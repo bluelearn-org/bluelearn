@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://bluelearn.org">
-    <img src="https://bluelearn.org/assets/logo.png" alt="BlueLearn" width="120" />
+    <img src=".github/assets/logo.png" alt="BlueLearn" width="120" />
   </a>
 </p>
 
