@@ -119,7 +119,7 @@ Allowed edge types right now are:
 
 Only `prerequisite` edges form the learning DAG. Walkthrough generation, level computation, frontier detection, and reachability checks must ignore other edge types. 
 
-There must be a trigger that prevents cycles among prerequisite edges. Related edges may be cyclic because they do not define learning order. Related edges are used for "related" or "see also" links, discovery/navigation, and contextual suggestions.
+There must be a trigger that prevents cycles among prerequisite edges. Related edges may be cyclic because they do not define learning order. Related edges are used for "related" or "see also" links, discovery/navigation, and contextual suggestions. See [Related Edges in Practice](#related-edges-in-practice) for how the directed table represents these undirected links.
 
 ### `subjects`
 
@@ -329,6 +329,39 @@ If deltas were stored instead, a delta model would store only the change/patch f
 
 
 Because the use case is read-heavy (history, diff, rollback) and guide bodies are small markdown with media kept in object storage, **full snapshots are most likely the right option**. 
+
+## Related Edges in Practice
+
+`guide_edges` is physically directed (`from_guide_id -> to_guide_id`), and for `prerequisite` rows that direction carries meaning (learning order). A `related` edge is **semantically undirected**: "Vectors related to Matrices" is the same fact as the reverse. The `from`/`to` columns therefore carry no meaning for `related` rows; they are just the two endpoints. `related` and `prerequisite` edges are kept on the same table rather than split into separate tables because they represent a single unified graph structure with differing semantics rather than fundamentally different data models while allowing potential future edge types to be easily added to the table.
+
+**1. Canonical ordering kills duplicates.** For `related` rows we always store the pair with the smaller id in `from_guide_id`, so `(A, B)` and `(B, A)` cannot both exist. Enforce with a partial check and a partial unique index; both conditions apply only to `related` rows, so they never constrain `prerequisite` direction:
+
+```sql
+ALTER TABLE guide_edges
+  ADD CONSTRAINT related_canonical_order
+  CHECK (edge_type <> 'related' OR from_guide_id < to_guide_id);
+
+CREATE UNIQUE INDEX guide_edges_related_unique
+  ON guide_edges (from_guide_id, to_guide_id)
+  WHERE edge_type = 'related';
+```
+
+**2. Reads query both columns.** Because direction is meaningless, the related guides of `X` can sit in either column. Always OR both sides and normalize to "the other endpoint":
+
+```sql
+SELECT CASE WHEN from_guide_id = :x THEN to_guide_id ELSE from_guide_id END AS related_guide_id
+FROM guide_edges
+WHERE edge_type = 'related'
+  AND (from_guide_id = :x OR to_guide_id = :x);
+```
+
+Querying only `from_guide_id` would silently miss half the links, so this OR-both-columns logic must live behind a single backend helper (e.g. `getRelatedGuides(id)` and `addRelation(a, b)`), not be hand-written per call site. `addRelation` is responsible for swapping the pair into canonical order before insert so the constraint above holds.
+
+For the reverse-direction lookups to stay fast, `to_guide_id` needs its own index. The prerequisite traversals already want one for walking backward, so a single index serves both:
+
+```sql
+CREATE INDEX guide_edges_to_guide_id ON guide_edges (to_guide_id);
+```
 
 ## Derived Data
 
