@@ -241,7 +241,8 @@ Key fields:
 - `direction`: `up` or `down`.
 - `reason`: required only on downvotes. Enum mirroring the canonical downvote rubric exactly: `unclear`, `factually_wrong`, `missing_step`, `outdated`, `broken_link`, `prereq_gap`, `wrong_level`, `scope_creep` (covers material outside topic). 
 - `note`: optional free-form text.
-- `created_at`: when the vote was cast.
+- `created_at`: when the vote was first cast.
+- `updated_at`: when the vote was last changed.
 
 Constraints:
 
