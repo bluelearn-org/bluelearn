@@ -1,0 +1,39 @@
+name: test
+
+# This trigger adds a "Run workflow" button in the GitHub Actions tab
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  run-tests:
+    name: Execute Validation Tasks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: pnpm/action-setup@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          
+      - run: pnpm install --frozen-lockfile
+      
+      # Run all your typechecking, linting, and testing tasks here
+      - name: Typecheck App & API
+        run: |
+          pnpm --filter app typecheck
+          pnpm --filter api exec tsc --noEmit
+          
+      - name: Lint App
+        run: pnpm --filter app lint
+        
+      - name: Run App Tests
+        run: pnpm --filter app test
+        
+      - name: Dry-run Build
+        run: |
+          pnpm --filter app build
+          pnpm --filter api exec wrangler deploy --dry-run --outdir=/tmp/api-build
