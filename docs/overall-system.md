@@ -20,9 +20,9 @@ This is what lets BLUE fit any kind of knowledge: a guide can have many prerequi
 - **Walkthrough**: A materialized part of the graph: pick a target guide, compute its transitive prerequisite DAG, optionally filter by subject tag, render bottom-up. Most walkthroughs are auto-generated on demand from a chosen target. Users should also be able to save these walkthroughs locally.
 - **Hierarchy**: The leveled shape of a walkthrough. Guides are grouped into levels where every guide at level N depends only on guides at levels below N. Guides at the same level are independent of each other and can be completed in any order.
 - **Level**: A computed depth position within a walkthrough (level 1 = primitives with no prereqs in this walkthrough; highest level = the target). The level of a guide = longest prerequisite path to it from a primitive in this walkthrough. Per-walkthrough only — the same guide can sit at different levels in different walkthroughs depending on what else is included.
+- **Learning path**: A **curated, versioned** curriculum authored on top of the graph. A curator picks one or more **targets**, the system seeds the prerequisite DAG beneath them, and the curator can then **skip** topics, **choose a specific guide variant** for each kept topic, and writes path metadata before submitting it for review. Unlike a walkthrough (auto-generated fresh on every open), a published learning path **revision** is a frozen snapshot reviewed by a verifier panel.
 - **Alternative**: A competing *theoretical* framing of the same topic inside a canonical guide (e.g. a different model, proof strategy, or conceptual lens). Alternatives live inside their parent guide, each with its own page and URL. Learner **upvotes and downvotes** rank alternatives against each other; strong sustained preference can promote one to the main guide content.
 - **Method**: A competing *practice* route to the same outcome inside a canonical guide (e.g. a different procedure, toolchain, or technique). Methods live inside their parent guide, each with its own page and URL. Learner **upvotes and downvotes** rank methods against each other; strong sustained preference can promote one to the main guide content.
-- **Modifications**: Edits to a guide, method, or alternative.
 - **Verifier**: A community member authorized to review guide submissions and modifications before publish. Verifiers are not required to be subject experts; their job is to check hierarchy soundness, catch obvious errors, prevent duplication, and apply the same structural checks to new methods and alternatives parented under a guide. Verifier discretion is deliberately constrained: decisions are rubric-bound, panel-based, justified in writing, and publicly logged. See the Guide Creation & Verification section below.
 - **Moderator**: A community member who handles post-publish guide review. Moderators see the full vote-rubric breakdown (both whole-guide and per-section), sit on re-review panels when a guide trips a re-review trigger, and sit on dispute panels. Moderator panels are odd-numbered, randomly drawn from the eligible pool, rubric-bound, and require written justifications on the same discipline as verifier panels. Subject-expert credentialing for moderators (and verifiers) is layered on later as the verifier-style credentialing system comes online.
 
@@ -126,6 +126,40 @@ Learners always know where they are. "I'm at level 3 of 5" is concrete. Each lev
 
 ---
 
+## Learning Paths
+
+A **walkthrough** is computed fresh every time someone picks a target, whereas a **learning path** is the curated, human-authored curriculum that someone deliberately shaped in order to reach a certain goal or audience (e.g. "Guides to Become a Doctor" or "Machine Learning for High Schoolers").
+
+### Traits
+
+- **Versioned authored artifacts**: a path has revisions. Each revision is authored, submitted, reviewed, and published (similar to the lifecycle of guides).
+- **Multiple targets**: learning path can contain several endpoints at once (e.g. Machine Learning *and* Statistics), unlike a single-target walkthrough.
+- **Curators can skip prerequisites**: a curator may intentionally omit a prerequisite the DAG would otherwise include (e.g. drop Trig from an applied path). The omission is part of the authored curriculum, which does not affect the global graph.
+- **Curators choose guide variants**: for each kept topic the curator pins a specific guide variant (a particular method or alternative), which best caters to particular goal or audience the curator is trying to target.
+- **Published revisions are fully frozen snapshots**: once published, a revision's targets, included topics, chosen variants, and displayed structure are fixed. Later changes to the global DAG or to which guide is canonical do **not** alter an already-published path. A new revision is the only way to change a path.
+
+### Authoring flow
+
+1. **Pick targets.** The curator chooses one or more goal topics.
+2. **System seeds the DAG.** The prerequisite closure beneath the targets is generated as a starting curriculum, with a default variant per topic.
+3. **Curate.** The curator skips topics, swaps variants, annotates nodes, and writes the path's title/summary.
+4. **Submit for review.** The revision goes to a **verifier** panel — the same pre-publish structural gate used for guides (hierarchy soundness, scope, duplication), since curation is a structural judgment, not post-publish moderation.
+5. **Publish.** On approval the revision freezes, including its displayed graph, and becomes the path's live revision.
+
+### Skipping a prerequisite (projection)
+
+When a curator omits a topic, the path does **not** show a gap. The displayed graph is the global DAG **projected** onto the kept topics: if the real chain is `Algebra → Trig → Calculus` and Trig is skipped, the path renders a direct `Algebra → Calculus` edge. This is a presentation choice for that one curriculum — it does **not** claim Trig stopped being a prerequisite of Calculus. The global DAG remains the single source of truth for prerequisites; the path stores only a frozen *view* of it. Curators cannot draw arbitrary connections; every displayed edge is derived from real prerequisite edges.
+
+### Why this stays consistent with one global DAG
+
+A learning path is to the DAG what a walkthrough is: a packaging of prerequisite truth, not a redefinition of it. The only added wrinkle is that a path's packaging is **authored and frozen** rather than recomputed live, so the curator's intent (and the exact shape a panel approved) survives later graph edits. Prerequisite authority never moves off `guide_edges`.
+
+### Not yet implemented
+
+Post-publish governance of paths themselves — learner votes on a path, vote-triggered re-review, disputes against a curation, and content holds over a path — is deferred. The guides a path references are still individually governed; what is deferred is governance of the curation. See `docs/database-schema.md` for the schema-level deferral note.
+
+---
+
 ## Guide Creation & Verification
 
 The original model (subject-expert jury reviews every submission before publish) has a cold-start problem: it requires subject-expert reviewers to exist *before* the first guide can be published, which is precisely when no such pool exists. The revised model below decouples publishing from subject expertise. The publish-time gate is staffed by **verifiers**: careful readers applying a structural rubric, not subject experts. After publish, **moderators** handle continuous vote-based review and dispute resolution. Subject-expert credentialing is a layer added on top of these roles later, not a prerequisite to operating.
@@ -138,8 +172,8 @@ When a user wants to contribute:
 
 1. **No canonical guide on the topic yet.** The user authors a fresh guide. Standard verifier queue.
 2. **A canonical guide already exists.** The user may:
-   - **Modify the canonical guide** (diff-style edits, reviewed by verifiers), or
-   - **Add a method or alternative** under that guide: *methods* for a different practice route to the same outcome, *alternatives* for a different theoretical framing. New methods and alternatives go through the same verifier gate as other new pages.
+  - **Modify the canonical guide** (diff-style edits, reviewed by verifiers), or
+  - **Add a method or alternative** under that guide: *methods* for a different practice route to the same outcome, *alternatives* for a different theoretical framing. New methods and alternatives go through the same verifier gate as other new pages.
 
 Disagreement with the main write-up or preference for another approach is handled by **authoring a method or alternative**. After publish, **upvotes and downvotes on each method and alternative automatically move them up or down** in ordering relative to siblings. If wide adoption occurs, alternatives/methods can promote to become the main guide.
 

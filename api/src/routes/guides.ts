@@ -49,14 +49,14 @@ export const variantsRouter = new Hono<HonoEnv>()
   // Roll back: insert a new revision copying an older snapshot
   .post('/:id/rollback', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
 
-export const revisionsRouter = new Hono<HonoEnv>()
+export const guideRevisionsRouter = new Hono<HonoEnv>()
   // A single revision snapshot (content + status)
   .get('/:id', (c) => c.json({ error: 'Not implemented' }, 501))
 
   // Overwrite a draft revision (pre-submit only)
   .patch('/:id', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
 
-  // Submit for review: flips to submitted and opens a review_case (same transaction)
+  // Submit for review: revision status flips to submitted and opens a review_case
   .post('/:id/submit', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
 
   // Rendered diff between two snapshots

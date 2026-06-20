@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import type { Context, MiddlewareHandler } from 'hono'
 import type { Database } from '../database.types'
 import type { HonoEnv } from '../types'
@@ -6,6 +6,8 @@ import type { HonoEnv } from '../types'
 declare module 'hono' {
   interface ContextVariableMap {
     supabase: SupabaseClient<Database>
+    // Set by requireUser so handlers reuse the authed user without re-fetching.
+    user: User
   }
 }
 
@@ -33,6 +35,7 @@ export const getAuthenticatedUser = async (c: Context) => {
 export const requireUser: MiddlewareHandler<HonoEnv> = async (c, next) => {
   const { user } = await getAuthenticatedUser(c)
   if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  c.set('user', user)
   await next()
 }
 

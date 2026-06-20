@@ -158,6 +158,9 @@ Relationships between guide bases. This table *is* the global graph.
 - `from_guide_base_id`: the source guide base of the edge.
 - `to_guide_base_id`: the target guide base of the edge.
 - `edge_type`: what kind of relationship this edge represents (see allowed types below).
+- `is_suspended`: flag to temporarily exclude an edge from graph traversal without deleting it. A suspended edge keeps its row (so it can be restored), still occupies its `(from, to)` slot for uniqueness, and is still counted by the cycle-prevention trigger so un-suspending can never resurrect a cycle. Walkthrough generation, level computation, reachability, and path projection must filter out suspended edges.
+- `created_at`: row creation time.
+- `updated_at`: last update time, maintained by a trigger.
 
 For prerequisite edges, direction means:
 
@@ -230,6 +233,58 @@ Because walkthrough and level generation use the **longest** path, redundant tra
 
 What over-declaration does cost is **graph bloat**: redundant edges clutter the DAG, walkthroughs, and diffs. A later **transitive reduction** pass can drop any edge `A -> C` when a longer path `A -> ... -> C` already exists. This is a tidiness optimization, not a correctness requirement, since levels stay correct without it. 
 
+### `learning_paths`
+
+The stable identity of a learning path: it stores no curriculum content of its own and points at whichever revision is currently live.
+
+- `id`: primary key; the path's stable identity.
+- `slug`: stable URL identifier (e.g. `ml-engineer`), unique **among learning paths**. Learning paths live under their own `/paths/{slug}` route namespace, so a path slug never collides with a guide base slug (`/{base-slug}`) — uniqueness only needs to hold within paths, not site-wide. Derived from the first published revision's title and frozen at first publish; never auto-changed by later title edits, exactly like `guides.slug`.
+- `current_revision_id`: nullable FK to `learning_path_revisions`. Points at the live published revision; null before the path's first publish. Creates a path ↔ revision pointer cycle, so the FK should be deferrable.
+- `status`: node-level disposition `draft | published | archived` (same shape and meaning as `guide_bases.status`). `published` once `current_revision_id` is set; `archived` retires the whole path while leaving the last revision retrievable.
+- `created_by`: FK to `profiles.id`; the path's original author.
+- `created_at`: row creation time.
+- `updated_at`: last update time, maintained by a trigger.
+
+A path stores no `title` or `summary`: both are versioned content on `learning_path_revisions`, so a rename lives in history and is restored on rollback.
+
+### `learning_path_revisions`
+
+Append-only version history plus the path's editorial metadata, mirroring `guide_revisions`. A published revision is immutable; further edits create a new revision rather than mutating a published one.
+
+- `id`: primary key of the revision row.
+- `learning_path_id`: which path this revision belongs to (FK to `learning_paths`).
+- `revision_number`: per-path counter (1, 2, 3, ...), unique with `learning_path_id`.
+- `title`: the path's human-facing title as of this revision. Versioned; `learning_paths.slug` is derived from it at first publish and then frozen.
+- `summary`: short description for listings and the path header, as of this revision.
+- `change_summary`: curator's note describing what changed in this revision (like a commit message), driving the history list.
+- `author_id`: who authored this specific revision. May differ from the path's original `created_by`, spreading curation credit.
+- `status`: draft lifecycle state `draft | submitted` only (the same shape and rationale as `guide_revisions.status`). The review verdict is not stored here; it is derived from the revision's `learning_path_review_cases` → `review_cases.status`.
+- `created_at`: when the revision was created.
+
+Submitting a revision creates its `review_cases` (+ `learning_path_review_cases`) row in the same transaction that sets `status = submitted`, exactly like submitting a guide revision. A revision "reads as approved" when its case is `approved`; `published`/`archived` are node-level and live on `learning_paths`.
+
+### `learning_path_revision_nodes`
+
+The frozen curriculum: the set of topics this revision includes, and which of them are the path's goals. A present row means "this topic is part of this revision, shown using this guide variant"; an absent row means the topic was intentionally excluded (skipped prerequisite).
+
+- `revision_id`: FK to `learning_path_revisions`.
+- `guide_base_id`: the included topic (FK to `guide_bases`).
+- `guide_id`: the guide variant the curator chose for this topic (FK to `guides`). The variant is pinned, but its content is read live through `guides.current_revision_id` (the path shows the up-to-date guide, not a frozen body).
+- `is_target`: boolean, default `false`. `true` marks this node as one of the path's goal topics (an endpoint the curriculum was built to reach). A revision may have several targets (a path can climb toward Machine Learning *and* Statistics at once).
+- `note`: optional curator annotation for this node within the path.
+- Primary key `(revision_id, guide_base_id)`, so a topic appears at most once per revision.
+
+### `learning_path_revision_edges`
+
+The projected prerequisite edges among included nodes, computed once at publish time and stored so the published path never drifts when the global DAG later changes.
+
+- `revision_id`: FK to `learning_path_revisions`.
+- `from_guide_base_id`: source endpoint (FK to `guide_bases`), an included node of this revision.
+- `to_guide_base_id`: target endpoint (FK to `guide_bases`), an included node of this revision.
+- Primary key `(revision_id, from_guide_base_id, to_guide_base_id)`.
+
+These edges are derived from the global `guide_edges` graph, never hand-authored: at publish, the global prerequisite graph is projected onto the included node set, bridging skipped prerequisites (if `A → Trig → C` and Trig is excluded, the projection stores `A → C`). They are a frozen *view* of the canonical graph, not a competing prerequisite authority (see [Learning paths as frozen projections](#learning-paths-as-frozen-projections) for why this does not violate the one-global-DAG rule).
+
 ### `votes`
 
 Upvotes and downvotes on guides (the canonical one plus other methods and alternatives). Because all content lives in guides, a guide is the only votable content unit: voting "on the topic" is voting on its canonical guide.
@@ -260,7 +315,7 @@ Verifier gates, post-publish re-reviews, disputes, and appeals all share the sam
 The item being reviewed.
 
 - `id`: primary key of the case.
-- `case_type`: what work the case represents: `guide_publish` | `guide_edit` | `dispute` | `appeal` | `re_review`. (All content is a guide now, so one publish/edit pair covers the original write-up and every method/alternative.)
+- `case_type`: what work the case represents: `guide_publish` | `guide_edit` | `learning_path_publish` | `learning_path_edit` | `dispute` | `appeal` | `re_review`.
 - `status`: lifecycle state: `pending` | `in_review` | `approved` | `rejected`.
 - `created_by`: the user who opened the case (author for publish/edit/appeal, filer for dispute).
 - `created_at`: when the case was created.
@@ -269,7 +324,7 @@ The item being reviewed.
 
 `review_panels`:
 
-An odd-numbered random group of panelists assembled to decide a case, drawn from the pool that matches the case type: **verifiers** for `guide_publish`/`guide_edit`, **moderators** for `re_review`/`dispute`/`appeal`.
+An odd-numbered random group of panelists assembled to decide a case, drawn from the pool that matches the case type: **verifiers** for `guide_publish`/`guide_edit`/`learning_path_publish`/`learning_path_edit`, **moderators** for `re_review`/`dispute`/`appeal`.
 
 - `id`: primary key of the panel.
 - `case_id`: the case this panel decides (FK to `review_cases`). One case may have many panels.
@@ -324,6 +379,11 @@ Each attaches type-specific data to a `review_cases` row. `case_id` is both prim
 
 - `case_id`: PK and FK to `review_cases`.
 - `guide_revision_id`: FK to `guide_revisions` — the exact guide revision under review. All content lives in one revision table now, so this is a single FK (no polymorphic split). It pins the panel to the exact snapshot it judged, so the decision stays attached to specific content after later edits.
+
+`learning_path_review_cases` (for `learning_path_publish`, `learning_path_edit`):
+
+- `case_id`: PK and FK to `review_cases`.
+- `learning_path_revision_id`: FK to `learning_path_revisions` — the exact path revision under review. Pins the panel to the precise snapshot it judged (targets, included nodes, chosen variants, metadata), so the decision stays attached to that snapshot after the curator drafts further revisions. The panel is drawn from the **verifier** pool, the same pre-publish structural gate used for `guide_publish`/`guide_edit`.
 
 `re_review_cases`:
 
@@ -521,7 +581,7 @@ CREATE INDEX guide_edges_to_guide_base_id ON guide_edges (to_guide_base_id);
 
 `review_panels.target_seat_count` is decided at assembly time, in three steps:
 
-1. **Policy default per `case_type`.** A baseline count, e.g. `guide_publish`/`guide_edit` → 3 verifiers, `dispute`/`appeal`/`re_review` → 5 moderators (numbers illustrative). Higher-stakes governance gets a larger panel. This is a small static map (one odd number per `case_type`) that changes only on a policy decision, so it lives as an app-level constant, not a table. The value is read here and copied onto the panel, which freezes it.
+1. **Policy default per `case_type`.** A baseline count, e.g. `guide_publish`/`guide_edit`/`learning_path_publish`/`learning_path_edit` → 3 verifiers, `dispute`/`appeal`/`re_review` → 5 moderators (numbers illustrative). Higher-stakes governance gets a larger panel. This is a small static map (one odd number per `case_type`) that changes only on a policy decision, so it lives as an app-level constant, not a table. The value is read here and copied onto the panel, which freezes it.
 2. **Clamp to the eligible pool.** The eligible pool is the role pool that matches the case type (verifiers vs moderators) minus anyone recused, conflicted, suspended (`profiles.is_suspended`), or the case author. You cannot seat more panelists than exist: `target = min(policy_default, eligible_pool_size)`.
 3. **Round down to odd.** A majority must always be decidable, so an even clamp is reduced by one (`4 → 3`). A pool too small to seat the minimum (e.g. fewer than 3 eligible) blocks assembly rather than seating an even or trivially small panel.
 
@@ -530,6 +590,28 @@ target_seat_count = round_down_to_odd( min( policy_default(case_type), eligible_
 ```
 
 The same eligibility filter feeds the replacement flow: when a seat is `replaced`, the new panelist is drawn from this pool minus those already seated.
+
+### Learning paths as frozen projections
+
+A published learning path revision stores its own `learning_path_revision_edges`, which can look like it duplicates or competes with the global `guide_edges` graph. It does neither, because the two answer different questions.
+
+`guide_edges` is the single source of truth for **"what are the prerequisites of a topic?"** Only it may be traversed for walkthrough generation, level computation, and reachability. `learning_path_revision_edges` answers **"how does this one curated curriculum present its topics?"** When a curator excludes Trig from `Algebra → Trig → Calculus`, the stored edge `Algebra → Calculus` is not a claim that Trig stopped being a prerequisite of Calculus; it is a claim that *this path* moves the learner from Algebra to Calculus directly. 
+
+Two rules keep the invariant intact:
+
+- **Projection:** path edges are computed by projecting the global DAG onto the included node set at publish time; curators cannot draw arbitrary edges (e.g. an invented `Algebra → ML`). Every stored edge therefore originates from `guide_edges`.
+- **Frozen, never authoritative:** once stored, path edges are read only to render that revision. Nothing treats them as prerequisite authority, so they cannot drift the meaning of the global graph.
+
+Storing the projection (rather than recomputing it from the live DAG on each read) allows learning paths to not automatically change whenever an edge in the global DAG is added/altered, which could potentially lead to unwanted changes in the curated learning path.
+
+### Learning path draft reconciliation
+
+Only a **draft** revision tracks the live DAG; a published revision is frozen and is never affected by any of the below. While a draft is open, the global `guide_edges` graph can change underneath it. The governing rule is that the system computes the delta and surfaces it, but only the curator/contributor mutates node rows. Membership never changes silently, because the node table stores only *included* rows and so cannot distinguish "curator skipped this" from "never in the closure." Blindly re-adding closure topics would resurrect deliberate skips; blindly dropping topics would override curation. Four cases:
+
+1. **New edge between two topics already in the draft:** nothing to reconcile. Draft edges are not stored (they freeze only at publish); the editor projects the live DAG onto the current node set on every render, so a new or removed edge between included topics is reflected automatically on the next redraw. No row changes.
+2. **A new prerequisite topic enters the targets' closure:** the system computes `new_closure − old_closure` and surfaces each addition as a suggestion ("Linear Algebra became a prerequisite of ML — add to path?"). A `learning_path_revision_nodes` row is inserted only on explicit curator approval, so a previously skipped topic is never auto-resurrected.
+3. **An edge is removed, so a kept topic is no longer required by the targets:** the topic stays in the draft (the curator may still want it); the system flags it ("Statistics is no longer required by your targets — keep or remove?") and the curator decides. No automatic delete.
+4. **A referenced guide or guide base is archived or purged mid-draft.** The affected node is flagged as broken; the curator must swap the variant (`guide_id`) or drop the node. Publish-time validation rejects any revision whose live nodes point at an archived or purged guide, so a broken reference can never freeze into a published revision.
 
 ### Derived Data
 
@@ -546,6 +628,10 @@ Reachability is computed by checking whether every transitive prerequisite exist
 #### Walkthroughs
 
 Most walkthroughs should be generated on demand by picking a target guide base and computing its transitive prerequisite DAG. Saved or user-curated walkthroughs are intentionally left for a later migration because their sharing, attribution, and dispute model is still open in `docs/open-questions.md`.
+
+#### Learning path levels
+
+A learning path stores no per-node level. Ordering is derived at render time by topological layering over the revision's frozen `learning_path_revision_edges`: each node's level is its longest projected-prerequisite path from a level-1 node. Because the edges are already the projection onto included nodes, skipped prerequisites never leave gaps in the numbering (a node promoted by an exclusion simply lands one level above whatever still precedes it). This is the same longest-path layering used for walkthroughs, run over the stored projected edges instead of the live DAG.
 
 ### Not Yet Implemented
 
@@ -594,6 +680,10 @@ Potential shape: a `role_applications` table.
 - `created_at`: when the application was filed.
 
 Approval inserts the matching `user_roles` row. A partial unique index on `(user_id, role) WHERE status = 'pending'` stops a user stacking duplicate open applications for the same role.
+
+#### Learning path post-publish governance
+
+The first-pass learning path schema covers authoring, pre-publish verifier review, and frozen publishing. Post-publish governance (learner **votes** on a path, vote-triggered **re-review**, **disputes** against a path, and **content holds** (hide/purge) over a path) is deliberately deferred. Paths reference guides that already carry their own votes, holds, and disputes, so a bad guide is still governed at the guide level; what is missing is governance of the *curation* itself (e.g. a path that skips a load-bearing prerequisite or pushes a fringe variant). When added, it should reuse the same machinery rather than grow a parallel one: a `re_review`/`dispute` case type targeting a `learning_path_id`, and a `content_holds` scope column for paths.
 
 ---
 
@@ -704,6 +794,33 @@ A moderator destroys content while keeping the audit trail. See [Content removal
 3. **Resolve scope to revisions.** A `revision_id` hold targets that row; a `guide_id` / `guide_base_id` hold fans out to every revision beneath it.
 4. `guide_revisions` → for each target, null the content fields (`body`, `title`, `summary`, `change_summary`) and set `is_purged = true`; keep the skeleton row as a tombstone. Pointers (`current_revision_id`, review cases) still resolve.
 5. **Object storage** → for each target revision, read `revision_assets → media_assets.storage_key`, delete each key from the bucket and verify, skipping any asset still referenced by a non-purged revision. Queue one delete job per asset; the purge is complete only when all jobs verify.
-6. **Node scope only:** scrub the node's own content — `guides.slug`, or `guide_bases.title` + `slug` — and set `status = 'archived'`. If a purged guide was canonical, re-point or leave `guide_bases.canonical_guide_id` per policy (it resolves to the tombstone).
+6. **Node scope only** → scrub the node's own content — `guides.slug`, or `guide_bases.title` + `slug` — and set `status = 'archived'`. If a purged guide was canonical, re-point or leave `guide_bases.canonical_guide_id` per policy (it resolves to the tombstone).
 7. `content_holds` → set `purged_at` and `purged_by`. The revision carries `is_purged = true`; who/when stays on this hold row.
+
+### 11. Author and publish a learning path
+
+A curator builds a curated curriculum from one or more targets. Most of the work (DAG closure, projection) happens at authoring/publish time; opening the path later (flow 12) reads a frozen snapshot.
+
+1. `learning_paths` → insert the shell: `slug = NULL` (addressed by id until first publish), `status = 'draft'`, `current_revision_id = NULL`, `created_by`.
+2. `learning_path_revisions` → insert revision 1: `learning_path_id`, `revision_number = 1`, `title`, `summary`, `change_summary`, `author_id`, `status = 'draft'`.
+3. **Pick targets:** the curator chooses one or more goal topics (and a variant for each). These are held in the editor until seeding; a target becomes a node flagged `is_target` in the next step.
+4. **Seed the curriculum:** the system computes the transitive prerequisite DAG closure of the chosen targets over `guide_edges`, picks a default variant per topic, and immediately materializes the whole closure: `learning_path_revision_nodes` → insert one row per closure topic (`revision_id`, `guide_base_id`, `guide_id`), setting `is_target = true` (with the curator's chosen variant) on the target topics and `false` on the rest. The draft starts as "everything included," and the curator narrows from there. Seeding into the real table (rather than holding the set in memory until submit) keeps a node row's meaning identical in every state. A row present means the topic is included; an absent row means it is excluded, so a `draft` revision and a `published` one read the same way, and submit needs no convert-set-into-rows step. The draft persists server-side, so the curator can leave and resume.
+5. **Curator edits the draft in place:** skip a prerequisite → `learning_path_revision_nodes` delete that `(revision_id, guide_base_id)` row. Swap a variant → update that row's `guide_id`. Annotate → set `note`. Edit metadata → update the revision's `title`/`summary`. Drafts are mutable up to submission (same as guide draft revisions). Whatever rows remain at submit *are* the included set, with no further translation.
+6. **Submit for review**: `learning_path_revisions` → `status = 'submitted'`; `review_cases` → insert root `case_type = 'learning_path_publish'` (revision 1) or `'learning_path_edit'` (later revisions), `status = 'pending'`, `created_by = author`; `learning_path_review_cases` → insert satellite `case_id`, `learning_path_revision_id`.
+7. **Panel / decisions / close:** identical to flow 1 steps 5–7, drawn from the **verifier** pool.
+8. **On approval** (publish, one transaction):
+  - **Freeze the projection.** Project the current `guide_edges` graph onto the revision's included node set, bridging excluded topics, and `learning_path_revision_edges` → insert one row per projected edge: `revision_id`, `from_guide_base_id`, `to_guide_base_id`. This is the only time these rows are written; the revision is now immutable.
+  - `learning_paths` → set `current_revision_id` = this revision, `status = 'published'`, and on revision 1 `slug = slugify(revision.title)` (frozen from here).
+
+On rejection nothing publishes; the revision stays a rejected snapshot (verdict derived from the case) and the curator may revise and resubmit, which creates a new revision and a new case. A later edit is the same flow starting at step 2 with `revision_number = N+1` and `case_type = 'learning_path_edit'`; on approval `current_revision_id` repoints and the slug is untouched. **Rollback** is a soft rollback: create a new revision cloning an older revision's targets/nodes, submit, and on approval repoint `current_revision_id`.
+
+### 12. Open a learning path
+
+A learner visits `/paths/{slug}`. No DAG traversal happens; the response is read straight from the frozen snapshot.
+
+1. `learning_paths` → resolve `slug` to the row; read `current_revision_id`.
+2. `learning_path_revisions` → load the live revision's metadata (`title`, `summary`).
+3. `learning_path_revision_nodes` → load the included nodes; join `guides` → `guides.current_revision_id` → `guide_revisions` for each node's live title/summary (the variant is frozen, its content is current).
+4. `learning_path_revision_edges` → load the frozen projected edges for the revision.
+5. **Derive levels in the app** by topological layering over the loaded edges (not stored; see [Learning path levels](#learning-path-levels)), and return `{ nodes, edges }` for the graph UI to render. The `is_target` nodes drive the "this path helps you reach …" display.
 

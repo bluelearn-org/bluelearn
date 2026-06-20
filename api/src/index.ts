@@ -3,7 +3,8 @@ import { cors } from 'hono/cors'
 import { supabaseMiddleware } from './middleware/auth.middleware'
 import type { HonoEnv } from './types'
 import { meRouter, profilesRouter } from './routes/identity'
-import { guidesRouter, variantsRouter, revisionsRouter } from './routes/guides'
+import { guidesRouter, variantsRouter, guideRevisionsRouter } from './routes/guides'
+import { learningPathsRouter, learningPathRevisionsRouter } from './routes/learning-paths'
 import { prerequisitesRouter, todosRouter } from './routes/graph'
 import { subjectsRouter } from './routes/subjects'
 import { reviewsRouter } from './routes/reviews'
@@ -18,7 +19,9 @@ const app = new Hono<HonoEnv>()
   .route('/profiles', profilesRouter)
   .route('/guides', guidesRouter)
   .route('/variants', variantsRouter)
-  .route('/revisions', revisionsRouter)
+  .route('/guide-revisions', guideRevisionsRouter)
+  .route('/paths', learningPathsRouter)
+  .route('/path-revisions', learningPathRevisionsRouter)
   .route('/prerequisites', prerequisitesRouter)
   .route('/todos', todosRouter)
   .route('/subjects', subjectsRouter)
