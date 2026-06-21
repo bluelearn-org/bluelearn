@@ -114,7 +114,7 @@
   }
 
   .data-label {
-    @apply font-mono text-sm text-muted-foreground;
+    @apply font-mono text-sm uppercase text-muted-foreground tracking-[0.08em];
   }
 
   .data-value {
@@ -131,13 +131,22 @@
 
   /* -- CTA BUTTON -- */
   .btn-cta {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-white transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-white font-mono text-xs uppercase transition-all duration-200;
     background: var(--brand-cta);
   }
 
   .btn-cta:hover {
     background: #000;
-    transform: scale(1.08);
+    transform: scale(1.05);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-white font-mono text-xs uppercase transition-all duration-200;
+    background: var(--brand-blue);
+  }
+
+  .btn:hover {
+    transform: scale(1.05);
   }
 
   /* -- SURFACE BLOCK -- */
@@ -223,4 +232,38 @@
   --color-brand-cta: var(--brand-cta);
   --color-brand-surface: var(--brand-surface);
   --color-brand-surface-hover: var(--brand-surface-hover);
+}
+
+@layer base {
+  .markdown h1 {
+    @apply text-2xl font-bold tracking-[-0.04em] mt-8 mb-3;
+  }
+
+  .markdown h2 {
+    @apply text-xl font-semibold tracking-[-0.03em] mt-6 mb-2;
+  }
+
+  .markdown h3 {
+    @apply text-lg font-medium mt-4 mb-2;
+  }
+
+  .markdown p {
+    @apply text-sm text-muted-foreground leading-relaxed mb-4;
+  }
+
+  .markdown strong {
+    @apply text-foreground;
+  }
+
+  .markdown blockquote {
+    @apply border-l-2 border-border pl-4 text-muted-foreground;
+  }
+
+  .markdown ul {
+    @apply list-disc pl-5 space-y-1;
+  }
+
+  .markdown ol {
+    @apply list-decimal pl-5 space-y-1;
+  }
 }

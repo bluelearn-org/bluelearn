@@ -3,6 +3,8 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 
 import appCss from "../styles.css?url"
+import { Navbar } from "@/components/Navbar"
+import { NotFound } from "@/components/NotFound"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,7 +17,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "TanStack Start Starter",
+        title: "BlueLearn | Free Structured Knowledge.",
       },
     ],
     links: [
@@ -25,12 +27,7 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  notFoundComponent: () => (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>404</h1>
-      <p>The requested page could not be found.</p>
-    </main>
-  ),
+  notFoundComponent: () => (<NotFound />),
   shellComponent: RootDocument,
 })
 
@@ -41,7 +38,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <Navbar />
+
         {children}
+        
         <TanStackDevtools
           config={{
             position: "bottom-right",
@@ -53,6 +53,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             },
           ]}
         />
+        
         <Scripts />
       </body>
     </html>
