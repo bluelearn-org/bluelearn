@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router"
-import { Search, SlidersHorizontal, X } from "lucide-react"
+import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react"
 
 import type { HydratedPath } from "@/types/paths"
 
@@ -96,21 +96,36 @@ function RouteComponent() {
         <Separator className="mb-4 bg-border" />
 
         <div className="flex flex-wrap gap-3">
-          {subjects.map((subject) => (
-            <Link
-              to={SubjectRoute.to}
-              params={{ slug: subject.slug }}
-              key={subject.slug}
-            >
-              <Badge
-                variant="outline"
-                className="rounded-full border p-6 mono-micro tracking-[0.08em] transition-colors hover:bg-badge"
+          {[...subjects]
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .slice(0, 24)
+            .map((subject) => (
+              <Link
+                to={SubjectRoute.to}
+                params={{ slug: subject.slug }}
+                key={subject.slug}
               >
-                {subject.name}
-              </Badge>
-            </Link>
-          ))}
+                <Badge
+                  variant="outline"
+                  className="rounded-full border p-4 mono-micro tracking-[0.08em] transition-colors hover:bg-badge"
+                >
+                  {subject.name}
+                </Badge>
+              </Link>
+            ))}
         </div>
+
+        {subjects.length > 24 && (
+          <div className="flex justify-center">
+            <Link
+              to="/subjects"
+              className="p-4 inline-flex justify-center items-center mono-micro uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Show More Subjects
+              <ChevronRight />
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Featured Section */}
