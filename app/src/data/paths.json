@@ -1,0 +1,110 @@
+[
+  {
+    "slug": "game-development-fundamentals",
+    "title": "Game Development Fundamentals",
+    "summary": "Learn how to create and animate game characters and bring them into Unity.",
+    "curator": "bluelearn",
+    "created_at": "14th June 2026",
+    "duration": 720,
+    "levels": [
+      {
+        "level": 1,
+        "guide": "game-development-introduction"
+      },
+      {
+        "level": 2,
+        "guide": "blender-character-creation"
+      },
+      {
+        "level": 3,
+        "guide": "data-structures-how-to-choose-structures"
+      },
+      {
+        "level": 4,
+        "guide": "unity-import-character"
+      },
+      {
+        "level": 5,
+        "guide": "unity-character-movement"
+      },
+      {
+        "level": 6,
+        "guide": "game-ai-systems-how-to-build-ai-behaviours"
+      },
+      {
+        "level": 7,
+        "guide": "physics-simulations-how-to-build-basic-simulations"
+      }
+    ]
+  },
+  {
+    "slug": "ml-engineer-beginner",
+    "title": "ML Engineer Beginner",
+    "summary": "Learn the mathematical foundations required to understand machine learning concepts and models.",
+    "curator": "bluelearn",
+    "created_at": "14th June 2026",
+    "duration": 720,
+    "tags": [
+      "ai",
+      "machine learning",
+      "mathematics"
+    ],
+    "levels": [
+      {
+        "level": 1,
+        "guide": "arithmetic-introduction"
+      },
+      {
+        "level": 2,
+        "guide": "algebra-how-to-express-equations"
+      },
+      {
+        "level": 3,
+        "guide": "probabilities-how-to-calculate-probability"
+      },
+      {
+        "level": 4,
+        "guide": "statistics-how-to-analyse-data"
+      },
+      {
+        "level": 5,
+        "guide": "machine-learning-fundamentals"
+      }
+    ]
+  },
+  {
+    "slug": "intro-to-mechanical-engineering",
+    "title": "Introduction to Mechanical Engineering",
+    "summary": "Build the mathematical and physical foundations used throughout mechanical engineering.",
+    "curator": "bluelearn",
+    "created_at": "14th June 2026",
+    "duration": 720,
+    "tags": [
+      "engineering",
+      "mechanical engineering",
+      "physics"
+    ],
+    "levels": [
+      {
+        "level": 1,
+        "guide": "arithmetic-introduction"
+      },
+      {
+        "level": 2,
+        "guide": "algebra-how-to-express-equations"
+      },
+      {
+        "level": 3,
+        "guide": "calculus-introduction"
+      },
+      {
+        "level": 4,
+        "guide": "vectors-introduction"
+      },
+      {
+        "level": 5,
+        "guide": "mechanics-how-to-apply-newtons-laws"
+      }
+    ]
+  }
+]

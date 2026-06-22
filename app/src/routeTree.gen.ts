@@ -9,38 +9,218 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SubjectsRouteImport } from './routes/subjects'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as PathsRouteImport } from './routes/paths'
+import { Route as GuidesRouteImport } from './routes/guides'
+import { Route as ContributeRouteImport } from './routes/contribute'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
+import { Route as PathsIndexRouteImport } from './routes/paths.index'
+import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
+import { Route as PathsSlugRouteImport } from './routes/paths.$slug'
+import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 
+const SubjectsRoute = SubjectsRouteImport.update({
+  id: '/subjects',
+  path: '/subjects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PathsRoute = PathsRouteImport.update({
+  id: '/paths',
+  path: '/paths',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesRoute = GuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContributeRoute = ContributeRouteImport.update({
+  id: '/contribute',
+  path: '/contribute',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SubjectsIndexRoute = SubjectsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SubjectsRoute,
+} as any)
+const PathsIndexRoute = PathsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PathsRoute,
+} as any)
+const SubjectsSlugRoute = SubjectsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => SubjectsRoute,
+} as any)
+const PathsSlugRoute = PathsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => PathsRoute,
+} as any)
+const GuidesSlugRoute = GuidesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => GuidesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
+  '/contribute': typeof ContributeRoute
+  '/guides': typeof GuidesRouteWithChildren
+  '/paths': typeof PathsRouteWithChildren
+  '/register': typeof RegisterRoute
+  '/subjects': typeof SubjectsRouteWithChildren
+  '/guides/$slug': typeof GuidesSlugRoute
+  '/paths/$slug': typeof PathsSlugRoute
+  '/subjects/$slug': typeof SubjectsSlugRoute
+  '/paths/': typeof PathsIndexRoute
+  '/subjects/': typeof SubjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
+  '/contribute': typeof ContributeRoute
+  '/guides': typeof GuidesRouteWithChildren
+  '/register': typeof RegisterRoute
+  '/guides/$slug': typeof GuidesSlugRoute
+  '/paths/$slug': typeof PathsSlugRoute
+  '/subjects/$slug': typeof SubjectsSlugRoute
+  '/paths': typeof PathsIndexRoute
+  '/subjects': typeof SubjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
+  '/contribute': typeof ContributeRoute
+  '/guides': typeof GuidesRouteWithChildren
+  '/paths': typeof PathsRouteWithChildren
+  '/register': typeof RegisterRoute
+  '/subjects': typeof SubjectsRouteWithChildren
+  '/guides/$slug': typeof GuidesSlugRoute
+  '/paths/$slug': typeof PathsSlugRoute
+  '/subjects/$slug': typeof SubjectsSlugRoute
+  '/paths/': typeof PathsIndexRoute
+  '/subjects/': typeof SubjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/browse'
+    | '/contribute'
+    | '/guides'
+    | '/paths'
+    | '/register'
+    | '/subjects'
+    | '/guides/$slug'
+    | '/paths/$slug'
+    | '/subjects/$slug'
+    | '/paths/'
+    | '/subjects/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/browse'
+    | '/contribute'
+    | '/guides'
+    | '/register'
+    | '/guides/$slug'
+    | '/paths/$slug'
+    | '/subjects/$slug'
+    | '/paths'
+    | '/subjects'
+  id:
+    | '__root__'
+    | '/'
+    | '/browse'
+    | '/contribute'
+    | '/guides'
+    | '/paths'
+    | '/register'
+    | '/subjects'
+    | '/guides/$slug'
+    | '/paths/$slug'
+    | '/subjects/$slug'
+    | '/paths/'
+    | '/subjects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrowseRoute: typeof BrowseRoute
+  ContributeRoute: typeof ContributeRoute
+  GuidesRoute: typeof GuidesRouteWithChildren
+  PathsRoute: typeof PathsRouteWithChildren
+  RegisterRoute: typeof RegisterRoute
+  SubjectsRoute: typeof SubjectsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/subjects': {
+      id: '/subjects'
+      path: '/subjects'
+      fullPath: '/subjects'
+      preLoaderRoute: typeof SubjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paths': {
+      id: '/paths'
+      path: '/paths'
+      fullPath: '/paths'
+      preLoaderRoute: typeof PathsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides': {
+      id: '/guides'
+      path: '/guides'
+      fullPath: '/guides'
+      preLoaderRoute: typeof GuidesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contribute': {
+      id: '/contribute'
+      path: '/contribute'
+      fullPath: '/contribute'
+      preLoaderRoute: typeof ContributeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +228,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/subjects/': {
+      id: '/subjects/'
+      path: '/'
+      fullPath: '/subjects/'
+      preLoaderRoute: typeof SubjectsIndexRouteImport
+      parentRoute: typeof SubjectsRoute
+    }
+    '/paths/': {
+      id: '/paths/'
+      path: '/'
+      fullPath: '/paths/'
+      preLoaderRoute: typeof PathsIndexRouteImport
+      parentRoute: typeof PathsRoute
+    }
+    '/subjects/$slug': {
+      id: '/subjects/$slug'
+      path: '/$slug'
+      fullPath: '/subjects/$slug'
+      preLoaderRoute: typeof SubjectsSlugRouteImport
+      parentRoute: typeof SubjectsRoute
+    }
+    '/paths/$slug': {
+      id: '/paths/$slug'
+      path: '/$slug'
+      fullPath: '/paths/$slug'
+      preLoaderRoute: typeof PathsSlugRouteImport
+      parentRoute: typeof PathsRoute
+    }
+    '/guides/$slug': {
+      id: '/guides/$slug'
+      path: '/$slug'
+      fullPath: '/guides/$slug'
+      preLoaderRoute: typeof GuidesSlugRouteImport
+      parentRoute: typeof GuidesRoute
+    }
   }
 }
 
+interface GuidesRouteChildren {
+  GuidesSlugRoute: typeof GuidesSlugRoute
+}
+
+const GuidesRouteChildren: GuidesRouteChildren = {
+  GuidesSlugRoute: GuidesSlugRoute,
+}
+
+const GuidesRouteWithChildren =
+  GuidesRoute._addFileChildren(GuidesRouteChildren)
+
+interface PathsRouteChildren {
+  PathsSlugRoute: typeof PathsSlugRoute
+  PathsIndexRoute: typeof PathsIndexRoute
+}
+
+const PathsRouteChildren: PathsRouteChildren = {
+  PathsSlugRoute: PathsSlugRoute,
+  PathsIndexRoute: PathsIndexRoute,
+}
+
+const PathsRouteWithChildren = PathsRoute._addFileChildren(PathsRouteChildren)
+
+interface SubjectsRouteChildren {
+  SubjectsSlugRoute: typeof SubjectsSlugRoute
+  SubjectsIndexRoute: typeof SubjectsIndexRoute
+}
+
+const SubjectsRouteChildren: SubjectsRouteChildren = {
+  SubjectsSlugRoute: SubjectsSlugRoute,
+  SubjectsIndexRoute: SubjectsIndexRoute,
+}
+
+const SubjectsRouteWithChildren = SubjectsRoute._addFileChildren(
+  SubjectsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrowseRoute: BrowseRoute,
+  ContributeRoute: ContributeRoute,
+  GuidesRoute: GuidesRouteWithChildren,
+  PathsRoute: PathsRouteWithChildren,
+  RegisterRoute: RegisterRoute,
+  SubjectsRoute: SubjectsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,0 +1,342 @@
+[
+  {
+    "slug": "arithmetic-introduction",
+    "title": "Introduction to Arithmetic",
+    "author": "bluelearn",
+    "summary": "Learn the fundamental operations of mathematics, including addition, subtraction, multiplication, and division.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "mathematics",
+      "arithmetic"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Mathematics Foundations",
+      "Arithmetic"
+    ],
+    "prerequisites": [],
+    "content": "# What is Arithmetic?"
+  },
+  {
+    "slug": "algebra-how-to-express-equations",
+    "title": "How to Express and Manipulate Algebraic Equations",
+    "author": "bluelearn",
+    "summary": "Learn how variables, expressions, and equations are used to model and solve mathematical problems.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "mathematics",
+      "algebra"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Mathematics Foundations",
+      "Algebra"
+    ],
+    "prerequisites": [
+      "arithmetic-introduction"
+    ],
+    "content": "# How do you work with algebraic expressions?"
+  },
+  {
+    "slug": "calculus-introduction",
+    "title": "Introduction to Calculus",
+    "author": "bluelearn",
+    "summary": "Explore the mathematical study of change and accumulation through derivatives and integrals.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "mathematics",
+      "calculus"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Mathematics Foundations",
+      "Calculus"
+    ],
+    "prerequisites": [
+      "algebra-how-to-express-equations"
+    ],
+    "content": "# What is Calculus?"
+  },
+  {
+    "slug": "probabilities-how-to-calculate-probability",
+    "title": "How to Calculate Probability",
+    "author": "bluelearn",
+    "summary": "Learn how to calculate the likelihood of events and reason about uncertainty.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "mathematics",
+      "probability"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Statistics Foundations",
+      "Probability"
+    ],
+    "prerequisites": [
+      "arithmetic-introduction"
+    ],
+    "content": "# How do you calculate probability?"
+  },
+  {
+    "slug": "statistics-how-to-analyse-data",
+    "title": "How to Analyse Data in Statistics",
+    "author": "bluelearn",
+    "summary": "Discover how to collect, interpret, and analyse data to uncover meaningful insights.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "mathematics",
+      "statistics"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Statistics Foundations",
+      "Statistics"
+    ],
+    "prerequisites": [
+      "probabilities-how-to-calculate-probability"
+    ],
+    "content": "# How do you analyse data?"
+  },
+  {
+    "slug": "vectors-introduction",
+    "title": "Introduction to Vectors",
+    "author": "bluelearn",
+    "summary": "Understand vectors, quantities that have both magnitude and direction, and how they are used in mathematics and physics.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "mathematics",
+      "vectors"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Mathematics Foundations",
+      "Vectors"
+    ],
+    "prerequisites": [
+      "algebra-how-to-express-equations"
+    ],
+    "content": "# What is a Vector?"
+  },
+  {
+    "slug": "mechanics-how-to-apply-newtons-laws",
+    "title": "How to Apply Newton's Laws in Mechanics",
+    "author": "bluelearn",
+    "summary": "Apply Newton's laws of motion to understand forces, movement, and physical systems.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "physics",
+      "mechanics",
+      "mathematics"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Physics Foundations",
+      "Mechanics"
+    ],
+    "prerequisites": [
+      "vectors-introduction",
+      "calculus-introduction"
+    ],
+    "content": "# How do you solve mechanics problems?"
+  },
+  {
+    "slug": "machine-learning-fundamentals",
+    "title": "Introduction to Machine Learning",
+    "author": "bluelearn",
+    "summary": "Apply Newton's laws of motion to understand forces, movement, and physical systems.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "ai",
+      "machine learning"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "AI Foundations",
+      "Machine Learning"
+    ],
+    "prerequisites": [
+      "algebra-how-to-express-equations",
+      "statistics-how-to-analyse-data"
+    ],
+    "content": "# What is Machine Learning?"
+  },
+  {
+    "slug": "physics-simulations-how-to-build-basic-simulations",
+    "title": "How to Build Basic Physics Simulations",
+    "author": "bluelearn",
+    "summary": "Create simple physics simulations by combining mathematical models with programming.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "physics",
+      "simulation"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Physics Foundations",
+      "Simulations"
+    ],
+    "prerequisites": [
+      "mechanics-how-to-apply-newtons-laws",
+      "programming-fundamentals"
+    ],
+    "content": "# How do physics simulations work?"
+  },
+  {
+    "slug": "programming-fundamentals",
+    "title": "Introduction to Programming",
+    "author": "bluelearn",
+    "summary": "Create simple physics simulations by combining mathematical models with programming.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "programming",
+      "computer science"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "CS Foundations",
+      "Programming"
+    ],
+    "prerequisites": [],
+    "content": "# What is Programming?"
+  },
+  {
+    "slug": "data-structures-how-to-choose-structures",
+    "title": "How to Choose the Right Data Structure",
+    "author": "bluelearn",
+    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "computer science",
+      "data structures"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "CS Foundations",
+      "Data Structures"
+    ],
+    "prerequisites": [
+      "programming-fundamentals"
+    ],
+    "content": "# How do you choose a data structure?"
+  },
+  {
+    "slug": "game-ai-systems-how-to-build-ai-behaviours",
+    "title": "How to Build Game AI Behaviours",
+    "author": "bluelearn",
+    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "game development",
+      "ai"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Game Development",
+      "AI Systems"
+    ],
+    "prerequisites": [
+      "programming-fundamentals",
+      "data-structures-how-to-choose-structures"
+    ],
+    "content": "# How does Game AI work?"
+  },
+  {
+    "slug": "game-development-introduction",
+    "title": "Introduction to Game Development",
+    "author": "bluelearn",
+    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "game development"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Game Development Foundations",
+      "Introduction"
+    ],
+    "prerequisites": [
+      "programming-fundamentals"
+    ],
+    "content": "# What is Game Development?"
+  },
+  {
+    "slug": "blender-character-creation",
+    "title": "Blender Character Creation",
+    "author": "bluelearn",
+    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "3d-modelling",
+      "blender",
+      "animation"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Game Development",
+      "Blender Character Creation"
+    ],
+    "prerequisites": [
+      "basic-3d-modelling"
+    ],
+    "content": "# Starting with the Base Mesh"
+  },
+  {
+    "slug": "unity-import-character",
+    "title": "How to Import a Character into Unity",
+    "author": "bluelearn",
+    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "game development",
+      "unity",
+      "3d"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Game Development",
+      "Unity Basics"
+    ],
+    "prerequisites": [
+      "game-development-introduction"
+    ],
+    "content": "# How to Import a Character into Unity."
+  },
+  {
+    "slug": "unity-character-movement",
+    "title": "How to Create Character Movement in Unity",
+    "author": "bluelearn",
+    "summary": "Create player movement systems in Unity using Character Controllers and C# scripts.",
+    "created_at": "14th June 2026",
+    "duration": 15,
+    "tags": [
+      "game development",
+      "unity",
+      "programming"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Game Development",
+      "Player Systems"
+    ],
+    "prerequisites": [
+      "unity-import-character",
+      "programming-fundamentals"
+    ],
+    "content": "# How to Create Character Movement in Unity."
+  }
+]
