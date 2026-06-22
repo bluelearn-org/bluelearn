@@ -35,7 +35,7 @@ function SubjectPage() {
         <Separator className="mb-4 bg-border" />
 
         {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {hydratedPaths.map((path: HydratedPath) => (
             <PathCard key={path.slug} path={path} />
           ))}
@@ -52,7 +52,7 @@ function SubjectPage() {
         <Separator className="mb-4 bg-border" />
 
         {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {allGuides.map((guide) => (
             <GuideCard key={guide.slug} guide={guide} />
           ))}

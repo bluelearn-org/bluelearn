@@ -155,7 +155,7 @@
     "duration": 15,
     "tags": [
       "ai",
-      "machine learning"
+      "machine-learning"
     ],
     "breadcrumbs": [
       "Home",
@@ -199,7 +199,7 @@
     "duration": 15,
     "tags": [
       "programming",
-      "computer science"
+      "computer-science"
     ],
     "breadcrumbs": [
       "Home",
@@ -217,8 +217,8 @@
     "created_at": "14th June 2026",
     "duration": 15,
     "tags": [
-      "computer science",
-      "data structures"
+      "computer-science",
+      "data-structures"
     ],
     "breadcrumbs": [
       "Home",
@@ -234,11 +234,11 @@
     "slug": "game-ai-systems-how-to-build-ai-behaviours",
     "title": "How to Build Game AI Behaviours",
     "author": "bluelearn",
-    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "summary": "Understand game AI systems and how to develop custom AI behviours.",
     "created_at": "14th June 2026",
     "duration": 15,
     "tags": [
-      "game development",
+      "game-development",
       "ai"
     ],
     "breadcrumbs": [
@@ -256,11 +256,11 @@
     "slug": "game-development-introduction",
     "title": "Introduction to Game Development",
     "author": "bluelearn",
-    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "summary": "Learn how to create and animate game characters and bring them into Unity.",
     "created_at": "14th June 2026",
     "duration": 15,
     "tags": [
-      "game development"
+      "game-development"
     ],
     "breadcrumbs": [
       "Home",
@@ -276,7 +276,7 @@
     "slug": "blender-character-creation",
     "title": "Blender Character Creation",
     "author": "bluelearn",
-    "summary": "Understand common data structures and learn when to use each one effectively.",
+    "summary": "Learn how to create characters in blender starting with the initial sketch to the 3D character.",
     "created_at": "14th June 2026",
     "duration": 15,
     "tags": [
@@ -292,7 +292,7 @@
     "prerequisites": [
       "basic-3d-modelling"
     ],
-    "content": "# Starting with the Base Mesh"
+    "content": "# Starting with the character concept sketch"
   },
   {
     "slug": "unity-import-character",
@@ -302,7 +302,7 @@
     "created_at": "14th June 2026",
     "duration": 15,
     "tags": [
-      "game development",
+      "game-development",
       "unity",
       "3d"
     ],
@@ -324,7 +324,7 @@
     "created_at": "14th June 2026",
     "duration": 15,
     "tags": [
-      "game development",
+      "game-development",
       "unity",
       "programming"
     ],

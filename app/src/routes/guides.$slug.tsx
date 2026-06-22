@@ -1,67 +1,61 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, notFound } from "@tanstack/react-router"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useMemo } from "react"
 import {
-  Bookmark,
-  ExternalLink,
+  ChevronDown,
+  ChevronUp,
   Flag,
-  MessageSquare,
+  Pencil,
 } from "lucide-react"
+
+import type { SubjectReference } from "@/types/subjects"
+import type { GuideReference, HydratedGuide } from "@/types/guides"
 
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CollapsibleSection } from "@/components/CollapsibleSection"
+
+
+import { extractHeadings, formatDuration } from "@/lib/guideUtils"
+import { getGuideBySlug, hydrateGuide } from "@/lib/getData"
 
 import guides from "@/data/guides.json"
-import { extractHeadings } from "@/lib/guideUtils"
-import { CollapsibleSection } from "@/components/CollapsibleSection"
+import subjects from "@/data/subjects.json"
 
 export const Route = createFileRoute("/guides/$slug")({
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const headings = useMemo(() => extractHeadings(guides[0].content), [])
+  const { slug } = Route.useParams()
+
+  const guide = getGuideBySlug(guides, slug);
+
+  if (!guide) { throw notFound }
+
+  const hydratedGuide: HydratedGuide = hydrateGuide(guide, guides, subjects);
+
+  const headings = useMemo(() => extractHeadings(guide.content), [])
 
   return (
     <div className="mx-auto max-w-[1280px] h-[calc(100vh-70px)] border-x bg-background">
 
       <section className="grid grid-cols-[320px_1fr] border-b">
-
         {/* SIDEBAR */}
         <aside className="h-[calc(100vh-70px)] overflow-y-auto border-r px-6 py-6">
-
-          {/* Cards */}
-          <div className="mb-6 grid grid-cols-2 gap-3 text-center">
-
-            <div className="rounded-md border p-3 place-content-center">
-              <p className="data-label">
-                Read time
-              </p>
-              <p className="mt-1 data-value">10 min</p>
-            </div>
-
-            <div className="rounded-md border p-3 place-content-center">
-              <p className="data-label">
-                Level
-              </p>
-              <p className="mt-1 data-value">3</p>
-
-              <Button
-                variant="link"
-                className="mt-1 h-auto p-0 text-xs text-brand-blue"
-              >
-                View Graph <ExternalLink className="ml-1 h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-
           {/* Prerequisites */}
           <CollapsibleSection title="Prerequisites">
-            <ul className="list-disc pl-4">
-              {guides[0].prerequisites.map((item: string) => (
-                <li key={item}>{item}</li>
+            <ul className="space-y-2">
+              {hydratedGuide.prerequisites.map((prereq: GuideReference) => (
+                <li
+                  key={prereq.slug}
+                  className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                  style={{
+                    paddingLeft: 6
+                  }}
+                >{prereq.title}</li>
               ))}
             </ul>
           </CollapsibleSection>
@@ -74,7 +68,7 @@ function RouteComponent() {
                   key={idx}
                   className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
                   style={{
-                    paddingLeft: h.level === 2 ? 0 : h.level === 3 ? 12 : 24,
+                    paddingLeft: h.level === 1 ? 6 : h.level === 2 ? 12 : h.level === 3 ? 24: 28,
                   }}
                 >
                   {h.text}
@@ -97,7 +91,7 @@ function RouteComponent() {
           <div className="mb-6 flex items-center justify-between">
 
             <ul className="flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-muted-foreground">
-              {guides[0].breadcrumbs.map((crumb: string, idx: number) => (
+              {hydratedGuide.breadcrumbs.map((crumb: string, idx: number) => (
                 <li key={crumb} className="flex items-center gap-2 mono-micro">
                   <span>{crumb}</span>
                   {idx < guides[0].breadcrumbs.length - 1 && <span>/</span>}
@@ -107,12 +101,20 @@ function RouteComponent() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <MessageSquare className="h-4 w-4" />
+              <Button variant="default" size="icon">
+                <Pencil className="h-4 w-4" />
+              </Button>
+
+              <Button variant="outline">
+                Open in Graph
               </Button>
 
               <Button variant="ghost" size="icon">
-                <Bookmark className="h-4 w-4" />
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+
+              <Button variant="ghost" size="icon">
+                <ChevronDown className="h-4 w-4" />
               </Button>
 
               <Button variant="ghost" size="icon">
@@ -130,31 +132,33 @@ function RouteComponent() {
           <Separator className="mb-8" />
 
           {/* Header */}
-          <header className="mb-10">
+          <header className="mb-5">
             <h1 className="text-3xl font-bold tracking-[-0.04em]">
-              {guides[0].title}
+              {hydratedGuide.title}
             </h1>
 
             <div className="mt-3 mono-micro">
-              {guides[0].author} • {guides[0].created_at}
+              {hydratedGuide.author} | {guides[0].created_at} | {formatDuration(guide.duration)}
             </div>
 
             <div className="mt-4 flex gap-2">
-              {guides[0].tags.map((tag: string) => (
+              {hydratedGuide.tags.map((tag: SubjectReference) => (
                 <Badge
-                  key={tag}
+                  key={tag.slug}
                   variant="outline"
                   className="rounded-full border bg-badge text-badge-foreground mono-micro tracking-[0.08em]"
                 >
-                  {tag}
+                  {tag.name}
                 </Badge>
               ))}
             </div>
           </header>
 
+          <Separator className="mb-8" />
+
           <article className="markdown">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {guides[0].content}
+              {hydratedGuide.content}
             </ReactMarkdown>
           </article>
         </main>

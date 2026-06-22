@@ -1,6 +1,7 @@
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 
+
 // format duration mins -> hrs & mins
 export function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
@@ -16,6 +17,7 @@ export function formatDuration(minutes: number): string {
 
   return `${hours} hr${hours > 1 ? "s" : ""} ${mins} min`;
 }
+
 
 // extract headings from markdown content
 export const extractHeadings = (markdown: string) => {

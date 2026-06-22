@@ -1,4 +1,4 @@
-import type { Subject } from "@/types/subjects";
+import type { SubjectReference } from "@/types/subjects";
 
 export type Guide = {
   slug: string;
@@ -13,6 +13,15 @@ export type Guide = {
   content: string;
 };
 
-export type HydratedGuide = Omit<Guide, "tags"> & {
-  tags: Array<Subject>;
+export type GuideReference = {
+  slug: string;
+  title: string;
+};
+
+export type HydratedGuide = Omit<
+  Guide,
+  "tags" | "prerequisites"
+> & {
+  tags: Array<SubjectReference>;
+  prerequisites: Array<GuideReference>;
 };

@@ -7,3 +7,7 @@ export type Subject = {
     contributors_total: number;
     languages_total: number;
 }
+export type SubjectReference = {
+    slug: string;
+    name: string;
+}

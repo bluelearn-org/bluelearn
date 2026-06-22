@@ -33,7 +33,7 @@ function PathPage() {
         <Separator className="mb-4 bg-border" />
         
         {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {hydratedPaths[0].levels.map((level: Level) => (
             <GuideCard key={level.guide.slug} guide={level.guide} level={level.level} />
           ))}

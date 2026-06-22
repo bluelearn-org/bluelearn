@@ -9,6 +9,15 @@
     "languages_total": 12
   },
   {
+    "slug": "ai",
+    "name": "AI",
+    "summary": "Guides covering Artificial Intelligence (AI), Machine Learning (ML) and Deep Learning.",
+    "paths_total": 5,
+    "guides_total": 142,
+    "contributors_total": 38,
+    "languages_total": 12
+  },
+  {
     "slug": "archery",
     "name": "Archery",
     "summary": "Guides on learning archery, including bow handling, shooting techniques, aiming accuracy, form, and target practice fundamentals.",
@@ -205,5 +214,122 @@
     "guides_total": 149,
     "contributors_total": 37,
     "languages_total": 12
+  },
+  {
+    "slug": "probability",
+    "name": "Probability",
+    "summary": "Guides covering probability theory, random events, likelihood calculations, probability distributions, and reasoning under uncertainty.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "statistics",
+    "name": "Statistics",
+    "summary": "Guides covering data collection, analysis, interpretation, visualisation, statistical testing, and drawing conclusions from data.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "vectors",
+    "name": "Vectors",
+    "summary": "Guides covering vector mathematics, magnitude, direction, vector operations, coordinate systems, and applications in science and engineering.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "physics",
+    "name": "Physics",
+    "summary": "Guides covering the fundamental laws of nature, including motion, forces, energy, matter, waves, electricity, and modern physics.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "mechanics",
+    "name": "Mechanics",
+    "summary": "Guides covering motion, forces, momentum, energy, statics, dynamics, and the behaviour of physical systems.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "machine-learning",
+    "name": "Machine Learning",
+    "summary": "Guides covering supervised and unsupervised learning, model training, feature engineering, evaluation techniques, and practical machine learning systems.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "simulation",
+    "name": "Simulation",
+    "summary": "Guides covering the creation of simulations, modelling real-world systems, numerical methods, and virtual experimentation.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "computer-science",
+    "name": "Computer Science",
+    "summary": "Guides covering algorithms, computation, software systems, data structures, programming principles, and theoretical foundations of computing.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "data-structures",
+    "name": "Data Structures",
+    "summary": "Guides covering arrays, linked lists, stacks, queues, trees, graphs, hash tables, and efficient data organisation techniques.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "3d-modelling",
+    "name": "3D Modelling",
+    "summary": "Guides covering the creation of three-dimensional assets, including modelling techniques, topology, sculpting, texturing, and optimisation.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "blender",
+    "name": "Blender",
+    "summary": "Guides covering the Blender software suite, including modelling, sculpting, animation, rendering, compositing, and asset creation workflows.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "animation",
+    "name": "Animation",
+    "summary": "Guides covering animation principles, character movement, rigging, keyframing, motion workflows, and visual storytelling.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
+  },
+  {
+    "slug": "3d",
+    "name": "3D",
+    "summary": "Guides covering three-dimensional graphics, environments, assets, rendering techniques, and interactive 3D applications.",
+    "paths_total": 5,
+    "guides_total": 0,
+    "contributors_total": 0,
+    "languages_total": 0
   }
 ]

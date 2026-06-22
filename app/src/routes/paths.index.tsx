@@ -7,8 +7,8 @@ import { PathCard } from "@/components/cards/PathCard"
 
 import { hydratePaths } from "@/lib/getData"
 
-import paths from "@/data/paths.json"
 import guides from "@/data/guides.json"
+import paths from "@/data/paths.json"
 
 
 export const Route = createFileRoute("/paths/")({ component: RouteComponent })
@@ -28,7 +28,7 @@ function RouteComponent() {
         <Separator className="mb-4 bg-border" />
 
         {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {hydratedPaths.map((path: HydratedPath) => (
             <PathCard key={path.slug} path={path} />
           ))}

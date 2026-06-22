@@ -22,7 +22,7 @@ function RouteComponent() {
         <Separator className="mb-4 bg-border" />
 
         {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {subjects.map((subject: Subject) => (
             <SubjectCard key={subject.slug} subject={subject} />
           ))}

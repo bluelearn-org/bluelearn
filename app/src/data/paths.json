@@ -6,6 +6,9 @@
     "curator": "bluelearn",
     "created_at": "14th June 2026",
     "duration": 720,
+    "tags": [
+      "game-development"
+    ],
     "levels": [
       {
         "level": 1,
