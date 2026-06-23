@@ -1,6 +1,11 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { createGuideSchema, createVariantSchema } from '@bluelearn/schemas'
+import {
+  castVoteSchema,
+  createGuideSchema,
+  createVariantSchema,
+  rollbackRevisionSchema,
+} from '@bluelearn/schemas'
 import { requireUser } from '../middleware/auth.middleware'
 import type { HonoEnv } from '../types'
 import {
@@ -13,8 +18,17 @@ import {
   listGuideVariants,
   listPublishedGuides,
 } from '../services/guide.service'
+import {
+  archiveVariant,
+  castVote,
+  createVariantRevision,
+  getVariant,
+  listVariantRevisions,
+  retractVote,
+  rollbackVariant,
+} from '../services/variant.service'
 
-// Normalize blank summary/body to NULL to match the create_topic RPC defaults
+// Normalize blank summary/body to NULL to match the create_guide RPC defaults
 const createGuideBody = createGuideSchema.extend({
   summary: createGuideSchema.shape.summary.transform((v) => v || null),
   body: createGuideSchema.shape.body.transform((v) => v || null),
@@ -84,26 +98,61 @@ export const guidesRouter = new Hono<HonoEnv>()
   })
 
 export const variantsRouter = new Hono<HonoEnv>()
-  // Returns the variant content and its vote tally.
-  .get('/:id', (c) => c.json({ error: 'Not implemented' }, 501))
+  // Returns the variant content and its vote tally as { variant }.
+  .get('/:id', async (c) => {
+    const { variant } = await getVariant(c.get('supabase'), c.req.param('id'))
+    return c.json({ variant })
+  })
 
-  // Archives the variant.
-  .delete('/:id', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
+  // Archives the variant. 404 if missing or not permitted.
+  .delete('/:id', requireUser, async (c) => {
+    const variant = await archiveVariant(c.get('supabase'), c.req.param('id'))
+    return c.json({ variant })
+  })
 
-  // Casts or updates the caller's vote.
-  .put('/:id/vote', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
+  // Stores the caller's vote; returns { vote }.
+  .put('/:id/vote', requireUser, zValidator('json', castVoteSchema), async (c) => {
+    const { vote } = await castVote(
+      c.get('supabase'),
+      c.get('user').id,
+      c.req.param('id'),
+      c.req.valid('json'),
+    )
+    return c.json({ vote })
+  })
 
-  // Retracts the caller's vote.
-  .delete('/:id/vote', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
+  // 204 once the caller's vote is gone.
+  .delete('/:id/vote', requireUser, async (c) => {
+    await retractVote(c.get('supabase'), c.get('user').id, c.req.param('id'))
+    return c.body(null, 204)
+  })
 
-  // Returns the revision history for this variant.
-  .get('/:id/revisions', (c) => c.json({ error: 'Not implemented' }, 501))
+  // Returns the published versions as { revisions }, newest live first.
+  .get('/:id/revisions', async (c) => {
+    const revisions = await listVariantRevisions(c.get('supabase'), c.req.param('id'))
+    return c.json({ revisions })
+  })
 
-  // Starts a new draft revision.
-  .post('/:id/revisions', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
+  // 201 with { revision_id } for the editor route.
+  .post('/:id/revisions', requireUser, async (c) => {
+    const { revision_id } = await createVariantRevision(
+      c.get('supabase'),
+      c.get('user').id,
+      c.req.param('id'),
+    )
+    return c.json({ revision_id }, 201)
+  })
 
-  // Restores an older revision as a new one.
-  .post('/:id/rollback', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
+  // 201 with { revision_id } for the restored snapshot's new revision.
+  .post('/:id/rollback', requireUser, zValidator('json', rollbackRevisionSchema), async (c) => {
+    const { revision_id } = await rollbackVariant(
+      c.get('supabase'),
+      c.get('user').id,
+      c.req.param('id'),
+      c.req.valid('json').revision_id,
+    )
+    return c.json({ revision_id }, 201)
+  })
 
 export const guideRevisionsRouter = new Hono<HonoEnv>()
   // Returns one revision and its status.
