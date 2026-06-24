@@ -54,7 +54,7 @@ function RouteComponent() {
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
 
-          <Button className="h-14 px-8 btn">Search</Button>
+          <Button className="h-14 px-8 btn-pri">Search</Button>
         </div>
       </section>
 

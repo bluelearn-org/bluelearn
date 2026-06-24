@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
 
 import { Separator } from "@/components/ui/separator"
+import ContributionFlow from "@/components/contribute/ContributionFlow"
 
 
 export const Route = createFileRoute("/contribute")({ component: RouteComponent })
-
 
 function RouteComponent() {
   return (
@@ -17,6 +17,8 @@ function RouteComponent() {
         </div>
 
         <Separator className="mb-8 bg-border" />
+
+        <ContributionFlow />
 
         </section>
     </div>

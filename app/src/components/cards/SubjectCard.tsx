@@ -55,12 +55,12 @@ export const SubjectCard = ({ subject }: PropTypes) => {
         </div>
 
         <div className="col-span-2 flex items-center justify-around px-4">
-          <Button variant="outline">
+          <Button variant="outline" className="btn-sec">
             View Graph
           </Button>
 
-          <Button variant="default">
-            Start Learning
+          <Button className="btn-pri">
+            Start Reading
           </Button>
         </div>
       </CardFooter>

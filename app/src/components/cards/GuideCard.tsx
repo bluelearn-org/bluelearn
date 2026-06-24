@@ -90,11 +90,11 @@ export const GuideCard = ({ guide, level }: PropTypes) => {
         </div>
 
         <div className="col-span-2 flex justify-around items-center px-4">
-          <Button variant="outline">
+          <Button variant="outline" className="btn-sec">
             Open in Graph
           </Button>
 
-          <Button variant="default">
+          <Button className="btn-pri">
             Start Reading
           </Button>
         </div>
