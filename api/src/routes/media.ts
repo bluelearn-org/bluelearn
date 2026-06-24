@@ -83,7 +83,45 @@ export const mediaRouter = new Hono<HonoEnv>()
     return c.json({ message: 'Asset deleted successfully' }, 200)
   })
 
-  // Get location of file from database
+  // Download file from database and display in browser
+  .get('/:id/display', async (c) => {
+    const id = c.req.param('id')
+    const supabase = c.get('supabase')
+
+    const { data: storageData, error } = await supabase
+      .from('media_assets')
+      .select('storage_key')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116')
+        return c.json({ error: 'Media not found' }, 404)
+
+      console.error('media download failed:', error)
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+
+    let storagePath = storageData.storage_key
+    storagePath = storagePath.split('/').map(encodeURIComponent).join('/')
+
+    const { data: downloadData, error: downloadError } = await supabase.storage
+      .from('media_assets')
+      .download(storagePath)
+
+    if (downloadError)
+      return c.json({ error: downloadError.message }, 500)
+
+    const buffer = await downloadData.arrayBuffer()
+
+    return new Response(buffer, {
+      headers: {
+        'Content-Type': downloadData.type,
+      }
+    })
+  })
+
+  // Get location of file, and other info, from database
   .get('/:id', async (c) => {
     const id = c.req.param('id')
 
