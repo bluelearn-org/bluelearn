@@ -1,6 +1,0 @@
-type: object
-description: Re-include a (previously skipped) guide as a node.
-properties:
-  guide_base_id:
-    $ref: '../common/Uuid.yaml'
-required: [guide_base_id]

@@ -153,6 +153,7 @@ export type Database = {
           status: Database["public"]["Enums"]["revision_status"]
           summary: string | null
           title: string | null
+          updated_at: string
         }
         Insert: {
           approved_at?: string | null
@@ -166,6 +167,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["revision_status"]
           summary?: string | null
           title?: string | null
+          updated_at?: string
         }
         Update: {
           approved_at?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["revision_status"]
           summary?: string | null
           title?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -319,6 +322,7 @@ export type Database = {
         Row: {
           guide_base_id: string
           guide_id: string
+          is_included: boolean
           is_target: boolean
           note: string | null
           revision_id: string
@@ -326,6 +330,7 @@ export type Database = {
         Insert: {
           guide_base_id: string
           guide_id: string
+          is_included?: boolean
           is_target?: boolean
           note?: string | null
           revision_id: string
@@ -333,6 +338,7 @@ export type Database = {
         Update: {
           guide_base_id?: string
           guide_id?: string
+          is_included?: boolean
           is_target?: boolean
           note?: string | null
           revision_id?: string
@@ -365,6 +371,7 @@ export type Database = {
           status: Database["public"]["Enums"]["learning_path_revision_status"]
           summary: string | null
           title: string | null
+          updated_at: string
         }
         Insert: {
           author_id?: string | null
@@ -376,6 +383,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["learning_path_revision_status"]
           summary?: string | null
           title?: string | null
+          updated_at?: string
         }
         Update: {
           author_id?: string | null
@@ -387,6 +395,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["learning_path_revision_status"]
           summary?: string | null
           title?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

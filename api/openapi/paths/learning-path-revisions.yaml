@@ -9,7 +9,7 @@
   get:
     tags: [learning-path-revisions]
     summary: Get a revision snapshot
-    description: Metadata, included nodes, and the revision's frozen projected edges.
+    description: Metadata, the revision's nodes, and the edges between them.
     operationId: getPathRevision
     responses:
       '200':
@@ -71,45 +71,6 @@
       '404':
         $ref: '../components/responses/_shared.yaml#/NotFound'
 
-/path-revisions/{id}/nodes:
-  parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
-  post:
-    tags: [learning-path-revisions]
-    summary: Re-include a skipped guide as a node
-    operationId: addPathNode
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '../components/schemas/learning-path-revisions/AddNodeRequest.yaml'
-    responses:
-      '201':
-        description: The added node
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                node:
-                  $ref: '../components/schemas/learning-path-revisions/PathNode.yaml'
-              required: [node]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
-
 /path-revisions/{id}/nodes/{baseId}:
   parameters:
     - name: id
@@ -126,7 +87,9 @@
   patch:
     tags: [learning-path-revisions]
     summary: Update a node
-    description: Swap the chosen variant, set a note, or toggle is_target.
+    description: >
+      Swap the chosen variant, set a note, toggle is_target, or skip /
+      re-include the node (is_included). Skipping is a soft hide, not a delete.
     operationId: updatePathNode
     security:
       - bearerAuth: []
@@ -149,22 +112,6 @@
               required: [node]
       '400':
         $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
-  delete:
-    tags: [learning-path-revisions]
-    summary: Skip a guide
-    description: Removes the guide from the included set.
-    operationId: removePathNode
-    security:
-      - bearerAuth: []
-    responses:
-      '204':
-        description: Node removed
       '401':
         $ref: '../components/responses/_shared.yaml#/Unauthorized'
       '403':

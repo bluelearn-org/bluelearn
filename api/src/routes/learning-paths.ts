@@ -24,21 +24,15 @@ export const learningPathsRouter = new Hono<HonoEnv>()
   .post('/:slug/revisions', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
 
 export const learningPathRevisionsRouter = new Hono<HonoEnv>()
-  // Gets the full snapshot of one revision (current or old), including metadata,
-  // included nodes, and the revision's frozen projected edges
+  // Gets the full snapshot of one revision: metadata, nodes, and projected edges.
   .get('/:id', (c) => c.json({ error: 'Not implemented' }, 501))
 
-  // Overwrite a draft revision's metadata (pre-submit only)
+  // Overwrite a draft revision's metadata (draft only)
   .patch('/:id', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
 
-  // Re-include a skipped topic as a node
-  .post('/:id/nodes', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
-
-  // Swap the chosen variant, set a note, or toggle is_target on a node
+  // Edit a node: swap the chosen variant, set a note, toggle is_target, or
+  // skip/re-include it. Skipping is a soft hide, not a delete.
   .patch('/:id/nodes/:baseId', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
-
-  // Skip a topic: remove it from the included set
-  .delete('/:id/nodes/:baseId', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))
 
   // Publish the draft directly: freeze its edges and point the path at it
   .post('/:id/publish', requireUser, (c) => c.json({ error: 'Not implemented' }, 501))

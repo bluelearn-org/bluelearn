@@ -5,6 +5,24 @@ import { ServiceError } from '../lib/service-error'
 
 type DB = SupabaseClient<Database>
 
+type GuideDraft = {
+  revision_id: string
+  guide_id: string
+  title: string
+  guide_slug: string | null
+  created_at: string
+  updated_at: string
+}
+
+type PathDraft = {
+  revision_id: string
+  path_id: string
+  title: string
+  path_slug: string | null
+  created_at: string
+  updated_at: string
+}
+
 async function fetchRoles(supabase: DB, userId: string) {
   const { data } = await supabase.from('user_roles').select('role').eq('user_id', userId)
   return data?.map((r) => r.role) ?? []
@@ -37,6 +55,50 @@ export async function getMyIdentity(supabase: DB, userId: string) {
 
   const roles = await fetchRoles(supabase, userId)
   return { profile, roles }
+}
+
+// The caller's own draft revisions. Guide drafts and path drafts are returned
+// as separate lists, each ordered most-recently-edited first.
+export async function getMyDrafts(
+  supabase: DB,
+  userId: string,
+): Promise<{ guide_drafts: GuideDraft[]; path_drafts: PathDraft[] }> {
+  const [guides, paths] = await Promise.all([
+    supabase
+      .from('guide_revisions')
+      .select('id, guide_id, title, created_at, updated_at, guides(slug)')
+      .eq('author_id', userId)
+      .eq('status', 'draft')
+      .order('updated_at', { ascending: false }),
+    supabase
+      .from('learning_path_revisions')
+      .select('id, learning_path_id, title, created_at, updated_at, learning_paths(slug)')
+      .eq('author_id', userId)
+      .eq('status', 'draft')
+      .order('updated_at', { ascending: false }),
+  ])
+
+  if (guides.error) throw new ServiceError(guides.error.message, 500)
+  if (paths.error) throw new ServiceError(paths.error.message, 500)
+
+  return {
+    guide_drafts: guides.data.map((r) => ({
+      revision_id: r.id,
+      guide_id: r.guide_id,
+      title: r.title ?? 'Untitled',
+      guide_slug: r.guides?.slug ?? null,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    })),
+    path_drafts: paths.data.map((r) => ({
+      revision_id: r.id,
+      path_id: r.learning_path_id,
+      title: r.title ?? 'Untitled',
+      path_slug: r.learning_paths?.slug ?? null,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    })),
+  }
 }
 
 // Apply the caller's profile edits and return the updated row and roles.

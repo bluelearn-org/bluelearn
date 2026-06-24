@@ -1,5 +1,7 @@
 type: object
-description: Swap the chosen variant, set a note, or toggle is_target. Partial.
+description: >
+  Swap the chosen variant, set a note, toggle is_target, or skip / re-include the
+  node (is_included). Skipping is a soft hide, not a delete. Partial.
 minProperties: 1
 properties:
   guide_id:
@@ -7,6 +9,9 @@ properties:
   is_target:
     type: boolean
     example: true
+  is_included:
+    type: boolean
+    example: false
   note:
     type: [string, 'null']
     example: Optional note

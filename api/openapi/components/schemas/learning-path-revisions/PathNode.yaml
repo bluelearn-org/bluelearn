@@ -9,7 +9,14 @@ properties:
   is_target:
     type: boolean
     example: true
+  is_included:
+    description: >
+      False means the curator skipped this topic: it stays on the revision as a
+      re-includable candidate but is excluded from the published curriculum and
+      bridged over by edge projection.
+    type: boolean
+    example: true
   note:
     type: [string, 'null']
     example: Optional curator note
-required: [guide_base_id, guide_id, is_target]
+required: [guide_base_id, guide_id, is_target, is_included]

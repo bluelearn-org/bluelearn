@@ -1,0 +1,23 @@
+type: object
+description: >
+  One of the caller's in-progress guide draft revisions. Drafts never surface
+  in the public guide listings (those key on the shell's published
+  current_revision_id), so this is the only way back into one.
+properties:
+  revision_id:
+    description: The draft revision. The guide editor route takes this directly.
+    $ref: '../common/Uuid.yaml'
+  guide_id:
+    description: The guide (variant) the revision belongs to.
+    $ref: '../common/Uuid.yaml'
+  title:
+    type: string
+    example: Derivatives
+  guide_slug:
+    description: The guide's public slug, or null while it has no published revision yet.
+    type: [string, 'null']
+  created_at:
+    $ref: '../common/Timestamp.yaml'
+  updated_at:
+    $ref: '../common/Timestamp.yaml'
+required: [revision_id, guide_id, title, guide_slug, created_at, updated_at]

@@ -4,6 +4,7 @@ import { updateProfileSchema } from '@bluelearn/schemas'
 import { getServiceSupabase, requireUser } from '../middleware/auth.middleware'
 import type { HonoEnv } from '../types'
 import {
+  getMyDrafts,
   getMyIdentity,
   getPublicProfile,
   updateMyProfile,
@@ -14,6 +15,14 @@ export const meRouter = new Hono<HonoEnv>()
   .get('/', requireUser, async (c) => {
     const { profile, roles } = await getMyIdentity(c.get('supabase'), c.get('user').id)
     return c.json({ profile, roles })
+  })
+
+  // Lists the caller's own draft revisions (guides + paths), newest first, for
+  // a "continue editing" view. Drafts are absent from public listings, so this
+  // is the way back in. Keyed on revision id since an unpublished shell has no slug.
+  .get('/drafts', requireUser, async (c) => {
+    const drafts = await getMyDrafts(c.get('supabase'), c.get('user').id)
+    return c.json(drafts)
   })
 
   // Updates the caller's profile. 409 if the username is taken.

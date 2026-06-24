@@ -46,6 +46,8 @@ components:
 paths:
   /me:
     $ref: './paths/identity.yaml#/~1me'
+  /me/drafts:
+    $ref: './paths/identity.yaml#/~1me~1drafts'
   /profiles/{username}:
     $ref: './paths/identity.yaml#/~1profiles~1{username}'
 
@@ -85,8 +87,6 @@ paths:
 
   /path-revisions/{id}:
     $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}'
-  /path-revisions/{id}/nodes:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1nodes'
   /path-revisions/{id}/nodes/{baseId}:
     $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1nodes~1{baseId}'
   /path-revisions/{id}/publish:

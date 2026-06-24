@@ -1,0 +1,23 @@
+type: object
+description: >
+  One of the caller's in-progress learning-path draft revisions. Drafts never
+  surface in the public path listings (those key on the shell's published
+  current_revision_id), so this is the only way back into one.
+properties:
+  revision_id:
+    description: The draft revision. The path editor route takes this directly.
+    $ref: '../common/Uuid.yaml'
+  path_id:
+    description: The learning path the revision belongs to.
+    $ref: '../common/Uuid.yaml'
+  title:
+    type: string
+    example: Backend Engineer
+  path_slug:
+    description: The path's public slug, or null while it has no published revision yet.
+    type: [string, 'null']
+  created_at:
+    $ref: '../common/Timestamp.yaml'
+  updated_at:
+    $ref: '../common/Timestamp.yaml'
+required: [revision_id, path_id, title, path_slug, created_at, updated_at]

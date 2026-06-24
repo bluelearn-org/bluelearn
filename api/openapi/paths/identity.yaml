@@ -50,6 +50,37 @@
             example:
               error: Username already taken
 
+/me/drafts:
+  get:
+    tags: [identity]
+    summary: The caller's in-progress drafts
+    description: >
+      The caller's draft revisions for a "continue editing" view, guide drafts
+      and path drafts as separate lists, each most-recently-edited first. RLS
+      already scopes drafts to their author.
+    operationId: getMyDrafts
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: The caller's guide and path draft revisions
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guide_drafts:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/identity/GuideDraft.yaml'
+                path_drafts:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/identity/PathDraft.yaml'
+              required: [guide_drafts, path_drafts]
+      '401':
+        $ref: '../components/responses/_shared.yaml#/Unauthorized'
+
 /profiles/{username}:
   get:
     tags: [identity]
