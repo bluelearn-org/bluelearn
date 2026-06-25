@@ -1,0 +1,43 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+import { notFound, badRequest, internalServerError } from '../lib/errors';
+
+export function fileNameCleaner(name: string) {
+  // Clean file names before upload
+  name = name.replaceAll(' ', '-')                 // Replace spaces with en dashes
+  name = name.replaceAll(/[^a-zA-Z0-9_\-\.]/g, '') // Remove special characters
+  return name
+}
+
+export async function uploadMediaFile(file: File, userId: string, db: SupabaseClient) {
+  // Uploads media file to bucket and store path in database
+  const cleanFileName = fileNameCleaner(file.name)
+
+  // Upload to storage
+  const { data: uploadData, error: uploadError } = await db.storage
+    .from('media_assets')
+    .upload(`uploads/${Date.now()}_${cleanFileName}`, file)
+
+  if (uploadError) {
+    console.error('media_assets upload failed:', uploadError.message)
+    throw badRequest('File upload failed')
+  }
+
+  // Insert path of uploadData into database
+  const { data: databaseEntry, error: databaseError } = await db
+    .from('media_assets')
+    .insert({
+      storage_key: uploadData.path,
+      uploaded_by: userId,
+      created_at: new Date().toUTCString(),
+      id: uploadData.id
+    })
+    .select()
+    .single()
+
+  if (databaseError) {
+    console.error('media_assets insert failed:', databaseError.message)
+    throw internalServerError('Failed to store file metadata in database')
+  }
+
+  return databaseEntry
+}
