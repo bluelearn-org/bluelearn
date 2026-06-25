@@ -1,92 +1,116 @@
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
 import { requireUser } from '../middleware/auth.middleware'
+import { createPrerequisiteSchema } from '@bluelearn/schemas'
 import type { HonoEnv } from '../types'
 
 export const prerequisitesRouter = new Hono<HonoEnv>()
 
-  // POST /prerequisites, Creates a guide_edge
-  .post('/', requireUser, async (c) => {
-    try {
-      const body = await c.req.json()
-      const { from_guide_base_id, to_guide_base_id } = body
+  // POST /prerequisites -> create a guide_edge
+  .post(
+    '/',
+    requireUser,
+    zValidator('json', createPrerequisiteSchema),
+    async (c) => {
+      const { from_guide_base_id, to_guide_base_id } =
+        c.req.valid('json')
 
-      if (!from_guide_base_id || !to_guide_base_id) {
-        return c.json(
-          { error: 'Missing from_guide_base_id or to_guide_base_id' },
-          400
-        )
-      }
+      const supabase = c.get('supabase')
 
-      // Insert into guide_edges table
-      const newEdge = await c.env.DB
-        .insertInto('guide_edges')
-        .values({
+      const { data, error } = await supabase
+        .from('guide_edges')
+        .insert({
           from_guide_base_id,
           to_guide_base_id,
+          edge_type: 'prerequisite',
           is_suspended: false,
-          created_at: new Date().toISOString(),
         })
-        .returningAll()
-        .executeTakeFirst()
+        .select()
+        .single()
 
-      return c.json({ data: newEdge }, 201)
-    } catch (err) {
-      console.error(err)
-      return c.json({ error: 'Failed to create prerequisite' }, 500)
+      if (error) {
+        switch (error.code) {
+
+          // unique_violation -> duplicate
+          case '23505':
+            return c.json(
+              { error: 'Prerequisite already exists' },
+              409
+            )
+          
+          // check_violation -> self-loop
+          case '23514':
+            return c.json(
+              { error: 'A guide cannot depend on itself' },
+              422
+            )
+          
+          // cycle detection trigger
+          case 'P0001':
+            return c.json(
+              { error: 'This would create a cycle' },
+              409
+            )
+
+          default:
+            console.error(error)
+            return c.json(
+              { error: 'Failed to create prerequisite' },
+              500
+            )
+        }
+      }
+
+      return c.json({ data }, 201)
     }
-  })
+  )
 
-  // DELETE /prerequisites, suspends
+  // DELETE /prerequisites/:id -> suspend for the verifiers
   .delete('/:id', requireUser, async (c) => {
-    try {
-      const id = c.req.param('id')
+    const id = c.req.param('id')
+    const supabase = c.get('supabase')
 
-      if (!id) {
-        return c.json({ error: 'Missing id' }, 400)
-      }
+    const { data, error } = await supabase
+      .from('guide_edges')
+      .update({ is_suspended: true })
+      .eq('id', id)
+      .select()
+      .single()
 
-      // Soft delete → set is_suspended = true
-      const updated = await c.env.DB
-        .updateTable('guide_edges')
-        .set({
-          is_suspended: true,
-          updated_at: new Date().toISOString(),
-        })
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst()
-
-      if (!updated) {
-        return c.json({ error: 'Guide edge not found' }, 404)
-      }
-
-      return c.json({ data: updated }, 200)
-    } catch (err) {
-      console.error(err)
-      return c.json({ error: 'Failed to suspend prerequisite' }, 500)
+    if (error) {
+      console.error(error)
+      return c.json(
+        { error: 'Failed to suspend prerequisite' },
+        500
+      )
     }
+
+    if (!data) {
+      return c.json({ error: 'Guide edge not found' }, 404)
+    }
+
+    return c.json({ data }, 200)
   })
 
 // TODOS ROUTER
 export const todosRouter = new Hono<HonoEnv>()
 
-  // GET /todos, Return all open todo prerequisites
+  // GET /todos → fetch open todo prerequisites
   .get('/', async (c) => {
-    try {
-      const todos = await c.env.DB
-        .selectFrom('todo_prerequisites')
-        .selectAll()
-        .where('status', '=', 'open')
-        .execute()
+    const supabase = c.get('supabase')
 
-      return c.json({ data: todos }, 200)
-    } catch (err) {
-      console.error(err)
+    const { data, error } = await supabase
+      .from('todo_prerequisites')
+      .select('*')
+      .eq('status', 'open')
+
+    if (error) {
+      console.error(error)
       return c.json({ error: 'Failed to fetch todos' }, 500)
     }
+
+    return c.json({ data }, 200)
   })
 
-// This is CyberRift first collaboration with others.
-// Any objection or suggestion may be given to CyberRift through dm in discord. (Username: cyberrift1).
-// Best wishes,
-// CyberRift.
+
+//Discord handle: cyberrift1
