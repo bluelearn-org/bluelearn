@@ -135,19 +135,23 @@ export async function listVariantRevisions(supabase: DB, id: string) {
   }))
 }
 
-// Start a new draft revision seeded from the variant's live content, falling
-// back to its most recent revision when nothing is live yet. RLS lets the author
-// insert a draft for a guide they own. Returns the draft revision id.
+// Start a new draft revision on an already-published variant, seeded from its
+// live content. Pre-publish work (the draft create_variant made) and a returned-for-edit
+// attempt (a rejected revision the review routes reopened to 'draft') are both edited
+// in place, not through here, so a live current_revision_id is always present.
 export async function createVariantRevision(supabase: DB, authorId: string, id: string) {
   const variant = await requireVariant(supabase, id)
 
-  const sourceQuery = supabase
+  // Verify that the variant points at a published revision
+  if (!variant.current_revision_id) {
+    throw new ServiceError('Variant has no published revision to revise', 409)
+  }
+
+  const { data: source, error: sourceError } = await supabase
     .from('guide_revisions')
     .select('title, summary, body')
-    .eq('guide_id', id)
-  const { data: source, error: sourceError } = variant.current_revision_id
-    ? await sourceQuery.eq('id', variant.current_revision_id).maybeSingle()
-    : await sourceQuery.order('created_at', { ascending: false }).limit(1).maybeSingle()
+    .eq('id', variant.current_revision_id)
+    .maybeSingle()
 
   if (sourceError) throw new ServiceError(sourceError.message, 500)
 

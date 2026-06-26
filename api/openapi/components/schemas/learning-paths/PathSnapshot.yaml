@@ -1,31 +1,18 @@
 type: object
 description: >
-  A path revision's frozen curriculum: included nodes and the projected
-  prerequisite edges among them.
+  A revision's curriculum graph: every node (included or skipped) and both edge
+  layers behind the show-skipped toggle. Shared by the public path page
+  (/paths/{slug}) and the revision editor (/path-revisions/{id}); each wraps it
+  alongside its own identity object.
 properties:
   nodes:
     type: array
     items:
-      type: object
-      properties:
-        guide_base_id:
-          $ref: '../common/Uuid.yaml'
-        guide_id:
-          description: The pinned guide variant for this node; always set.
-          $ref: '../common/Uuid.yaml'
-        slug:
-          type: [string, 'null']
-          example: postgres
-        title:
-          type: string
-          example: PostgreSQL
-        is_target:
-          type: boolean
-          example: true
-        note:
-          type: [string, 'null']
-      required: [guide_base_id, guide_id, is_target]
-  edges:
+      $ref: '../learning-path-revisions/PathNode.yaml'
+  projected_edges:
+    description: >
+      Hide-skipped view: the prerequisite edges among included nodes only,
+      bridged across skipped ones, frozen at publish.
     type: array
     items:
       type: object
@@ -35,4 +22,17 @@ properties:
         to_id:
           $ref: '../common/Uuid.yaml'
       required: [from_id, to_id]
-required: [nodes, edges]
+  raw_edges:
+    description: >
+      Show-skipped view: the prerequisite edges among all of this revision's
+      nodes, read live from the guide graph with no bridging over skipped nodes.
+    type: array
+    items:
+      type: object
+      properties:
+        from_id:
+          $ref: '../common/Uuid.yaml'
+        to_id:
+          $ref: '../common/Uuid.yaml'
+      required: [from_id, to_id]
+required: [nodes, projected_edges, raw_edges]

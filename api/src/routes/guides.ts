@@ -27,8 +27,8 @@ import {
   listVariantRevisions,
   retractVote,
   rollbackVariant,
-} from '../services/variant.service'
-import { getRevision, submitRevision, updateRevision } from '../services/revision.service'
+} from '../services/guide-variant.service'
+import { getRevision, submitRevision, updateRevision } from '../services/guide-revision.service'
 
 // Normalize blank summary/body to NULL to match the create_guide RPC defaults
 const createGuideBody = createGuideSchema.extend({

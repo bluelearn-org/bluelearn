@@ -1,0 +1,40 @@
+name: PR template check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || "";
+            const stripComments = (s) => s.replace(/<!--[\s\S]*?-->/g, "").trim();
+            const section = (heading) =>
+              body.split(heading)[1]?.split(/\n##?#? /)[0] ?? "";
+            const errors = [];
+
+            // Summary must have real text after the heading.
+            if (stripComments(section("## Summary")).length < 10) {
+              errors.push("Summary section is empty.");
+            }
+
+            // Exactly one Type of change box ticked.
+            const typeChecked = (section("## Type of change").match(/- \[x\]/gi) || []).length;
+            if (typeChecked === 0) errors.push("No 'Type of change' option checked.");
+            if (typeChecked > 1) errors.push("Check only ONE 'Type of change' option.");
+
+            // At least one Verification box ticked.
+            if (!/- \[x\]/i.test(section("## Verification"))) {
+              errors.push("No 'Verification' checkbox ticked.");
+            }
+
+            if (errors.length) {
+              core.setFailed("PR body incomplete:\n- " + errors.join("\n- "));
+            }

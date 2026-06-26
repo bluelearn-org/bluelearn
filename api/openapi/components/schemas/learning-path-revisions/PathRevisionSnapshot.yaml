@@ -1,40 +1,11 @@
 type: object
 description: >
-  A path revision's metadata, its nodes, and both edge sets behind the editor's
-  show-skipped / hide-skipped toggle: the bridged projection over included nodes
-  and the raw prerequisite edges among all nodes.
+  A revision's editorial metadata paired with its curriculum graph. The same
+  wrapper the public path page uses ({ path, snapshot }), keyed on the revision
+  instead of the path so the editor sees the specific revision it is editing.
 properties:
   revision:
     $ref: './LearningPathRevision.yaml'
-  nodes:
-    type: array
-    items:
-      $ref: './PathNode.yaml'
-  projected_edges:
-    description: >
-      Hide-skipped view: prerequisite edges among included nodes only, bridged
-      across skipped ones. Computed live for a draft; the frozen set for a
-      published revision.
-    type: array
-    items:
-      type: object
-      properties:
-        from_id:
-          $ref: '../common/Uuid.yaml'
-        to_id:
-          $ref: '../common/Uuid.yaml'
-      required: [from_id, to_id]
-  raw_edges:
-    description: >
-      Show-skipped view: prerequisite edges among all of this revision's nodes,
-      straight from the guide graph with no bridging over skipped nodes.
-    type: array
-    items:
-      type: object
-      properties:
-        from_id:
-          $ref: '../common/Uuid.yaml'
-        to_id:
-          $ref: '../common/Uuid.yaml'
-      required: [from_id, to_id]
-required: [revision, nodes, projected_edges, raw_edges]
+  snapshot:
+    $ref: '../learning-paths/PathSnapshot.yaml'
+required: [revision, snapshot]
