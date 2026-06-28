@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
-export function RegisterForm({
+export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
@@ -31,16 +31,16 @@ export function RegisterForm({
         {/* Header */}
         <CardHeader className="space-y-4 p-6">
           <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
-            Registration
+            Authentication
           </p>
 
           <div className="space-y-2">
             <CardTitle className="text-2xl font-semibold tracking-tight">
-              Create your account
+              Welcome back
             </CardTitle>
 
             <CardDescription className="text-sm text-muted-foreground">
-              Join BlueLearn to start creating, learning, and collaborating.
+              Sign in to start sharing knowledge.
             </CardDescription>
           </div>
         </CardHeader>
@@ -51,73 +51,47 @@ export function RegisterForm({
             <FieldGroup className="space-y-5">
               <Field className="space-y-2">
                 <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                  Username
-                </FieldLabel>
-
-                <Input
-                  id="username"
-                  type="text"
-                  autoComplete="username"
-                  placeholder="Choose a username"
-                  className="h-10 rounded-md"
-                  required
-                />
-              </Field>
-
-              <Field className="space-y-2">
-                <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                   Email
                 </FieldLabel>
 
                 <Input
                   id="email"
                   type="email"
-                  autoComplete="email"
                   placeholder="me@example.com"
+                  autoComplete="email"
                   className="h-10 rounded-md"
                   required
                 />
               </Field>
 
-              <div className="grid gap-5 md:grid-cols-2">
-                <Field className="space-y-2">
+              <Field className="space-y-2">
+                <div className="flex items-center justify-between">
                   <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                     Password
                   </FieldLabel>
 
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    className="h-10 rounded-md"
-                    required
-                  />
-                </Field>
+                  <a
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Forgot password?
+                  </a>
+                </div>
 
-                <Field className="space-y-2">
-                  <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                    Confirm Password
-                  </FieldLabel>
-
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    autoComplete="new-password"
-                    className="h-10 rounded-md"
-                    required
-                  />
-                </Field>
-              </div>
-
-              <FieldDescription className="text-xs text-muted-foreground">
-                Passwords must be at least <span className="font-medium text-foreground">8 characters</span> long.
-              </FieldDescription>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  className="h-10 rounded-md"
+                  required
+                />
+              </Field>
             </FieldGroup>
           </form>
         </CardContent>
 
         {/* Footer */}
-        <CardFooter className="flex flex-col gap-5 px-6">
+        <CardFooter className="flex flex-col gap-5 border-t p-6">
           <Field orientation="horizontal">
             <Checkbox
               id="terms-checkbox-2"
@@ -133,21 +107,21 @@ export function RegisterForm({
               </FieldDescription>
             </FieldContent>
           </Field>
-
+          
           <Button
             type="submit"
             className="btn-pri w-full"
           >
-            Create account
+            Sign in
           </Button>
 
           <FieldDescription className="text-center text-sm">
-            Already have an account?{" "}
+            Don't have an account?{" "}
             <a
-              href="/login"
+              href="/signup"
               className="font-medium text-foreground transition-colors hover:underline"
             >
-              Sign in
+              Create one
             </a>
           </FieldDescription>
         </CardFooter>
