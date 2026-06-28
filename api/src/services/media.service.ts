@@ -1,5 +1,7 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { notFound, badRequest, internalServerError } from '../lib/errors';
+import { SupabaseClient } from '@supabase/supabase-js'
+import { ServiceError } from '../lib/service-error'
+
+type DB = SupabaseClient<Database>
 
 export function fileNameCleaner(name: string) {
   // Clean file names before upload
@@ -19,7 +21,7 @@ export async function uploadMediaFile(file: File, userId: string, db: SupabaseCl
 
   if (uploadError) {
     console.error('media_assets upload failed:', uploadError.message)
-    throw badRequest('File upload failed')
+    return new ServiceError('File upload failed', 500)
   }
 
   // Insert path of uploadData into database
@@ -36,7 +38,7 @@ export async function uploadMediaFile(file: File, userId: string, db: SupabaseCl
 
   if (databaseError) {
     console.error('media_assets insert failed:', databaseError.message)
-    throw internalServerError('Failed to store file metadata in database')
+    throw new ServiceError('Failed to store file metadata in database', 500)
   }
 
   return databaseEntry
