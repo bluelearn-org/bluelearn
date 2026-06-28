@@ -5,7 +5,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [learning-path-revisions]
     summary: Get a revision snapshot
@@ -15,14 +15,14 @@
       nodes and the raw prerequisite edges among all nodes.
     operationId: getPathRevision
     responses:
-      '200':
+      "200":
         description: The revision snapshot
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/learning-path-revisions/PathRevisionSnapshot.yaml'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/learning-path-revisions/PathRevisionSnapshot.yaml"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   patch:
     tags: [learning-path-revisions]
     summary: Overwrite a draft revision's metadata
@@ -35,9 +35,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/learning-path-revisions/UpdatePathRevisionRequest.yaml'
+            $ref: "../components/schemas/learning-path-revisions/UpdatePathRevisionRequest.yaml"
     responses:
-      '200':
+      "200":
         description: The updated revision
         content:
           application/json:
@@ -45,16 +45,16 @@
               type: object
               properties:
                 revision:
-                  $ref: '../components/schemas/learning-path-revisions/LearningPathRevision.yaml'
+                  $ref: "../components/schemas/learning-path-revisions/LearningPathRevision.yaml"
               required: [revision]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /path-revisions/{id}/targets:
   parameters:
@@ -62,7 +62,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   post:
     tags: [learning-path-revisions]
     summary: Add a target
@@ -87,23 +87,23 @@
             properties:
               guide_base_id:
                 description: The guide base to add as a target.
-                $ref: '../components/schemas/common/Uuid.yaml'
+                $ref: "../components/schemas/common/Uuid.yaml"
             required: [guide_base_id]
     responses:
-      '200':
+      "200":
         description: The recomputed snapshot
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/learning-path-revisions/PathRevisionSnapshot.yaml'
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/learning-path-revisions/PathRevisionSnapshot.yaml"
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /path-revisions/{id}/targets/{baseId}:
   parameters:
@@ -111,13 +111,13 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
     - name: baseId
       in: path
       required: true
       description: The target's guide_base_id.
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   delete:
     tags: [learning-path-revisions]
     summary: Remove a target
@@ -131,20 +131,20 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The recomputed snapshot
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/learning-path-revisions/PathRevisionSnapshot.yaml'
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/learning-path-revisions/PathRevisionSnapshot.yaml"
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /path-revisions/{id}/nodes/{baseId}:
   parameters:
@@ -152,13 +152,13 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
     - name: baseId
       in: path
       required: true
       description: The node's guide_base_id.
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   patch:
     tags: [learning-path-revisions]
     summary: Update a node
@@ -173,9 +173,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/learning-path-revisions/UpdateNodeRequest.yaml'
+            $ref: "../components/schemas/learning-path-revisions/UpdateNodeRequest.yaml"
     responses:
-      '200':
+      "200":
         description: The updated node
         content:
           application/json:
@@ -183,16 +183,16 @@
               type: object
               properties:
                 node:
-                  $ref: '../components/schemas/learning-path-revisions/PathNode.yaml'
+                  $ref: "../components/schemas/learning-path-revisions/PathNode.yaml"
               required: [node]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /path-revisions/{id}/publish:
   parameters:
@@ -200,7 +200,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   post:
     tags: [learning-path-revisions]
     summary: Publish the revision
@@ -209,7 +209,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: Published
         content:
           application/json:
@@ -219,12 +219,12 @@
                 slug:
                   type: string
               required: [slug]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /path-revisions/{id}/rollback:
   parameters:
@@ -232,7 +232,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   post:
     tags: [learning-path-revisions]
     summary: Roll back to an older revision
@@ -248,10 +248,10 @@
             type: object
             properties:
               revision_id:
-                $ref: '../components/schemas/common/Uuid.yaml'
+                $ref: "../components/schemas/common/Uuid.yaml"
             required: [revision_id]
     responses:
-      '201':
+      "201":
         description: Created; new draft revision id
         content:
           application/json:
@@ -259,16 +259,16 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /path-revisions/{id}/diff/{otherId}:
   parameters:
@@ -276,22 +276,22 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
     - name: otherId
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [learning-path-revisions]
     summary: Rendered diff between two revision snapshots
     operationId: diffPathRevisions
     responses:
-      '200':
+      "200":
         description: The rendered diff
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/learning-path-revisions/LearningPathRevisionDiff.yaml'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/learning-path-revisions/LearningPathRevisionDiff.yaml"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

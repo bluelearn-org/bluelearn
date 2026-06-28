@@ -6,9 +6,9 @@ properties:
     type: string
     example: Calculus
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
   body:
-    type: [string, 'null']
+    type: [string, "null"]
   change_summary:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Clarified the chain rule section.

@@ -2,19 +2,19 @@ type: object
 description: One panel member's vote and written justification.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   decision:
     type: string
     enum: [approved, rejected]
     example: approved
   justification:
-    type: [string, 'null']
+    type: [string, "null"]
     example: All the information is correct.
   reasons:
     type: array
     description: Rubric reasons; present (and non-empty) only on a reject.
     items:
-      $ref: './ReviewDecisionReason.yaml'
+      $ref: "./ReviewDecisionReason.yaml"
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, decision]

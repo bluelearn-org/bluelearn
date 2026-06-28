@@ -6,8 +6,8 @@ properties:
     enum: [up, down]
     example: down
   reason:
-    $ref: './DownvoteReason.yaml'
+    $ref: "./DownvoteReason.yaml"
   note:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Forgot to include boiling step
 required: [direction]

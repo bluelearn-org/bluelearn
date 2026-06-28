@@ -2,17 +2,17 @@ type: object
 description: Rendered diff between two learning path revision snapshots.
 properties:
   from:
-    $ref: '../common/RevisionRef.yaml'
+    $ref: "../common/RevisionRef.yaml"
   to:
-    $ref: '../common/RevisionRef.yaml'
+    $ref: "../common/RevisionRef.yaml"
   fields:
     type: object
     description: Per-field diff of the versioned metadata.
     properties:
       title:
-        $ref: '../common/FieldDiff.yaml'
+        $ref: "../common/FieldDiff.yaml"
       summary:
-        $ref: '../common/FieldDiff.yaml'
+        $ref: "../common/FieldDiff.yaml"
     required: [title, summary]
   nodes:
     type: object
@@ -21,15 +21,15 @@ properties:
       added:
         type: array
         items:
-          $ref: './PathNode.yaml'
+          $ref: "./PathNode.yaml"
       removed:
         type: array
         items:
-          $ref: './PathNode.yaml'
+          $ref: "./PathNode.yaml"
       changed:
         type: array
         items:
-          $ref: './PathNode.yaml'
+          $ref: "./PathNode.yaml"
     required: [added, removed, changed]
   edges:
     type: object
@@ -41,9 +41,9 @@ properties:
           type: object
           properties:
             from_id:
-              $ref: '../common/Uuid.yaml'
+              $ref: "../common/Uuid.yaml"
             to_id:
-              $ref: '../common/Uuid.yaml'
+              $ref: "../common/Uuid.yaml"
           required: [from_id, to_id]
       removed:
         type: array
@@ -51,9 +51,9 @@ properties:
           type: object
           properties:
             from_id:
-              $ref: '../common/Uuid.yaml'
+              $ref: "../common/Uuid.yaml"
             to_id:
-              $ref: '../common/Uuid.yaml'
+              $ref: "../common/Uuid.yaml"
           required: [from_id, to_id]
     required: [added, removed]
 required: [from, to, fields, nodes, edges]

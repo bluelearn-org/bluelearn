@@ -18,13 +18,13 @@
                 format: binary
             required: [file]
     responses:
-      '201':
+      "201":
         description: The stored asset
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/media/MediaUploadResponse.yaml'
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
+              $ref: "../components/schemas/media/MediaUploadResponse.yaml"
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"

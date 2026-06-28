@@ -3,8 +3,8 @@
 // "Café" collapse to the same handle.
 export const slugify = (input: string): string =>
   input
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")

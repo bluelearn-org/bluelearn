@@ -1,15 +1,15 @@
 type: object
 properties:
   guide_id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   direction:
     type: string
     enum: [up, down]
     example: down
   reason:
-    $ref: './DownvoteReason.yaml'
+    $ref: "./DownvoteReason.yaml"
   note:
-    type: [string, 'null']
+    type: [string, "null"]
   updated_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [guide_id, direction]

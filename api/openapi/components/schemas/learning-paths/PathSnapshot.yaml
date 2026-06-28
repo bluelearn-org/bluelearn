@@ -8,7 +8,7 @@ properties:
   nodes:
     type: array
     items:
-      $ref: '../learning-path-revisions/PathNode.yaml'
+      $ref: "../learning-path-revisions/PathNode.yaml"
   projected_edges:
     description: >
       Hide-skipped view: the prerequisite edges among included nodes only,
@@ -18,9 +18,9 @@ properties:
       type: object
       properties:
         from_id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
         to_id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
       required: [from_id, to_id]
   raw_edges:
     description: >
@@ -31,8 +31,8 @@ properties:
       type: object
       properties:
         from_id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
         to_id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
       required: [from_id, to_id]
 required: [nodes, projected_edges, raw_edges]

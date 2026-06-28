@@ -2,13 +2,13 @@ type: object
 description: A variant (a method/alternative) under a guide.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
-    type: [string, 'null']
+    type: [string, "null"]
     example: physics-based
   title:
     type: string
     example: Physics-based approach
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
 required: [id, title]

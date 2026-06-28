@@ -103,10 +103,11 @@ the DCO is enough.
 - [Wrangler](https://developers.cloudflare.com/workers/wrangler/) — comes
   with the `api/` package
 
-### Clone, install, run
+### Fork, clone, install, run
+Fork the repository to your own GitHub account, then run the following commands in your terminal.
 
 ```bash
-git clone https://github.com/bluelearn-org/bluelearn.git
+git clone https://github.com/<your-username>/bluelearn.git
 cd bluelearn
 pnpm install
 ```
@@ -121,7 +122,7 @@ Copy the example env files and fill in the values the CLI printed:
 
 ```bash
 cp api/.dev.vars.example api/.dev.vars
-cp app/.env.example app/.env       # if app/ uses one
+cp app/.env.example app/.env
 ```
 
 Then in two terminals (or your favourite runner):

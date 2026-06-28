@@ -6,18 +6,18 @@ description: >
 properties:
   revision_id:
     description: The draft revision. The path editor route takes this directly.
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   path_id:
     description: The learning path the revision belongs to.
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   title:
     type: string
     example: Backend Engineer
   path_slug:
     description: The path's public slug, or null while it has no published revision yet.
-    type: [string, 'null']
+    type: [string, "null"]
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
   updated_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [revision_id, path_id, title, path_slug, created_at, updated_at]

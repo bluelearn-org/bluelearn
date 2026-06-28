@@ -5,13 +5,13 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [guide-revisions]
     summary: Get a revision snapshot
     operationId: getGuideRevision
     responses:
-      '200':
+      "200":
         description: The revision snapshot
         content:
           application/json:
@@ -19,10 +19,10 @@
               type: object
               properties:
                 revision:
-                  $ref: '../components/schemas/guide-revisions/GuideRevision.yaml'
+                  $ref: "../components/schemas/guide-revisions/GuideRevision.yaml"
               required: [revision]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   patch:
     tags: [guide-revisions]
     summary: Overwrite a draft revision
@@ -35,9 +35,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/guide-revisions/UpdateRevisionRequest.yaml'
+            $ref: "../components/schemas/guide-revisions/UpdateRevisionRequest.yaml"
     responses:
-      '200':
+      "200":
         description: The updated revision
         content:
           application/json:
@@ -45,14 +45,14 @@
               type: object
               properties:
                 revision:
-                  $ref: '../components/schemas/guide-revisions/GuideRevision.yaml'
+                  $ref: "../components/schemas/guide-revisions/GuideRevision.yaml"
               required: [revision]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /guide-revisions/{id}/submit:
   parameters:
@@ -60,7 +60,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   post:
     tags: [guide-revisions]
     summary: Submit a revision for review
@@ -69,7 +69,7 @@
     security:
       - bearerAuth: []
     responses:
-      '201':
+      "201":
         description: Review case opened
         content:
           application/json:
@@ -77,12 +77,12 @@
               type: object
               properties:
                 review_case_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [review_case_id]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /guide-revisions/{id}/diff/{otherId}:
   parameters:
@@ -90,22 +90,22 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
     - name: otherId
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [guide-revisions]
     summary: Rendered diff between two revisions
     operationId: diffGuideRevisions
     responses:
-      '200':
+      "200":
         description: The rendered diff
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/guide-revisions/GuideRevisionDiff.yaml'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/guide-revisions/GuideRevisionDiff.yaml"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

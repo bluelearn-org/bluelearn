@@ -7,16 +7,16 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The caller's profile and roles
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/identity/MeResponse.yaml'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/identity/MeResponse.yaml"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   patch:
     tags: [identity]
     summary: Update own profile
@@ -29,24 +29,24 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/identity/UpdateProfileRequest.yaml'
+            $ref: "../components/schemas/identity/UpdateProfileRequest.yaml"
     responses:
-      '200':
+      "200":
         description: The updated profile and roles
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/identity/MeResponse.yaml'
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '409':
+              $ref: "../components/schemas/identity/MeResponse.yaml"
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "409":
         description: Username already taken
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/common/Error.yaml'
+              $ref: "../components/schemas/common/Error.yaml"
             example:
               error: Username already taken
 
@@ -62,7 +62,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The caller's guide and path draft revisions
         content:
           application/json:
@@ -72,14 +72,14 @@
                 guide_drafts:
                   type: array
                   items:
-                    $ref: '../components/schemas/identity/GuideDraft.yaml'
+                    $ref: "../components/schemas/identity/GuideDraft.yaml"
                 path_drafts:
                   type: array
                   items:
-                    $ref: '../components/schemas/identity/PathDraft.yaml'
+                    $ref: "../components/schemas/identity/PathDraft.yaml"
               required: [guide_drafts, path_drafts]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
 
 /profiles/{username}:
   get:
@@ -95,11 +95,11 @@
           type: string
         example: username123
     responses:
-      '200':
+      "200":
         description: The public profile and role badges
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/identity/ProfileResponse.yaml'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/identity/ProfileResponse.yaml"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
