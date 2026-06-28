@@ -7,7 +7,7 @@ import {
   castDecision,
   getReviewCase,
   getReviewQueue,
-  listMyReviewCases,
+  listReviewCases,
 } from '../services/review.service'
 
 export const reviewsRouter = new Hono<HonoEnv>()
@@ -17,9 +17,9 @@ export const reviewsRouter = new Hono<HonoEnv>()
     return c.json({ cases }, 200)
   })
 
-  // Past / finished review cases the caller was a panelist on
-  .get('/cases', requireUser, async (c) => {
-    const cases = await listMyReviewCases(c.get('supabase'), c.get('user').id)
+  // All finished review cases — public browse
+  .get('/cases', async (c) => {
+    const cases = await listReviewCases(c.get('supabase'))
     return c.json({ cases }, 200)
   })
 
