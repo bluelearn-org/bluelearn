@@ -52,7 +52,7 @@ graph.post(
 )
 
 /**
- * DELETE /prerequisites (soft delete)
+ * DELETE /prerequisites (suspend)
  */
 graph.delete(
   '/prerequisites',
