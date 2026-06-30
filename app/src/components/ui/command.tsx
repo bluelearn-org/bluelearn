@@ -1,7 +1,6 @@
-"use client"
-
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
+import { CheckIcon, SearchIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -15,7 +14,6 @@ import {
   InputGroup,
   InputGroupAddon,
 } from "@/components/ui/input-group"
-import { SearchIcon, CheckIcon } from "lucide-react"
 
 function Command({
   className,

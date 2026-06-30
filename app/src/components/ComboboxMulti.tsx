@@ -8,7 +8,7 @@ type PropTypes = {
 
 
 export function ComboboxMulti({ items }: PropTypes) {
-  const [value, setValue] = useState<string[]>([])
+  const [value, setValue] = useState<Array<string>>([])
 
   return (
     <Combobox

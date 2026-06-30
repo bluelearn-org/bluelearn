@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/popover"
 
 type ComboboxBaseProps = {
-  items: string[]
+  items: Array<string>
   placeholder?: string
 }
 
@@ -33,8 +33,8 @@ type SingleProps = ComboboxBaseProps & {
 
 type MultiProps = ComboboxBaseProps & {
   multiple: true
-  value: string[]
-  onValueChange: (value: string[]) => void
+  value: Array<string>
+  onValueChange: (value: Array<string>) => void
 }
 
 type ComboboxProps = SingleProps | MultiProps
