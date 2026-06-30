@@ -1,7 +1,9 @@
+import { useMemo } from "react"
 import { createFileRoute, notFound } from "@tanstack/react-router"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { useMemo } from "react"
+import remarkMath from "remark-math"
+import rehypeKatex from "rehype-katex"
 import {
   ChevronDown,
   ChevronUp,
@@ -24,6 +26,8 @@ import { getGuideBySlug, hydrateGuide } from "@/lib/getData"
 import guides from "@/data/guides.json"
 import subjects from "@/data/subjects.json"
 
+import "katex/dist/katex.min.css"
+
 export const Route = createFileRoute("/guides/$slug")({
   component: RouteComponent,
 })
@@ -33,11 +37,13 @@ function RouteComponent() {
 
   const guide = getGuideBySlug(guides, slug);
 
-  if (!guide) { throw notFound }
+  if (!guide) {
+    throw notFound()
+  }
 
   const hydratedGuide: HydratedGuide = hydrateGuide(guide, guides, subjects);
 
-  const headings = useMemo(() => extractHeadings(guide.content), [])
+  const headings = useMemo(() => extractHeadings(guide.content), [guide.content])
 
   return (
     <div className="mx-auto max-w-[1280px] h-[calc(100vh-70px)] border-x bg-background">
@@ -175,7 +181,7 @@ function RouteComponent() {
           <Separator className="mb-8" />
 
           <article className="markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
               {hydratedGuide.content}
             </ReactMarkdown>
           </article>
