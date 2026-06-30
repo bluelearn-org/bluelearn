@@ -26,13 +26,13 @@ function RouteComponent() {
     p.levels.map((l) => l.guide)
   );
 
-  const sectionHeadingCommonClassNames = "font-mono text-[13px] uppercase tracking-[0.08em] text-muted-foreground ml-1";
+  const sectionHeadingCommonClassNames = "font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground ml-1";
 
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
       <section className="border-b px-8 py-10 lg:px-16">
         <div className="mb-6">
-          <h1 className="data-label text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <h1 className="data-label text-[14px] uppercase tracking-[0.08em] text-muted-foreground">
             Browse
           </h1>
         </div>
