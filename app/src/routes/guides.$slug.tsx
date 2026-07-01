@@ -46,7 +46,13 @@ function RouteComponent() {
         {/* SIDEBAR */}
         <aside className="h-[calc(100vh-70px)] overflow-y-auto border-r px-6 py-6">
           {/* Prerequisites */}
-          <CollapsibleSection title="Prerequisites">
+          <CollapsibleSection
+            title={
+              <p className="ml-auto">
+                Prerequisites
+              </p>
+            }
+          >
             <ul className="space-y-2">
               {hydratedGuide.prerequisites.map((prereq: GuideReference) => (
                 <li
@@ -61,7 +67,13 @@ function RouteComponent() {
           </CollapsibleSection>
 
           {/* TOC */}
-          <CollapsibleSection title="Table of Contents">
+          <CollapsibleSection
+            title={
+              <p className="ml-auto">
+                Table of Contents
+              </p>
+            }
+          >
             <ul className="space-y-2">
               {headings.map((h, idx) => (
                 <li
@@ -78,7 +90,13 @@ function RouteComponent() {
           </CollapsibleSection>
 
           {/* Variants */}
-          <CollapsibleSection title="Variants">
+          <CollapsibleSection
+            title={
+              <p className="ml-auto">
+                Variants
+              </p>
+            }
+          >
             <ul className="space-y-2">
             </ul>
           </CollapsibleSection>
