@@ -2,13 +2,13 @@ type: object
 description: One seat on a review panel.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   member_id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   status:
     type: string
     enum: [assigned, recused, replaced, completed]
     example: assigned
   assigned_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, member_id, status]

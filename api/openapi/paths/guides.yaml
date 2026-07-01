@@ -6,7 +6,7 @@
     description: Published guide bases, alphabetical.
     operationId: listGuides
     responses:
-      '200':
+      "200":
         description: Published guides
         content:
           application/json:
@@ -16,7 +16,7 @@
                 guides:
                   type: array
                   items:
-                    $ref: '../components/schemas/guides/GuideListItem.yaml'
+                    $ref: "../components/schemas/guides/GuideListItem.yaml"
               required: [guides]
   post:
     tags: [guides]
@@ -33,9 +33,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/guides/CreateGuideRequest.yaml'
+            $ref: "../components/schemas/guides/CreateGuideRequest.yaml"
     responses:
-      '201':
+      "201":
         description: Created; draft revision id
         content:
           application/json:
@@ -43,12 +43,12 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
 
 /guides/{slug}:
   parameters:
@@ -64,7 +64,7 @@
     description: Canonical content of the guide plus its subject tags.
     operationId: getGuide
     responses:
-      '200':
+      "200":
         description: Guide content + subject tags
         content:
           application/json:
@@ -72,14 +72,14 @@
               type: object
               properties:
                 guide:
-                  $ref: '../components/schemas/guides/Guide.yaml'
+                  $ref: "../components/schemas/guides/Guide.yaml"
                 subjects:
                   type: array
                   items:
-                    $ref: '../components/schemas/subjects/SubjectTag.yaml'
+                    $ref: "../components/schemas/subjects/SubjectTag.yaml"
               required: [guide, subjects]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   delete:
     tags: [guides]
     summary: Archive a guide
@@ -88,7 +88,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The archived guide
         content:
           application/json:
@@ -99,12 +99,12 @@
                   type: object
                   properties:
                     id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     slug:
                       type: string
                       example: calculus
                     status:
-                      $ref: '../components/schemas/common/NodeStatus.yaml'
+                      $ref: "../components/schemas/common/NodeStatus.yaml"
                   required: [id, slug, status]
               required: [guide]
             example:
@@ -112,10 +112,10 @@
                 id: 00000000-0000-0000-0000-000000000000
                 slug: calculus
                 status: archived
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /guides/{slug}/walkthrough:
   parameters:
@@ -133,14 +133,14 @@
       longest-path depths, plus the prerequisite edges among the nodes.
     operationId: getWalkthrough
     responses:
-      '200':
+      "200":
         description: The walkthrough graph
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/guides/Walkthrough.yaml'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+              $ref: "../components/schemas/guides/Walkthrough.yaml"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /guides/{slug}/variants:
   parameters:
@@ -156,7 +156,7 @@
     description: The methods (practice guide) or alternatives (theory guide) under this guide.
     operationId: listGuideVariants
     responses:
-      '200':
+      "200":
         description: Variants under the guide
         content:
           application/json:
@@ -166,10 +166,10 @@
                 variants:
                   type: array
                   items:
-                    $ref: '../components/schemas/variants/VariantListItem.yaml'
+                    $ref: "../components/schemas/variants/VariantListItem.yaml"
               required: [variants]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   post:
     tags: [guides]
     summary: Add a variant under a guide
@@ -184,9 +184,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/variants/CreateVariantRequest.yaml'
+            $ref: "../components/schemas/variants/CreateVariantRequest.yaml"
     responses:
-      '201':
+      "201":
         description: Created; draft revision id
         content:
           application/json:
@@ -194,14 +194,14 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /guides/{slug}/{variantSlug}:
   parameters:
@@ -228,7 +228,7 @@
       actions. Drafts have no slug and are addressed by id instead.
     operationId: getVariantBySlug
     responses:
-      '200':
+      "200":
         description: The variant detail
         content:
           application/json:
@@ -236,7 +236,7 @@
               type: object
               properties:
                 variant:
-                  $ref: '../components/schemas/variants/Variant.yaml'
+                  $ref: "../components/schemas/variants/Variant.yaml"
               required: [variant]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

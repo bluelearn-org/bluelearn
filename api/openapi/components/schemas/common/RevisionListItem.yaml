@@ -2,7 +2,7 @@ type: object
 description: A revision summary for history lists (guide, variant, or path).
 properties:
   id:
-    $ref: './Uuid.yaml'
+    $ref: "./Uuid.yaml"
   status:
     type: string
     description: >
@@ -11,11 +11,11 @@ properties:
     enum: [draft, submitted, approved, rejected]
     example: approved
   created_at:
-    $ref: './Timestamp.yaml'
+    $ref: "./Timestamp.yaml"
   approved_at:
     description: >
       When the revision was approved and promoted to live. Null unless it went
       live.
-    type: [string, 'null']
+    type: [string, "null"]
     format: date-time
 required: [id, status, created_at]

@@ -8,10 +8,10 @@ properties:
     type: string
     example: Backend Engineer
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
   target_ids:
     type: array
     description: Guide base ids the path is built to reach.
     items:
-      $ref: '../common/Uuid.yaml'
+      $ref: "../common/Uuid.yaml"
 required: [target_ids]

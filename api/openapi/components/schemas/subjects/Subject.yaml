@@ -1,7 +1,7 @@
 type: object
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
     type: string
     example: math

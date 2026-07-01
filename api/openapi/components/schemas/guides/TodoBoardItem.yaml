@@ -4,10 +4,10 @@ description: >
   the dependent guide base's identity (published, so its slug exists) for links.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   guide_base_id:
     description: The dependent guide base that declared the need.
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   guide_slug:
     type: string
     description: Slug of the dependent guide base (published, so non-null).
@@ -23,5 +23,5 @@ properties:
     enum: [open, resolved]
     example: open
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, guide_base_id, guide_slug, guide_title, title, status]

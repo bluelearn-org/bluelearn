@@ -338,5 +338,23 @@
       "programming-fundamentals"
     ],
     "content": "# How to Create Character Movement in Unity."
+  },
+  {
+    "slug": "latex-usage-101",
+    "title": "Utilizing LaTeX 101",
+    "author": "DeluxiusGamer",
+    "summary": "A beginner-friendly introduction to writing LaTeX math expressions, covering inline and display syntax, common commands, and argument grouping.",
+    "created_at": "1st July 2026",
+    "duration": 10,
+    "tags": [
+      "mathematics"
+    ],
+    "breadcrumbs": [
+      "Home",
+      "Mathematics",
+      "LaTeX"
+    ],
+    "prerequisites": [],
+    "content": "# Utilizing LaTeX 101\n\nLaTeX math is enclosed in two delimiters using dollar signs (`$`):\n\n1. **Inline** enclose math with single dollar signs: `$...$`\n2. **Display blocks** enclose math with double dollar signs: `$$...$$`\n\nTo write symbols like $\\alpha$, you use backslash-prefixed commands. Commands are usually shortened versions of the name (e.g. `\\frac` for fraction).\n\n### Common Commands\n\n`x^2` renders as $x^2$\n\n`x_n` renders as $x_n$\n\n`\\\\frac{a}{b}` renders as $\\frac{a}{b}$\n\n`\\\\sqrt{x}` renders as $\\sqrt{x}$\n\n`\\\\int_{a}^{b}` renders as $\\int_{a}^{b}$\n\n`\\\\sum_{i=1}^{n}` renders as $\\sum_{i=1}^{n}$\n\n`\\\\lim_{x \\\\to 0}` renders as $\\lim_{x \\to 0}$\n\n`\\\\alpha, \\\\beta, \\\\pi` renders as $\\alpha, \\beta, \\pi$\n\n`\\\\pm` renders as $\\pm$\n\n`\\\\infty` renders as $\\infty$\n\n`\\\\text{words}` renders as $\\text{words}$\n\nYou'll also see `{}` and `[]` in formulas. `{}` groups characters together as a single argument, for example `x_{233}` makes $x_{233}$. `[]` is for optional arguments, for example `\\sqrt[3]{x}` makes $\\sqrt[3]{x}$ where `[3]` is the root degree.\n\n**Note:** In Bluelearn, guides are saved as JSON files, so you must write LaTeX commands with double backslashes (`\\\\`) instead of a single backslash (`\\`)."
   }
 ]

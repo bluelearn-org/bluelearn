@@ -2,18 +2,18 @@ type: object
 description: Rendered diff between two guide revision snapshots.
 properties:
   from:
-    $ref: '../common/RevisionRef.yaml'
+    $ref: "../common/RevisionRef.yaml"
   to:
-    $ref: '../common/RevisionRef.yaml'
+    $ref: "../common/RevisionRef.yaml"
   fields:
     type: object
     description: Per-field diff of the versioned content.
     properties:
       title:
-        $ref: '../common/FieldDiff.yaml'
+        $ref: "../common/FieldDiff.yaml"
       summary:
-        $ref: '../common/FieldDiff.yaml'
+        $ref: "../common/FieldDiff.yaml"
       body:
-        $ref: '../common/FieldDiff.yaml'
+        $ref: "../common/FieldDiff.yaml"
     required: [title, summary, body]
 required: [from, to, fields]

@@ -2,7 +2,7 @@ type: object
 description: A guide carrying this subject tag.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
     type: string
     example: calculus
@@ -10,5 +10,5 @@ properties:
     type: string
     example: Calculus
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
 required: [id, slug, title]

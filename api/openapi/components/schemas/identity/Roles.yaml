@@ -1,4 +1,4 @@
 type: array
 items:
-  $ref: './Role.yaml'
+  $ref: "./Role.yaml"
 example: [verifier]

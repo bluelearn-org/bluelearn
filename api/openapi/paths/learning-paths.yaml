@@ -5,7 +5,7 @@
     summary: List published learning paths
     operationId: listLearningPaths
     responses:
-      '200':
+      "200":
         description: Published learning paths
         content:
           application/json:
@@ -15,7 +15,7 @@
                 learning_paths:
                   type: array
                   items:
-                    $ref: '../components/schemas/learning-paths/LearningPathListItem.yaml'
+                    $ref: "../components/schemas/learning-paths/LearningPathListItem.yaml"
               required: [learning_paths]
   post:
     tags: [learning-paths]
@@ -32,9 +32,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/learning-paths/CreateLearningPathRequest.yaml'
+            $ref: "../components/schemas/learning-paths/CreateLearningPathRequest.yaml"
     responses:
-      '201':
+      "201":
         description: Created; draft revision id
         content:
           application/json:
@@ -42,14 +42,14 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
 
 /paths/{slug}:
   parameters:
@@ -65,7 +65,7 @@
     description: Resolves the live current revision and returns its full snapshot.
     operationId: getLearningPath
     responses:
-      '200':
+      "200":
         description: The path + its current snapshot
         content:
           application/json:
@@ -73,12 +73,12 @@
               type: object
               properties:
                 path:
-                  $ref: '../components/schemas/learning-paths/LearningPath.yaml'
+                  $ref: "../components/schemas/learning-paths/LearningPath.yaml"
                 snapshot:
-                  $ref: '../components/schemas/learning-paths/PathSnapshot.yaml'
+                  $ref: "../components/schemas/learning-paths/PathSnapshot.yaml"
               required: [path, snapshot]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   delete:
     tags: [learning-paths]
     summary: Archive a path
@@ -86,7 +86,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The archived path
         content:
           application/json:
@@ -97,12 +97,12 @@
                   type: object
                   properties:
                     id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     slug:
                       type: string
                       example: backend-engineer
                     status:
-                      $ref: '../components/schemas/common/NodeStatus.yaml'
+                      $ref: "../components/schemas/common/NodeStatus.yaml"
                   required: [id, slug, status]
               required: [path]
             example:
@@ -110,12 +110,12 @@
                 id: 00000000-0000-0000-0000-000000000000
                 slug: backend-engineer
                 status: archived
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /paths/{slug}/revisions:
   parameters:
@@ -130,7 +130,7 @@
     summary: Revision history for this path
     operationId: listLearningPathRevisions
     responses:
-      '200':
+      "200":
         description: Revisions, newest first
         content:
           application/json:
@@ -140,10 +140,10 @@
                 revisions:
                   type: array
                   items:
-                    $ref: '../components/schemas/learning-path-revisions/LearningPathRevisionListItem.yaml'
+                    $ref: "../components/schemas/learning-path-revisions/LearningPathRevisionListItem.yaml"
               required: [revisions]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   post:
     tags: [learning-paths]
     summary: Start a new draft revision
@@ -151,7 +151,7 @@
     security:
       - bearerAuth: []
     responses:
-      '201':
+      "201":
         description: Created; draft revision id
         content:
           application/json:
@@ -159,11 +159,11 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '403':
-        $ref: '../components/responses/_shared.yaml#/Forbidden'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses/_shared.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

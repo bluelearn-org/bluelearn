@@ -45,83 +45,83 @@ components:
 
 paths:
   /me:
-    $ref: './paths/identity.yaml#/~1me'
+    $ref: "./paths/identity.yaml#/~1me"
   /me/drafts:
-    $ref: './paths/identity.yaml#/~1me~1drafts'
+    $ref: "./paths/identity.yaml#/~1me~1drafts"
   /profiles/{username}:
-    $ref: './paths/identity.yaml#/~1profiles~1{username}'
+    $ref: "./paths/identity.yaml#/~1profiles~1{username}"
 
   /guides:
-    $ref: './paths/guides.yaml#/~1guides'
+    $ref: "./paths/guides.yaml#/~1guides"
   /guides/{slug}:
-    $ref: './paths/guides.yaml#/~1guides~1{slug}'
+    $ref: "./paths/guides.yaml#/~1guides~1{slug}"
   /guides/{slug}/walkthrough:
-    $ref: './paths/guides.yaml#/~1guides~1{slug}~1walkthrough'
+    $ref: "./paths/guides.yaml#/~1guides~1{slug}~1walkthrough"
   /guides/{slug}/variants:
-    $ref: './paths/guides.yaml#/~1guides~1{slug}~1variants'
+    $ref: "./paths/guides.yaml#/~1guides~1{slug}~1variants"
   /guides/{slug}/{variantSlug}:
-    $ref: './paths/guides.yaml#/~1guides~1{slug}~1{variantSlug}'
+    $ref: "./paths/guides.yaml#/~1guides~1{slug}~1{variantSlug}"
 
   /variants/{id}:
-    $ref: './paths/variants.yaml#/~1variants~1{id}'
+    $ref: "./paths/variants.yaml#/~1variants~1{id}"
   /variants/{id}/vote:
-    $ref: './paths/variants.yaml#/~1variants~1{id}~1vote'
+    $ref: "./paths/variants.yaml#/~1variants~1{id}~1vote"
   /variants/{id}/revisions:
-    $ref: './paths/variants.yaml#/~1variants~1{id}~1revisions'
+    $ref: "./paths/variants.yaml#/~1variants~1{id}~1revisions"
   /variants/{id}/rollback:
-    $ref: './paths/variants.yaml#/~1variants~1{id}~1rollback'
+    $ref: "./paths/variants.yaml#/~1variants~1{id}~1rollback"
 
   /guide-revisions/{id}:
-    $ref: './paths/guide-revisions.yaml#/~1guide-revisions~1{id}'
+    $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}"
   /guide-revisions/{id}/submit:
-    $ref: './paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1submit'
+    $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1submit"
   /guide-revisions/{id}/diff/{otherId}:
-    $ref: './paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1diff~1{otherId}'
+    $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1diff~1{otherId}"
 
   /paths:
-    $ref: './paths/learning-paths.yaml#/~1paths'
+    $ref: "./paths/learning-paths.yaml#/~1paths"
   /paths/{slug}:
-    $ref: './paths/learning-paths.yaml#/~1paths~1{slug}'
+    $ref: "./paths/learning-paths.yaml#/~1paths~1{slug}"
   /paths/{slug}/revisions:
-    $ref: './paths/learning-paths.yaml#/~1paths~1{slug}~1revisions'
+    $ref: "./paths/learning-paths.yaml#/~1paths~1{slug}~1revisions"
 
   /path-revisions/{id}:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}"
   /path-revisions/{id}/targets:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1targets'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1targets"
   /path-revisions/{id}/targets/{baseId}:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1targets~1{baseId}'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1targets~1{baseId}"
   /path-revisions/{id}/nodes/{baseId}:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1nodes~1{baseId}'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1nodes~1{baseId}"
   /path-revisions/{id}/publish:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1publish'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1publish"
   /path-revisions/{id}/rollback:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1rollback'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1rollback"
   /path-revisions/{id}/diff/{otherId}:
-    $ref: './paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1diff~1{otherId}'
+    $ref: "./paths/learning-path-revisions.yaml#/~1path-revisions~1{id}~1diff~1{otherId}"
 
   /prerequisites:
-    $ref: './paths/graph.yaml#/~1prerequisites'
+    $ref: "./paths/graph.yaml#/~1prerequisites"
   /prerequisites/{id}:
-    $ref: './paths/graph.yaml#/~1prerequisites~1{id}'
+    $ref: "./paths/graph.yaml#/~1prerequisites~1{id}"
   /todos:
-    $ref: './paths/graph.yaml#/~1todos'
+    $ref: "./paths/graph.yaml#/~1todos"
 
   /subjects:
-    $ref: './paths/subjects.yaml#/~1subjects'
+    $ref: "./paths/subjects.yaml#/~1subjects"
   /subjects/{slug}:
-    $ref: './paths/subjects.yaml#/~1subjects~1{slug}'
+    $ref: "./paths/subjects.yaml#/~1subjects~1{slug}"
   /subjects/{slug}/guides:
-    $ref: './paths/subjects.yaml#/~1subjects~1{slug}~1guides'
+    $ref: "./paths/subjects.yaml#/~1subjects~1{slug}~1guides"
 
   /reviews/queue:
-    $ref: './paths/reviews.yaml#/~1reviews~1queue'
+    $ref: "./paths/reviews.yaml#/~1reviews~1queue"
   /reviews/cases:
-    $ref: './paths/reviews.yaml#/~1reviews~1cases'
+    $ref: "./paths/reviews.yaml#/~1reviews~1cases"
   /reviews/cases/{id}:
-    $ref: './paths/reviews.yaml#/~1reviews~1cases~1{id}'
+    $ref: "./paths/reviews.yaml#/~1reviews~1cases~1{id}"
   /reviews/cases/{id}/decisions:
-    $ref: './paths/reviews.yaml#/~1reviews~1cases~1{id}~1decisions'
+    $ref: "./paths/reviews.yaml#/~1reviews~1cases~1{id}~1decisions"
 
   /media/upload:
-    $ref: './paths/media.yaml#/~1media~1upload'
+    $ref: "./paths/media.yaml#/~1media~1upload"

@@ -2,13 +2,13 @@ type: object
 description: One topic in a path revision (included or skipped).
 properties:
   guide_base_id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   guide_id:
     description: The pinned guide variant (always set); content is read live through it.
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
     description: The pinned guide's slug, read live; null before the guide's first publish.
-    type: [string, 'null']
+    type: [string, "null"]
     example: postgres
   title:
     description: The pinned guide's title, read live through its current revision.
@@ -25,6 +25,6 @@ properties:
     type: boolean
     example: true
   note:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Optional curator note
 required: [guide_base_id, guide_id, is_target, is_included]

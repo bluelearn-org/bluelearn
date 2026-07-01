@@ -5,16 +5,16 @@ description: >
   the guide is a draft.
 properties:
   title:
-    type: [string, 'null']
+    type: [string, "null"]
     maxLength: 200
     example: Calculus
   knowledge_type:
-    $ref: './KnowledgeType.yaml'
+    $ref: "./KnowledgeType.yaml"
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
     maxLength: 500
     example: The study of continuous change.
   body:
-    type: [string, 'null']
+    type: [string, "null"]
     example: |
       # Calculus

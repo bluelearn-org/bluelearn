@@ -2,21 +2,21 @@ type: object
 description: The caller's own profile row.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   username:
     type: string
     example: username123
   display_name:
-    type: [string, 'null']
-    example: John Appleseed 
+    type: [string, "null"]
+    example: John Appleseed
   bio:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Coding enthusiast
   is_suspended:
     type: boolean
     example: false
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
   updated_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, username]

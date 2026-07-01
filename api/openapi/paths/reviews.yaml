@@ -8,7 +8,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: Open cases
         content:
           application/json:
@@ -18,10 +18,10 @@
                 cases:
                   type: array
                   items:
-                    $ref: '../components/schemas/reviews/ReviewCaseListItem.yaml'
+                    $ref: "../components/schemas/reviews/ReviewCaseListItem.yaml"
               required: [cases]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
 
 /reviews/cases:
   get:
@@ -29,7 +29,7 @@
     summary: List all / past cases
     operationId: listReviewCases
     responses:
-      '200':
+      "200":
         description: Review cases
         content:
           application/json:
@@ -39,7 +39,7 @@
                 cases:
                   type: array
                   items:
-                    $ref: '../components/schemas/reviews/ReviewCaseListItem.yaml'
+                    $ref: "../components/schemas/reviews/ReviewCaseListItem.yaml"
               required: [cases]
 
 /reviews/cases/{id}:
@@ -48,13 +48,13 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [reviews]
     summary: Get a case with its panel and decisions
     operationId: getReviewCase
     responses:
-      '200':
+      "200":
         description: Case + panel + decisions
         content:
           application/json:
@@ -62,18 +62,18 @@
               type: object
               properties:
                 case:
-                  $ref: '../components/schemas/reviews/ReviewCase.yaml'
+                  $ref: "../components/schemas/reviews/ReviewCase.yaml"
                 panel:
                   type: array
                   items:
-                    $ref: '../components/schemas/reviews/ReviewPanelMember.yaml'
+                    $ref: "../components/schemas/reviews/ReviewPanelMember.yaml"
                 decisions:
                   type: array
                   items:
-                    $ref: '../components/schemas/reviews/ReviewDecision.yaml'
+                    $ref: "../components/schemas/reviews/ReviewDecision.yaml"
               required: [case, panel, decisions]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /reviews/cases/{id}/decisions:
   parameters:
@@ -81,7 +81,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   post:
     tags: [reviews]
     summary: Cast a panel vote
@@ -94,9 +94,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/reviews/CreateDecisionRequest.yaml'
+            $ref: "../components/schemas/reviews/CreateDecisionRequest.yaml"
     responses:
-      '201':
+      "201":
         description: The recorded decision
         content:
           application/json:
@@ -104,19 +104,19 @@
               type: object
               properties:
                 decision:
-                  $ref: '../components/schemas/reviews/ReviewDecision.yaml'
+                  $ref: "../components/schemas/reviews/ReviewDecision.yaml"
               required: [decision]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
-      '409':
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
+      "409":
         description: The caller's seat has already cast a decision on this case
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/common/Error.yaml'
+              $ref: "../components/schemas/common/Error.yaml"
             example:
               error: You have already cast a decision on this case

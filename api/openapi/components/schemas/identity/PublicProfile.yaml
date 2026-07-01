@@ -5,11 +5,11 @@ properties:
     type: string
     example: username123
   display_name:
-    type: [string, 'null']
+    type: [string, "null"]
     example: John Appleseed
   bio:
-    type: [string, 'null']
-    example: Coding enthusiast 
+    type: [string, "null"]
+    example: Coding enthusiast
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [username]

@@ -2,21 +2,21 @@ type: object
 description: A single guide revision snapshot.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   guide_id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   title:
     type: string
     example: Calculus
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
   body:
-    type: [string, 'null']
+    type: [string, "null"]
   change_summary:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Fixed the limit definition.
   status:
-    $ref: '../common/RevisionStatus.yaml'
+    $ref: "../common/RevisionStatus.yaml"
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, guide_id, title, status]

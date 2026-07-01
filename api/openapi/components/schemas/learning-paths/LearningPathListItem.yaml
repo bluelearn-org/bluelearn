@@ -1,7 +1,7 @@
 type: object
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
     type: string
     example: backend-engineer
@@ -9,7 +9,7 @@ properties:
     type: string
     example: Backend Engineer
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, slug, title]
