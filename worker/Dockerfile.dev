@@ -1,0 +1,11 @@
+FROM node:20
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY . .
+
+RUN pnpm install
+
+CMD ["pnpm", "--filter", "worker", "dev"]

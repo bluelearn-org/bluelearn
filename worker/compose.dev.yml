@@ -1,0 +1,39 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - net
+
+  typesense:
+    image: typesense/typesense:0.25.0
+    env_file:
+      - .env.dev
+    command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
+    ports:
+      - "8108:8108"
+    volumes:
+      - ./data/typesense_data:/data
+    restart: unless-stopped
+    networks:
+      - net
+
+worker:
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+    env_file:
+      - .env.dev
+    depends_on:
+      - redis
+      - typesense
+    restart: unless-stopped
+    networks:
+      - net
+
+networks:
+  net:
+    external: true
+    name: blue-net
