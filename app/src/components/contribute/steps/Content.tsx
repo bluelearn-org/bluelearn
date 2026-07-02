@@ -1,3 +1,4 @@
+import Editor from "../editor/Editor";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 
 type PropTypes = {
@@ -9,7 +10,7 @@ export const Content = ({ Stepper }: PropTypes) => {
         <Stepper.Content step="content">
             <StepperActionHeader title={"Content"} Stepper={Stepper} />
 
-            <h2>Guide Body</h2>
+            <Editor />
         </Stepper.Content>
-    )
-}
+    );
+};
