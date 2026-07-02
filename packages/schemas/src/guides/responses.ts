@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { subjectReferenceSchema } from "../subject"
+import { subjectReferenceSchema } from "../subjects"
 import { guideReferenceSchema } from "./references"
 
 export const guideSchema = z.object({

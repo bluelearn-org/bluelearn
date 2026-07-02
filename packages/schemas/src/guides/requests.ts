@@ -1,31 +1,31 @@
 import { z } from "zod"
 import {
-  bodySchema,
-  changeSummarySchema,
-  slugSchema,
-  summarySchema,
-  titleSchema,
+  guideBodySchema,
+  guideChangeSummarySchema,
+  guideSlugSchema,
+  guideSummarySchema,
+  guideTitleSchema,
 } from "./fields"
 import { downvoteReasonSchema, knowledgeTypeSchema, voteDirectionSchema } from "./enums"
 
 // The editable content of a revision.
 const revisionContentSchema = z.object({
-  title: titleSchema,
-  summary: summarySchema.nullish(),
-  body: bodySchema.nullish(),
+  title: guideTitleSchema,
+  summary: guideSummarySchema.nullish(),
+  body: guideBodySchema.nullish(),
 })
 
 // The full guide-creation payload, submitted in one POST once the multistep
 // contribution form is complete. title, slug, knowledge_type, body, and at
 // least one subject are required; summary/prerequisites/related are optional.
 export const createGuideSchema = z.object({
-  tags: z.array(slugSchema).min(1),
+  tags: z.array(guideSlugSchema).min(1),
   knowledge_type: knowledgeTypeSchema.default("theory"),
-  title: titleSchema,
-  slug: slugSchema,
-  summary: summarySchema.nullish(),
-  prerequisites: z.array(slugSchema).default([]),
-  body: bodySchema.min(1),
+  title: guideTitleSchema,
+  slug: guideSlugSchema,
+  summary: guideSummarySchema.nullish(),
+  prerequisites: z.array(guideSlugSchema).default([]),
+  body: guideBodySchema.min(1),
 })
 
 // Variants share the parent base's subjects, and a variant's own slug is assigned
@@ -37,7 +37,7 @@ export const createVariantSchema = revisionContentSchema
 // want to change (at least one is required). A user can clear summary, body, or
 // change_summary by sending an empty value, but a present title must stay set.
 export const updateRevisionSchema = revisionContentSchema
-  .extend({ change_summary: changeSummarySchema.nullish() })
+  .extend({ change_summary: guideChangeSummarySchema.nullish() })
   .partial()
   .refine((v) => Object.keys(v).length > 0, {
     message: "at least one field is required",
