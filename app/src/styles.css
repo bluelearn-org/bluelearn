@@ -114,7 +114,7 @@
   }
 
   .data-label {
-    @apply font-mono text-sm uppercase text-muted-foreground tracking-[0.08em];
+    @apply font-mono text-sm tracking-[0.08em] text-muted-foreground uppercase;
   }
 
   .data-value {
@@ -131,7 +131,7 @@
 
   /* -- CTA BUTTON -- */
   .btn-cta {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-white font-mono text-xs uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-white uppercase transition-all duration-200;
     background: var(--brand-cta);
   }
 
@@ -140,7 +140,7 @@
   }
 
   .btn-pri {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-white font-mono text-xs uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-white uppercase transition-all duration-200;
     background: var(--brand-blue);
   }
 
@@ -149,7 +149,7 @@
   }
 
   .btn-sec {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-black font-mono text-xs uppercase transition-all duration-200 border;
+    @apply inline-flex items-center justify-center rounded-md border px-4 py-2 font-mono text-xs text-black uppercase transition-all duration-200;
     background: var(--muted);
   }
 
@@ -159,13 +159,13 @@
 
   /* -- SURFACE BLOCK -- */
   .surface {
-    @apply bg-brand-surface border border-border rounded-lg;
+    @apply rounded-lg border border-border bg-brand-surface;
   }
 
   .surface:hover {
     background: var(--brand-surface-hover);
   }
-  
+
   /* -- SIDEBAR ITEM STATES -- */
   .sidebar-item {
     @apply flex items-center gap-2 rounded-md px-3 py-2 text-foreground transition;
@@ -188,13 +188,13 @@
 
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  
+
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
-  
+
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
 
@@ -244,19 +244,19 @@
 
 @layer base {
   .markdown h1 {
-    @apply text-2xl font-bold tracking-[-0.04em] mt-8 mb-3;
+    @apply mt-8 mb-3 text-2xl font-bold tracking-[-0.04em];
   }
 
   .markdown h2 {
-    @apply text-xl font-semibold tracking-[-0.03em] mt-6 mb-2;
+    @apply mt-6 mb-2 text-xl font-semibold tracking-[-0.03em];
   }
 
   .markdown h3 {
-    @apply text-lg font-medium mt-4 mb-2;
+    @apply mt-4 mb-2 text-lg font-medium;
   }
 
   .markdown p {
-    @apply text-sm text-muted-foreground leading-relaxed mb-4;
+    @apply mb-4 text-sm leading-relaxed text-muted-foreground;
   }
 
   .markdown strong {
@@ -268,10 +268,10 @@
   }
 
   .markdown ul {
-    @apply list-disc pl-5 space-y-1;
+    @apply list-disc space-y-1 pl-5;
   }
 
   .markdown ol {
-    @apply list-decimal pl-5 space-y-1;
+    @apply list-decimal space-y-1 pl-5;
   }
 }

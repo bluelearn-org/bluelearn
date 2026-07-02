@@ -1,6 +1,7 @@
 //  @ts-check
 
-import { tanstackConfig } from "@tanstack/eslint-config"
+import { tanstackConfig } from "@tanstack/eslint-config";
+import prettier from "eslint-config-prettier";
 
 export default [
   {
@@ -15,4 +16,5 @@ export default [
     ],
   },
   ...tanstackConfig,
-]
+  prettier,
+];

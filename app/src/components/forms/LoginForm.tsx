@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,30 +7,27 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Field,
   FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   return (
-    <div
-      className={cn("mx-auto w-full max-w-md", className)}
-      {...props}
-    >
+    <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="rounded-md bg-background shadow-none">
         {/* Header */}
         <CardHeader className="space-y-4 p-6">
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase">
             Authentication
           </p>
 
@@ -50,7 +47,7 @@ export function LoginForm({
           <form className="space-y-6">
             <FieldGroup className="space-y-5">
               <Field className="space-y-2">
-                <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                   Email
                 </FieldLabel>
 
@@ -66,7 +63,7 @@ export function LoginForm({
 
               <Field className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                     Password
                   </FieldLabel>
 
@@ -103,15 +100,13 @@ export function LoginForm({
                 Accept terms of service
               </FieldLabel>
               <FieldDescription className="font-mono">
-                By clicking this checkbox, you agree to the terms of service and privacy policy.
+                By clicking this checkbox, you agree to the terms of service and
+                privacy policy.
               </FieldDescription>
             </FieldContent>
           </Field>
-          
-          <Button
-            type="submit"
-            className="btn-pri w-full"
-          >
+
+          <Button type="submit" className="btn-pri w-full">
             Sign in
           </Button>
 
@@ -127,5 +122,5 @@ export function LoginForm({
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

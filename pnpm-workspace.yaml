@@ -1,5 +1,5 @@
 packages:
-  - 'api'
-  - 'app'
-  - 'worker'
-  - 'packages/*'
+  - "api"
+  - "app"
+  - "worker"
+  - "packages/*"

@@ -1,23 +1,18 @@
 import type { Subject, SubjectReference } from "@/types/subjects";
-import type {
-  Guide,
-  GuideReference,
-  HydratedGuide,
-} from "@/types/guides";
-import type { HydratedPath, Path } from "@/types/paths"
-
+import type { Guide, GuideReference, HydratedGuide } from "@/types/guides";
+import type { HydratedPath, Path } from "@/types/paths";
 
 // TODO: update to fetch from api
 export const getPathBySlug = (paths: Array<Path>, slug: string) => {
-  const foundPath = paths.find(path => path.slug === slug);
+  const foundPath = paths.find((path) => path.slug === slug);
   return foundPath;
-}
+};
 
 // TODO: update to fetch from api
 export const getGuideBySlug = (guides: Array<Guide>, slug: string) => {
-  const foundGuide = guides.find(guide => guide.slug === slug);
+  const foundGuide = guides.find((guide) => guide.slug === slug);
   return foundGuide;
-}
+};
 
 // TODO: used for hydration - remove when fetching from api
 export const createGuideMap = (guides: Array<Guide>): Record<string, Guide> => {
@@ -27,7 +22,7 @@ export const createGuideMap = (guides: Array<Guide>): Record<string, Guide> => {
   }, {});
 
   return guideMap;
-}
+};
 
 export const createSubjectMap = (
   subjects: Array<Subject>
@@ -44,20 +39,22 @@ export const createSubjectMap = (
 };
 
 // TODO: when integrating api, hydration should be done on the backend - change this to fetch from api
-export const hydratePaths = (guides: Array<Guide>, paths: Array<Path>): Array<HydratedPath> => {
+export const hydratePaths = (
+  guides: Array<Guide>,
+  paths: Array<Path>
+): Array<HydratedPath> => {
   const guideMap = createGuideMap(guides);
 
   const hydratedPaths = paths.map((path) => ({
     ...path,
     levels: path.levels.map((l) => ({
       level: l.level,
-      guide: guideMap[l.guide]
-    }))
+      guide: guideMap[l.guide],
+    })),
   }));
 
-  return hydratedPaths
-}
-
+  return hydratedPaths;
+};
 
 export const hydrateGuide = (
   guide: Guide,
@@ -74,7 +71,7 @@ export const hydrateGuide = (
       .map((slug) => subjectMap[slug])
       .map<SubjectReference>((subject) => ({
         slug: subjectMap[subject.slug].slug,
-        name: subjectMap[subject.slug].name
+        name: subjectMap[subject.slug].name,
       })),
 
     prerequisites: guide.prerequisites

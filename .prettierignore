@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+.output
+.nitro
+.tanstack
+.vinxi
+.wrangler
+pnpm-lock.yaml
+app/src/routeTree.gen.ts
+api/src/database.types.ts
+mockups
+*.md

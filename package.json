@@ -15,12 +15,29 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "format": "pnpm -r format",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
     "test": "pnpm -r test",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
     "api:deploy": "pnpm --filter api deploy"
+  },
+  "lint-staged": {
+    "app/**/*.{ts,tsx,js,jsx}": [
+      "pnpm --filter app exec eslint --fix",
+      "prettier --write"
+    ],
+    "api/**/*.{ts,js}": [
+      "pnpm --filter api exec eslint --fix",
+      "prettier --write"
+    ],
+    "packages/schemas/**/*.{ts,js}": [
+      "pnpm --filter @bluelearn/schemas exec eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,jsonc,yml,yaml,css,html}": "prettier --write"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -30,6 +47,10 @@
     ]
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.7.4",
     "supabase": "^2.105.0"
   }
 }
