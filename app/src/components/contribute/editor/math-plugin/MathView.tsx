@@ -51,6 +51,11 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     setIsFocused(true);
   };
 
+  const handleBlur = () => {
+      setIsFocused(false);
+  };
+
+
   // Load MathLive dynamically on the client (SSR safe)
   useEffect(() => {
     import("mathlive").then((mathlive) => {
@@ -68,6 +73,14 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       }
     }
   }, [equation, isLoaded]);
+
+  // Blur the math field and hide menu if the node is no longer selected
+  useEffect(() => {
+    if (!isSelected && ref.current) {
+      ref.current.blur();
+      setIsFocused(false);
+    }
+  }, [isSelected, isLoaded]);
 
   // Auto-focus empty equations when they are selected (e.g. immediately after insertion)
   useEffect(() => {
@@ -198,9 +211,9 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
         <math-field
           ref={ref}
           value={equation}
-          virtual-keyboard-mode="manual"
+          readOnly={!isSelected && !isFocused}
           onFocus={handleFocus}
-          onBlur={() => setIsFocused(false)}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           style={{
             minWidth: isFocused ? "8rem" : "0px",
@@ -251,9 +264,9 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
         <math-field
           ref={ref}
           value={equation}
-          virtual-keyboard-mode="manual"
+          readOnly={!isSelected && !isFocused}
           onFocus={handleFocus}
-          onBlur={() => setIsFocused(false)}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           style={{
             width: "100%",
