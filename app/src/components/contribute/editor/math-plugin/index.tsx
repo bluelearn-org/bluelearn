@@ -257,16 +257,35 @@ export function MathShortcutTypeListener() {
 
           const textContent = anchorNode.getTextContent();
           const match = findMathInText(textContent);
-          if (!match) {
-            return;
-          }
 
-          // Verify that selection is within or adjacent to the math equation
-          const isCursorInMatch =
-            anchorOffset >= match.startIdx &&
-            anchorOffset <= match.endIdx + 1;
-          if (!isCursorInMatch) {
-            return;
+          let startIdx: number;
+          let endIdx: number;
+          let equation: string;
+          let isInline: boolean;
+
+          if (match) {
+            // Verify that selection is within or adjacent to the math equation
+            const isCursorInMatch =
+              anchorOffset >= match.startIdx &&
+              anchorOffset <= match.endIdx + 1;
+            if (!isCursorInMatch) {
+              return;
+            }
+            startIdx = match.startIdx;
+            endIdx = match.endIdx;
+            equation = match.equation;
+            isInline = match.isInline;
+          } else {
+            // Check if the user typed "$$" for block math
+            const textBeforeCursor = textContent.slice(0, anchorOffset);
+            if (textBeforeCursor.endsWith("$$")) {
+              startIdx = anchorOffset - 2;
+              endIdx = anchorOffset - 1;
+              equation = "";
+              isInline = false;
+            } else {
+              return;
+            }
           }
 
           const root = $getRoot();
@@ -275,8 +294,8 @@ export function MathShortcutTypeListener() {
           const nodeStartIdx = findNodeStartIdx(charMap, anchorNode);
 
           if (nodeStartIdx !== -1) {
-            const startPos = charMap[nodeStartIdx + match.startIdx];
-            const endPos = charMap[nodeStartIdx + match.endIdx];
+            const startPos = charMap[nodeStartIdx + startIdx];
+            const endPos = charMap[nodeStartIdx + endIdx];
             if (startPos && endPos) {
               const startNodeKey = startPos.node.getKey();
               const startOffset = startPos.offset;
@@ -294,7 +313,7 @@ export function MathShortcutTypeListener() {
                   return;
                 }
 
-                const mathNode = $createMathNode(match.equation, match.isInline);
+                const mathNode = $createMathNode(equation, isInline);
                 const rangeSelection = $createRangeSelection();
                 rangeSelection.anchor.set(
                   latestStartNode.getKey(),

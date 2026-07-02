@@ -11,6 +11,7 @@ const {
   COMMAND_PRIORITY_LOW,
   KEY_BACKSPACE_COMMAND,
   KEY_DELETE_COMMAND,
+  KEY_ENTER_COMMAND,
 } = lexical;
 
 interface MathViewProps {
@@ -68,6 +69,13 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     }
   }, [equation, isLoaded]);
 
+  // Auto-focus empty equations when they are selected (e.g. immediately after insertion)
+  useEffect(() => {
+    if (isLoaded && isSelected && equation === "" && ref.current) {
+      ref.current.focus();
+    }
+  }, [isLoaded, isSelected, equation]);
+
   // Update Lexical Node equation on input changes
   useEffect(() => {
     const mf = ref.current;
@@ -111,6 +119,17 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       return false;
     };
 
+    const handleEnterCommand = (event: KeyboardEvent) => {
+      if (!isFocused && isSelected && $isNodeSelection($getSelection())) {
+        event.preventDefault();
+        if (ref.current) {
+          ref.current.focus();
+        }
+        return true;
+      }
+      return false;
+    };
+
     const unregisterDelete = editor.registerCommand(
       KEY_DELETE_COMMAND,
       handleDeleteCommand,
@@ -121,10 +140,16 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       handleDeleteCommand,
       COMMAND_PRIORITY_LOW
     );
+    const unregisterEnter = editor.registerCommand(
+      KEY_ENTER_COMMAND,
+      handleEnterCommand,
+      COMMAND_PRIORITY_LOW
+    );
 
     return () => {
       unregisterDelete();
       unregisterBackspace();
+      unregisterEnter();
     };
   }, [editor, isSelected, nodeKey, isFocused]);
 
@@ -142,16 +167,15 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   const handleKeyDown = (e: any) => {
     if (e.key === "Escape") {
       e.currentTarget.blur();
-    } else if (inline && e.key === "Enter") {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       e.currentTarget.blur();
-    } else if (
-      !inline &&
-      e.key === "Enter" &&
-      (e.shiftKey || e.ctrlKey || e.metaKey)
-    ) {
-      e.preventDefault();
-      e.currentTarget.blur();
+      editor.update(() => {
+        const node = $getNodeByKey(nodeKey);
+        if (node !== null) {
+          node.selectNext();
+        }
+      });
     }
   };
 
