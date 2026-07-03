@@ -24,3 +24,23 @@ export type Level = {
 export type HydratedPath = Omit<Path, "levels"> & {
   levels: Array<Level>;
 };
+
+export type LearningPathRevision = {
+  path_id: string;
+  title: string;
+  summary: string;
+  contributor_id: string;
+  contributor_name: string;
+  created_at: string;
+  status: string;
+}
+
+export type GuideRevision = {
+  guide_id: string;
+  title: string;
+  summary: string;
+  contributor_id: string;
+  contributor_name: string;
+  created_at: string;
+  status: string;
+}

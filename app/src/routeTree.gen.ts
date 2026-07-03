@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubjectsRouteImport } from './routes/subjects'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PathsRouteImport } from './routes/paths'
 import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as ContributeRouteImport } from './routes/contribute'
@@ -30,6 +31,11 @@ const SubjectsRoute = SubjectsRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PathsRoute = PathsRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/contribute': typeof ContributeRoute
   '/guides': typeof GuidesRouteWithChildren
   '/paths': typeof PathsRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/browse': typeof BrowseRoute
   '/contribute': typeof ContributeRoute
   '/guides': typeof GuidesRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/paths/$slug': typeof PathsSlugRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/contribute': typeof ContributeRoute
   '/guides': typeof GuidesRouteWithChildren
   '/paths': typeof PathsRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/contribute'
     | '/guides'
     | '/paths'
+    | '/profile'
     | '/register'
     | '/subjects'
     | '/guides/$slug'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/contribute'
     | '/guides'
+    | '/profile'
     | '/register'
     | '/guides/$slug'
     | '/paths/$slug'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/contribute'
     | '/guides'
     | '/paths'
+    | '/profile'
     | '/register'
     | '/subjects'
     | '/guides/$slug'
@@ -173,6 +185,7 @@ export interface RootRouteChildren {
   ContributeRoute: typeof ContributeRoute
   GuidesRoute: typeof GuidesRouteWithChildren
   PathsRoute: typeof PathsRouteWithChildren
+  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   SubjectsRoute: typeof SubjectsRouteWithChildren
 }
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/paths': {
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContributeRoute: ContributeRoute,
   GuidesRoute: GuidesRouteWithChildren,
   PathsRoute: PathsRouteWithChildren,
+  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   SubjectsRoute: SubjectsRouteWithChildren,
 }
