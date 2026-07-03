@@ -1,5 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { ServiceError } from '../lib/service-error'
+import type { Database } from '../database.types'
+
+import { type FileUpload, type UUID } from '@bluelearn/schemas'
 
 type DB = SupabaseClient<Database>
 
@@ -10,7 +13,7 @@ export function fileNameCleaner(name: string) {
   return name
 }
 
-export async function uploadMediaFile(file: File, userId: string, db: SupabaseClient) {
+export async function uploadMediaFile(file: FileUpload, userId: string, db: DB) {
   // Uploads media file to bucket and store path in database
   const cleanFileName = fileNameCleaner(file.name)
 
