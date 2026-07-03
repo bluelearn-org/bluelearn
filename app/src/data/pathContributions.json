@@ -1,0 +1,56 @@
+[
+  {
+    "path_id": "path-001",
+    "title": "Full-Stack Web Development Masterclass",
+    "summary": "A comprehensive learning path covering frontend development with React, backend with Node.js, and database design with PostgreSQL.",
+    "contributor_id": "user_567",
+    "contributor_name": "David Lee",
+    "created_at": "2026-07-01T13:00:00Z",
+    "status": "pending"
+  },
+  {
+    "path_id": "path-002",
+    "title": "Mobile Development with React Native",
+    "summary": "Learn to build cross-platform mobile applications using React Native, covering UI components, state management, navigation, and native modules.",
+    "contributor_id": "user_890",
+    "contributor_name": "Jessica Williams",
+    "created_at": "2026-06-30T11:30:00Z",
+    "status": "pending"
+  },
+  {
+    "path_id": "path-003",
+    "title": "Cloud Architecture and DevOps Essentials",
+    "summary": "Master cloud deployment, containerization with Docker, Kubernetes orchestration, CI/CD pipelines, and monitoring best practices.",
+    "contributor_id": "user_012",
+    "contributor_name": "James Martinez",
+    "created_at": "2026-06-28T15:45:00Z",
+    "status": "pending"
+  },
+  {
+    "path_id": "path-004",
+    "title": "GraphQL API Development",
+    "summary": "Build modern APIs with GraphQL, including schema design, resolvers, authentication, real-time subscriptions, and best practices.",
+    "contributor_id": "user_345",
+    "contributor_name": "Sofia Patel",
+    "created_at": "2026-06-27T10:00:00Z",
+    "status": "pending"
+  },
+    {
+    "path_id": "path-005",
+    "title": "GraphQL API Development",
+    "summary": "Build modern APIs with GraphQL, including schema design, resolvers, authentication, real-time subscriptions, and best practices.",
+    "contributor_id": "user_345",
+    "contributor_name": "Sofia Patel",
+    "created_at": "2026-06-27T10:00:00Z",
+    "status": "pending"
+  },
+    {
+    "path_id": "path-006",
+    "title": "GraphQL API Development",
+    "summary": "Build modern APIs with GraphQL, including schema design, resolvers, authentication, real-time subscriptions, and best practices.",
+    "contributor_id": "user_345",
+    "contributor_name": "Sofia Patel",
+    "created_at": "2026-06-27T10:00:00Z",
+    "status": "pending"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "guide_id": "guide-001",
+    "title": "Getting Started with React Hooks",
+    "summary": "A comprehensive guide covering React Hooks fundamentals, including useState, useEffect, useContext, and custom hooks with practical examples.",
+    "contributor_id": "user_123",
+    "contributor_name": "Alex Johnson",
+    "created_at": "2026-07-02T14:30:00Z",
+    "status": "pending"
+  },
+  {
+    "guide_id": "guide-002",
+    "title": "TypeScript Advanced Patterns",
+    "summary": "Explore advanced TypeScript patterns including generics, conditional types, mapped types, and utility types for building scalable applications.",
+    "contributor_id": "user_456",
+    "contributor_name": "Sarah Chen",
+    "created_at": "2026-07-01T10:15:00Z",
+    "status": "pending"
+  },
+  {
+    "guide_id": "guide-003",
+    "title": "Database Optimization Techniques",
+    "summary": "Learn essential database optimization strategies including indexing, query optimization, caching strategies, and performance monitoring.",
+    "contributor_id": "user_789",
+    "contributor_name": "Michael Rodriguez",
+    "created_at": "2026-06-30T16:45:00Z",
+    "status": "pending"
+  },
+  {
+    "guide_id": "guide-004",
+    "title": "Testing JavaScript Applications",
+    "summary": "Complete guide to testing in JavaScript covering unit tests, integration tests, end-to-end testing with Jest, Vitest, and Cypress.",
+    "contributor_id": "user_234",
+    "contributor_name": "Emma Watson",
+    "created_at": "2026-06-29T09:20:00Z",
+    "status": "pending"
+  }
+]
