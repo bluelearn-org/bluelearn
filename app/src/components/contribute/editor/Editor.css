@@ -3,6 +3,9 @@
 /* == BRAND COLOR VARIABLES FOR MDXEDITOR == */
 .mdxeditor,
 [class*="_editorRoot"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
   --blue-1: var(--background);
   --blue-2: var(--muted);
   --blue-3: var(--muted);
