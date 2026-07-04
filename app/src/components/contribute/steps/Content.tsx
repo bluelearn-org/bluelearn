@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 
 const Editor = lazy(() => import("../editor/Editor"));
@@ -8,19 +8,27 @@ type PropTypes = {
 };
 
 export const Content = ({ Stepper }: PropTypes) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <Stepper.Content step="content">
       <StepperActionHeader title={"Content"} Stepper={Stepper} />
 
-      <Suspense
-        fallback={
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-            Loading Editor...
-          </div>
-        }
-      >
-        <Editor />
-      </Suspense>
+      {mounted && (
+        <Suspense
+          fallback={
+            <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+              Loading Editor...
+            </div>
+          }
+        >
+          <Editor />
+        </Suspense>
+      )}
     </Stepper.Content>
   );
 };

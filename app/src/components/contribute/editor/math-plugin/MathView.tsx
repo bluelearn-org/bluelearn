@@ -57,11 +57,16 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
 
   // Load MathLive dynamically on the client (SSR safe)
   useEffect(() => {
+    let isMounted = true;
     import("mathlive").then((mathlive) => {
-      mathlive.MathfieldElement.fontsDirectory =
-        "https://unpkg.com/mathlive@0.110.0/dist/fonts";
-      setIsLoaded(true);
+      if (isMounted) {
+        mathlive.MathfieldElement.fontsDirectory = "/mathlive/fonts";
+        setIsLoaded(true);
+      }
     });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync equation prop to math-field value when it changes externally or after MathLive loads
