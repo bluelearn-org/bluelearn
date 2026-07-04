@@ -214,7 +214,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       >
         <math-field
           ref={ref}
-          value={equation}
+          defaultValue={equation}
           readOnly={!isSelected && !isFocused}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -267,7 +267,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       >
         <math-field
           ref={ref}
-          value={equation}
+          defaultValue={equation}
           readOnly={!isSelected && !isFocused}
           onFocus={handleFocus}
           onBlur={handleBlur}
