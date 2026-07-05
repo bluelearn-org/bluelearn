@@ -29,6 +29,9 @@ export const admin: DB = createClient<Database>(
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
+// Unwrap a Supabase { data, error } result: throw on error so a bad insert
+// fails the test at the cause, and return deta as non-null so callers get a
+// clean row without null-checks.
 function unwrap<T>(result: { data: T | null; error: unknown }): T {
   if (result.error) throw result.error;
   return result.data as T;
@@ -101,6 +104,49 @@ export function createPanelMember(
     panel_id: panelId,
     member_id: memberId,
     status: "assigned",
+    ...overrides,
+  });
+}
+
+export function createGuideBase(
+  overrides: Partial<Insert<"guide_bases">> = {}
+) {
+  return insert("guide_bases", {
+    slug: `guide-${crypto.randomUUID()}`,
+    title: "Test Guide",
+    knowledge_type: "theory",
+    ...overrides,
+  });
+}
+
+export function createGuide(
+  guideBaseId: string,
+  overrides: Partial<Insert<"guides">> = {}
+) {
+  return insert("guides", { guide_base_id: guideBaseId, ...overrides });
+}
+
+export function createGuideRevision(
+  guideId: string,
+  overrides: Partial<Insert<"guide_revisions">> = {}
+) {
+  return insert("guide_revisions", {
+    guide_id: guideId,
+    title: "Test Guide",
+    ...overrides,
+  });
+}
+
+// Links a review case to the exact guide revision it judges. This is what gives
+// a queued guide case its title in the /reviews/queue response.
+export function createGuideReviewCase(
+  caseId: string,
+  guideRevisionId: string,
+  overrides: Partial<Insert<"guide_review_cases">> = {}
+) {
+  return insert("guide_review_cases", {
+    case_id: caseId,
+    guide_revision_id: guideRevisionId,
     ...overrides,
   });
 }
