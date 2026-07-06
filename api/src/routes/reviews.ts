@@ -29,19 +29,19 @@ export const reviewsRouter = new Hono<HonoEnv>()
     return c.json(result, 200);
   })
 
-  // Cast or update a panel vote with written justification (+ rubric reasons if rejected)
+  // Cast a panel vote with written justification
   .post(
     "/cases/:id/decisions",
     requireUser,
     zValidator("json", createDecisionSchema),
     async (c) => {
-      const body = c.req.valid("json");
+      const { decision, notes } = c.req.valid("json");
       const result = await castDecision(
         c.get("supabase"),
         c.get("user").id,
         c.req.param("id"),
-        body
+        { decision, notes }
       );
-      return c.json({ decision: result }, 200);
+      return c.json({ decision: result }, 201);
     }
   );

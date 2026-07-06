@@ -1,59 +1,175 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
-import type { CreateDecisionInput } from "@bluelearn/schemas";
 
 type DB = SupabaseClient<Database>;
+type ReviewOutcome = Database["public"]["Enums"]["review_outcome"];
 
-// Cases in the caller's queue — open reviews where they are an assigned panelist.
+// -- Internal row shapes for single top-level casts --
+
+type QueueRow = {
+  id: string;
+  panel_id: string;
+  member_id: string | null;
+  status: string;
+  assigned_at: string;
+  review_panels: {
+    id: string;
+    target_seat_count: number;
+    outcome: ReviewOutcome | null;
+    opened_at: string;
+    closed_at: string | null;
+    case_id: string;
+    review_cases: {
+      id: string;
+      case_type: string;
+      status: string;
+      created_at: string;
+      created_by: string | null;
+      time_limit: string | null;
+      updated_at: string;
+    };
+  };
+};
+
+type GuideLinkRow = {
+  case_id: string;
+  guide_revision_id: string;
+  guide_revisions: { title: string | null; summary: string | null };
+};
+
+type CaseListRow = {
+  id: string;
+  case_type: string;
+  status: string;
+  created_at: string;
+  created_by: string | null;
+  time_limit: string | null;
+  updated_at: string;
+  review_panels: Array<{
+    id: string;
+    target_seat_count: number;
+    outcome: ReviewOutcome | null;
+    opened_at: string;
+    closed_at: string | null;
+  }>;
+  guide_review_cases: {
+    guide_revision_id: string;
+    guide_revisions: { title: string | null; summary: string | null } | null;
+  } | null;
+};
+
+type CaseDetailRow = {
+  id: string;
+  case_type: string;
+  status: string;
+  created_at: string;
+  created_by: string | null;
+  time_limit: string | null;
+  updated_at: string;
+  review_panels: Array<{
+    id: string;
+    target_seat_count: number;
+    outcome: ReviewOutcome | null;
+    opened_at: string;
+    closed_at: string | null;
+    panel_members: Array<{
+      id: string;
+      member_id: string | null;
+      status: string;
+      assigned_at: string;
+      review_decisions: {
+        id: string;
+        decision: ReviewOutcome;
+        notes: string | null;
+        created_at: string;
+        review_decision_reasons: Array<{ reason: string }> | null;
+      } | null;
+    }>;
+  }>;
+  guide_review_cases: {
+    guide_revision_id: string;
+    guide_revisions: {
+      id: string;
+      title: string | null;
+      summary: string | null;
+      body: string | null;
+      status: string;
+      created_at: string;
+    } | null;
+  } | null;
+};
+
+// ---- Exports ----
+
 export async function getReviewQueue(supabase: DB, userId: string) {
-  const { data, error } = await supabase
-    .from("review_cases")
+  const { data: raw, error } = await supabase
+    .from("panel_members")
     .select(
-      `id, case_type, status, created_at,
+      `id, panel_id, member_id, status, assigned_at,
        review_panels!inner(
-         panel_members!inner(member_id)
-       ),
-       guide_review_cases(
-         guide_revision_id,
-         guide_revisions!inner(title)
+         id, target_seat_count, outcome, opened_at, closed_at, case_id,
+         review_cases!inner(id, case_type, status, created_at, created_by, time_limit, updated_at)
        )`
     )
-    .in("status", ["pending", "in_review"])
-    .eq("review_panels.panel_members.member_id", userId)
-    .eq("review_panels.panel_members.status", "assigned")
-    .order("created_at", { ascending: false });
+    .eq("member_id", userId)
+    .eq("status", "assigned");
 
   if (error) {
     console.error(error);
     throw new ServiceError("Failed to load review queue", 500);
   }
 
-  if (!data) return [];
+  const memberships = (raw ?? []) as unknown as QueueRow[];
 
-  return data.map((rc) => {
-    const raw = rc as Record<string, unknown>;
-    const grc = raw.guide_review_cases as Record<string, unknown> | null;
-    const gr = grc?.guide_revisions as Record<string, unknown> | undefined;
+  const open = memberships.filter(
+    (m) =>
+      m.review_panels.review_cases.status === "pending" ||
+      m.review_panels.review_cases.status === "in_review"
+  );
+
+  const caseIds = [
+    ...new Set(open.map((m) => m.review_panels.review_cases.id)),
+  ];
+
+  let guideLinks: GuideLinkRow[] = [];
+  if (caseIds.length > 0) {
+    const { data: links, error: linkError } = await supabase
+      .from("guide_review_cases")
+      .select(
+        "case_id, guide_revision_id, guide_revisions!inner(title, summary)"
+      )
+      .in("case_id", caseIds);
+
+    if (linkError) {
+      console.error(linkError);
+      throw new ServiceError("Failed to load guide revision details", 500);
+    }
+    guideLinks = (links ?? []) as unknown as GuideLinkRow[];
+  }
+
+  return open.map((m) => {
+    const rc = m.review_panels.review_cases;
+    const link = guideLinks.find((l) => l.case_id === rc.id);
     return {
       id: rc.id,
       case_type: rc.case_type,
       status: rc.status,
-      title: (gr?.title as string) ?? null,
+      title: link?.guide_revisions?.title ?? null,
       created_at: rc.created_at,
     };
   });
 }
 
-// All finished review cases — public browse.
 export async function listReviewCases(supabase: DB) {
-  const { data, error } = await supabase
+  const { data: raw, error } = await supabase
     .from("review_cases")
     .select(
-      `id, case_type, status, created_at,
+      `id, case_type, status, created_at, created_by, time_limit, updated_at,
+       review_panels(id, target_seat_count, outcome, opened_at, closed_at),
        guide_review_cases(
          guide_revision_id,
-         guide_revisions!inner(title)
+         guide_revisions(title, summary)
        )`
     )
     .in("status", ["approved", "rejected"])
@@ -61,33 +177,27 @@ export async function listReviewCases(supabase: DB) {
 
   if (error) {
     console.error(error);
-    throw new ServiceError("Failed to load review cases", 500);
+    throw new ServiceError("Failed to list review cases", 500);
   }
 
-  if (!data) return [];
+  const rows = (raw ?? []) as unknown as CaseListRow[];
 
-  return data.map((rc) => {
-    const raw = rc as Record<string, unknown>;
-    const grc = raw.guide_review_cases as Record<string, unknown> | null;
-    const gr = grc?.guide_revisions as Record<string, unknown> | undefined;
-    return {
-      id: rc.id,
-      case_type: rc.case_type,
-      status: rc.status,
-      title: (gr?.title as string) ?? null,
-      created_at: rc.created_at,
-    };
-  });
+  return rows.map((c) => ({
+    id: c.id,
+    case_type: c.case_type,
+    status: c.status,
+    title: c.guide_review_cases?.guide_revisions?.title ?? null,
+    created_at: c.created_at,
+  }));
 }
 
-// Full detail for a single finished review case: flattened case, panel, and decisions.
 export async function getReviewCase(supabase: DB, caseId: string) {
-  const { data, error } = await supabase
+  const { data: raw, error } = await supabase
     .from("review_cases")
     .select(
-      `id, case_type, status, created_by, created_at, updated_at,
+      `id, case_type, status, created_at, created_by, time_limit, updated_at,
        review_panels(
-         id,
+         id, target_seat_count, outcome, opened_at, closed_at,
          panel_members(
            id, member_id, status, assigned_at,
            review_decisions(
@@ -98,90 +208,59 @@ export async function getReviewCase(supabase: DB, caseId: string) {
        ),
        guide_review_cases(
          guide_revision_id,
-         guide_revisions!inner(title)
+         guide_revisions(id, title, summary, body, status, created_at)
        )`
     )
     .eq("id", caseId)
-    .in("status", ["approved", "rejected"])
+    .order("opened_at", { foreignTable: "review_panels", ascending: false })
     .maybeSingle();
 
   if (error) {
     console.error(error);
     throw new ServiceError("Failed to load review case", 500);
   }
-  if (!data) throw new ServiceError("Review case not found", 404);
+  if (!raw) throw new ServiceError("Review case not found", 404);
 
-  const raw = data as unknown as {
-    id: string;
-    case_type: string;
-    status: string;
-    created_by: string | null;
-    created_at: string;
-    updated_at: string;
-    review_panels: Array<{
-      panel_members: Array<{
-        id: string;
-        member_id: string;
-        status: string;
-        assigned_at: string;
-        review_decisions: Array<{
-          id: string;
-          decision: string;
-          notes: string | null;
-          created_at: string;
-          review_decision_reasons: Array<{ reason: string }>;
-        }>;
-      }>;
-    }>;
-    guide_review_cases: Array<{
-      guide_revisions: { title: string } | null;
-    }>;
-  };
+  const data = raw as unknown as CaseDetailRow;
+  const latestPanel = data.review_panels[0] ?? null;
+  const members = latestPanel?.panel_members ?? [];
 
-  const caseData = {
-    id: raw.id,
-    case_type: raw.case_type,
-    status: raw.status,
-    title: raw.guide_review_cases?.[0]?.guide_revisions?.title ?? null,
-    created_by: raw.created_by,
-    created_at: raw.created_at,
-    updated_at: raw.updated_at,
-  };
-
-  const panel =
-    raw.review_panels?.flatMap((p) =>
-      p.panel_members?.map((m) => ({
-        id: m.id,
-        member_id: m.member_id,
-        status: m.status,
-        assigned_at: m.assigned_at,
-      }))
-    ) ?? [];
-
-  const decisions =
-    raw.review_panels?.flatMap((p) =>
-      p.panel_members?.flatMap((m) =>
-        m.review_decisions?.map((d) => ({
+  return {
+    case: {
+      id: data.id,
+      case_type: data.case_type,
+      status: data.status,
+      title: data.guide_review_cases?.guide_revisions?.title ?? null,
+      created_by: data.created_by,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    },
+    panel: members.map((pm) => ({
+      id: pm.id,
+      member_id: pm.member_id,
+      status: pm.status,
+      assigned_at: pm.assigned_at,
+    })),
+    decisions: members
+      .filter((pm) => pm.review_decisions)
+      .map((pm) => {
+        const d = pm.review_decisions!;
+        return {
           id: d.id,
           decision: d.decision,
           justification: d.notes,
           reasons: d.review_decision_reasons?.map((r) => r.reason) ?? [],
           created_at: d.created_at,
-        }))
-      )
-    ) ?? [];
-
-  return { case: caseData, panel, decisions };
+        };
+      }),
+  };
 }
 
-// Cast or update the caller's vote on an active case. Upserts on the
-// panel_member_id unique constraint so the same panelist can change their
-// vote. Writes rubric reasons on reject.
 export async function castDecision(
   supabase: DB,
   userId: string,
   caseId: string,
-  input: CreateDecisionInput
+  input: { decision: ReviewOutcome; notes?: string | null }
 ) {
   const { data: panel, error: panelError } = await supabase
     .from("review_panels")
@@ -192,7 +271,7 @@ export async function castDecision(
 
   if (panelError) {
     console.error(panelError);
-    throw new ServiceError("Failed to find review panel", 500);
+    throw new ServiceError("Failed to find active panel", 500);
   }
   if (!panel)
     throw new ServiceError("No active review panel for this case", 400);
@@ -218,7 +297,7 @@ export async function castDecision(
       {
         panel_member_id: member.id,
         decision: input.decision,
-        notes: input.justification,
+        notes: input.notes ?? null,
       },
       { onConflict: "panel_member_id" }
     )
@@ -227,57 +306,8 @@ export async function castDecision(
 
   if (upsertError) {
     console.error(upsertError);
-    throw new ServiceError("Failed to cast decision", 500);
+    throw new ServiceError("Failed to record decision", 500);
   }
 
-  // Clear old reasons so a vote change from reject→approve doesn't leave
-  // stale reasons behind. PostgREST may reject the DELETE if RLS lacks
-  // a DELETE policy — that's acceptable; old reasons remain as orphans.
-  const { error: delErr } = await supabase
-    .from("review_decision_reasons")
-    .delete()
-    .eq("decision_id", decision.id);
-  if (delErr) console.error("Could not clear old reasons:", delErr);
-
-  // Write rubric reasons on reject
-  if (input.decision === "rejected") {
-    const { error: reasonsError } = await supabase
-      .from("review_decision_reasons")
-      .insert(
-        input.reasons.map((r) => ({ decision_id: decision.id, reason: r }))
-      );
-
-    if (reasonsError) {
-      console.error(reasonsError);
-      throw new ServiceError("Failed to record decision reasons", 500);
-    }
-  }
-
-  // Re-fetch with reasons for a clean response
-  const { data: full, error: fetchError } = await supabase
-    .from("review_decisions")
-    .select("id, decision, notes, created_at, review_decision_reasons(reason)")
-    .eq("id", decision.id)
-    .single();
-
-  if (fetchError) {
-    console.error(fetchError);
-    throw new ServiceError("Failed to load recorded decision", 500);
-  }
-
-  const rawFull = full as unknown as {
-    id: string;
-    decision: string;
-    notes: string | null;
-    created_at: string;
-    review_decision_reasons: Array<{ reason: string }> | null;
-  };
-
-  return {
-    id: rawFull.id,
-    decision: rawFull.decision,
-    justification: rawFull.notes,
-    reasons: rawFull.review_decision_reasons?.map((r) => r.reason) ?? [],
-    created_at: rawFull.created_at,
-  };
+  return decision;
 }

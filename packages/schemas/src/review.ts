@@ -1,26 +1,10 @@
 import { z } from "zod";
 
-export const decisionReasons = [
-  "hierarchy_issue",
-  "factual_error",
-  "duplicate_content",
-  "scope_violation",
-  "clarity_issue",
-  "missing_required_information",
-] as const;
-
-// Cast a panel vote. An approve carries only a justification; a reject must
-// also cite at least one rubric reason, matching the OpenAPI oneOf spec.
-export const createDecisionSchema = z.discriminatedUnion("decision", [
-  z.object({
-    decision: z.literal("approved"),
-    justification: z.string().trim().min(1),
-  }),
-  z.object({
-    decision: z.literal("rejected"),
-    justification: z.string().trim().min(1),
-    reasons: z.array(z.enum(decisionReasons)).min(1),
-  }),
-]);
+// Cast or update a panel vote on a review case. decision is required;
+// notes is an optional written justification.
+export const createDecisionSchema = z.object({
+  decision: z.enum(["approved", "rejected"]),
+  notes: z.string().trim().nullish(),
+});
 
 export type CreateDecisionInput = z.infer<typeof createDecisionSchema>;

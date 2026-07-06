@@ -6,6 +6,5 @@ create policy "Panelists can update their own decision"
       select 1 from public.panel_members pm
       where pm.id = panel_member_id
         and pm.member_id = (select auth.uid())
-        and pm.status = 'assigned'
     )
   );
