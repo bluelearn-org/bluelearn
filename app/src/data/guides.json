@@ -6,15 +6,8 @@
     "summary": "Learn the fundamental operations of mathematics, including addition, subtraction, multiplication, and division.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "mathematics",
-      "arithmetic"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Mathematics Foundations",
-      "Arithmetic"
-    ],
+    "tags": ["mathematics", "arithmetic"],
+    "breadcrumbs": ["Home", "Mathematics Foundations", "Arithmetic"],
     "prerequisites": [],
     "content": "# What is Arithmetic?"
   },
@@ -25,18 +18,9 @@
     "summary": "Learn how variables, expressions, and equations are used to model and solve mathematical problems.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "mathematics",
-      "algebra"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Mathematics Foundations",
-      "Algebra"
-    ],
-    "prerequisites": [
-      "arithmetic-introduction"
-    ],
+    "tags": ["mathematics", "algebra"],
+    "breadcrumbs": ["Home", "Mathematics Foundations", "Algebra"],
+    "prerequisites": ["arithmetic-introduction"],
     "content": "# How do you work with algebraic expressions?"
   },
   {
@@ -46,18 +30,9 @@
     "summary": "Explore the mathematical study of change and accumulation through derivatives and integrals.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "mathematics",
-      "calculus"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Mathematics Foundations",
-      "Calculus"
-    ],
-    "prerequisites": [
-      "algebra-how-to-express-equations"
-    ],
+    "tags": ["mathematics", "calculus"],
+    "breadcrumbs": ["Home", "Mathematics Foundations", "Calculus"],
+    "prerequisites": ["algebra-how-to-express-equations"],
     "content": "# What is Calculus?"
   },
   {
@@ -67,18 +42,9 @@
     "summary": "Learn how to calculate the likelihood of events and reason about uncertainty.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "mathematics",
-      "probability"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Statistics Foundations",
-      "Probability"
-    ],
-    "prerequisites": [
-      "arithmetic-introduction"
-    ],
+    "tags": ["mathematics", "probability"],
+    "breadcrumbs": ["Home", "Statistics Foundations", "Probability"],
+    "prerequisites": ["arithmetic-introduction"],
     "content": "# How do you calculate probability?"
   },
   {
@@ -88,18 +54,9 @@
     "summary": "Discover how to collect, interpret, and analyse data to uncover meaningful insights.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "mathematics",
-      "statistics"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Statistics Foundations",
-      "Statistics"
-    ],
-    "prerequisites": [
-      "probabilities-how-to-calculate-probability"
-    ],
+    "tags": ["mathematics", "statistics"],
+    "breadcrumbs": ["Home", "Statistics Foundations", "Statistics"],
+    "prerequisites": ["probabilities-how-to-calculate-probability"],
     "content": "# How do you analyse data?"
   },
   {
@@ -109,18 +66,9 @@
     "summary": "Understand vectors, quantities that have both magnitude and direction, and how they are used in mathematics and physics.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "mathematics",
-      "vectors"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Mathematics Foundations",
-      "Vectors"
-    ],
-    "prerequisites": [
-      "algebra-how-to-express-equations"
-    ],
+    "tags": ["mathematics", "vectors"],
+    "breadcrumbs": ["Home", "Mathematics Foundations", "Vectors"],
+    "prerequisites": ["algebra-how-to-express-equations"],
     "content": "# What is a Vector?"
   },
   {
@@ -130,20 +78,9 @@
     "summary": "Apply Newton's laws of motion to understand forces, movement, and physical systems.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "physics",
-      "mechanics",
-      "mathematics"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Physics Foundations",
-      "Mechanics"
-    ],
-    "prerequisites": [
-      "vectors-introduction",
-      "calculus-introduction"
-    ],
+    "tags": ["physics", "mechanics", "mathematics"],
+    "breadcrumbs": ["Home", "Physics Foundations", "Mechanics"],
+    "prerequisites": ["vectors-introduction", "calculus-introduction"],
     "content": "# How do you solve mechanics problems?"
   },
   {
@@ -153,15 +90,8 @@
     "summary": "Apply Newton's laws of motion to understand forces, movement, and physical systems.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "ai",
-      "machine-learning"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "AI Foundations",
-      "Machine Learning"
-    ],
+    "tags": ["ai", "machine-learning"],
+    "breadcrumbs": ["Home", "AI Foundations", "Machine Learning"],
     "prerequisites": [
       "algebra-how-to-express-equations",
       "statistics-how-to-analyse-data"
@@ -175,15 +105,8 @@
     "summary": "Create simple physics simulations by combining mathematical models with programming.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "physics",
-      "simulation"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Physics Foundations",
-      "Simulations"
-    ],
+    "tags": ["physics", "simulation"],
+    "breadcrumbs": ["Home", "Physics Foundations", "Simulations"],
     "prerequisites": [
       "mechanics-how-to-apply-newtons-laws",
       "programming-fundamentals"
@@ -197,15 +120,8 @@
     "summary": "Create simple physics simulations by combining mathematical models with programming.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "programming",
-      "computer-science"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "CS Foundations",
-      "Programming"
-    ],
+    "tags": ["programming", "computer-science"],
+    "breadcrumbs": ["Home", "CS Foundations", "Programming"],
     "prerequisites": [],
     "content": "# What is Programming?"
   },
@@ -216,18 +132,9 @@
     "summary": "Understand common data structures and learn when to use each one effectively.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "computer-science",
-      "data-structures"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "CS Foundations",
-      "Data Structures"
-    ],
-    "prerequisites": [
-      "programming-fundamentals"
-    ],
+    "tags": ["computer-science", "data-structures"],
+    "breadcrumbs": ["Home", "CS Foundations", "Data Structures"],
+    "prerequisites": ["programming-fundamentals"],
     "content": "# How do you choose a data structure?"
   },
   {
@@ -237,15 +144,8 @@
     "summary": "Understand game AI systems and how to develop custom AI behviours.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "game-development",
-      "ai"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Game Development",
-      "AI Systems"
-    ],
+    "tags": ["game-development", "ai"],
+    "breadcrumbs": ["Home", "Game Development", "AI Systems"],
     "prerequisites": [
       "programming-fundamentals",
       "data-structures-how-to-choose-structures"
@@ -259,17 +159,9 @@
     "summary": "Learn how to create and animate game characters and bring them into Unity.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "game-development"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Game Development Foundations",
-      "Introduction"
-    ],
-    "prerequisites": [
-      "programming-fundamentals"
-    ],
+    "tags": ["game-development"],
+    "breadcrumbs": ["Home", "Game Development Foundations", "Introduction"],
+    "prerequisites": ["programming-fundamentals"],
     "content": "# What is Game Development?"
   },
   {
@@ -279,19 +171,9 @@
     "summary": "Learn how to create characters in blender starting with the initial sketch to the 3D character.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "3d-modelling",
-      "blender",
-      "animation"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Game Development",
-      "Blender Character Creation"
-    ],
-    "prerequisites": [
-      "basic-3d-modelling"
-    ],
+    "tags": ["3d-modelling", "blender", "animation"],
+    "breadcrumbs": ["Home", "Game Development", "Blender Character Creation"],
+    "prerequisites": ["basic-3d-modelling"],
     "content": "# Starting with the character concept sketch"
   },
   {
@@ -301,19 +183,9 @@
     "summary": "Understand common data structures and learn when to use each one effectively.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "game-development",
-      "unity",
-      "3d"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Game Development",
-      "Unity Basics"
-    ],
-    "prerequisites": [
-      "game-development-introduction"
-    ],
+    "tags": ["game-development", "unity", "3d"],
+    "breadcrumbs": ["Home", "Game Development", "Unity Basics"],
+    "prerequisites": ["game-development-introduction"],
     "content": "# How to Import a Character into Unity."
   },
   {
@@ -323,20 +195,9 @@
     "summary": "Create player movement systems in Unity using Character Controllers and C# scripts.",
     "created_at": "14th June 2026",
     "duration": 15,
-    "tags": [
-      "game-development",
-      "unity",
-      "programming"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Game Development",
-      "Player Systems"
-    ],
-    "prerequisites": [
-      "unity-import-character",
-      "programming-fundamentals"
-    ],
+    "tags": ["game-development", "unity", "programming"],
+    "breadcrumbs": ["Home", "Game Development", "Player Systems"],
+    "prerequisites": ["unity-import-character", "programming-fundamentals"],
     "content": "# How to Create Character Movement in Unity."
   },
   {
@@ -346,14 +207,8 @@
     "summary": "A beginner-friendly introduction to writing LaTeX math expressions, covering inline and display syntax, common commands, and argument grouping.",
     "created_at": "1st July 2026",
     "duration": 10,
-    "tags": [
-      "mathematics"
-    ],
-    "breadcrumbs": [
-      "Home",
-      "Mathematics",
-      "LaTeX"
-    ],
+    "tags": ["mathematics"],
+    "breadcrumbs": ["Home", "Mathematics", "LaTeX"],
     "prerequisites": [],
     "content": "# Utilizing LaTeX 101\n\nLaTeX math is enclosed in two delimiters using dollar signs (`$`):\n\n1. **Inline** enclose math with single dollar signs: `$...$`\n2. **Display blocks** enclose math with double dollar signs: `$$...$$`\n\nTo write symbols like $\\alpha$, you use backslash-prefixed commands. Commands are usually shortened versions of the name (e.g. `\\frac` for fraction).\n\n### Common Commands\n\n`x^2` renders as $x^2$\n\n`x_n` renders as $x_n$\n\n`\\\\frac{a}{b}` renders as $\\frac{a}{b}$\n\n`\\\\sqrt{x}` renders as $\\sqrt{x}$\n\n`\\\\int_{a}^{b}` renders as $\\int_{a}^{b}$\n\n`\\\\sum_{i=1}^{n}` renders as $\\sum_{i=1}^{n}$\n\n`\\\\lim_{x \\\\to 0}` renders as $\\lim_{x \\to 0}$\n\n`\\\\alpha, \\\\beta, \\\\pi` renders as $\\alpha, \\beta, \\pi$\n\n`\\\\pm` renders as $\\pm$\n\n`\\\\infty` renders as $\\infty$\n\n`\\\\text{words}` renders as $\\text{words}$\n\nYou'll also see `{}` and `[]` in formulas. `{}` groups characters together as a single argument, for example `x_{233}` makes $x_{233}$. `[]` is for optional arguments, for example `\\sqrt[3]{x}` makes $\\sqrt[3]{x}$ where `[3]` is the root degree.\n\n**Note:** In Bluelearn, guides are saved as JSON files, so you must write LaTeX commands with double backslashes (`\\\\`) instead of a single backslash (`\\`)."
   },

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import * as React from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -13,64 +13,61 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
 type ComboboxBaseProps = {
-  items: Array<string>
-  placeholder?: string
-}
+  items: Array<string>;
+  placeholder?: string;
+};
 
 type SingleProps = ComboboxBaseProps & {
-  multiple?: false
-  value: string
-  onValueChange: (value: string) => void
-}
+  multiple?: false;
+  value: string;
+  onValueChange: (value: string) => void;
+};
 
 type MultiProps = ComboboxBaseProps & {
-  multiple: true
-  value: Array<string>
-  onValueChange: (value: Array<string>) => void
-}
+  multiple: true;
+  value: Array<string>;
+  onValueChange: (value: Array<string>) => void;
+};
 
-type ComboboxProps = SingleProps | MultiProps
+type ComboboxProps = SingleProps | MultiProps;
 
-export function Combobox({ multiple, items, value, onValueChange }: ComboboxProps) {
-  const [open, setOpen] = React.useState(false)
+export function Combobox({
+  multiple,
+  items,
+  value,
+  onValueChange,
+}: ComboboxProps) {
+  const [open, setOpen] = React.useState(false);
 
-  const isMulti = multiple === true
+  const isMulti = multiple === true;
 
-  const selected = isMulti
-    ? value
-    : value
-      ? [value]
-      : []
+  const selected = isMulti ? value : value ? [value] : [];
 
   const toggle = (item: string) => {
     if (!isMulti) {
-      onValueChange(item)
-      setOpen(false)
-      return
+      onValueChange(item);
+      setOpen(false);
+      return;
     }
 
-    const exists = value.includes(item)
+    const exists = value.includes(item);
 
-    onValueChange(
-      exists
-        ? value.filter((v) => v !== item)
-        : [...value, item]
-    )
-  }
+    onValueChange(exists ? value.filter((v) => v !== item) : [...value, item]);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-[300px] justify-between">
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex flex-wrap gap-1">
             {selected.length === 0 && (
               <span className="text-muted-foreground">Select...</span>
             )}
@@ -101,7 +98,7 @@ export function Combobox({ multiple, items, value, onValueChange }: ComboboxProp
 
             <CommandGroup>
               {items.map((item) => {
-                const isSelected = selected.includes(item)
+                const isSelected = selected.includes(item);
 
                 return (
                   <CommandItem
@@ -117,12 +114,12 @@ export function Combobox({ multiple, items, value, onValueChange }: ComboboxProp
                     />
                     {item}
                   </CommandItem>
-                )
+                );
               })}
             </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

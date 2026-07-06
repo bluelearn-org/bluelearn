@@ -1,14 +1,14 @@
-import * as React from "react"
+import * as React from "react";
 import {
   ChevronFirstIcon,
   ChevronLastIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function PaginationBase({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -19,7 +19,7 @@ function PaginationBase({ className, ...props }: React.ComponentProps<"nav">) {
       className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
     />
-  )
+  );
 }
 
 function PaginationContent({
@@ -32,17 +32,17 @@ function PaginationContent({
       className={cn("flex items-center gap-0.5", className)}
       {...props}
     />
-  )
+  );
 }
 
 function PaginationItem({ ...props }: React.ComponentProps<"li">) {
-  return <li data-slot="pagination-item" {...props} />
+  return <li data-slot="pagination-item" {...props} />;
 }
 
 type PaginationLinkProps = {
-  isActive?: boolean
+  isActive?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">
+  React.ComponentProps<"a">;
 
 function PaginationLink({
   className,
@@ -64,7 +64,7 @@ function PaginationLink({
         {...props}
       />
     </Button>
-  )
+  );
 }
 
 function PaginationFirst({
@@ -80,7 +80,7 @@ function PaginationFirst({
     >
       <ChevronFirstIcon data-icon="inline-start" className="cn-rtl-flip" />
     </PaginationLink>
-  )
+  );
 }
 
 function PaginationPrevious({
@@ -96,7 +96,7 @@ function PaginationPrevious({
     >
       <ChevronLeftIcon data-icon="inline-start" className="cn-rtl-flip" />
     </PaginationLink>
-  )
+  );
 }
 
 function PaginationNext({
@@ -112,7 +112,7 @@ function PaginationNext({
     >
       <ChevronRightIcon data-icon="inline-end" className="cn-rtl-flip" />
     </PaginationLink>
-  )
+  );
 }
 
 function PaginationLast({
@@ -128,7 +128,7 @@ function PaginationLast({
     >
       <ChevronLastIcon data-icon="inline-start" className="cn-rtl-flip" />
     </PaginationLink>
-  )
+  );
 }
 
 function PaginationEllipsis({
@@ -148,7 +148,7 @@ function PaginationEllipsis({
       <MoreHorizontalIcon />
       <span className="sr-only">More pages</span>
     </span>
-  )
+  );
 }
 
 export {
@@ -161,4 +161,4 @@ export {
   PaginationNext,
   PaginationPrevious,
   PaginationLast,
-}
+};

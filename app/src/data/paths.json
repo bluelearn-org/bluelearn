@@ -6,9 +6,7 @@
     "curator": "bluelearn",
     "created_at": "14th June 2026",
     "duration": 720,
-    "tags": [
-      "game-development"
-    ],
+    "tags": ["game-development"],
     "levels": [
       {
         "level": 1,
@@ -47,11 +45,7 @@
     "curator": "bluelearn",
     "created_at": "14th June 2026",
     "duration": 720,
-    "tags": [
-      "ai",
-      "machine learning",
-      "mathematics"
-    ],
+    "tags": ["ai", "machine learning", "mathematics"],
     "levels": [
       {
         "level": 1,
@@ -82,11 +76,7 @@
     "curator": "bluelearn",
     "created_at": "14th June 2026",
     "duration": 720,
-    "tags": [
-      "engineering",
-      "mechanical engineering",
-      "physics"
-    ],
+    "tags": ["engineering", "mechanical engineering", "physics"],
     "levels": [
       {
         "level": 1,

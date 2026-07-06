@@ -10,6 +10,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  format:
+    name: prettier · check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+
   app:
     name: app · typecheck + lint + build
     runs-on: ubuntu-latest
@@ -27,7 +40,7 @@ jobs:
       - run: pnpm --filter app build
 
   api:
-    name: api · typecheck + dry-deploy
+    name: api · typecheck + lint + dry-deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,5 +50,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api exec tsc --noEmit
+      - run: pnpm --filter api typecheck
+      - run: pnpm --filter api lint
       - run: pnpm --filter api exec wrangler deploy --dry-run --outdir=/tmp/api-build
+
+  schemas:
+    name: schemas · typecheck + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @bluelearn/schemas typecheck
+      - run: pnpm --filter @bluelearn/schemas lint

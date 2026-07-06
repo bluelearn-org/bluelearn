@@ -7,21 +7,21 @@
 # once they are known.
 
 # Default fallback — everything not matched below.
-*           @tonylam0
+*                     @tonylam0 @andyrodrigues30
 
 # Governance, licensing, and project-wide policy.
-/LICENSE              @tonylam0
-/LICENSE-CONTENT      @tonylam0
-/CODE_OF_CONDUCT.md   @tonylam0 
-/CONTRIBUTING.md      @tonylam0 
-/GOVERNANCE.md        @tonylam0 
-/SECURITY.md          @tonylam0 
-/README.md            @tonylam0
+/LICENSE              @tonylam0 @andyrodrigues30
+/LICENSE-CONTENT      @tonylam0 @andyrodrigues30
+/CODE_OF_CONDUCT.md   @tonylam0 @andyrodrigues30
+/CONTRIBUTING.md      @tonylam0 @andyrodrigues30
+/GOVERNANCE.md        @tonylam0 @andyrodrigues30
+/SECURITY.md          @tonylam0 @andyrodrigues30
+/README.md            @tonylam0 @andyrodrigues30
 
 # Workspace areas.
-/api/                 @tonylam0 
-/app/                 @tonylam0 
-/supabase/            @tonylam0 
+/api/                 @tonylam0 @andyrodrigues30
+/app/                 @tonylam0 @andyrodrigues30
+/supabase/            @tonylam0 @andyrodrigues30
 
 # CI and repo plumbing.
-/.github/             @tonylam0 
+/.github/             @tonylam0 @andyrodrigues30

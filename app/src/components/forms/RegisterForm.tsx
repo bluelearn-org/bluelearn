@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,30 +7,27 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Field,
   FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function RegisterForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   return (
-    <div
-      className={cn("mx-auto w-full max-w-md", className)}
-      {...props}
-    >
+    <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="rounded-md bg-background shadow-none">
         {/* Header */}
         <CardHeader className="space-y-4 p-6">
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase">
             Registration
           </p>
 
@@ -50,7 +47,7 @@ export function RegisterForm({
           <form className="space-y-6">
             <FieldGroup className="space-y-5">
               <Field className="space-y-2">
-                <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                   Username
                 </FieldLabel>
 
@@ -65,7 +62,7 @@ export function RegisterForm({
               </Field>
 
               <Field className="space-y-2">
-                <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                   Email
                 </FieldLabel>
 
@@ -81,7 +78,7 @@ export function RegisterForm({
 
               <div className="grid gap-5 md:grid-cols-2">
                 <Field className="space-y-2">
-                  <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                     Password
                   </FieldLabel>
 
@@ -95,7 +92,7 @@ export function RegisterForm({
                 </Field>
 
                 <Field className="space-y-2">
-                  <FieldLabel className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                     Confirm Password
                   </FieldLabel>
 
@@ -110,7 +107,11 @@ export function RegisterForm({
               </div>
 
               <FieldDescription className="text-xs text-muted-foreground">
-                Passwords must be at least <span className="font-medium text-foreground">8 characters</span> long.
+                Passwords must be at least{" "}
+                <span className="font-medium text-foreground">
+                  8 characters
+                </span>{" "}
+                long.
               </FieldDescription>
             </FieldGroup>
           </form>
@@ -129,15 +130,13 @@ export function RegisterForm({
                 Accept terms of service
               </FieldLabel>
               <FieldDescription className="font-mono">
-                By clicking this checkbox, you agree to the terms of service and privacy policy.
+                By clicking this checkbox, you agree to the terms of service and
+                privacy policy.
               </FieldDescription>
             </FieldContent>
           </Field>
 
-          <Button
-            type="submit"
-            className="btn-pri w-full"
-          >
+          <Button type="submit" className="btn-pri w-full">
             Create account
           </Button>
 
@@ -153,5 +152,5 @@ export function RegisterForm({
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

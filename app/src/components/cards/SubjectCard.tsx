@@ -1,33 +1,25 @@
-import { Link } from "@tanstack/react-router"
-import type { Subject } from "@/types/subjects"
+import { Link } from "@tanstack/react-router";
+import type { Subject } from "@/types/subjects";
 
-import {
-  Card,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardFooter, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-import { Route as SubjectRoute } from "@/routes/subjects.$slug"
-
+import { Route as SubjectRoute } from "@/routes/subjects.$slug";
 
 type PropTypes = {
   subject: Subject;
-}
+};
 
 export const SubjectCard = ({ subject }: PropTypes) => {
   return (
     <Card className="group rounded-md bg-background shadow-none transition-colors hover:bg-muted">
       {/* Header */}
       <CardHeader className="space-y-3 border-b p-6">
-        <p className="mb-3 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+        <p className="mb-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
           Subject
         </p>
 
-        <Link
-          to={SubjectRoute.to}
-          params={{ slug: subject.slug }}
-        >
+        <Link to={SubjectRoute.to} params={{ slug: subject.slug }}>
           <h3 className="line-clamp-2 text-xl font-semibold tracking-tight">
             {subject.name}
           </h3>
@@ -39,16 +31,16 @@ export const SubjectCard = ({ subject }: PropTypes) => {
       </CardHeader>
 
       {/* Footer */}
-      <CardFooter className="grid grid-cols-2 lg:grid-cols-4 p-0">
+      <CardFooter className="grid grid-cols-2 p-0 lg:grid-cols-4">
         <div className="border-r px-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
             Paths
           </p>
           <p className="mt-1 text-lg font-semibold">{subject.paths_total}</p>
         </div>
 
         <div className="border-r px-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
             Guides
           </p>
           <p className="mt-1 text-lg font-semibold">{subject.guides_total}</p>
@@ -59,11 +51,9 @@ export const SubjectCard = ({ subject }: PropTypes) => {
             View Graph
           </Button>
 
-          <Button className="btn-pri">
-            Start Reading
-          </Button>
+          <Button className="btn-pri">Start Reading</Button>
         </div>
       </CardFooter>
     </Card>
-  )
-}
+  );
+};

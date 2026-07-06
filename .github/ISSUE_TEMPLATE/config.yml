@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/USER/REPO/security/advisories/new
     about: Please report security issues privately. See SECURITY.md.
   - name: Question or general discussion
-    url: https://github.com/SebReyWriter/TheBLUEForum/discussions 
+    url: https://github.com/SebReyWriter/TheBLUEForum/discussions
     about: Use GitHub Discussions for questions, ideas, and design conversations.

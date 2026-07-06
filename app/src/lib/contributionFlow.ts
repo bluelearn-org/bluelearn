@@ -1,8 +1,5 @@
 // type step always exists
-export const typeStep = [
-  { id: "type", title: "Contribution Type" },
-] as const;
-
+export const typeStep = [{ id: "type", title: "Contribution Type" }] as const;
 
 // flow definitions
 export const flows = {

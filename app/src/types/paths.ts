@@ -12,14 +12,14 @@ export type Path = {
   curator: string;
   created_at: string;
   duration: number;
-  
+
   levels: Array<PathLevel>;
 };
 
 export type Level = {
   level: number;
-  guide: Guide
-}
+  guide: Guide;
+};
 
 export type HydratedPath = Omit<Path, "levels"> & {
   levels: Array<Level>;
