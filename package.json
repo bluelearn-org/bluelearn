@@ -22,6 +22,8 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
+    "supabase:types": "supabase gen types typescript --local > api/src/database.types.ts",
+    "supabase:types:remote": "supabase gen types typescript > api/src/database.types.ts",
     "api:deploy": "pnpm --filter api deploy"
   },
   "lint-staged": {

@@ -15,6 +15,7 @@ contributor path, from "I want to help" to "my change is merged."
 - [Development setup](#development-setup)
 - [Repository layout](#repository-layout)
 - [Working on the code](#working-on-the-code)
+  - [PR naming](#pr-naming)
   - [Branch naming](#branch-naming)
   - [Commit messages](#commit-messages)
   - [Code style and linting](#code-style-and-linting)
@@ -156,6 +157,20 @@ were consolidated.
 ---
 
 ## Working on the code
+
+### PR naming
+```
+<type>(<scope>):<short description>
+Where `<type>` is one of: `feat`, `fix`, `docs`, `refactor`, `chore`,
+`test`, `perf`, `ci` and short description matches the issue title where possible.
+
+Examples:
+
+- `feat(app):integrate search route`
+- `fix(api)auth redirect loop`
+- `docs: simplify overall system doc`
+
+```
 
 ### Branch naming
 
