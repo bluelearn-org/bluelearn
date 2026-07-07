@@ -2,29 +2,29 @@ type: object
 description: A variant's detail — current revision content plus vote tally.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   guide_base_id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
-    type: [string, 'null']
+    type: [string, "null"]
     example: physics-based
   status:
-    $ref: '../common/NodeStatus.yaml'
+    $ref: "../common/NodeStatus.yaml"
   current:
-    type: [object, 'null']
+    type: [object, "null"]
     description: The live revision content.
     properties:
       id:
-        $ref: '../common/Uuid.yaml'
+        $ref: "../common/Uuid.yaml"
       title:
         type: string
         example: Physics-based approach
       summary:
-        type: [string, 'null']
+        type: [string, "null"]
       body:
-        type: [string, 'null']
+        type: [string, "null"]
       created_at:
-        $ref: '../common/Timestamp.yaml'
+        $ref: "../common/Timestamp.yaml"
   votes:
     type: object
     description: Public tally only; the rubric breakdown is moderator-gated.

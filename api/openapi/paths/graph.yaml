@@ -14,12 +14,12 @@
             type: object
             properties:
               from_guide_base_id:
-                $ref: '../components/schemas/common/Uuid.yaml'
+                $ref: "../components/schemas/common/Uuid.yaml"
               to_guide_base_id:
-                $ref: '../components/schemas/common/Uuid.yaml'
+                $ref: "../components/schemas/common/Uuid.yaml"
             required: [from_guide_base_id, to_guide_base_id]
     responses:
-      '201':
+      "201":
         description: The created edge
         content:
           application/json:
@@ -30,11 +30,11 @@
                   type: object
                   properties:
                     id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     from_guide_base_id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     to_guide_base_id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     edge_type:
                       type: string
                       enum: [prerequisite, related]
@@ -43,21 +43,28 @@
                       type: boolean
                       example: false
                     created_at:
-                      $ref: '../components/schemas/common/Timestamp.yaml'
-                  required: [id, from_guide_base_id, to_guide_base_id, edge_type, is_suspended]
+                      $ref: "../components/schemas/common/Timestamp.yaml"
+                  required:
+                    [
+                      id,
+                      from_guide_base_id,
+                      to_guide_base_id,
+                      edge_type,
+                      is_suspended,
+                    ]
               required: [edge]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
-      '409':
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
+      "409":
         description: That edge already exists, or it would create a prerequisite cycle
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/common/Error.yaml'
+              $ref: "../components/schemas/common/Error.yaml"
             example:
               error: That prerequisite edge would create a cycle
 
@@ -67,7 +74,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   delete:
     tags: [graph]
     summary: Suspend a prerequisite edge
@@ -76,7 +83,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The suspended edge
         content:
           application/json:
@@ -87,11 +94,11 @@
                   type: object
                   properties:
                     id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     from_guide_base_id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     to_guide_base_id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     edge_type:
                       type: string
                       enum: [prerequisite, related]
@@ -100,13 +107,20 @@
                       type: boolean
                       example: true
                     created_at:
-                      $ref: '../components/schemas/common/Timestamp.yaml'
-                  required: [id, from_guide_base_id, to_guide_base_id, edge_type, is_suspended]
+                      $ref: "../components/schemas/common/Timestamp.yaml"
+                  required:
+                    [
+                      id,
+                      from_guide_base_id,
+                      to_guide_base_id,
+                      edge_type,
+                      is_suspended,
+                    ]
               required: [edge]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /todos:
   get:
@@ -115,7 +129,7 @@
     description: All open TODO prerequisites declared across guides.
     operationId: listTodos
     responses:
-      '200':
+      "200":
         description: Open TODO prerequisites
         content:
           application/json:
@@ -125,7 +139,7 @@
                 todos:
                   type: array
                   items:
-                    $ref: '../components/schemas/guides/TodoBoardItem.yaml'
+                    $ref: "../components/schemas/guides/TodoBoardItem.yaml"
               required: [todos]
   post:
     tags: [graph]
@@ -147,13 +161,13 @@
             properties:
               guide_base_id:
                 description: The dependent guide that declares the need.
-                $ref: '../components/schemas/common/Uuid.yaml'
+                $ref: "../components/schemas/common/Uuid.yaml"
               title:
                 type: string
                 example: Trigonometry
             required: [guide_base_id, title]
     responses:
-      '201':
+      "201":
         description: The created TODO prerequisite
         content:
           application/json:
@@ -161,11 +175,11 @@
               type: object
               properties:
                 todo:
-                  $ref: '../components/schemas/guides/Todo.yaml'
+                  $ref: "../components/schemas/guides/Todo.yaml"
               required: [todo]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

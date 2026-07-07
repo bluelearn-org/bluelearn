@@ -1,7 +1,7 @@
 import { defineStepper } from "@stepperize/react";
 import { useMemo, useState } from "react";
 
-import type { ContributionType } from "@/types/contributions"
+import type { ContributionType } from "@/types/contributions";
 
 import { flows, typeStep } from "@/lib/contributionFlow";
 
@@ -16,20 +16,15 @@ import { Submit } from "@/components/contribute/steps/Submit";
 import { SelectPathGuides } from "@/components/contribute/steps/SelectPathGuides";
 import { OrderPathGuides } from "@/components/contribute/steps/OrderPathGuides";
 
-
 export default function ContributionFlow() {
-  const [type, setType] =
-    useState<ContributionType | null>(null);
+  const [type, setType] = useState<ContributionType | null>(null);
 
   const StepperInstance = useMemo(() => {
     if (!type) {
       return defineStepper(typeStep);
     }
 
-    return defineStepper([
-      ...typeStep,
-      ...flows[type],
-    ]);
+    return defineStepper([...typeStep, ...flows[type]]);
   }, [type]);
 
   const { Stepper, useStepper } = StepperInstance;
@@ -95,7 +90,7 @@ function Inner({
                 step={step.id}
                 className="flex items-center gap-2 py-2"
               >
-                <Stepper.Indicator className="size-8 border rounded-full grid place-items-center text-xl  bg-badge">
+                <Stepper.Indicator className="grid size-8 place-items-center rounded-full border bg-badge text-xl">
                   {index + 1}
                 </Stepper.Indicator>
 
@@ -106,16 +101,15 @@ function Inner({
         </Stepper.List>
       </div>
 
-
       {/* content */}
-      <div className="flex flex-col w-full">
+      <div className="flex w-full flex-col">
         <SelectType pickType={pickType} type={type} Stepper={Stepper} />
 
         <SubjectDetails Stepper={Stepper} />
         <GuideDetails Stepper={Stepper} />
         <VariantDetails Stepper={Stepper} />
         <PathDetails Stepper={Stepper} />
-        
+
         <BaseGuide Stepper={Stepper} />
         <Content Stepper={Stepper} />
         <SelectPathGuides Stepper={Stepper} />
@@ -123,7 +117,6 @@ function Inner({
 
         <Submit Stepper={Stepper} />
       </div>
-
     </div>
   );
 }

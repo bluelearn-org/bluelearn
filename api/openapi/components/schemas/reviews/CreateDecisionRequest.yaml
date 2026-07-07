@@ -25,5 +25,5 @@ oneOf:
         type: array
         minItems: 1
         items:
-          $ref: './ReviewDecisionReason.yaml'
+          $ref: "./ReviewDecisionReason.yaml"
     required: [decision, justification, reasons]

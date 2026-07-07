@@ -921,6 +921,10 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: string
       }
+      rollback_learning_path_revision: {
+        Args: { p_revision_id: string; p_source_revision_id: string }
+        Returns: string
+      }
       submit_guide_revision: {
         Args: { p_revision_id: string }
         Returns: string

@@ -18,10 +18,7 @@ export type GuideReference = {
   title: string;
 };
 
-export type HydratedGuide = Omit<
-  Guide,
-  "tags" | "prerequisites"
-> & {
+export type HydratedGuide = Omit<Guide, "tags" | "prerequisites"> & {
   tags: Array<SubjectReference>;
   prerequisites: Array<GuideReference>;
 };

@@ -6,18 +6,18 @@ description: >
 properties:
   revision_id:
     description: The draft revision. The guide editor route takes this directly.
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   guide_id:
     description: The guide (variant) the revision belongs to.
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   title:
     type: string
     example: Derivatives
   guide_slug:
     description: The guide's public slug, or null while it has no published revision yet.
-    type: [string, 'null']
+    type: [string, "null"]
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
   updated_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [revision_id, guide_id, title, guide_slug, created_at, updated_at]

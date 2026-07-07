@@ -1,33 +1,35 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router";
 
-import type { Subject } from "@/types/subjects"
+import type { Subject } from "@/types/subjects";
 
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@/components/ui/separator";
 
-import { SubjectCard } from "@/components/cards/SubjectCard"
-import subjects from "@/data/subjects.json"
+import { SubjectCard } from "@/components/cards/SubjectCard";
+import subjects from "@/data/subjects.json";
 
-export const Route = createFileRoute("/subjects/")({ component: RouteComponent })
+export const Route = createFileRoute("/subjects/")({
+  component: RouteComponent,
+});
 
 function RouteComponent() {
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
       <section className="border-b px-8 py-8 lg:px-16">
         <div className="mb-6">
-          <h1 className="data-label text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+          <h1 className="data-label text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
             Browse By Subjects
           </h1>
         </div>
-        
+
         <Separator className="mb-4 bg-border" />
 
         {/* Grid */}
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {subjects.map((subject: Subject) => (
             <SubjectCard key={subject.slug} subject={subject} />
           ))}
         </div>
       </section>
     </div>
-  )
+  );
 }

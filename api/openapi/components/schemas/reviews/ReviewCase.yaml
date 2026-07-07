@@ -2,18 +2,18 @@ type: object
 description: A review case root.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   case_type:
-    $ref: './CaseType.yaml'
+    $ref: "./CaseType.yaml"
   status:
-    $ref: './CaseStatus.yaml'
+    $ref: "./CaseStatus.yaml"
   title:
     type: string
     example: Calculus
   created_by:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
   updated_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, case_type, status]

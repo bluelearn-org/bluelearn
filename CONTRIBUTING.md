@@ -15,6 +15,7 @@ contributor path, from "I want to help" to "my change is merged."
 - [Development setup](#development-setup)
 - [Repository layout](#repository-layout)
 - [Working on the code](#working-on-the-code)
+  - [PR naming](#pr-naming)
   - [Branch naming](#branch-naming)
   - [Commit messages](#commit-messages)
   - [Code style and linting](#code-style-and-linting)
@@ -103,10 +104,11 @@ the DCO is enough.
 - [Wrangler](https://developers.cloudflare.com/workers/wrangler/) — comes
   with the `api/` package
 
-### Clone, install, run
+### Fork, clone, install, run
+Fork the repository to your own GitHub account, then run the following commands in your terminal.
 
 ```bash
-git clone https://github.com/bluelearn-org/bluelearn.git
+git clone https://github.com/<your-username>/bluelearn.git
 cd bluelearn
 pnpm install
 ```
@@ -121,7 +123,7 @@ Copy the example env files and fill in the values the CLI printed:
 
 ```bash
 cp api/.dev.vars.example api/.dev.vars
-cp app/.env.example app/.env       # if app/ uses one
+cp app/.env.example app/.env
 ```
 
 Then in two terminals (or your favourite runner):
@@ -155,6 +157,20 @@ were consolidated.
 ---
 
 ## Working on the code
+
+### PR naming
+```
+<type>(<scope>):<short description>
+Where `<type>` is one of: `feat`, `fix`, `docs`, `refactor`, `chore`,
+`test`, `perf`, `ci` and short description matches the issue title where possible.
+
+Examples:
+
+- `feat(app):integrate search route`
+- `fix(api)auth redirect loop`
+- `docs: simplify overall system doc`
+
+```
 
 ### Branch naming
 

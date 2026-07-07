@@ -2,12 +2,12 @@ type: object
 description: Lightweight reference to a revision for diff/compare headers.
 properties:
   id:
-    $ref: './Uuid.yaml'
+    $ref: "./Uuid.yaml"
   author_id:
-    $ref: './Uuid.yaml'
+    $ref: "./Uuid.yaml"
   created_at:
-    $ref: './Timestamp.yaml'
+    $ref: "./Timestamp.yaml"
   change_summary:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Fixed the limit definition.
 required: [id]

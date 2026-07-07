@@ -1,74 +1,86 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { CastVoteInput } from '@bluelearn/schemas'
-import type { Database } from '../database.types'
-import { ServiceError } from '../lib/service-error'
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { CastVoteInput } from "@bluelearn/schemas";
+import type { Database } from "../database.types";
+import { ServiceError } from "../lib/service-error";
 
-type DB = SupabaseClient<Database>
+type DB = SupabaseClient<Database>;
 
 // A variant's detail is its live revision content; the public vote tally is
 // attached separately.
 const VARIANT_DETAIL = `
   id, guide_base_id, slug, status,
   current:guide_revisions!guides_current_revision_id_fkey(id, title, summary, body, created_at)
-`
+`;
 
 // Confirm the variant (a guides row) is visible to the caller, or 404, and
 // return the row. RLS hides drafts, so an unseen variant reads as missing.
 async function requireVariant(supabase: DB, id: string) {
   const { data, error } = await supabase
-    .from('guides')
-    .select('id, current_revision_id')
-    .eq('id', id)
-    .maybeSingle()
+    .from("guides")
+    .select("id, current_revision_id")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (error) throw new ServiceError(error.message, 500)
-  if (!data) throw new ServiceError('Variant not found', 404)
-  return data
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load variant", 500);
+  }
+  if (!data) throw new ServiceError("Variant not found", 404);
+  return data;
 }
 
 // Attach the public vote tally (counts only) to a variant.
 async function withVotes<T extends { id: string }>(supabase: DB, variant: T) {
   const { data: tally, error } = await supabase
-    .from('guide_vote_tallies')
-    .select('upvotes, downvotes')
-    .eq('guide_id', variant.id)
-    .maybeSingle()
+    .from("guide_vote_tallies")
+    .select("upvotes, downvotes")
+    .eq("guide_id", variant.id)
+    .maybeSingle();
 
-  if (error) throw new ServiceError(error.message, 500)
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load vote tally", 500);
+  }
   return {
     ...variant,
     votes: { up: tally?.upvotes ?? 0, down: tally?.downvotes ?? 0 },
-  }
+  };
 }
 
 // Resolve a variant by id to its content + public vote tally.
 export async function getVariant(supabase: DB, id: string) {
   const { data: variant, error } = await supabase
-    .from('guides')
+    .from("guides")
     .select(VARIANT_DETAIL)
-    .eq('id', id)
-    .maybeSingle()
+    .eq("id", id)
+    .maybeSingle();
 
-  if (error) throw new ServiceError(error.message, 500)
-  if (!variant) throw new ServiceError('Variant not found', 404)
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load variant", 500);
+  }
+  if (!variant) throw new ServiceError("Variant not found", 404);
 
-  return { variant: await withVotes(supabase, variant) }
+  return { variant: await withVotes(supabase, variant) };
 }
 
 // Archive the variant. Per RLS only the author or a moderator may; a
 // non-permitted caller matches zero rows.
 export async function archiveVariant(supabase: DB, id: string) {
   const { data, error } = await supabase
-    .from('guides')
-    .update({ status: 'archived' })
-    .eq('id', id)
-    .select('id, slug, status')
+    .from("guides")
+    .update({ status: "archived" })
+    .eq("id", id)
+    .select("id, slug, status");
 
-  if (error) throw new ServiceError(error.message, 500)
-  if (!data || data.length === 0) {
-    throw new ServiceError('Variant not found or not permitted', 404)
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to archive variant", 500);
   }
-  return data[0]
+  if (!data || data.length === 0) {
+    throw new ServiceError("Variant not found or not permitted", 404);
+  }
+  return data[0];
 }
 
 // Cast or update the caller's vote: one row per (voter, variant), re-voting
@@ -77,12 +89,12 @@ export async function castVote(
   supabase: DB,
   voterId: string,
   id: string,
-  input: CastVoteInput,
+  input: CastVoteInput
 ) {
-  await requireVariant(supabase, id)
+  await requireVariant(supabase, id);
 
   const { data, error } = await supabase
-    .from('votes')
+    .from("votes")
     .upsert(
       {
         voter_id: voterId,
@@ -91,24 +103,27 @@ export async function castVote(
         reason: input.reason ?? null,
         note: input.note || null,
       },
-      { onConflict: 'voter_id,guide_id' },
+      { onConflict: "voter_id,guide_id" }
     )
-    .select('guide_id, direction, reason, note, updated_at')
-    .single()
+    .select("guide_id, direction, reason, note, updated_at")
+    .single();
 
-  if (error) throw new ServiceError(error.message, 400)
-  return { vote: data }
+  if (error) throw new ServiceError("Unable to cast vote", 400);
+  return { vote: data };
 }
 
 // Retract the caller's vote. A no-op delete (no matching row) is still success.
 export async function retractVote(supabase: DB, voterId: string, id: string) {
   const { error } = await supabase
-    .from('votes')
+    .from("votes")
     .delete()
-    .eq('voter_id', voterId)
-    .eq('guide_id', id)
+    .eq("voter_id", voterId)
+    .eq("guide_id", id);
 
-  if (error) throw new ServiceError(error.message, 500)
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to retract vote", 500);
+  }
 }
 
 // The variant's published-version timeline: only revisions that went live,
@@ -116,60 +131,73 @@ export async function retractVote(supabase: DB, voterId: string, id: string) {
 // current content), not authoring order, so an early draft approved late lands
 // where it went live. Empty until the review flow promotes a revision.
 export async function listVariantRevisions(supabase: DB, id: string) {
-  await requireVariant(supabase, id)
+  await requireVariant(supabase, id);
 
   const { data, error } = await supabase
-    .from('guide_revisions')
-    .select('id, created_at, approved_at')
-    .eq('guide_id', id)
-    .not('approved_at', 'is', null)
-    .order('approved_at', { ascending: false })
+    .from("guide_revisions")
+    .select("id, created_at, approved_at")
+    .eq("guide_id", id)
+    .not("approved_at", "is", null)
+    .order("approved_at", { ascending: false });
 
-  if (error) throw new ServiceError(error.message, 500)
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load variant revisions", 500);
+  }
 
   return (data ?? []).map((rev) => ({
     id: rev.id,
-    status: 'approved' as const,
+    status: "approved" as const,
     created_at: rev.created_at,
     approved_at: rev.approved_at,
-  }))
+  }));
 }
 
 // Start a new draft revision on an already-published variant, seeded from its
 // live content. Pre-publish work (the draft create_variant made) and a returned-for-edit
 // attempt (a rejected revision the review routes reopened to 'draft') are both edited
 // in place, not through here, so a live current_revision_id is always present.
-export async function createVariantRevision(supabase: DB, authorId: string, id: string) {
-  const variant = await requireVariant(supabase, id)
+export async function createVariantRevision(
+  supabase: DB,
+  authorId: string,
+  id: string
+) {
+  const variant = await requireVariant(supabase, id);
 
   // Verify that the variant points at a published revision
   if (!variant.current_revision_id) {
-    throw new ServiceError('Variant has no published revision to revise', 409)
+    throw new ServiceError("Variant has no published revision to revise", 409);
   }
 
   const { data: source, error: sourceError } = await supabase
-    .from('guide_revisions')
-    .select('title, summary, body')
-    .eq('id', variant.current_revision_id)
-    .maybeSingle()
+    .from("guide_revisions")
+    .select("title, summary, body")
+    .eq("id", variant.current_revision_id)
+    .maybeSingle();
 
-  if (sourceError) throw new ServiceError(sourceError.message, 500)
+  if (sourceError) {
+    console.error(sourceError);
+    throw new ServiceError("Failed to load variant", 500);
+  }
 
   const { data, error } = await supabase
-    .from('guide_revisions')
+    .from("guide_revisions")
     .insert({
       guide_id: id,
       title: source?.title ?? null,
       summary: source?.summary ?? null,
       body: source?.body ?? null,
       author_id: authorId,
-      status: 'draft',
+      status: "draft",
     })
-    .select('id')
-    .single()
+    .select("id")
+    .single();
 
-  if (error) throw new ServiceError(error.message, 500)
-  return { revision_id: data.id }
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to create revision", 500);
+  }
+  return { revision_id: data.id };
 }
 
 // Roll an older revision forward as a new draft: copy its snapshot into a fresh
@@ -178,22 +206,26 @@ export async function rollbackVariant(
   supabase: DB,
   authorId: string,
   id: string,
-  sourceRevisionId: string,
+  sourceRevisionId: string
 ) {
-  await requireVariant(supabase, id)
+  await requireVariant(supabase, id);
 
   const { data: source, error: sourceError } = await supabase
-    .from('guide_revisions')
-    .select('title, summary, body, created_at')
-    .eq('id', sourceRevisionId)
-    .eq('guide_id', id)
-    .maybeSingle()
+    .from("guide_revisions")
+    .select("title, summary, body, created_at")
+    .eq("id", sourceRevisionId)
+    .eq("guide_id", id)
+    .maybeSingle();
 
-  if (sourceError) throw new ServiceError(sourceError.message, 500)
-  if (!source) throw new ServiceError('Revision not found for this variant', 404)
+  if (sourceError) {
+    console.error(sourceError);
+    throw new ServiceError("Failed to load revision", 500);
+  }
+  if (!source)
+    throw new ServiceError("Revision not found for this variant", 404);
 
   const { data, error } = await supabase
-    .from('guide_revisions')
+    .from("guide_revisions")
     .insert({
       guide_id: id,
       title: source.title,
@@ -201,11 +233,14 @@ export async function rollbackVariant(
       body: source.body,
       change_summary: `Rolled back to revision from ${source.created_at.slice(0, 10)}`,
       author_id: authorId,
-      status: 'draft',
+      status: "draft",
     })
-    .select('id')
-    .single()
+    .select("id")
+    .single();
 
-  if (error) throw new ServiceError(error.message, 500)
-  return { revision_id: data.id }
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to create revision", 500);
+  }
+  return { revision_id: data.id };
 }

@@ -1,7 +1,7 @@
 type: object
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   slug:
     type: string
     example: calculus
@@ -9,8 +9,8 @@ properties:
     type: string
     example: Calculus
   knowledge_type:
-    $ref: './KnowledgeType.yaml'
+    $ref: "./KnowledgeType.yaml"
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
     example: The study of continuous change.
 required: [id, slug, title, knowledge_type, summary]

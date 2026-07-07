@@ -3,7 +3,7 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-} from "@/components/ui/empty"
+} from "@/components/ui/empty";
 
 export const NotFound = () => {
   return (
@@ -17,5 +17,5 @@ export const NotFound = () => {
         </EmptyHeader>
       </Empty>
     </main>
-  )
-}
+  );
+};

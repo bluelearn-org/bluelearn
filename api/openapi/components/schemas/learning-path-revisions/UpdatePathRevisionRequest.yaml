@@ -6,9 +6,9 @@ properties:
     type: string
     example: Backend Engineer
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
     example: Updated summary
   change_summary:
     description: The curator's note describing what changed in this revision.
-    type: [string, 'null']
+    type: [string, "null"]
     example: Added a statistics branch before ML.

@@ -7,7 +7,7 @@ properties:
       type: object
       properties:
         id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
         slug:
           type: string
           example: arithmetic
@@ -15,7 +15,7 @@ properties:
           type: string
           example: Arithmetic
         summary:
-          type: [string, 'null']
+          type: [string, "null"]
         depth:
           type: integer
           description: Longest prerequisite-chain depth in this walkthrough (target = 0).
@@ -27,8 +27,8 @@ properties:
       type: object
       properties:
         from_id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
         to_id:
-          $ref: '../common/Uuid.yaml'
+          $ref: "../common/Uuid.yaml"
       required: [from_id, to_id]
 required: [nodes, edges]

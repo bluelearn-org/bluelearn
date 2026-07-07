@@ -5,7 +5,7 @@
     summary: List all subjects
     operationId: listSubjects
     responses:
-      '200':
+      "200":
         description: All subjects
         content:
           application/json:
@@ -15,7 +15,7 @@
                 subjects:
                   type: array
                   items:
-                    $ref: '../components/schemas/subjects/Subject.yaml'
+                    $ref: "../components/schemas/subjects/Subject.yaml"
               required: [subjects]
   post:
     tags: [subjects]
@@ -28,9 +28,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/subjects/CreateSubjectRequest.yaml'
+            $ref: "../components/schemas/subjects/CreateSubjectRequest.yaml"
     responses:
-      '201':
+      "201":
         description: The created subject
         content:
           application/json:
@@ -38,18 +38,18 @@
               type: object
               properties:
                 subject:
-                  $ref: '../components/schemas/subjects/Subject.yaml'
+                  $ref: "../components/schemas/subjects/Subject.yaml"
               required: [subject]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '409':
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "409":
         description: A subject with this name already exists
         content:
           application/json:
             schema:
-              $ref: '../components/schemas/common/Error.yaml'
+              $ref: "../components/schemas/common/Error.yaml"
             example:
               error: A subject with this name already exists
 
@@ -67,7 +67,7 @@
     description: Subject metadata only; the tagged guide list is a separate call.
     operationId: getSubject
     responses:
-      '200':
+      "200":
         description: The subject
         content:
           application/json:
@@ -75,10 +75,10 @@
               type: object
               properties:
                 subject:
-                  $ref: '../components/schemas/subjects/Subject.yaml'
+                  $ref: "../components/schemas/subjects/Subject.yaml"
               required: [subject]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /subjects/{slug}/guides:
   parameters:
@@ -94,7 +94,7 @@
     description: Alphabetical list of guides carrying this subject tag.
     operationId: listSubjectGuides
     responses:
-      '200':
+      "200":
         description: Tagged guides
         content:
           application/json:
@@ -104,7 +104,7 @@
                 guides:
                   type: array
                   items:
-                    $ref: '../components/schemas/subjects/SubjectGuideListItem.yaml'
+                    $ref: "../components/schemas/subjects/SubjectGuideListItem.yaml"
               required: [guides]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

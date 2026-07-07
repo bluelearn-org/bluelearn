@@ -5,14 +5,14 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [variants]
     summary: Get a variant
     description: Current revision content plus the public vote tally.
     operationId: getVariant
     responses:
-      '200':
+      "200":
         description: The variant detail
         content:
           application/json:
@@ -20,10 +20,10 @@
               type: object
               properties:
                 variant:
-                  $ref: '../components/schemas/variants/Variant.yaml'
+                  $ref: "../components/schemas/variants/Variant.yaml"
               required: [variant]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   delete:
     tags: [variants]
     summary: Archive a variant
@@ -31,7 +31,7 @@
     security:
       - bearerAuth: []
     responses:
-      '200':
+      "200":
         description: The archived variant
         content:
           application/json:
@@ -42,12 +42,12 @@
                   type: object
                   properties:
                     id:
-                      $ref: '../components/schemas/common/Uuid.yaml'
+                      $ref: "../components/schemas/common/Uuid.yaml"
                     slug:
-                      type: [string, 'null']
+                      type: [string, "null"]
                       example: physics-based
                     status:
-                      $ref: '../components/schemas/common/NodeStatus.yaml'
+                      $ref: "../components/schemas/common/NodeStatus.yaml"
                   required: [id, status]
               required: [variant]
             example:
@@ -55,10 +55,10 @@
                 id: 00000000-0000-0000-0000-000000000000
                 slug: physics-based
                 status: archived
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /variants/{id}/vote:
   parameters:
@@ -66,7 +66,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   put:
     tags: [variants]
     summary: Cast or update a vote
@@ -79,9 +79,9 @@
       content:
         application/json:
           schema:
-            $ref: '../components/schemas/variants/VoteRequest.yaml'
+            $ref: "../components/schemas/variants/VoteRequest.yaml"
     responses:
-      '200':
+      "200":
         description: The stored vote
         content:
           application/json:
@@ -89,14 +89,14 @@
               type: object
               properties:
                 vote:
-                  $ref: '../components/schemas/variants/Vote.yaml'
+                  $ref: "../components/schemas/variants/Vote.yaml"
               required: [vote]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   delete:
     tags: [variants]
     summary: Retract the caller's vote
@@ -104,12 +104,12 @@
     security:
       - bearerAuth: []
     responses:
-      '204':
+      "204":
         description: Vote retracted
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /variants/{id}/revisions:
   parameters:
@@ -117,7 +117,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   get:
     tags: [variants]
     summary: Published-version history for this variant
@@ -126,7 +126,7 @@
       (when each became the current content).
     operationId: listVariantRevisions
     responses:
-      '200':
+      "200":
         description: Published versions, newest live first
         content:
           application/json:
@@ -136,10 +136,10 @@
                 revisions:
                   type: array
                   items:
-                    $ref: '../components/schemas/common/RevisionListItem.yaml'
+                    $ref: "../components/schemas/common/RevisionListItem.yaml"
               required: [revisions]
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
   post:
     tags: [variants]
     summary: Start a new draft revision
@@ -147,7 +147,7 @@
     security:
       - bearerAuth: []
     responses:
-      '201':
+      "201":
         description: Created; draft revision id
         content:
           application/json:
@@ -155,12 +155,12 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
 
 /variants/{id}/rollback:
   parameters:
@@ -168,7 +168,7 @@
       in: path
       required: true
       schema:
-        $ref: '../components/schemas/common/Uuid.yaml'
+        $ref: "../components/schemas/common/Uuid.yaml"
   post:
     tags: [variants]
     summary: Roll back to an older revision
@@ -184,10 +184,10 @@
             type: object
             properties:
               revision_id:
-                $ref: '../components/schemas/common/Uuid.yaml'
+                $ref: "../components/schemas/common/Uuid.yaml"
             required: [revision_id]
     responses:
-      '201':
+      "201":
         description: Created; new revision id
         content:
           application/json:
@@ -195,11 +195,11 @@
               type: object
               properties:
                 revision_id:
-                  $ref: '../components/schemas/common/Uuid.yaml'
+                  $ref: "../components/schemas/common/Uuid.yaml"
               required: [revision_id]
-      '400':
-        $ref: '../components/responses/_shared.yaml#/BadRequest'
-      '401':
-        $ref: '../components/responses/_shared.yaml#/Unauthorized'
-      '404':
-        $ref: '../components/responses/_shared.yaml#/NotFound'
+      "400":
+        $ref: "../components/responses/_shared.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

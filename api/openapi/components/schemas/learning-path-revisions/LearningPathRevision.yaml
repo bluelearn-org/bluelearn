@@ -2,25 +2,25 @@ type: object
 description: A path revision's editorial metadata.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   title:
     description: Null on a draft until the curator sets one; required to publish.
-    type: [string, 'null']
+    type: [string, "null"]
     example: Backend Engineer
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
   change_summary:
     description: The curator's note describing what changed in this revision.
-    type: [string, 'null']
+    type: [string, "null"]
   status:
-    $ref: '../common/LearningPathRevisionStatus.yaml'
+    $ref: "../common/LearningPathRevisionStatus.yaml"
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
   published_at:
     description: When the revision went live. Null until published.
-    type: [string, 'null']
+    type: [string, "null"]
     format: date-time
   updated_at:
     description: Last edit time. Advances while the draft is edited, then freezes at publish.
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, title, status]

@@ -5,7 +5,7 @@ description: >
   instead of the path so the editor sees the specific revision it is editing.
 properties:
   revision:
-    $ref: './LearningPathRevision.yaml'
+    $ref: "./LearningPathRevision.yaml"
   snapshot:
-    $ref: '../learning-paths/PathSnapshot.yaml'
+    $ref: "../learning-paths/PathSnapshot.yaml"
 required: [revision, snapshot]

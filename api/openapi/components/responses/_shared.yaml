@@ -7,7 +7,7 @@ BadRequest:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common/Error.yaml'
+        $ref: "../schemas/common/Error.yaml"
       example:
         error: Validation failed
 Unauthorized:
@@ -15,7 +15,7 @@ Unauthorized:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common/Error.yaml'
+        $ref: "../schemas/common/Error.yaml"
       example:
         error: Unauthorized
 Forbidden:
@@ -23,7 +23,7 @@ Forbidden:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common/Error.yaml'
+        $ref: "../schemas/common/Error.yaml"
       example:
         error: Forbidden
 NotFound:
@@ -31,6 +31,6 @@ NotFound:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common/Error.yaml'
+        $ref: "../schemas/common/Error.yaml"
       example:
         error: Not found

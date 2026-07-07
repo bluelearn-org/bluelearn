@@ -4,20 +4,20 @@ description: >
   revision is only ever draft or published; ordering is by published_at.
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   title:
     description: Null on an unpublished draft until the curator sets one.
-    type: [string, 'null']
+    type: [string, "null"]
     example: Backend Engineer
   change_summary:
     description: The curator's note describing what changed in this revision.
-    type: [string, 'null']
+    type: [string, "null"]
   status:
-    $ref: '../common/LearningPathRevisionStatus.yaml'
+    $ref: "../common/LearningPathRevisionStatus.yaml"
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
   published_at:
     description: When the revision went live. Null unless it has been published.
-    type: [string, 'null']
+    type: [string, "null"]
     format: date-time
 required: [id, title, status, created_at]

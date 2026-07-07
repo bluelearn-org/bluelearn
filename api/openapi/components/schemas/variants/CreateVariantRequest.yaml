@@ -4,7 +4,7 @@ properties:
     type: string
     example: Physics-based approach
   summary:
-    type: [string, 'null']
+    type: [string, "null"]
   body:
-    type: [string, 'null']
+    type: [string, "null"]
 required: [title]

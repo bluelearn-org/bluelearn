@@ -1,15 +1,15 @@
 type: object
 properties:
   id:
-    $ref: '../common/Uuid.yaml'
+    $ref: "../common/Uuid.yaml"
   case_type:
-    $ref: './CaseType.yaml'
+    $ref: "./CaseType.yaml"
   status:
-    $ref: './CaseStatus.yaml'
+    $ref: "./CaseStatus.yaml"
   title:
     type: string
     description: Title of the content under review.
     example: Calculus
   created_at:
-    $ref: '../common/Timestamp.yaml'
+    $ref: "../common/Timestamp.yaml"
 required: [id, case_type, title, created_at]

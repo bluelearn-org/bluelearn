@@ -1,74 +1,87 @@
-import { createFileRoute, notFound } from "@tanstack/react-router"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import { useMemo } from "react"
-import {
-  ChevronDown,
-  ChevronUp,
-  Flag,
-  Pencil,
-} from "lucide-react"
+import { useMemo } from "react";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import { ChevronDown, ChevronUp, Flag, Pencil } from "lucide-react";
 
-import type { SubjectReference } from "@/types/subjects"
-import type { GuideReference, HydratedGuide } from "@/types/guides"
+import type { SubjectReference } from "@/types/subjects";
+import type { GuideReference, HydratedGuide } from "@/types/guides";
 
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { CollapsibleSection } from "@/components/CollapsibleSection"
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
+import { extractHeadings, formatDuration } from "@/lib/guideUtils";
+import { getGuideBySlug, hydrateGuide } from "@/lib/getData";
 
-import { extractHeadings, formatDuration } from "@/lib/guideUtils"
-import { getGuideBySlug, hydrateGuide } from "@/lib/getData"
+import guides from "@/data/guides.json";
+import subjects from "@/data/subjects.json";
 
-import guides from "@/data/guides.json"
-import subjects from "@/data/subjects.json"
+import "katex/dist/katex.min.css";
 
 export const Route = createFileRoute("/guides/$slug")({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const { slug } = Route.useParams()
+  const { slug } = Route.useParams();
 
   const guide = getGuideBySlug(guides, slug);
 
-  if (!guide) { throw notFound }
+  if (!guide) {
+    throw notFound();
+  }
 
   const hydratedGuide: HydratedGuide = hydrateGuide(guide, guides, subjects);
 
-  const headings = useMemo(() => extractHeadings(guide.content), [])
+  const headings = useMemo(
+    () => extractHeadings(guide.content),
+    [guide.content]
+  );
 
   return (
-    <div className="mx-auto max-w-[1280px] h-[calc(100vh-70px)] border-x bg-background">
-
+    <div className="mx-auto h-[calc(100vh-70px)] max-w-[1280px] border-x bg-background">
       <section className="grid grid-cols-[320px_1fr] border-b">
         {/* SIDEBAR */}
         <aside className="h-[calc(100vh-70px)] overflow-y-auto border-r px-6 py-6">
           {/* Prerequisites */}
-          <CollapsibleSection title="Prerequisites">
+          <CollapsibleSection title={<p className="ml-auto">Prerequisites</p>}>
             <ul className="space-y-2">
               {hydratedGuide.prerequisites.map((prereq: GuideReference) => (
                 <li
                   key={prereq.slug}
-                  className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
                   style={{
-                    paddingLeft: 6
+                    paddingLeft: 6,
                   }}
-                >{prereq.title}</li>
+                >
+                  {prereq.title}
+                </li>
               ))}
             </ul>
           </CollapsibleSection>
 
           {/* TOC */}
-          <CollapsibleSection title="Table of Contents">
+          <CollapsibleSection
+            title={<p className="ml-auto">Table of Contents</p>}
+          >
             <ul className="space-y-2">
               {headings.map((h, idx) => (
                 <li
                   key={idx}
-                  className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
                   style={{
-                    paddingLeft: h.level === 1 ? 6 : h.level === 2 ? 12 : h.level === 3 ? 24: 28,
+                    paddingLeft:
+                      h.level === 1
+                        ? 6
+                        : h.level === 2
+                          ? 12
+                          : h.level === 3
+                            ? 24
+                            : 28,
                   }}
                 >
                   {h.text}
@@ -78,21 +91,18 @@ function RouteComponent() {
           </CollapsibleSection>
 
           {/* Variants */}
-          <CollapsibleSection title="Variants">
-            <ul className="space-y-2">
-            </ul>
+          <CollapsibleSection title={<p className="ml-auto">Variants</p>}>
+            <ul className="space-y-2"></ul>
           </CollapsibleSection>
         </aside>
 
         {/* MAIN */}
         <main className="h-[calc(100vh-70px)] overflow-y-auto px-10 py-8 lg:px-16">
-
           {/* Breadcrumbs */}
           <div className="mb-6 flex items-center justify-between">
-
-            <ul className="flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            <ul className="flex items-center gap-2 text-xs tracking-[0.08em] text-muted-foreground uppercase">
               {hydratedGuide.breadcrumbs.map((crumb: string, idx: number) => (
-                <li key={crumb} className="flex items-center gap-2 mono-micro">
+                <li key={crumb} className="mono-micro flex items-center gap-2">
                   <span>{crumb}</span>
                   {idx < guides[0].breadcrumbs.length - 1 && <span>/</span>}
                 </li>
@@ -105,9 +115,7 @@ function RouteComponent() {
                 <Pencil className="h-4 w-4" />
               </Button>
 
-              <Button variant="outline">
-                Open in Graph
-              </Button>
+              <Button variant="outline">Open in Graph</Button>
 
               <Button variant="ghost" size="icon">
                 <ChevronUp className="h-4 w-4" />
@@ -137,8 +145,9 @@ function RouteComponent() {
               {hydratedGuide.title}
             </h1>
 
-            <div className="mt-3 mono-micro">
-              {hydratedGuide.author} | {guides[0].created_at} | {formatDuration(guide.duration)}
+            <div className="mono-micro mt-3">
+              {hydratedGuide.author} | {guides[0].created_at} |{" "}
+              {formatDuration(guide.duration)}
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -146,7 +155,7 @@ function RouteComponent() {
                 <Badge
                   key={tag.slug}
                   variant="outline"
-                  className="rounded-full border bg-badge text-badge-foreground mono-micro tracking-[0.08em]"
+                  className="mono-micro rounded-full border bg-badge tracking-[0.08em] text-badge-foreground"
                 >
                   {tag.name}
                 </Badge>
@@ -157,12 +166,15 @@ function RouteComponent() {
           <Separator className="mb-8" />
 
           <article className="markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
               {hydratedGuide.content}
             </ReactMarkdown>
           </article>
         </main>
       </section>
     </div>
-  )
+  );
 }

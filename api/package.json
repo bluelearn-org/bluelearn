@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "types": "wrangler types",
     "docs:serve": "serve openapi -l 4000"
   },
@@ -15,15 +17,17 @@
     "@bluelearn/schemas": "workspace:*",
     "@hono/zod-validator": "^0.8.0",
     "@supabase/supabase-js": "^2.105.4",
-    "build": "^0.1.4",
     "hono": "^4.12.18",
-    "typecheck": "^0.1.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250508.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
     "serve": "^14.2.6",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.62.1",
     "vitest": "^3.2.6",
     "wrangler": "^4.14.1"
   }
