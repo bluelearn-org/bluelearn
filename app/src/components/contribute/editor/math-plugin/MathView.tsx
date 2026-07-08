@@ -3,6 +3,8 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { lexical } from "@mdxeditor/editor";
 import { $isMathNode } from "./MathNode";
+import { MathFieldAdapter } from "./MathFieldAdapter";
+import type { MathFieldAdapterRef } from "./MathFieldAdapter";
 
 const {
   $getNodeByKey,
@@ -20,31 +22,36 @@ interface MathViewProps {
   inline: boolean;
 }
 
-/* eslint-disable @typescript-eslint/no-namespace */
-declare module "react" {
-  namespace JSX {
-    interface IntrinsicElements {
-      "math-field": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          "virtual-keyboard-mode"?: string;
-          value?: string;
-          readOnly?: boolean;
-          "read-only"?: string;
-        },
-        HTMLElement
-      >;
+const isTargetMathLive = (el: HTMLElement | null): boolean => {
+  if (!el) return false;
+
+  let current: HTMLElement | null = el;
+  while (current && current !== document.body) {
+    const classes = Array.from(current.classList);
+    if (
+      classes.some(
+        (c) =>
+          c.startsWith("ML__") ||
+          c.startsWith("MLK__") ||
+          c.includes("mathfield") ||
+          c.includes("cortexjs")
+      ) ||
+      current.id.includes("cortexjs") ||
+      current.tagName.toLowerCase() === "math-field"
+    ) {
+      return true;
     }
+    current = current.parentElement;
   }
-}
-/* eslint-enable @typescript-eslint/no-namespace */
+  return false;
+};
 
 export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   const [editor] = useLexicalComposerContext();
   const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
   const [isFocused, setIsFocused] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  const ref = useRef<any>(null);
+  const ref = useRef<MathFieldAdapterRef>(null);
   const containerRef = useRef<HTMLDivElement | HTMLSpanElement>(null);
 
   const handleFocus = () => {
@@ -52,69 +59,62 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     setSelected(true);
   };
 
-  const handleBlur = () => {
+  const handleBlur = (e: React.FocusEvent) => {
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (
+      isTargetMathLive(relatedTarget) ||
+      isTargetMathLive(document.activeElement as HTMLElement)
+    ) {
+      return;
+    }
     setIsFocused(false);
   };
 
-  // Load MathLive dynamically on the client (SSR safe)
-  useEffect(() => {
-    let isMounted = true;
-
-    if (typeof window !== "undefined") {
-      const win = window as any;
-      // Pre-emptively intercept the module-level font prefetch before the import finishes evaluating
-      if (!win.MathfieldElement || !win.MathfieldElement.fontsDirectory) {
-        let _mathfieldElement: any = { fontsDirectory: "/mathlive/fonts" };
-        try {
-          Object.defineProperty(win, "MathfieldElement", {
-            get() {
-              return _mathfieldElement;
-            },
-            set(val) {
-              _mathfieldElement = val;
-              if (val) {
-                val.fontsDirectory = "/mathlive/fonts";
-              }
-            },
-            configurable: true,
-          });
-        } catch (e) {
-          console.warn("Could not define MathfieldElement prefetch wrapper", e);
-        }
-      }
+  const handlePointerDown = () => {
+    if (editor.isEditable()) {
+      setIsFocused(true);
+      setSelected(true);
     }
+  };
 
-    import("mathlive").then((mathlive) => {
-      if (isMounted) {
-        mathlive.MathfieldElement.fontsDirectory = "/mathlive/fonts";
-        setIsLoaded(true);
+  // Handle click/pointer outside to blur
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const handleDocumentPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+
+      if (containerRef.current?.contains(target)) {
+        return;
       }
-    });
-    return () => {
-      isMounted = false;
+
+      if (isTargetMathLive(target)) {
+        return;
+      }
+
+      setIsFocused(false);
+      if (ref.current) {
+        ref.current.blur();
+      }
     };
-  }, []);
 
-  // Sync equation prop to math-field value when it changes externally or after MathLive loads
-  useEffect(() => {
-    if (isLoaded && ref.current) {
-      if (ref.current.value !== equation) {
-        ref.current.value = equation;
-      }
-    }
-  }, [equation, isLoaded]);
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+    };
+  }, [isFocused]);
 
-  // Blur the math field and hide menu if the node is no longer selected
+  // Blur the math field if the node is no longer selected in Lexical
   useEffect(() => {
     if (!isSelected && ref.current) {
       ref.current.blur();
       setIsFocused(false);
     }
-  }, [isSelected, isLoaded]);
+  }, [isSelected]);
 
-  // Auto-focus empty equations immediately after insertion (when equation is empty)
+  // Auto-focus empty equations immediately after insertion
   useEffect(() => {
-    if (isLoaded && equation === "" && ref.current) {
+    if (equation === "" && ref.current) {
       const timeoutId = setTimeout(() => {
         if (ref.current) {
           ref.current.focus();
@@ -122,30 +122,17 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       }, 100);
       return () => clearTimeout(timeoutId);
     }
-  }, [isLoaded, equation]);
+  }, [equation]);
 
   // Update Lexical Node equation on input changes
-  useEffect(() => {
-    const mf = ref.current;
-    if (!mf) {
-      return;
-    }
-
-    const handleInput = (e: Event) => {
-      const newValue = (e.target as any).value;
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey);
-        if ($isMathNode(node)) {
-          node.setEquation(newValue);
-        }
-      });
-    };
-
-    mf.addEventListener("input", handleInput);
-    return () => {
-      mf.removeEventListener("input", handleInput);
-    };
-  }, [editor, nodeKey]);
+  const handleInputChange = (newValue: string) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isMathNode(node)) {
+        node.setEquation(newValue);
+      }
+    });
+  };
 
   // Intercept Lexical backspace/delete commands when the math-field is actively focused
   useEffect(() => {
@@ -214,10 +201,17 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
 
   const handleKeyDown = (e: any) => {
     if (e.key === "Escape") {
-      e.currentTarget.blur();
+      e.preventDefault();
+      if (ref.current) {
+        ref.current.blur();
+      }
+      editor.getRootElement()?.focus();
     } else if (e.key === "Enter") {
       e.preventDefault();
-      e.currentTarget.blur();
+      if (ref.current) {
+        ref.current.blur();
+      }
+      editor.getRootElement()?.focus();
       editor.update(() => {
         const node = $getNodeByKey(nodeKey);
         if (node !== null) {
@@ -243,13 +237,15 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           verticalAlign: "middle",
         }}
       >
-        <math-field
+        <MathFieldAdapter
           ref={ref}
-          defaultValue={equation}
-          readOnly={!editor.isEditable()}
+          value={equation}
+          onChange={handleInputChange}
+          readOnly={!editor.isEditable() || !isFocused}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPointerDown={handlePointerDown}
           style={{
             minWidth: isFocused ? "8rem" : "0px",
             display: "inline-block",
@@ -299,13 +295,15 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             : "bg-transparent ring-0 group-hover:bg-slate-50/50 group-hover:ring-1 group-hover:ring-slate-300/50"
         }`}
       >
-        <math-field
+        <MathFieldAdapter
           ref={ref}
-          defaultValue={equation}
-          readOnly={!editor.isEditable()}
+          value={equation}
+          onChange={handleInputChange}
+          readOnly={!editor.isEditable() || !isFocused}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPointerDown={handlePointerDown}
           style={{
             width: "100%",
             display: "block",
