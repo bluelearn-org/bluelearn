@@ -19,9 +19,9 @@ if (!/127\.0\.0\.1|localhost/.test(env.SUPABASE_URL ?? "")) {
 }
 
 type DB = SupabaseClient<Database>;
-type Tables = Database["public"]["Tables"];
-type Insert<T extends keyof Tables> = Tables[T]["Insert"];
-type Row<T extends keyof Tables> = Tables[T]["Row"];
+export type Tables = Database["public"]["Tables"];
+export type Insert<T extends keyof Tables> = Tables[T]["Insert"];
+export type Row<T extends keyof Tables> = Tables[T]["Row"];
 
 export const admin: DB = createClient<Database>(
   env.SUPABASE_URL,
@@ -37,7 +37,9 @@ function unwrap<T>(result: { data: T | null; error: unknown }): T {
   return result.data as T;
 }
 
-async function insert<T extends keyof Tables>(
+// Seed one row with the service client (bypasses RLS) and return it. The
+// factories in tests/factories/ wrap this per table.
+export async function insert<T extends keyof Tables>(
   table: T,
   values: Insert<T>
 ): Promise<Row<T>> {
@@ -72,82 +74,19 @@ export async function makeUser(): Promise<{ token: string; userId: string }> {
   return { token: session.session.access_token, userId: created.user.id };
 }
 
-export function createReviewCase(
-  createdBy: string,
-  overrides: Partial<Insert<"review_cases">> = {}
-) {
-  return insert("review_cases", {
-    case_type: "guide_publish",
-    status: "pending",
-    created_by: createdBy,
-    ...overrides,
-  });
+// Shorthand for the Authorization header bundle most requests need.
+export function auth(token: string) {
+  return { headers: { Authorization: `Bearer ${token}` } };
 }
 
-export function createReviewPanel(
-  caseId: string,
-  overrides: Partial<Insert<"review_panels">> = {}
-) {
-  return insert("review_panels", {
-    case_id: caseId,
-    target_seat_count: 1,
-    ...overrides,
-  });
-}
-
-export function createPanelMember(
-  panelId: string,
-  memberId: string,
-  overrides: Partial<Insert<"panel_members">> = {}
-) {
-  return insert("panel_members", {
-    panel_id: panelId,
-    member_id: memberId,
-    status: "assigned",
-    ...overrides,
-  });
-}
-
-export function createGuideBase(
-  overrides: Partial<Insert<"guide_bases">> = {}
-) {
-  return insert("guide_bases", {
-    slug: `guide-${crypto.randomUUID()}`,
-    title: "Test Guide",
-    knowledge_type: "theory",
-    ...overrides,
-  });
-}
-
-export function createGuide(
-  guideBaseId: string,
-  overrides: Partial<Insert<"guides">> = {}
-) {
-  return insert("guides", { guide_base_id: guideBaseId, ...overrides });
-}
-
-export function createGuideRevision(
-  guideId: string,
-  overrides: Partial<Insert<"guide_revisions">> = {}
-) {
-  return insert("guide_revisions", {
-    guide_id: guideId,
-    title: "Test Guide",
-    status: "submitted",
-    ...overrides,
-  });
-}
-
-// Links a review case to the exact guide revision it judges. This is what gives
-// a queued guide case its title in the /reviews/queue response.
-export function createGuideReviewCase(
-  caseId: string,
-  guideRevisionId: string,
-  overrides: Partial<Insert<"guide_review_cases">> = {}
-) {
-  return insert("guide_review_cases", {
-    case_id: caseId,
-    guide_revision_id: guideRevisionId,
-    ...overrides,
-  });
+// Shorthand for an authorized JSON request init.
+export function jsonAuth(token: string, method: string, body: unknown) {
+  return {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  };
 }

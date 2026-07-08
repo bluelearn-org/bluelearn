@@ -1,16 +1,17 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
+import { env, jsonAuth, makeUser } from "./helpers";
 import {
-  env,
-  makeUser,
   createReviewCase,
   createReviewPanel,
   createPanelMember,
+  createGuideReviewCase,
+} from "./factories/reviews";
+import {
   createGuideBase,
   createGuide,
   createGuideRevision,
-  createGuideReviewCase,
-} from "./helpers";
+} from "./factories/guides";
 import { expectToMatchSpec } from "./openapi";
 
 // A realistic queue entry: a guide_publish case with an assigned seat for
@@ -69,5 +70,65 @@ describe("GET /reviews/queue", () => {
     await expectToMatchSpec(res, "GET", "/reviews/queue");
     const body = (await res.json()) as { cases: Array<{ id: string }> };
     expect(body.cases.map((c) => c.id)).not.toContain(reviewCase.id);
+  });
+});
+
+describe("GET /reviews/cases", () => {
+  // Contract-first: 501 stub. Asserts the documented case-list shape.
+  it("lists review cases", async () => {
+    const { userId } = await makeUser();
+    const reviewCase = await seedQueueCase(userId, "Statistics");
+
+    const res = await app.request("/reviews/cases", {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/reviews/cases");
+    const body = (await res.json()) as { cases: Array<{ id: string }> };
+    expect(body.cases.map((c) => c.id)).toContain(reviewCase.id);
+  });
+});
+
+describe("GET /reviews/cases/{id}", () => {
+  // Contract-first: 501 stub. Asserts the documented case + panel + decisions shape.
+  it("returns a case with its panel and decisions", async () => {
+    const { userId } = await makeUser();
+    const reviewCase = await seedQueueCase(userId, "Statistics");
+
+    const res = await app.request(`/reviews/cases/${reviewCase.id}`, {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/reviews/cases/{id}");
+    const body = (await res.json()) as { case: { id: string } };
+    expect(body.case.id).toBe(reviewCase.id);
+  });
+});
+
+describe("POST /reviews/cases/{id}/decisions", () => {
+  it("401s without a token", async () => {
+    const res = await app.request(
+      `/reviews/cases/${crypto.randomUUID()}/decisions`,
+      { method: "POST" },
+      env
+    );
+    expect(res.status).toBe(401);
+    await expectToMatchSpec(res, "POST", "/reviews/cases/{id}/decisions");
+  });
+
+  // Contract-first: 501 stub. Asserts the documented recorded-decision shape.
+  it("records an approving decision for an assigned panelist", async () => {
+    const { token, userId } = await makeUser();
+    const reviewCase = await seedQueueCase(userId, "Statistics");
+
+    const res = await app.request(
+      `/reviews/cases/${reviewCase.id}/decisions`,
+      jsonAuth(token, "POST", {
+        decision: "approved",
+        justification: "Clear and accurate.",
+      }),
+      env
+    );
+
+    expect(res.status).toBe(201);
+    await expectToMatchSpec(res, "POST", "/reviews/cases/{id}/decisions");
   });
 });

@@ -109,7 +109,10 @@ export async function castVote(
     .single();
 
   if (error) throw new ServiceError("Unable to cast vote", 400);
-  return { vote: data };
+  // reason belongs to downvotes only; drop the NULL so an upvote payload omits
+  // it rather than carrying a non-enum null.
+  const { reason, ...rest } = data;
+  return { vote: reason === null ? rest : { ...rest, reason } };
 }
 
 // Retract the caller's vote. A no-op delete (no matching row) is still success.
