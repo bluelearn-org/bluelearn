@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Separator } from "radix-ui";
 import type { Subject } from "@/types/subjects";
 
 import { Card, CardFooter, CardHeader } from "@/components/ui/card";
