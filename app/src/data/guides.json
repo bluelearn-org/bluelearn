@@ -211,5 +211,17 @@
     "breadcrumbs": ["Home", "Mathematics", "LaTeX"],
     "prerequisites": [],
     "content": "# Utilizing LaTeX 101\n\nLaTeX math is enclosed in two delimiters using dollar signs (`$`):\n\n1. **Inline** enclose math with single dollar signs: `$...$`\n2. **Display blocks** enclose math with double dollar signs: `$$...$$`\n\nTo write symbols like $\\alpha$, you use backslash-prefixed commands. Commands are usually shortened versions of the name (e.g. `\\frac` for fraction).\n\n### Common Commands\n\n`x^2` renders as $x^2$\n\n`x_n` renders as $x_n$\n\n`\\\\frac{a}{b}` renders as $\\frac{a}{b}$\n\n`\\\\sqrt{x}` renders as $\\sqrt{x}$\n\n`\\\\int_{a}^{b}` renders as $\\int_{a}^{b}$\n\n`\\\\sum_{i=1}^{n}` renders as $\\sum_{i=1}^{n}$\n\n`\\\\lim_{x \\\\to 0}` renders as $\\lim_{x \\to 0}$\n\n`\\\\alpha, \\\\beta, \\\\pi` renders as $\\alpha, \\beta, \\pi$\n\n`\\\\pm` renders as $\\pm$\n\n`\\\\infty` renders as $\\infty$\n\n`\\\\text{words}` renders as $\\text{words}$\n\nYou'll also see `{}` and `[]` in formulas. `{}` groups characters together as a single argument, for example `x_{233}` makes $x_{233}$. `[]` is for optional arguments, for example `\\sqrt[3]{x}` makes $\\sqrt[3]{x}$ where `[3]` is the root degree.\n\n**Note:** In Bluelearn, guides are saved as JSON files, so you must write LaTeX commands with double backslashes (`\\\\`) instead of a single backslash (`\\`)."
+  },
+  {
+    "slug": "how-to-install-github-cli-on-wsl",
+    "title": "How to install GitHub CLI on WSL",
+    "author": "andyrodrigues30",
+    "summary": "This guide covers the steps to install GitHub CLI in WSL (Ubuntu)",
+    "created_at": "2026-06-30",
+    "duration": 10,
+    "tags": ["programming"],
+    "breadcrumbs": ["Home", "GitHub CLI Basics"],
+    "prerequisites": [],
+    "content": "## Update Packages\n```shell\nsudo apt update\n```\n\n## Install `curl`\n```shell\nsudo apt install curl -y\n```\n\n## Add the GitHub CLI repository\n```shell\ncurl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \\\n| sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg\n\nsudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg\n\necho \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main\" \\\n| sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null\n```\n\n## Install the GitHub CLI\n```shell\nsudo apt update\nsudo apt install gh -y\n```\n\n## Verify the installation\n```shell\ngh --version\n```\n\nYou should see the following output:\n```shell\ngh version 2.xx.**x**\n```\n\n## Authenticate with GitHub\n```shell\ngh auth login\n```\n\nChoose:\n- GitHub.com\n- SSH or HTTPS\n- Login with a web browser"
   }
 ]
