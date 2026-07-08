@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import type { HydratedPath } from "@/types/paths";
+import type { HydratedPath, Level } from "@/types/paths";
 import type { Guide } from "@/types/guides";
 import type { Subject } from "@/types/subjects";
 
@@ -21,18 +21,20 @@ export const Route = createFileRoute("/review/")({ component: RouteComponent });
 
 function RouteComponent() {
   const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
-  const allGuides = hydratedPaths.flatMap((p) => p.levels.map((l) => l.guide));
+  const allGuides: Array<Guide> = hydratedPaths.flatMap((p) =>
+    p.levels.map((l) => l.guide)
+  );
 
   const tabs = [
-    {
-      id: "guides",
-      label: "Guides",
-      content: <ReviewGrid type="guides" data={allGuides} />,
-    },
     {
       id: "subjects",
       label: "Subjects",
       content: <ReviewGrid type="subjects" data={subjects} />,
+    },
+    {
+      id: "guides",
+      label: "Guides",
+      content: <ReviewGrid type="guides" data={allGuides} />,
     },
     {
       id: "paths",
@@ -75,18 +77,17 @@ const ReviewGrid = ({ type, data }: ReviewGridProps) => {
   } else if (type == "guides") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((d: Guide) => (
-          <GuideCard key={d.slug} guide={d} />
-        ))}
+        {data.map((guide: Guide) => {
+          return <GuideCard key={guide.slug} guide={guide} />;
+        })}
       </div>
     );
   } else if (type == "subjects") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {subjects.map((subject: Subject) => {
+        {data.map((subject: Subject) => {
           const s = {
             ...subject,
-            label: "Subjects",
             stats: [
               { label: "Objectives", data: subject.paths_total },
               { label: "Guides", data: subject.guides_total },
