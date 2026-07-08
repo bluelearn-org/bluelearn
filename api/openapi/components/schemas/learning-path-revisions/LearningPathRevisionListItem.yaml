@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   A path revision summary for the history list. Paths have no review gate, so a
   revision is only ever draft or published; ordering is by published_at.

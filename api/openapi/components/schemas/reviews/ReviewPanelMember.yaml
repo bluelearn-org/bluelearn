@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: One seat on a review panel.
 properties:
   id:

@@ -27,7 +27,7 @@ import {
   listVariantRevisions,
   retractVote,
   rollbackVariant,
-} from "../services/guide-variant.service";
+} from "../services/variant.service";
 import {
   getRevision,
   submitRevision,

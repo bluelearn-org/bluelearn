@@ -16,7 +16,9 @@ export async function createPrerequisite(
       to_guide_base_id: toGuideBaseId,
       edge_type: "prerequisite",
     })
-    .select("id, from_guide_base_id, to_guide_base_id, edge_type")
+    .select(
+      "id, from_guide_base_id, to_guide_base_id, edge_type, is_suspended, created_at"
+    )
     .single();
 
   if (error) {
@@ -41,7 +43,9 @@ export async function suspendPrerequisite(supabase: DB, id: string) {
     .from("guide_edges")
     .update({ is_suspended: true })
     .eq("id", id)
-    .select("id, is_suspended")
+    .select(
+      "id, from_guide_base_id, to_guide_base_id, edge_type, is_suspended, created_at"
+    )
     .maybeSingle();
 
   if (error) {

@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   One of the caller's in-progress guide draft revisions. Drafts never surface
   in the public guide listings (those key on the shell's published

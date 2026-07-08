@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Cast or update the caller's vote. reason is required iff direction is down.
 properties:
   direction:

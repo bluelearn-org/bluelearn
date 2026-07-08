@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   A TODO prerequisite as shown on the public board: the raw row enriched with
   the dependent guide base's identity (published, so its slug exists) for links.

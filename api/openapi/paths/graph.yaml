@@ -12,6 +12,7 @@
         application/json:
           schema:
             type: object
+            additionalProperties: false
             properties:
               from_guide_base_id:
                 $ref: "../components/schemas/common/Uuid.yaml"
@@ -25,9 +26,11 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 edge:
                   type: object
+                  additionalProperties: false
                   properties:
                     id:
                       $ref: "../components/schemas/common/Uuid.yaml"
@@ -89,9 +92,11 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 edge:
                   type: object
+                  additionalProperties: false
                   properties:
                     id:
                       $ref: "../components/schemas/common/Uuid.yaml"
@@ -135,6 +140,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 todos:
                   type: array
@@ -158,6 +164,7 @@
         application/json:
           schema:
             type: object
+            additionalProperties: false
             properties:
               guide_base_id:
                 description: The dependent guide that declares the need.
@@ -173,6 +180,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 todo:
                   $ref: "../components/schemas/guides/Todo.yaml"

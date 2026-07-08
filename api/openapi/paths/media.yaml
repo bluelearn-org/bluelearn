@@ -12,6 +12,7 @@
         multipart/form-data:
           schema:
             type: object
+            additionalProperties: false
             properties:
               file:
                 type: string

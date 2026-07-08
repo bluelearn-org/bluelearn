@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Public-facing profile (internal id omitted).
 properties:
   username:

@@ -68,6 +68,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 guide_drafts:
                   type: array

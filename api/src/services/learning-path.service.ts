@@ -70,6 +70,9 @@ export async function createLearningPath(
   );
 
   if (error) {
+    // RLS restricts path creation to curators; a denied insert surfaces as 42501.
+    if (error.code === "42501")
+      throw new ServiceError("Not permitted to create a learning path", 403);
     console.error(error);
     throw new ServiceError("Failed to create learning path", 500);
   }

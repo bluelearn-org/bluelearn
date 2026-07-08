@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubjectsRouteImport } from './routes/subjects'
+import { Route as ReviewRouteImport } from './routes/review'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PathsRouteImport } from './routes/paths'
 import { Route as LoginRouteImport } from './routes/login'
@@ -18,6 +19,7 @@ import { Route as ContributeRouteImport } from './routes/contribute'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
+import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as PathsIndexRouteImport } from './routes/paths.index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as PathsSlugRouteImport } from './routes/paths.$slug'
@@ -26,6 +28,11 @@ import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 const SubjectsRoute = SubjectsRouteImport.update({
   id: '/subjects',
   path: '/subjects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -68,6 +75,11 @@ const SubjectsIndexRoute = SubjectsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SubjectsRoute,
 } as any)
+const ReviewIndexRoute = ReviewIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReviewRoute,
+} as any)
 const PathsIndexRoute = PathsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -97,11 +109,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/paths': typeof PathsRouteWithChildren
   '/register': typeof RegisterRoute
+  '/review': typeof ReviewRouteWithChildren
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRoute
   '/paths/$slug': typeof PathsSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/paths/': typeof PathsIndexRoute
+  '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -115,6 +129,7 @@ export interface FileRoutesByTo {
   '/paths/$slug': typeof PathsSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/paths': typeof PathsIndexRoute
+  '/review': typeof ReviewIndexRoute
   '/subjects': typeof SubjectsIndexRoute
 }
 export interface FileRoutesById {
@@ -126,11 +141,13 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/paths': typeof PathsRouteWithChildren
   '/register': typeof RegisterRoute
+  '/review': typeof ReviewRouteWithChildren
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRoute
   '/paths/$slug': typeof PathsSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/paths/': typeof PathsIndexRoute
+  '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
 }
 export interface FileRouteTypes {
@@ -143,11 +160,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/paths'
     | '/register'
+    | '/review'
     | '/subjects'
     | '/guides/$slug'
     | '/paths/$slug'
     | '/subjects/$slug'
     | '/paths/'
+    | '/review/'
     | '/subjects/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -161,6 +180,7 @@ export interface FileRouteTypes {
     | '/paths/$slug'
     | '/subjects/$slug'
     | '/paths'
+    | '/review'
     | '/subjects'
   id:
     | '__root__'
@@ -171,11 +191,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/paths'
     | '/register'
+    | '/review'
     | '/subjects'
     | '/guides/$slug'
     | '/paths/$slug'
     | '/subjects/$slug'
     | '/paths/'
+    | '/review/'
     | '/subjects/'
   fileRoutesById: FileRoutesById
 }
@@ -187,6 +209,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PathsRoute: typeof PathsRouteWithChildren
   RegisterRoute: typeof RegisterRoute
+  ReviewRoute: typeof ReviewRouteWithChildren
   SubjectsRoute: typeof SubjectsRouteWithChildren
 }
 
@@ -197,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/subjects'
       fullPath: '/subjects'
       preLoaderRoute: typeof SubjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -255,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubjectsIndexRouteImport
       parentRoute: typeof SubjectsRoute
     }
+    '/review/': {
+      id: '/review/'
+      path: '/'
+      fullPath: '/review/'
+      preLoaderRoute: typeof ReviewIndexRouteImport
+      parentRoute: typeof ReviewRoute
+    }
     '/paths/': {
       id: '/paths/'
       path: '/'
@@ -309,6 +346,17 @@ const PathsRouteChildren: PathsRouteChildren = {
 
 const PathsRouteWithChildren = PathsRoute._addFileChildren(PathsRouteChildren)
 
+interface ReviewRouteChildren {
+  ReviewIndexRoute: typeof ReviewIndexRoute
+}
+
+const ReviewRouteChildren: ReviewRouteChildren = {
+  ReviewIndexRoute: ReviewIndexRoute,
+}
+
+const ReviewRouteWithChildren =
+  ReviewRoute._addFileChildren(ReviewRouteChildren)
+
 interface SubjectsRouteChildren {
   SubjectsSlugRoute: typeof SubjectsSlugRoute
   SubjectsIndexRoute: typeof SubjectsIndexRoute
@@ -331,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PathsRoute: PathsRouteWithChildren,
   RegisterRoute: RegisterRoute,
+  ReviewRoute: ReviewRouteWithChildren,
   SubjectsRoute: SubjectsRouteWithChildren,
 }
 export const routeTree = rootRouteImport

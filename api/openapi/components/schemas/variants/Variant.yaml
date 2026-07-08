@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A variant's detail — current revision content plus vote tally.
 properties:
   id:
@@ -27,6 +28,7 @@ properties:
         $ref: "../common/Timestamp.yaml"
   votes:
     type: object
+    additionalProperties: false
     description: Public tally only; the rubric breakdown is moderator-gated.
     properties:
       up:

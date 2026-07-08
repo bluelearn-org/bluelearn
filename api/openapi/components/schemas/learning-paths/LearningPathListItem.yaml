@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 properties:
   id:
     $ref: "../common/Uuid.yaml"

@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A revision summary for history lists (guide, variant, or path).
 properties:
   id:

@@ -7,5 +7,11 @@ SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
 
+# Typesense variables
+TYPESENSE_HOST=localhost
+TYPESENSE_PORT=8108
+TYPESENSE_PROTOCOL=http
+TYPESENSE_API_KEY=
+
 # Frontend origin for CORS (Vite dev server)
 APP_URL=http://localhost:3000

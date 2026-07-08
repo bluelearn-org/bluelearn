@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   A revision's editorial metadata paired with its curriculum graph. The same
   wrapper the public path page uses ({ path, snapshot }), keyed on the revision

@@ -11,6 +11,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 subjects:
                   type: array
@@ -36,6 +37,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 subject:
                   $ref: "../components/schemas/subjects/Subject.yaml"
@@ -73,6 +75,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 subject:
                   $ref: "../components/schemas/subjects/Subject.yaml"
@@ -100,6 +103,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 guides:
                   type: array

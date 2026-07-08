@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   A revision's curriculum graph: every node (included or skipped) and both edge
   layers behind the show-skipped toggle. Shared by the public path page
@@ -16,6 +17,7 @@ properties:
     type: array
     items:
       type: object
+      additionalProperties: false
       properties:
         from_id:
           $ref: "../common/Uuid.yaml"
@@ -29,6 +31,7 @@ properties:
     type: array
     items:
       type: object
+      additionalProperties: false
       properties:
         from_id:
           $ref: "../common/Uuid.yaml"

@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A declared missing prerequisite topic (no guide base exists for it yet).
 properties:
   id:

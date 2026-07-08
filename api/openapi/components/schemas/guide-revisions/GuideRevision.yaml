@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A single guide revision snapshot.
 properties:
   id:

@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Partial update; at least one field required.
 minProperties: 1
 properties:
