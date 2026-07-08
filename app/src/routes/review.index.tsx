@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import type { HydratedPath, Level } from "@/types/paths";
+import type { HydratedPath } from "@/types/paths";
 import type { Guide } from "@/types/guides";
 import type { Subject } from "@/types/subjects";
 
