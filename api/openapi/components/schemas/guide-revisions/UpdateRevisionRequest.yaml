@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Overwrite a draft revision (pre-submit only). Partial.
 minProperties: 1
 properties:

@@ -69,14 +69,18 @@ export async function getMyDrafts(
   const [guides, paths] = await Promise.all([
     supabase
       .from("guide_revisions")
-      .select("id, guide_id, title, created_at, updated_at, guides(slug)")
+      .select(
+        // Two FKs relate revisions to guides (authorship + live pointer);
+        // drafts hang off the authorship one.
+        "id, guide_id, title, created_at, updated_at, guides!guide_revisions_guide_id_fkey(slug)"
+      )
       .eq("author_id", userId)
       .eq("status", "draft")
       .order("updated_at", { ascending: false }),
     supabase
       .from("learning_path_revisions")
       .select(
-        "id, learning_path_id, title, created_at, updated_at, learning_paths(slug)"
+        "id, learning_path_id, title, created_at, updated_at, learning_paths!learning_path_revisions_learning_path_id_fkey(slug)"
       )
       .eq("author_id", userId)
       .eq("status", "draft")

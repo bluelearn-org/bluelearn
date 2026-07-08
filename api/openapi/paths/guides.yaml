@@ -12,6 +12,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 guides:
                   type: array
@@ -41,6 +42,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"
@@ -70,6 +72,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 guide:
                   $ref: "../components/schemas/guides/Guide.yaml"
@@ -94,9 +97,11 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 guide:
                   type: object
+                  additionalProperties: false
                   properties:
                     id:
                       $ref: "../components/schemas/common/Uuid.yaml"
@@ -162,6 +167,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 variants:
                   type: array
@@ -192,6 +198,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"
@@ -234,6 +241,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 variant:
                   $ref: "../components/schemas/variants/Variant.yaml"

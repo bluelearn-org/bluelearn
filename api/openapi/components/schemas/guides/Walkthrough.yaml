@@ -1,10 +1,12 @@
 type: object
+additionalProperties: false
 description: A guide's transitive prerequisite DAG, RLS-filtered.
 properties:
   nodes:
     type: array
     items:
       type: object
+      additionalProperties: false
       properties:
         id:
           $ref: "../common/Uuid.yaml"
@@ -25,6 +27,7 @@ properties:
     type: array
     items:
       type: object
+      additionalProperties: false
       properties:
         from_id:
           $ref: "../common/Uuid.yaml"

@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Rendered diff for a single versioned field.
 properties:
   changed:

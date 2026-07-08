@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A variant (a method/alternative) under a guide.
 properties:
   id:

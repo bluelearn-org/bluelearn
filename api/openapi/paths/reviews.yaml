@@ -14,6 +14,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 cases:
                   type: array
@@ -35,6 +36,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 cases:
                   type: array
@@ -60,6 +62,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 case:
                   $ref: "../components/schemas/reviews/ReviewCase.yaml"
@@ -102,6 +105,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 decision:
                   $ref: "../components/schemas/reviews/ReviewDecision.yaml"
@@ -112,11 +116,3 @@
         $ref: "../components/responses/_shared.yaml#/Unauthorized"
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"
-      "409":
-        description: The caller's seat has already cast a decision on this case
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/common/Error.yaml"
-            example:
-              error: You have already cast a decision on this case

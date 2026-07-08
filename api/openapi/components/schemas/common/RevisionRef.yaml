@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Lightweight reference to a revision for diff/compare headers.
 properties:
   id:

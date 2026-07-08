@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Overwrite a draft revision's metadata (draft only; published is immutable). Partial.
 minProperties: 1
 properties:

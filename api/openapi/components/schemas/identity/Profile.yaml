@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: The caller's own profile row.
 properties:
   id:

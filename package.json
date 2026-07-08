@@ -19,6 +19,7 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "test": "pnpm -r test",
+    "test:api": "pnpm --filter api exec vitest run",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",

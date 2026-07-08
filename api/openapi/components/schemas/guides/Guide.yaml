@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: Guide base joined to its canonical guide's current revision.
 properties:
   id:

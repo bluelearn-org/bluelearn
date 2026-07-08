@@ -17,6 +17,7 @@ const navItems = [
   { label: "Browse", to: "/browse" },
   { label: "Subjects", to: "/subjects" },
   { label: "Learning Paths", to: "/paths" },
+  { label: "Review Queue", to: "/review" },
 ];
 
 const profileItems = [

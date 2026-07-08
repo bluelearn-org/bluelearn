@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   A guide starts as an empty draft and is fleshed out in the editor, so every
   field is optional. knowledge_type defaults to theory and stays editable while

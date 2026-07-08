@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A guide carrying this subject tag.
 properties:
   id:

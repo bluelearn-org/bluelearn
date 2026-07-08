@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   One of the caller's in-progress learning-path draft revisions. Drafts never
   surface in the public path listings (those key on the shell's published

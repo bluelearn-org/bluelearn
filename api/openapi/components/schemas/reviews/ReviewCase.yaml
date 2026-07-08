@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: A review case root.
 properties:
   id:

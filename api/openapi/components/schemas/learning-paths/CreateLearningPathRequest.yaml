@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: >
   Creates a draft path (shell + revision 1), seeding the closure of the
   target guides as the initial node set.

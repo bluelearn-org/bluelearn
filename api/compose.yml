@@ -1,0 +1,11 @@
+services:
+  typesense:
+    image: typesense/typesense:0.25.0
+    env_file:
+      - .dev.vars
+    command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
+    ports:
+      - "8108:8108"
+    volumes:
+      - ./data/typesense_data:/data
+    restart: unless-stopped

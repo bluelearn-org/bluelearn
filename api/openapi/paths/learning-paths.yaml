@@ -11,6 +11,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 learning_paths:
                   type: array
@@ -40,6 +41,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"
@@ -71,6 +73,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 path:
                   $ref: "../components/schemas/learning-paths/LearningPath.yaml"
@@ -92,9 +95,11 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 path:
                   type: object
+                  additionalProperties: false
                   properties:
                     id:
                       $ref: "../components/schemas/common/Uuid.yaml"
@@ -136,6 +141,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revisions:
                   type: array
@@ -157,6 +163,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"

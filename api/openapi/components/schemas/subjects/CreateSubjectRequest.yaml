@@ -1,4 +1,5 @@
 type: object
+additionalProperties: false
 description: slug is derived from the name server-side.
 properties:
   name:

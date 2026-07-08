@@ -43,6 +43,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision:
                   $ref: "../components/schemas/learning-path-revisions/LearningPathRevision.yaml"
@@ -84,6 +85,7 @@
         application/json:
           schema:
             type: object
+            additionalProperties: false
             properties:
               guide_base_id:
                 description: The guide base to add as a target.
@@ -181,6 +183,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 node:
                   $ref: "../components/schemas/learning-path-revisions/PathNode.yaml"
@@ -215,6 +218,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 slug:
                   type: string
@@ -246,6 +250,7 @@
         application/json:
           schema:
             type: object
+            additionalProperties: false
             properties:
               revision_id:
                 $ref: "../components/schemas/common/Uuid.yaml"
@@ -257,6 +262,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"

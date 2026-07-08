@@ -18,6 +18,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 variant:
                   $ref: "../components/schemas/variants/Variant.yaml"
@@ -37,9 +38,11 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 variant:
                   type: object
+                  additionalProperties: false
                   properties:
                     id:
                       $ref: "../components/schemas/common/Uuid.yaml"
@@ -87,6 +90,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 vote:
                   $ref: "../components/schemas/variants/Vote.yaml"
@@ -132,6 +136,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revisions:
                   type: array
@@ -153,6 +158,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"
@@ -182,6 +188,7 @@
         application/json:
           schema:
             type: object
+            additionalProperties: false
             properties:
               revision_id:
                 $ref: "../components/schemas/common/Uuid.yaml"
@@ -193,6 +200,7 @@
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 revision_id:
                   $ref: "../components/schemas/common/Uuid.yaml"
