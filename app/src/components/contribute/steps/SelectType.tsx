@@ -52,11 +52,11 @@ export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
           className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
           style={{
             backgroundColor:
-              type == "path" ? "var(--badge-bg)" : "var(--muted-bg)",
+              type == "objective" ? "var(--badge-bg)" : "var(--muted-bg)",
           }}
-          onClick={() => pickType("path")}
+          onClick={() => pickType("objective")}
         >
-          Path
+          Objective
         </button>
       </div>
     </Stepper.Content>

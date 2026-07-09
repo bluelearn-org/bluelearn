@@ -4,6 +4,7 @@ export type Subject = {
   summary: string;
   paths_total: number;
   guides_total: number;
+  status?: string;
 };
 
 export type SubjectReference = {

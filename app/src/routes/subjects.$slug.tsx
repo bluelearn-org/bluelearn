@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import type { HydratedPath } from "@/types/paths";
+import type { HydratedObjective, Level } from "@/types/objectives";
 
 import { Separator } from "@/components/ui/separator";
-import { PathCard } from "@/components/cards/PathCard";
+import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 import { GuideCard } from "@/components/cards/GuideCard";
 
-import { hydratePaths } from "@/lib/getData";
+import { hydrateObjectives } from "@/lib/getData";
 
-import paths from "@/data/paths.json";
+import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/subjects/$slug")({
   component: SubjectPage,
@@ -18,16 +19,21 @@ export const Route = createFileRoute("/subjects/$slug")({
 function SubjectPage() {
   const { slug } = Route.useParams();
 
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedObjectives: Array<HydratedObjective> = hydrateObjectives(
+    guides,
+    objectives
+  );
 
-  const allGuides = hydratedPaths.flatMap((p) => p.levels.map((l) => l.guide));
+  const allGuides = hydratedObjectives.flatMap((p) =>
+    p.levels.map((l) => l.guide)
+  );
 
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
       <section className="border-b px-8 py-8 lg:px-16">
         <div className="mb-6">
           <h1 className="data-label text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
-            {slug} Learning Paths ({hydratedPaths.length})
+            {slug} Learning Objectives ({hydratedObjectives.length})
           </h1>
         </div>
 
@@ -35,9 +41,16 @@ function SubjectPage() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {hydratedPaths.map((path: HydratedPath) => (
-            <PathCard key={path.slug} path={path} />
-          ))}
+          {hydratedObjectives.map((objective: HydratedObjective) => {
+            const p = {
+              ...objective,
+              stats: [
+                { label: "Duration", data: objective.duration },
+                { label: "Guides", data: objective.levels.length },
+              ],
+            };
+            return <ObjectiveCard key={p.slug} objective={p} />;
+          })}
         </div>
       </section>
 
@@ -52,9 +65,24 @@ function SubjectPage() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {allGuides.map((guide) => (
-            <GuideCard key={guide.slug} guide={guide} />
-          ))}
+          {hydratedObjectives[0].levels.map((level: Level) => {
+            const g = {
+              ...level.guide,
+              stats: [{ label: "Duration", data: level.guide.duration }],
+              actionBtns: (
+                <div className="col-span-2 col-start-3 mt-5 flex items-center justify-around border-t-1 p-4 pt-8 lg:mt-0 lg:border-none lg:pt-4">
+                  <Button variant="outline" className="btn-sec" size="lg">
+                    View Walkthrough
+                  </Button>
+
+                  <Button className="btn-pri" size="lg">
+                    Read
+                  </Button>
+                </div>
+              ),
+            };
+            return <GuideCard key={g.slug} guide={g} />;
+          })}
         </div>
       </section>
     </div>

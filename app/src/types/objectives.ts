@@ -1,19 +1,20 @@
 import type { Guide } from "@/types/guides";
 
-export type PathLevel = {
+export type ObjectiveLevel = {
   level: number;
   guide: string;
 };
 
-export type Path = {
+export type Objective = {
   slug: string;
   title: string;
   summary: string;
+  status?: string;
   curator: string;
   created_at: string;
   duration: number;
 
-  levels: Array<PathLevel>;
+  levels: Array<ObjectiveLevel>;
 };
 
 export type Level = {
@@ -21,6 +22,6 @@ export type Level = {
   guide: Guide;
 };
 
-export type HydratedPath = Omit<Path, "levels"> & {
+export type HydratedObjective = Omit<Objective, "levels"> & {
   levels: Array<Level>;
 };

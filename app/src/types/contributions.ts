@@ -1,4 +1,4 @@
-export type ContributionType = "subject" | "guide" | "variant" | "path";
+export type ContributionType = "subject" | "guide" | "variant" | "objective";
 
 export type ContributionDraft = {
   type?: ContributionType;
@@ -18,7 +18,7 @@ export type ContributionDraft = {
   // Variant
   baseGuide?: string;
 
-  // Path
+  // Objective
   levels?: Array<{
     level: number;
     guide: string;
