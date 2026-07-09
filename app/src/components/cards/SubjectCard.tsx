@@ -2,38 +2,22 @@ import { Link } from "@tanstack/react-router";
 import type { Subject } from "@/types/subjects";
 
 import { Card, CardFooter, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { FooterStats } from "@/components/cards/FooterStats";
+import { Button } from "@/components/ui/button";
 
 import { Route as SubjectRoute } from "@/routes/subjects.$slug";
 
-type SubjectProp = Subject & {
-  stats?: Array<{ label: string; data: number }>;
-  actionBtns?: React.ReactNode;
-};
-
 type PropTypes = {
-  subject: SubjectProp;
+  subject: Subject;
 };
 
 export const SubjectCard = ({ subject }: PropTypes) => {
   return (
     <Card className="group rounded-md bg-background shadow-none transition-colors hover:bg-muted">
       {/* Header */}
-      <CardHeader className="p-6">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-            Subject
-          </p>
-          {subject.status && (
-            <Badge
-              variant="outline"
-              className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
-            >
-              {subject.status}
-            </Badge>
-          )}
-        </div>
+      <CardHeader className="space-y-3 border-b p-6">
+        <p className="mb-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
+          Subject
+        </p>
 
         <Link to={SubjectRoute.to} params={{ slug: subject.slug }}>
           <h3 className="line-clamp-2 text-xl font-semibold tracking-tight">
@@ -47,15 +31,29 @@ export const SubjectCard = ({ subject }: PropTypes) => {
       </CardHeader>
 
       {/* Footer */}
-      {(subject.stats || subject.actionBtns) && (
-        <CardFooter className="grid grid-cols-2 border-t p-0 lg:grid-cols-4">
-          {subject.stats?.map((s: { label: string; data: number }) => {
-            return <FooterStats label={s.label} data={s.data} />;
-          })}
+      <CardFooter className="grid grid-cols-2 p-0 lg:grid-cols-4">
+        <div className="border-r px-4">
+          <p className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+            Paths
+          </p>
+          <p className="mt-1 text-lg font-semibold">{subject.paths_total}</p>
+        </div>
 
-          {subject.actionBtns}
-        </CardFooter>
-      )}
+        <div className="border-r px-4">
+          <p className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
+            Guides
+          </p>
+          <p className="mt-1 text-lg font-semibold">{subject.guides_total}</p>
+        </div>
+
+        <div className="col-span-2 flex items-center justify-around px-4">
+          <Button variant="outline" className="btn-sec">
+            View Graph
+          </Button>
+
+          <Button className="btn-pri">Start Reading</Button>
+        </div>
+      </CardFooter>
     </Card>
   );
 };

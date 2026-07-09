@@ -24,20 +24,11 @@ export const FeaturedRow = ({ paths, type }: PropTypes) => {
 
       {/* Paths */}
       <div className="flex scrollbar-thin gap-6 overflow-x-auto p-2">
-        {paths.map((path: HydratedPath) => {
-          const p = {
-            ...path,
-            stats: [
-              { label: "Duration", data: path.duration },
-              { label: "Guides", data: path.levels.length },
-            ],
-          };
-          return (
-            <div key={path.slug} className="w-[550px] shrink-0">
-              <PathCard key={p.slug} path={p} />;
-            </div>
-          );
-        })}
+        {paths.map((path: HydratedPath) => (
+          <div key={path.slug} className="w-[550px] shrink-0">
+            <PathCard key={path.slug} path={path} />
+          </div>
+        ))}
       </div>
     </section>
   );

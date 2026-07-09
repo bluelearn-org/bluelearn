@@ -26,7 +26,7 @@ export function CustomTabs({ tabs, defaultTab }: PropTypes) {
       </TabsList>
 
       {tabs.map((tab) => (
-        <TabsContent key={tab.id} className="w-full" value={tab.id}>
+        <TabsContent key={tab.id} value={tab.id}>
           {tab.content}
         </TabsContent>
       ))}

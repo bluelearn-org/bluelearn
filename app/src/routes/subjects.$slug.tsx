@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import type { HydratedPath, Level } from "@/types/paths";
+import type { HydratedPath } from "@/types/paths";
 
 import { Separator } from "@/components/ui/separator";
 import { PathCard } from "@/components/cards/PathCard";
@@ -10,7 +10,6 @@ import { hydratePaths } from "@/lib/getData";
 
 import paths from "@/data/paths.json";
 import guides from "@/data/guides.json";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/subjects/$slug")({
   component: SubjectPage,
@@ -36,16 +35,9 @@ function SubjectPage() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {hydratedPaths.map((path: HydratedPath) => {
-            const p = {
-              ...path,
-              stats: [
-                { label: "Duration", data: path.duration },
-                { label: "Guides", data: path.levels.length },
-              ],
-            };
-            return <PathCard key={p.slug} path={p} />;
-          })}
+          {hydratedPaths.map((path: HydratedPath) => (
+            <PathCard key={path.slug} path={path} />
+          ))}
         </div>
       </section>
 
@@ -60,24 +52,9 @@ function SubjectPage() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {hydratedPaths[0].levels.map((level: Level) => {
-            const g = {
-              ...level.guide,
-              stats: [{ label: "Duration", data: level.guide.duration }],
-              actionBtns: (
-                <div className="col-span-2 col-start-3 mt-5 flex items-center justify-around border-t-1 p-4 pt-8 lg:mt-0 lg:border-none lg:pt-4">
-                  <Button variant="outline" className="btn-sec" size="lg">
-                    View Walkthrough
-                  </Button>
-
-                  <Button className="btn-pri" size="lg">
-                    Read
-                  </Button>
-                </div>
-              ),
-            };
-            return <GuideCard key={g.slug} guide={g} />;
-          })}
+          {allGuides.map((guide) => (
+            <GuideCard key={guide.slug} guide={guide} />
+          ))}
         </div>
       </section>
     </div>

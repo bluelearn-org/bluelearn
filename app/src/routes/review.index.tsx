@@ -15,21 +15,18 @@ import paths from "@/data/paths.json";
 import subjects from "@/data/subjects.json";
 
 import { hydratePaths } from "@/lib/getData";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/review/")({ component: RouteComponent });
 
 function RouteComponent() {
   const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
-  const allGuides: Array<Guide> = hydratedPaths.flatMap((p) =>
-    p.levels.map((l) => l.guide)
-  );
+  const allGuides = hydratedPaths.flatMap((p) => p.levels.map((l) => l.guide));
 
   const tabs = [
     {
-      id: "subjects",
-      label: "Subjects",
-      content: <ReviewGrid type="subjects" data={subjects} />,
+      id: "paths",
+      label: "Learning Paths",
+      content: <ReviewGrid type="paths" data={hydratedPaths} />,
     },
     {
       id: "guides",
@@ -37,9 +34,9 @@ function RouteComponent() {
       content: <ReviewGrid type="guides" data={allGuides} />,
     },
     {
-      id: "paths",
-      label: "Learning Paths",
-      content: <ReviewGrid type="paths" data={hydratedPaths} />,
+      id: "subjects",
+      label: "Subjects",
+      content: <ReviewGrid type="subjects" data={subjects} />,
     },
   ];
 
@@ -69,46 +66,25 @@ const ReviewGrid = ({ type, data }: ReviewGridProps) => {
   if (type == "paths") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((path: HydratedPath) => {
-          const p = {
-            ...path,
-          };
-          return <PathCard key={p.slug} path={p} />;
-        })}
+        {data.map((d: HydratedPath) => (
+          <PathCard key={d.slug} path={d} />
+        ))}
       </div>
     );
   } else if (type == "guides") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((guide: Guide) => {
-          return <GuideCard key={guide.slug} guide={guide} />;
-        })}
+        {data.map((d: Guide) => (
+          <GuideCard key={d.slug} guide={d} />
+        ))}
       </div>
     );
   } else if (type == "subjects") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((subject: Subject) => {
-          const s = {
-            ...subject,
-            stats: [
-              { label: "Objectives", data: subject.paths_total },
-              { label: "Guides", data: subject.guides_total },
-            ],
-            actionBtns: (
-              <div className="col-span-2 mt-5 flex items-center justify-around border-t-1 p-4 pt-8 lg:mt-0 lg:border-none lg:pt-4">
-                <Button variant="destructive" size="lg">
-                  Reject
-                </Button>
-
-                <Button className="btn-pri" size="lg">
-                  Approve
-                </Button>
-              </div>
-            ),
-          };
-          return <SubjectCard key={s.slug} subject={s} />;
-        })}
+        {data.map((d: Subject) => (
+          <SubjectCard key={d.slug} subject={d} />
+        ))}
       </div>
     );
   }

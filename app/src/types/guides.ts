@@ -11,9 +11,6 @@ export type Guide = {
   breadcrumbs: Array<string>;
   prerequisites: Array<string>;
   content: string;
-  level?: number;
-  order?: number;
-  status?: string;
 };
 
 export type GuideReference = {

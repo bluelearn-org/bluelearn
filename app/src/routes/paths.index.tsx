@@ -28,16 +28,9 @@ function RouteComponent() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {hydratedPaths.map((path: HydratedPath) => {
-            const p = {
-              ...path,
-              stats: [
-                { label: "Duration", data: path.duration },
-                { label: "Guides", data: path.levels.length },
-              ],
-            };
-            return <PathCard key={p.slug} path={p} />;
-          })}
+          {hydratedPaths.map((path: HydratedPath) => (
+            <PathCard key={path.slug} path={path} />
+          ))}
         </div>
       </section>
     </div>
