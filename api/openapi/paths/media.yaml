@@ -17,7 +17,11 @@
               file:
                 type: string
                 format: binary
-            required: [file]
+              revision_id:
+                type: string
+                format: uuid
+                description: The draft revision the asset is linked to.
+            required: [file, revision_id]
     responses:
       "201":
         description: The stored asset
