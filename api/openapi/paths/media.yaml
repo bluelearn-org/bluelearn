@@ -33,3 +33,5 @@
         $ref: "../components/responses/_shared.yaml#/BadRequest"
       "401":
         $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"

@@ -85,12 +85,10 @@ export async function addMediaRevision(
   const { error: revisionFindError } = revisionResult;
 
   if (revisionFindError) {
-    console.error("revision_id not found in guide_revisions");
-    throw new ServiceError("Guide revision ID not found", 500);
+    throw new ServiceError("Guide revision not found", 404);
   }
   if (assetFindError) {
-    console.error("asset_id not found in media_assets");
-    throw new ServiceError("Asset ID not found", 500);
+    throw new ServiceError("Asset not found", 404);
   }
 
   const { data: revisionEntry, error: revisionInsertError } = await db

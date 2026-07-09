@@ -46,4 +46,28 @@ describe("POST /media/upload", () => {
     expect(res.status).toBe(201);
     await expectToMatchSpec(res, "POST", "/media/upload");
   });
+
+  it("404s when the revision does not exist", async () => {
+    const { token } = await makeUser();
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob(["fake-png-bytes"], { type: "image/png" }),
+      "test.png"
+    );
+    form.append("revision_id", crypto.randomUUID());
+
+    const res = await app.request(
+      "/media/upload",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      },
+      env
+    );
+
+    expect(res.status).toBe(404);
+    await expectToMatchSpec(res, "POST", "/media/upload");
+  });
 });
