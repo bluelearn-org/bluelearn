@@ -404,22 +404,19 @@ export async function diffPathRevisions(
   };
 }
 
-// Two nodes with the same guide_base_id are "the same" iff every other column
-// matches. slug/title come from the live guide_base lookup, so a rename
-// between revisions also counts as a change.
+// Two nodes with the same guide_base_id are "the same" iff every per-revision
+// column matches. slug/title are excluded: both snapshots read them live from
+// the current guide_bases row, so a paired node always agrees on them and they
+// can never signal a change.
 function sameNode(
   a: {
     guide_id: string;
-    slug: string | null;
-    title: string | null;
     is_target: boolean;
     is_included: boolean;
     note: string | null;
   },
   b: {
     guide_id: string;
-    slug: string | null;
-    title: string | null;
     is_target: boolean;
     is_included: boolean;
     note: string | null;
@@ -427,8 +424,6 @@ function sameNode(
 ): boolean {
   return (
     a.guide_id === b.guide_id &&
-    a.slug === b.slug &&
-    a.title === b.title &&
     a.is_target === b.is_target &&
     a.is_included === b.is_included &&
     a.note === b.note
