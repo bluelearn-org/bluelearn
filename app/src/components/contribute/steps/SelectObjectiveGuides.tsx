@@ -4,9 +4,9 @@ type PropTypes = {
   Stepper: any;
 };
 
-export const SelectPathGuides = ({ Stepper }: PropTypes) => {
+export const SelectObjectiveGuides = ({ Stepper }: PropTypes) => {
   return (
-    <Stepper.Content step="path-guides">
+    <Stepper.Content step="objective-guides">
       <StepperActionHeader title={"Select Guides"} Stepper={Stepper} />
 
       <h2>Select Guides</h2>

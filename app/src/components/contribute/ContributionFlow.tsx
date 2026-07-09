@@ -11,10 +11,10 @@ import { GuideDetails } from "@/components/contribute/steps/GuideDetails";
 import { VariantDetails } from "@/components/contribute/steps/VariantDetails";
 import { Content } from "@/components/contribute/steps/Content";
 import { BaseGuide } from "@/components/contribute/steps/BaseGuide";
-import { PathDetails } from "@/components/contribute/steps/PathDetails";
+import { ObjectiveDetails } from "@/components/contribute/steps/ObjectiveDetails";
 import { Submit } from "@/components/contribute/steps/Submit";
-import { SelectPathGuides } from "@/components/contribute/steps/SelectPathGuides";
-import { OrderPathGuides } from "@/components/contribute/steps/OrderPathGuides";
+import { SelectObjectiveGuides } from "@/components/contribute/steps/SelectObjectiveGuides";
+import { OrderObjectiveGuides } from "@/components/contribute/steps/OrderObjectiveGuides";
 
 export default function ContributionFlow() {
   const [type, setType] = useState<ContributionType | null>(null);
@@ -60,7 +60,7 @@ function Inner({
     setType(value);
 
     requestAnimationFrame(() => {
-      let nextStep = "path-details";
+      let nextStep = "objective-details";
 
       switch (value) {
         case "subject":
@@ -102,18 +102,18 @@ function Inner({
       </div>
 
       {/* content */}
-      <div className="flex w-full flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <SelectType pickType={pickType} type={type} Stepper={Stepper} />
 
         <SubjectDetails Stepper={Stepper} />
         <GuideDetails Stepper={Stepper} />
         <VariantDetails Stepper={Stepper} />
-        <PathDetails Stepper={Stepper} />
+        <ObjectiveDetails Stepper={Stepper} />
 
         <BaseGuide Stepper={Stepper} />
         <Content Stepper={Stepper} />
-        <SelectPathGuides Stepper={Stepper} />
-        <OrderPathGuides Stepper={Stepper} />
+        <SelectObjectiveGuides Stepper={Stepper} />
+        <OrderObjectiveGuides Stepper={Stepper} />
 
         <Submit Stepper={Stepper} />
       </div>

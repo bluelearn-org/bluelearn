@@ -21,10 +21,10 @@ export const flows = {
     { id: "submit", title: "Submit" },
   ],
 
-  path: [
-    { id: "path-details", title: "Path Details" },
-    { id: "path-guides", title: "Select Guides" },
-    { id: "path-ordering", title: "Order Guides" },
+  objective: [
+    { id: "objective-details", title: "Objective Details" },
+    { id: "objective-guides", title: "Select Guides" },
+    { id: "objective-ordering", title: "Order Guides" },
     { id: "submit", title: "Submit" },
   ],
 } as const;

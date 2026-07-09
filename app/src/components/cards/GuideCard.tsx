@@ -9,33 +9,37 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FooterStats } from "@/components/cards/FooterStats";
 
 import { Route as GuideRoute } from "@/routes/guides.$slug";
-import { formatDuration } from "@/lib/guideUtils";
 
-type PropTypes = {
-  guide: Guide;
-  level?: number;
+type GuideProp = Guide & {
+  stats?: Array<{ label: string; data: number }>;
+  actionBtns?: React.ReactNode;
 };
 
-export const GuideCard = ({ guide, level }: PropTypes) => {
+type PropTypes = {
+  guide: GuideProp;
+};
+
+export const GuideCard = ({ guide }: PropTypes) => {
   return (
     <Card className="group rounded-md bg-background shadow-none transition-colors hover:bg-muted">
       {/* Header */}
       <CardHeader className="relative p-4">
-        <div className="absolute top-6 right-6">
-          <Badge
-            variant="outline"
-            className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
-          >
-            Not Started
-          </Badge>
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
+            Guide
+          </p>
+          {guide.status && (
+            <Badge
+              variant="outline"
+              className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+            >
+              {guide.status}
+            </Badge>
+          )}
         </div>
-
-        <p className="mb-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
-          Guide
-        </p>
 
         <Link to={GuideRoute.to} params={{ slug: guide.slug }}>
           <h3 className="line-clamp-2 text-xl font-semibold tracking-tight">
@@ -58,7 +62,7 @@ export const GuideCard = ({ guide, level }: PropTypes) => {
         </p>
 
         {/* Tags */}
-        <div className="pyt-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-4">
           {guide.tags.map((tag) => (
             <Badge
               key={tag}
@@ -72,33 +76,15 @@ export const GuideCard = ({ guide, level }: PropTypes) => {
       </CardContent>
 
       {/* Footer */}
-      <CardFooter className="grid grid-cols-4 border-t p-0">
-        {level && (
-          <div className="border-r px-4">
-            <p className="font-mono tracking-[0.08em] text-muted-foreground uppercase">
-              Level
-            </p>
-            <p className="mt-1 text-lg font-semibold">{level}</p>
-          </div>
-        )}
+      {(guide.stats || guide.actionBtns) && (
+        <CardFooter className="grid grid-cols-2 border-t p-0 lg:grid-cols-4">
+          {guide.stats?.map((g: { label: string; data: number }) => {
+            return <FooterStats label={g.label} data={g.data} />;
+          })}
 
-        <div className="border-r px-4">
-          <p className="font-mono tracking-[0.08em] text-muted-foreground uppercase">
-            Duration
-          </p>
-          <p className="mt-1 text-lg font-semibold">
-            {formatDuration(guide.duration)}
-          </p>
-        </div>
-
-        <div className="col-span-2 flex items-center justify-around px-4">
-          <Button variant="outline" className="btn-sec">
-            Open in Graph
-          </Button>
-
-          <Button className="btn-pri">Start Reading</Button>
-        </div>
-      </CardFooter>
+          {guide.actionBtns}
+        </CardFooter>
+      )}
     </Card>
   );
 };

@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
-import type { HydratedPath } from "@/types/paths";
+import type { HydratedObjective } from "@/types/objectives";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { PathCard } from "@/components/cards/PathCard";
+import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
-import { hydratePaths } from "@/lib/getData";
+import { hydrateObjectives } from "@/lib/getData";
 
-import paths from "@/data/paths.json";
+import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { Pagination } from "@/components/Pagination";
@@ -21,10 +21,13 @@ export const Route = createFileRoute("/browse")({
 });
 
 function RouteComponent() {
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedObjectives: Array<HydratedObjective> = hydrateObjectives(
+    guides,
+    objectives
+  );
 
-  const allGuides = hydratedPaths
-    .flatMap((p) => p.levels.map((l) => l.guide))
+  const allGuides = hydratedObjectives
+    .flatMap((o) => o.levels.map((l) => l.guide))
     .slice(0, 6);
 
   const sectionHeadingCommonClassNames =
@@ -67,20 +70,20 @@ function RouteComponent() {
         </div>
       </section>
 
-      {/* Paths */}
+      {/* Objectives */}
       <section className="px-8 py-10 lg:px-16">
         <CollapsibleSection
           title={
             <h2 className={`${sectionHeadingCommonClassNames}`}>
-              Learning Paths ({paths.length})
+              Learning Objectives ({objectives.length})
             </h2>
           }
           defaultOpen={true}
         >
           <Separator className="mb-8 h-[0.5px]! bg-border" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {hydratedPaths.map((path: HydratedPath) => (
-              <PathCard key={path.slug} path={path} />
+            {hydratedObjectives.map((objective: HydratedObjective) => (
+              <ObjectiveCard key={objective.slug} objective={objective} />
             ))}
           </div>
           <div className="mt-8 mb-4">
