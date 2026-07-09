@@ -6,7 +6,12 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["src/database.types.ts", "worker-configuration.d.ts"],
+    ignores: [
+      "src/database.types.ts",
+      "worker-configuration.d.ts",
+      ".wrangler/",
+      "dist/",
+    ],
   },
   eslint.configs.recommended,
   tseslint.configs.recommended,

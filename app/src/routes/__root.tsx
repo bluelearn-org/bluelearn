@@ -1,6 +1,7 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/Navbar";
 import { NotFound } from "@/components/NotFound";
 
@@ -39,6 +40,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Navbar />
 
         {children}
+        <Toaster />
 
         <Scripts />
       </body>

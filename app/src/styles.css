@@ -275,3 +275,75 @@
     @apply list-decimal space-y-1 pl-5;
   }
 }
+
+/* Force network loading of KaTeX Math Italic */
+@font-face {
+  font-family: "KaTeX_Math";
+  src: url("/mathlive/fonts/KaTeX_Math-Italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX Main Italic */
+@font-face {
+  font-family: "KaTeX_Main";
+  src: url("/mathlive/fonts/KaTeX_Main-Italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX Main Regular */
+@font-face {
+  font-family: "KaTeX_Main";
+  src: url("/mathlive/fonts/KaTeX_Main-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX Main Bold */
+@font-face {
+  font-family: "KaTeX_Main";
+  src: url("/mathlive/fonts/KaTeX_Main-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: bold;
+}
+
+/* Force network loading of KaTeX Size1 Regular */
+@font-face {
+  font-family: "KaTeX_Size1";
+  src: url("/mathlive/fonts/KaTeX_Size1-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX Size2 Regular */
+@font-face {
+  font-family: "KaTeX_Size2";
+  src: url("/mathlive/fonts/KaTeX_Size2-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX Size3 Regular */
+@font-face {
+  font-family: "KaTeX_Size3";
+  src: url("/mathlive/fonts/KaTeX_Size3-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX Size4 Regular */
+@font-face {
+  font-family: "KaTeX_Size4";
+  src: url("/mathlive/fonts/KaTeX_Size4-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: normal;
+}
+
+/* Force network loading of KaTeX AMS Regular */
+@font-face {
+  font-family: "KaTeX_AMS";
+  src: url("/mathlive/fonts/KaTeX_AMS-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: normal;
+}
