@@ -110,45 +110,6 @@ Note: `accepted` is not a stored revision value. A revision "reads as accepted" 
 
 **Rollback.** Rollback never deletes newer rows. It inserts a new revision that copies an older one's content. Through this, the version history shows that a rollback occurred through the change_summary.
 
-### `content_holds`
-
-Moderation record for hiding or purging content (see [Content removal](#content-removal)). Decoupled from the content so `guide_revisions` stays immutable for hides.
-
-- `id`: primary key of the hold.
-- `revision_id`: nullable FK to `guide_revisions`. Set for a single-revision hold.
-- `guide_id`: nullable FK to `guides`. Set for a whole-guide hold.
-- `guide_base_id`: nullable FK to `guide_bases`. Set for a whole-topic hold.
-- `hold_type`: `dmca | csam | ncii | violent_extremism | tos_violation | gdpr_erasure | court_order | law_enforcement | counternotice`.
-- `action`: `hidden` (reversible, content untouched), `purge` (irreversible content destruction), or `legal_hold` (must preserve, purge blocked until `preserve_until`).
-- `preserve_until`: nullable timestamp; set on a `legal_hold`. While `preserve_until > now()`, purge of the covered content is blocked. Duration is set per the governing obligation.
-- `actor_id`: FK to `profiles.id`; the moderator who placed the hold.
-- `reason`: free-text note.
-- `created_at`: when the hold was placed.
-- `released_at`: nullable; set when a `hidden` hold is lifted. Null = active.
-- `released_by`: nullable FK to `profiles.id`; the moderator who lifted the `hidden` hold. Null while active. Recorded separately from `actor_id` so the audit trail shows who placed *and* who lifted.
-- `purged_at`: nullable; set when a `purge` finishes executing.
-- `purged_by`: nullable FK to `profiles.id`; the moderator who executed the `purge`. Null until the purge completes. Separate from `actor_id` for the same audit reason.
-
-Exactly one of `revision_id` / `guide_id` / `guide_base_id` is set. A node-scoped hold fans out to the revisions beneath it at purge time.
-
-Holds are multi-row: one piece of content can carry several at once (e.g. a `hidden` hold to take it out of view *and* a `legal_hold` to preserve it for reporting). A `csam` item is typically held this way (hidden, preserved, reported) and only purged after the preservation window passes.
-
-### `media_assets` and `revision_assets`
-
-The manifest of object-storage assets, so a purge can delete media reliably instead of scraping URLs out of markdown.
-
-`media_assets`:
-
-- `id`: primary key of the asset.
-- `storage_key`: object-storage key (not the public URL).
-- `uploaded_by`: FK to `profiles.id`.
-- `created_at`: upload time.
-
-`revision_assets`: many-to-many between revisions and assets, written when a revision is saved.
-
-- `revision_id`: FK to `guide_revisions`.
-- `asset_id`: FK to `media_assets`. The pair `(revision_id, asset_id)` is the primary key.
-
 ### `guide_edges`
 
 Relationships between guide bases. This table *is* the global graph.
@@ -184,31 +145,6 @@ Allowed edge types right now are:
 Only `prerequisite` edges form the learning DAG. Walkthrough generation, level computation, and reachability checks must ignore other edge types. 
 
 There must be a trigger that prevents cycles among prerequisite edges. Related edges may be cyclic because they do not define learning order. Related edges are used for "related" or "see also" links, discovery/navigation, and contextual suggestions. See [Related Edges in Practice](#related-edges-in-practice) for how the directed table represents these undirected links.
-
-### `subjects`
-
-Subject tags, such as Math, Physics, or Game Development. Subjects are not containers and do not own guide bases. They are filters over the global graph.
-
-- `id`: primary key of the subject.
-- `slug`: stable URL identifier for the subject (e.g. `game-development`).
-- `name`: human-readable subject name (e.g. `Game Development`).
-- `summary`: optional short description for subject listings and the subject header. Nullable; subjects have no revision table, so it lives on the row.
-- `creator_id`: FK to `profiles.id` (the user who created the subject).
-- `created_at`: subject creation time.
-
-### `guide_subjects`
-
-Many-to-many join table between guide bases and subjects. Lets one guide base appear in multiple subject views without duplicating content.
-
-- `guide_base_id`: the tagged guide base.
-- `subject_id`: the subject tag applied to it. The pair `(guide_base_id, subject_id)` is the primary key, so a guide base cannot carry the same tag twice.
-
-Example:
-
-```text
-Guide base: Vectors
-Subjects: Math, Physics, Game Development
-```
 
 ### `todo_prerequisites`
 
@@ -287,6 +223,38 @@ The projected prerequisite edges among included nodes, computed once at publish 
 
 These edges are derived from the global `guide_edges` graph, never hand-authored: at publish, the global prerequisite graph is projected onto the included (`is_included = true`) node set, bridging skipped prerequisites (if `A → Trig → C` and Trig is skipped, the projection stores `A → C`). The projection is computed by `project_objective_edges(revision_id)`. A draft computes it live on every read for the editor's hide-skipped view; only at publish is the result frozen into this table. (The editor's show-skipped view instead uses the raw prerequisite edges among the nodes, read straight from `guide_edges` and never stored.) They are a frozen *view* of the canonical graph, not a competing prerequisite authority (see [Objectives as frozen projections](#objectives-as-frozen-projections) for why this does not violate the one-global-DAG rule).
 
+### `subjects`
+
+Subject tags, such as Math, Physics, or Game Development. Subjects are not containers and do not own guide bases. They are filters over the global graph.
+
+- `id`: primary key of the subject.
+- `slug`: stable URL identifier for the subject (e.g. `game-development`).
+- `name`: human-readable subject name (e.g. `Game Development`).
+- `summary`: optional short description for subject listings and the subject header. Nullable; subjects have no revision table, so it lives on the row.
+- `creator_id`: FK to `profiles.id` (the user who created the subject).
+- `created_at`: subject creation time.
+
+### `guide_subjects`
+
+Many-to-many join table between guide bases and subjects. Lets one guide base appear in multiple subject views without duplicating content.
+
+- `guide_base_id`: the tagged guide base.
+- `subject_id`: the subject tag applied to it. The pair `(guide_base_id, subject_id)` is the primary key, so a guide base cannot carry the same tag twice.
+
+Example:
+
+```text
+Guide base: Vectors
+Subjects: Math, Physics, Game Development
+```
+
+### `objective_subjects`
+
+Many-to-many join table between objectives and subjects, mirroring `guide_subjects`. It tags the stable `objectives` node, not a revision, so an objective's subject membership is live metadata rather than versioned curriculum content.
+
+- `objective_id`: the tagged objective.
+- `subject_id`: the subject tag applied to it. The pair `(objective_id, subject_id)` is the primary key, so an objective cannot carry the same tag twice.
+
 ### `votes`
 
 Upvotes and downvotes on guides (the canonical one plus other methods and alternatives). Because all content lives in guides, a guide is the only votable content unit: voting "on the topic" is voting on its canonical guide.
@@ -307,6 +275,45 @@ Constraints:
 - A check that `reason` is present if and only if `direction = 'down'`.
 
 Display rules: public users see upvote/downvote totals only. The rubric breakdown is visible to moderators only, enforced by row level security. Guide ordering among siblings is **derived** from net votes, not stored as a rank column.
+
+### `content_holds`
+
+Moderation record for hiding or purging content (see [Content removal](#content-removal)). Decoupled from the content so `guide_revisions` stays immutable for hides.
+
+- `id`: primary key of the hold.
+- `revision_id`: nullable FK to `guide_revisions`. Set for a single-revision hold.
+- `guide_id`: nullable FK to `guides`. Set for a whole-guide hold.
+- `guide_base_id`: nullable FK to `guide_bases`. Set for a whole-topic hold.
+- `hold_type`: `dmca | csam | ncii | violent_extremism | tos_violation | gdpr_erasure | court_order | law_enforcement | counternotice`.
+- `action`: `hidden` (reversible, content untouched), `purge` (irreversible content destruction), or `legal_hold` (must preserve, purge blocked until `preserve_until`).
+- `preserve_until`: nullable timestamp; set on a `legal_hold`. While `preserve_until > now()`, purge of the covered content is blocked. Duration is set per the governing obligation.
+- `actor_id`: FK to `profiles.id`; the moderator who placed the hold.
+- `reason`: free-text note.
+- `created_at`: when the hold was placed.
+- `released_at`: nullable; set when a `hidden` hold is lifted. Null = active.
+- `released_by`: nullable FK to `profiles.id`; the moderator who lifted the `hidden` hold. Null while active. Recorded separately from `actor_id` so the audit trail shows who placed *and* who lifted.
+- `purged_at`: nullable; set when a `purge` finishes executing.
+- `purged_by`: nullable FK to `profiles.id`; the moderator who executed the `purge`. Null until the purge completes. Separate from `actor_id` for the same audit reason.
+
+Exactly one of `revision_id` / `guide_id` / `guide_base_id` is set. A node-scoped hold fans out to the revisions beneath it at purge time.
+
+Holds are multi-row: one piece of content can carry several at once (e.g. a `hidden` hold to take it out of view *and* a `legal_hold` to preserve it for reporting). A `csam` item is typically held this way (hidden, preserved, reported) and only purged after the preservation window passes.
+
+### `media_assets` and `revision_assets`
+
+The manifest of object-storage assets, so a purge can delete media reliably instead of scraping URLs out of markdown.
+
+`media_assets`:
+
+- `id`: primary key of the asset.
+- `storage_key`: object-storage key (not the public URL).
+- `uploaded_by`: FK to `profiles.id`.
+- `created_at`: upload time.
+
+`revision_assets`: many-to-many between revisions and assets, written when a revision is saved.
+
+- `revision_id`: FK to `guide_revisions`.
+- `asset_id`: FK to `media_assets`. The pair `(revision_id, asset_id)` is the primary key.
 
 ### `review_cases`, `review_panels`, and `review_decisions`
 
@@ -422,6 +429,8 @@ Contests the outcome of a prior `review_case`.
 
 ---
 
+
+
 ## Considerations
 
 Design decisions and rules that span multiple tables.
@@ -432,7 +441,7 @@ Design decisions and rules that span multiple tables.
 
 Submitting a revision creates a `guide_review_cases` row pointing at a `review_cases` row in the same transaction that flips the revision to `submitted`. From then on, the review lifecycle (`pending → in_review → approved | rejected`) is tracked entirely by `review_cases.status`. The revision and the node it belongs to read that state by joining through the case; they never copy it.
 
-**Why `guide_revisions.status` is only `draft | submitted`.** A revision only needs to record the part of its lifecycle that *it* owns:
+**Why** `guide_revisions.status` **is only** `draft | submitted`**.** A revision only needs to record the part of its lifecycle that *it* owns:
 
 - `draft` — being written, mutable, no case yet.
 - `submitted` — handed off to review; exactly one `guide_review_cases` row now exists.
@@ -469,13 +478,15 @@ Each level still keeps its own `status` because it answers a question only that 
 - `guides.status` — is **this method/alternative** live, while its base and siblings stay published? You can archive one guide without touching the base.
 - `guide_revisions.status` — is **this specific draft** still being written or already handed to review? This is per-revision and has no meaning at the node level.
 
+
+
 ### Content removal
 
 An `action` field picks the path in the `content_holds` table: `hidden` (reversible) or `purge` (irreversible). Content only lives on `guide_revisions`, so every actual content destruction lands there (`guides` and `guide_bases` hold no `body` to destroy).
 
-**Hide (`hidden`) — reversible, e.g. DMCA.** Insert a `content_holds` row; touch nothing else. The display layer hides any content with an active hold (`released_at IS NULL`). The revision row is never mutated, so immutability and history stay intact. Lift by setting `released_at`. The hold row is the audit trail.
+**Hide (**`hidden`**) — reversible, e.g. DMCA.** Insert a `content_holds` row; touch nothing else. The display layer hides any content with an active hold (`released_at IS NULL`). The revision row is never mutated, so immutability and history stay intact. Lift by setting `released_at`. The hold row is the audit trail.
 
-**Purge (`purge`) — irreversible, e.g. CSAM or court order.** The content is destroyed but the row survives as a tombstone, so the audit trail (author, dates, which guide) and all foreign keys stay valid. Nulling the body alone is not enough — copies live in three places, and a purge must reach all three:
+**Purge (**`purge`**) — irreversible, e.g. CSAM or court order.** The content is destroyed but the row survives as a tombstone, so the audit trail (author, dates, which guide) and all foreign keys stay valid. Nulling the body alone is not enough — copies live in three places, and a purge must reach all three:
 
 1. **Database row.** Null the content fields (`body`, `title`, `summary`, `change_summary`) and set `is_purged = true`; keep the skeleton (`id`, `guide_id`, `author_id`, `created_at`). The row stays so pointers (`current_revision_id`, review cases) resolve to a tombstone, not a dangling id. The `is_purged` flag marks the tombstone as deliberate (vs. accidental corruption that left content null); who/when lives on the covering `content_holds` row.
 2. **Object storage.** Media is referenced by URL in the body, so parsing markdown to find assets is unreliable. Delete via the manifest instead: iterate `revision_assets → media_assets.storage_key`, delete each key from the bucket, and verify it is gone. Before deleting a key, confirm no surviving (non-purged) revision still references that asset — shared assets must outlive a single revision's purge. (A CSAM legal purge overrides this and removes the asset regardless of references.) Because the DB and the bucket cannot share a transaction, queue one delete job per asset and mark the purge complete only once every job verifies deletion; a periodic orphan sweep reconciles bucket keys with no live manifest row as a backstop.
@@ -507,6 +518,8 @@ How a guide slug is decided:
 1. Default to `slugify(title)` of the guide's title (author may override).
 2. Resolve collisions against siblings under the **same base only** by appending a counter (`visual-method`, `visual-method-2`). This is a last resort, as it will only be used if the author decides to not change the guide's title to be unique. On guide submission, there will be a warning signaling the author that there is another guide with the same name, and they should change it unless they are okay with the numbered slug being used. Per-base scoping means a slug like `visual-method` can be reused under a different topic.
 3. Assign at **first publish**, once the title has settled through review; drafts are addressed by id until then. After that the slug is frozen, and later title edits never move it.
+
+
 
 ### Snapshots vs. Deltas
 
@@ -574,11 +587,13 @@ For the reverse-direction lookups to stay fast, `to_guide_base_id` needs its own
 CREATE INDEX guide_edges_to_guide_base_id ON guide_edges (to_guide_base_id);
 ```
 
+
+
 ### Deciding panel size
 
 `review_panels.target_seat_count` is decided at assembly time, in three steps:
 
-1. **Policy default per `case_type`.** A baseline count, e.g. `guide_publish`/`guide_edit` → 3 verifiers, `dispute`/`appeal`/`re_review` → 5 moderators (numbers illustrative). Higher-stakes governance gets a larger panel. This is a small static map (one odd number per `case_type`) that changes only on a policy decision, so it lives as an app-level constant, not a table. The value is read here and copied onto the panel, which freezes it.
+1. **Policy default per** `case_type`**.** A baseline count, e.g. `guide_publish`/`guide_edit` → 3 verifiers, `dispute`/`appeal`/`re_review` → 5 moderators (numbers illustrative). Higher-stakes governance gets a larger panel. This is a small static map (one odd number per `case_type`) that changes only on a policy decision, so it lives as an app-level constant, not a table. The value is read here and copied onto the panel, which freezes it.
 2. **Clamp to the eligible pool.** The eligible pool is the role pool that matches the case type (verifiers vs moderators) minus anyone recused, conflicted, suspended (`profiles.is_suspended`), or the case author. You cannot seat more panelists than exist: `target = min(policy_default, eligible_pool_size)`.
 3. **Round down to odd.** A majority must always be decidable, so an even clamp is reduced by one (`4 → 3`). A pool too small to seat the minimum (e.g. fewer than 3 eligible) blocks assembly rather than seating an even or trivially small panel.
 
@@ -690,6 +705,8 @@ The first-pass objective schema covers authoring and frozen publishing. Post-pub
 
 ---
 
+
+
 ## Table Flows in Practice
 
 This section traces the main user actions end to end, showing which rows are written, in which tables, and in what order. It exists to check the schema against real usage. Each flow lists the steps as `table` → what is written.
@@ -733,6 +750,8 @@ A second author adds another guide under a topic that already has a canonical gu
 2. `guide_revisions` → revision 1 of the new guide.
 3. Submit → review → publish: identical to flow 1 steps 4–8, **except** `guide_bases.canonical_guide_id` is **not** touched. The new guide publishes as a sibling; whether it becomes canonical is decided later by votes (flow 4), not by publishing.
 
+
+
 ### 3. Edit an existing published guide
 
 1. `guide_revisions` → insert the next revision: edited `title`/`summary`/`body`, `change_summary`, `author_id` (may differ from original author → spreads edit credit), `status = 'draft'` then `submitted` on handoff. `media_assets` / `revision_assets` → link this revision's assets, same as flow 1 step 4.
@@ -751,6 +770,8 @@ A second author adds another guide under a topic that already has a canonical gu
   - `re_review_cases` → `guide_id`, `trigger_type` (`ratio | rubric_weighted | section_density`).
   - Panel is drawn from the **moderator** pool (not verifiers), then decisions/close as in flow 1.
 
+
+
 ### 5. File a dispute
 
 A member contests content, a reviewer's conduct, a governance decision, or a cross-subject conflict.
@@ -758,13 +779,17 @@ A member contests content, a reviewer's conduct, a governance decision, or a cro
 1. `review_cases` → `case_type = 'dispute'`, `created_by = filer`.
 2. `disputes` → `dispute_type`, the matching target FK arm (`target_guide_id` for `factual`, `target_base_id` for `cross_subject`, `target_profile_id` for `reviewer_misconduct`, none for `governance`), `claim_text`.
 3. **Moderator** panel → decisions → close (flow 1 shape).
-4. **If `cross_subject` resolves into a spin-off**: `guide_bases` → insert a new subject-specific node with `forked_from_guide_base_id` = the original. The fork is an explicit, governed exception to "one canonical base per topic."
+4. **If** `cross_subject` **resolves into a spin-off**: `guide_bases` → insert a new subject-specific node with `forked_from_guide_base_id` = the original. The fork is an explicit, governed exception to "one canonical base per topic."
+
+
 
 ### 6. Appeal a resolved case
 
 1. `review_cases` → `case_type = 'appeal'`, `created_by = appellant`.
 2. `appeals` → `appealed_case_id` (the prior resolved case being challenged), `appeal_reason`. An appeal targets a **case**, not content.
 3. **Moderator** panel → decisions → close. Outcome may overturn the original ruling, driving the corresponding publish/edit/disposition change.
+
+
 
 ### 7. Declare prerequisites and graph edges
 
@@ -775,10 +800,15 @@ When authoring a guide base, the author wires it into the graph.
 - **Prerequisite topic does not exist yet**: `todo_prerequisites` → insert `dependent_guide_base_id`, `title` (free text), `status = 'open'`. Acts as a recruitment surface.
 - **TODO later filled**: when a real base is created for that topic, `todo_prerequisites` → set `status = 'resolved'`, `resolved_guide_base_id` = the new base; typically a real `prerequisite` edge is added in `guide_edges` at the same time.
 
+
+
 ### 8. Tag a topic into subjects
 
 1. `subjects` → row exists (or insert if new, governance-gated).
 2. `guide_subjects` → insert `(guide_base_id, subject_id)` per tag. One base can be tagged into several subjects; the composite PK blocks duplicate tags. Subject views and floors then filter the global graph through these rows.
+3. `objective_subjects` → insert `(objective_id, subject_id)` per tag to surface an objective under a subject. Same composite-PK dedupe; tagging is owner-only and untagging moderator/admin-only.
+
+
 
 ### 9. Hide content (reversible, e.g. DMCA)
 
@@ -787,6 +817,8 @@ A moderator takes content out of view without destroying it. See [Content remova
 1. `content_holds` → insert: `action = 'hidden'`, `hold_type`, `actor_id`, `reason`, and exactly one scope (`revision_id` / `guide_id` / `guide_base_id`).
 2. Display layer hides any content with an active hold (`released_at IS NULL`). No content row is touched, so immutability and history are preserved.
 3. **To lift:** `content_holds` → set `released_at` and `released_by`. Content reappears; the hold row remains as the audit trail.
+
+
 
 ### 10. Purge content (irreversible, e.g. CSAM / court order)
 
@@ -799,6 +831,8 @@ A moderator destroys content while keeping the audit trail. See [Content removal
 5. **Object storage** → for each target revision, read `revision_assets → media_assets.storage_key`, delete each key from the bucket and verify, skipping any asset still referenced by a non-purged revision. Queue one delete job per asset; the purge is complete only when all jobs verify.
 6. **Node scope only** → scrub the node's own content — `guides.slug`, or `guide_bases.title` + `slug` — and set `status = 'archived'`. If a purged guide was canonical, re-point or leave `guide_bases.canonical_guide_id` per policy (it resolves to the tombstone).
 7. `content_holds` → set `purged_at` and `purged_by`. The revision carries `is_purged = true`; who/when stays on this hold row.
+
+
 
 ### 11. Author and publish an objective
 
