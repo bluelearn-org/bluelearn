@@ -10,5 +10,11 @@ export const fileSchema = z
 
 export const uuidSchema = z.uuid();
 
+export const mediaUploadSchema = z.object({
+  file: fileSchema,
+  revision_id: uuidSchema,
+});
+
 export type FileUpload = z.infer<typeof fileSchema>;
 export type UUID = z.infer<typeof uuidSchema>;
+export type MediaUploadInput = z.infer<typeof mediaUploadSchema>;

@@ -64,8 +64,6 @@ export async function assertRevisionLinkable(
   userId: string,
   db: DB
 ) {
-  // Confirm the caller owns a draft revision to attach the asset to, before
-  // anything is uploaded, so a bad revision_id never leaves an orphan asset.
   const { data, error } = await db
     .from("guide_revisions")
     .select("id")
@@ -88,9 +86,6 @@ export async function linkAssetToRevision(
   asset_id: UUID,
   db: DB
 ) {
-  // Link an existing asset to a revision. The foreign keys are the source of
-  // truth: a 23503 means the revision was deleted between the pre-check and
-  // here, so treat it as not found rather than re-querying to confirm.
   const { data: revisionEntry, error: revisionInsertError } = await db
     .from("revision_assets")
     .insert({ revision_id, asset_id })
@@ -109,4 +104,18 @@ export async function linkAssetToRevision(
   }
 
   return revisionEntry;
+}
+
+export async function uploadRevisionMedia(
+  file: FileUpload,
+  revisionId: UUID,
+  userId: string,
+  db: DB
+) {
+  // Verify the revision before uploading, so a bad id fails fast and never
+  // leaves an orphan file or asset row behind, then store and link the asset.
+  await assertRevisionLinkable(revisionId, userId, db);
+  const asset = await uploadMediaFile(file, userId, db);
+  await linkAssetToRevision(revisionId, asset.id, db);
+  return { url: asset.url, path: asset.path, mime_type: asset.mime_type };
 }
