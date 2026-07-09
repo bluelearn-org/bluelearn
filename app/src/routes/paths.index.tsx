@@ -8,12 +8,12 @@ import { PathCard } from "@/components/cards/PathCard";
 import { hydratePaths } from "@/lib/getData";
 
 import guides from "@/data/guides.json";
-import paths from "@/data/objectives.json";
+import objectives from "@/data/objectives.json";
 
 export const Route = createFileRoute("/paths/")({ component: RouteComponent });
 
 function RouteComponent() {
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, objectives);
 
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">

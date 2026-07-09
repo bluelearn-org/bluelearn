@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { FeaturedRow } from "@/components/FeaturedRow";
 
 import subjects from "@/data/subjects.json";
-import paths from "@/data/objectives.json";
+import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
 
 import { hydratePaths } from "@/lib/getData";
@@ -20,7 +20,7 @@ import { hydratePaths } from "@/lib/getData";
 export const Route = createFileRoute("/")({ component: RouteComponent });
 
 function RouteComponent() {
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, objectives);
 
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">

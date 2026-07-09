@@ -8,7 +8,7 @@ import { GuideCard } from "@/components/cards/GuideCard";
 
 import { hydratePaths } from "@/lib/getData";
 
-import paths from "@/data/objectives.json";
+import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/subjects/$slug")({
 function SubjectPage() {
   const { slug } = Route.useParams();
 
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, objectives);
 
   const allGuides = hydratedPaths.flatMap((p) => p.levels.map((l) => l.guide));
 

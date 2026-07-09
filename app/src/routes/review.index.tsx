@@ -11,7 +11,7 @@ import { CustomTabs } from "@/components/Tabs";
 import { SubjectCard } from "@/components/cards/SubjectCard";
 
 import guides from "@/data/guides.json";
-import paths from "@/data/objectives.json";
+import objectives from "@/data/objectives.json";
 import subjects from "@/data/subjects.json";
 
 import { hydratePaths } from "@/lib/getData";
@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/review/")({ component: RouteComponent });
 
 function RouteComponent() {
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, objectives);
   const allGuides: Array<Guide> = hydratedPaths.flatMap((p) =>
     p.levels.map((l) => l.guide)
   );

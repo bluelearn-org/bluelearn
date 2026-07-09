@@ -10,7 +10,7 @@ import { PathCard } from "@/components/cards/PathCard";
 
 import { hydratePaths } from "@/lib/getData";
 
-import paths from "@/data/objectives.json";
+import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { Pagination } from "@/components/Pagination";
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/browse")({
 });
 
 function RouteComponent() {
-  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, paths);
+  const hydratedPaths: Array<HydratedPath> = hydratePaths(guides, objectives);
 
   const allGuides = hydratedPaths
     .flatMap((p) => p.levels.map((l) => l.guide))
@@ -72,7 +72,7 @@ function RouteComponent() {
         <CollapsibleSection
           title={
             <h2 className={`${sectionHeadingCommonClassNames}`}>
-              Learning Paths ({paths.length})
+              Learning Paths ({objectives.length})
             </h2>
           }
           defaultOpen={true}
