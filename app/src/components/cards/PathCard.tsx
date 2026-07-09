@@ -9,14 +9,18 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { FooterStats } from "@/components/cards/FooterStats";
 
 import { Route as LearningPathRoute } from "@/routes/paths.$slug";
-import { formatDuration } from "@/lib/guideUtils";
+
+type PathProp = HydratedPath & {
+  stats?: Array<{ label: string; data: number }>;
+  actionBtns?: React.ReactNode;
+};
 
 type PropTypes = {
-  path: HydratedPath;
+  path: PathProp;
 };
 
 export const PathCard = ({ path }: PropTypes) => {
@@ -26,18 +30,19 @@ export const PathCard = ({ path }: PropTypes) => {
     <Card className="group flex flex-col justify-between rounded-md bg-background shadow-none transition-colors hover:bg-muted">
       {/* Header */}
       <CardHeader className="relative p-4">
-        <div className="absolute top-6 right-6">
-          <Badge
-            variant="outline"
-            className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
-          >
-            Not Started
-          </Badge>
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
+            Path
+          </p>
+          {path.status && (
+            <Badge
+              variant="outline"
+              className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+            >
+              {path.status}
+            </Badge>
+          )}
         </div>
-
-        <p className="mb-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
-          Path
-        </p>
 
         <Link to={LearningPathRoute.to} params={{ slug: path.slug }}>
           <h3 className="line-clamp-2 text-xl font-semibold tracking-tight">
@@ -91,33 +96,15 @@ export const PathCard = ({ path }: PropTypes) => {
       </CardContent>
 
       {/* Footer */}
-      <CardFooter className="grid grid-cols-4 border-t p-0">
-        <div className="border-r px-4">
-          <p className="font-mono tracking-[0.08em] text-muted-foreground uppercase">
-            Duration
-          </p>
+      {(path.stats || path.actionBtns) && (
+        <CardFooter className="grid grid-cols-2 border-t p-0 lg:grid-cols-4">
+          {path.stats?.map((g: { label: string; data: number }) => {
+            return <FooterStats label={g.label} data={g.data} />;
+          })}
 
-          <p className="mt-1 text-lg font-semibold">
-            {formatDuration(path.duration)}
-          </p>
-        </div>
-
-        <div className="border-r px-4">
-          <p className="font-mono tracking-[0.08em] text-muted-foreground uppercase">
-            Levels
-          </p>
-
-          <p className="mt-1 text-lg font-semibold">{path.levels.length}</p>
-        </div>
-
-        <div className="col-span-2 flex items-center justify-around px-4">
-          <Button variant="outline" className="btn-sec">
-            Open in Graph
-          </Button>
-
-          <Button className="btn-pri">Start Reading</Button>
-        </div>
-      </CardFooter>
+          {path.actionBtns}
+        </CardFooter>
+      )}
     </Card>
   );
 };

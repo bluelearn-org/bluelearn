@@ -9,6 +9,7 @@ export type Path = {
   slug: string;
   title: string;
   summary: string;
+  status?: string;
   curator: string;
   created_at: string;
   duration: number;

@@ -25,9 +25,17 @@ function RouteComponent() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {subjects.map((subject: Subject) => (
-            <SubjectCard key={subject.slug} subject={subject} />
-          ))}
+          {subjects.map((subject: Subject) => {
+            const s = {
+              ...subject,
+              label: "Subjects",
+              stats: [
+                { label: "Objectives", data: subject.paths_total },
+                { label: "Guides", data: subject.guides_total },
+              ],
+            };
+            return <SubjectCard key={s.slug} subject={s} />;
+          })}
         </div>
       </section>
     </div>
