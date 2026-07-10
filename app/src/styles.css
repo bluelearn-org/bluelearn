@@ -149,7 +149,7 @@
   }
 
   .btn-sec {
-    @apply inline-flex items-center justify-center rounded-md border px-4 py-2 font-mono text-xs text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono text-xs text-black uppercase transition-all duration-200;
     background: var(--muted);
   }
 
@@ -159,7 +159,7 @@
 
   /* -- SURFACE BLOCK -- */
   .surface {
-    @apply rounded-lg border border-border bg-brand-surface;
+    @apply rounded-lg border-1 border-border bg-brand-surface;
   }
 
   .surface:hover {

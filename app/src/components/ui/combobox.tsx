@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
@@ -20,8 +18,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+export type ComboboxItem = {
+  value: string;
+  label: string;
+  description?: string;
+};
+
 type ComboboxBaseProps = {
-  items: Array<string>;
+  items: Array<ComboboxItem>;
   placeholder?: string;
 };
 
@@ -51,17 +55,21 @@ export function Combobox({
 
   const selected = isMulti ? value : value ? [value] : [];
 
-  const toggle = (item: string) => {
+  const toggle = (itemValue: string) => {
     if (!isMulti) {
-      onValueChange(item);
+      onValueChange(itemValue);
       setOpen(false);
       return;
     }
 
-    const exists = value.includes(item);
+    const exists = value.includes(itemValue);
 
-    onValueChange(exists ? value.filter((v) => v !== item) : [...value, item]);
+    onValueChange(
+      exists ? value.filter((v) => v !== itemValue) : [...value, itemValue]
+    );
   };
+
+  const selectedItems = items.filter((item) => selected.includes(item.value));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -73,16 +81,16 @@ export function Combobox({
             )}
 
             {isMulti ? (
-              selected.map((v) => (
+              selectedItems.map((item) => (
                 <span
-                  key={v}
+                  key={item.value}
                   className="flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs"
                 >
-                  {v}
+                  {item.label}
                 </span>
               ))
             ) : (
-              <span>{selected[0]}</span>
+              <span>{selectedItems[0]?.label}</span>
             )}
           </div>
 
@@ -90,7 +98,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[500px] p-0">
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
@@ -98,13 +106,13 @@ export function Combobox({
 
             <CommandGroup>
               {items.map((item) => {
-                const isSelected = selected.includes(item);
+                const isSelected = selected.includes(item.value);
 
                 return (
                   <CommandItem
-                    key={item}
-                    value={item}
-                    onSelect={() => toggle(item)}
+                    key={item.value}
+                    value={item.label} // searchable text
+                    onSelect={() => toggle(item.value)}
                   >
                     <Check
                       className={cn(
@@ -112,7 +120,15 @@ export function Combobox({
                         isSelected ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    {item}
+                    <div className="flex flex-col">
+                      <span>{item.label}</span>
+
+                      {item.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {item.description}
+                        </span>
+                      )}
+                    </div>
                   </CommandItem>
                 );
               })}
