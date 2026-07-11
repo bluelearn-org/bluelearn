@@ -108,6 +108,28 @@ const computeWalkthrough = (targetSlug: string): Array<WalkthroughNode> => {
   return result;
 };
 
+// Helper to get transitive prerequisites of a guide
+const getTransitivePrereqs = (slug: string): Set<string> => {
+  const prereqs = new Set<string>();
+  const queue = [slug];
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const guide = guidesMap.get(current);
+    if (guide) {
+      for (const p of guide.prerequisites) {
+        if (!prereqs.has(p)) {
+          prereqs.add(p);
+          queue.push(p);
+        }
+      }
+    }
+  }
+  return prereqs;
+};
+
 export const OrderObjectiveGuides = ({
   Stepper,
   objectiveContData,
@@ -117,6 +139,34 @@ export const OrderObjectiveGuides = ({
     objectiveContData.selectedSlugs[0] || ""
   );
   const [curatedSequence, setCuratedSequence] = useState<Array<string>>([]);
+
+  // Find violations in the current sequence
+  const findViolations = (): Record<string, Array<string> | undefined> => {
+    const violations: Record<string, Array<string> | undefined> = {};
+    const slugToIndex: Record<string, number> = {};
+    curatedSequence.forEach((slug, idx) => {
+      slugToIndex[slug] = idx;
+    });
+
+    curatedSequence.forEach((slug) => {
+      const transPrereqs = getTransitivePrereqs(slug);
+      const outOfOrderPrereqs: Array<string> = [];
+      transPrereqs.forEach((prereq) => {
+        if (prereq in slugToIndex && slugToIndex[prereq] > slugToIndex[slug]) {
+          const title = guidesMap.get(prereq)?.title || prereq;
+          outOfOrderPrereqs.push(title);
+        }
+      });
+      if (outOfOrderPrereqs.length > 0) {
+        violations[slug] = outOfOrderPrereqs;
+      }
+    });
+
+    return violations;
+  };
+
+  const violations = findViolations();
+  const isCustomSequence = Object.keys(violations).length > 0;
 
   const selectedGuidesList = guidesData.filter((g) =>
     objectiveContData.selectedSlugs.includes(g.slug)
@@ -280,11 +330,25 @@ export const OrderObjectiveGuides = ({
           {/* Left Pane: Curated Sequence (5 cols) */}
           <Card className="flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm lg:col-span-5">
             <CardHeader className="border-b pb-4">
-              <div className="flex items-center gap-2 text-primary">
-                <ListOrdered className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base font-semibold">
-                  Create Curated Sequence
-                </CardTitle>
+              <div className="flex w-full items-center justify-between">
+                <div className="flex items-center gap-2 text-primary">
+                  <ListOrdered className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-base font-semibold">
+                    Create Curated Sequence
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-1.5 pr-1 select-none">
+                  <span
+                    className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                      isCustomSequence
+                        ? "animate-pulse bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                        : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                    }`}
+                  />
+                  <span className="font-mono text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    {isCustomSequence ? "Custom" : "Aligned"}
+                  </span>
+                </div>
               </div>
               <CardDescription>
                 Build the sequential learning plan by ordering selected guides.
