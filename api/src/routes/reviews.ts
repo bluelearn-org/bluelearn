@@ -38,10 +38,9 @@ export const reviewsRouter = new Hono<HonoEnv>()
       const input = c.req.valid("json");
       const result = await castDecision(
         c.get("supabase"),
-        c.get("user").id,
         c.req.param("id"),
         input
       );
-      return c.json({ decision: result }, 201);
+      return c.json({ decision: result }, 200);
     }
   );
