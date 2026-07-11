@@ -24,7 +24,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import guidesData from "@/data/guides.json";
 
 // Map for O(1) guide lookup
@@ -327,8 +326,8 @@ export const OrderObjectiveGuides = ({
         </Field>
 
         <div className="grid h-[calc(100vh-450px)] min-h-[350px] w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
-          {/* Left Pane: Curated Sequence (5 cols) */}
-          <Card className="flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm lg:col-span-5">
+          {/* Left Pane: Curated Sequence (7 cols) */}
+          <Card className="flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm lg:col-span-7">
             <CardHeader className="border-b pb-4">
               <div className="flex w-full items-center justify-between">
                 <div className="flex items-center gap-2 text-primary">
@@ -445,8 +444,8 @@ export const OrderObjectiveGuides = ({
             </CardContent>
           </Card>
 
-          {/* Right Pane: Generated Walkthrough by Level (7 cols) */}
-          <Card className="flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/10 shadow-none lg:col-span-7">
+          {/* Right Pane: Generated Walkthrough by Level (5 cols) */}
+          <Card className="flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/10 shadow-none lg:col-span-5">
             <CardHeader className="border-b pb-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Layers className="h-5 w-5 text-primary" />
@@ -477,17 +476,19 @@ export const OrderObjectiveGuides = ({
                       return (
                         <div
                           key={node.slug}
-                          className="flex items-start gap-3 rounded-lg border border-border bg-background p-3 shadow-sm transition-all hover:bg-muted/30"
+                          onClick={() => {
+                            if (!isTarget) {
+                              handleToggleGuide(node.slug, !isChecked);
+                            }
+                          }}
+                          className={`flex items-start gap-3 rounded-lg border p-3 shadow-sm transition-all select-none ${
+                            isTarget
+                              ? "cursor-default border-primary/30 bg-primary/5 opacity-90"
+                              : isChecked
+                                ? "cursor-pointer border-primary/25 bg-primary/5 hover:bg-primary/10"
+                                : "cursor-pointer border-border bg-background hover:bg-muted/30"
+                          }`}
                         >
-                          <div className="pt-0.5">
-                            <Checkbox
-                              checked={isChecked}
-                              disabled={isTarget}
-                              onCheckedChange={(checked) =>
-                                handleToggleGuide(node.slug, checked === true)
-                              }
-                            />
-                          </div>
                           <div className="min-w-0 flex-1">
                             <h4 className="flex items-center gap-2 text-sm font-medium text-foreground">
                               {node.title}
