@@ -26,6 +26,7 @@ export default function ContributionFlow() {
     title: "",
     summary: "",
     subjects: [],
+    newSubjects: [],
     prereqs: [],
     todoPrereqs: [],
   });

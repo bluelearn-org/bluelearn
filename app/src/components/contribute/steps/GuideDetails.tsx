@@ -23,6 +23,13 @@ export const GuideDetails = ({
   setGuideContData,
 }: PropTypes) => {
   const [todoPrereq, setTodoPrereq] = useState<string>("");
+  const [newSubject, setNewSubject] = useState<{
+    name: string;
+    summary: string;
+  }>({
+    name: "",
+    summary: "",
+  });
 
   return (
     <Stepper.Content step="guide-details">
@@ -95,6 +102,70 @@ export const GuideDetails = ({
             }
           />
         </Field>
+        <Field className="space-y-2">
+          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+            New Subjects
+          </FieldLabel>
+          <div className="flex items-center justify-between gap-4">
+            <Input
+              id="new-subject-name"
+              type="text"
+              maxLength={50}
+              placeholder="Enter name of new subject."
+              className="h-10 rounded-md"
+              value={newSubject.name}
+              onChange={(e) =>
+                setNewSubject((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
+              }
+            />
+
+            <Input
+              id="new-subject-summary"
+              type="text"
+              maxLength={50}
+              placeholder="Enter summary of new subject."
+              className="h-10 rounded-md"
+              value={newSubject.summary}
+              onChange={(e) =>
+                setNewSubject((prev) => ({
+                  ...prev,
+                  summary: e.target.value,
+                }))
+              }
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="btn-sec h-10 w-24 rounded-md"
+              onClick={() => {
+                if (newSubject.name !== "" && newSubject.summary !== "") {
+                  const newSubs = [...guideContData.newSubjects, newSubject];
+                  setGuideContData((prev) => ({
+                    ...prev,
+                    newSubjects: newSubs,
+                  }));
+
+                  setNewSubject({ name: "", summary: "" });
+                }
+              }}
+            >
+              Add Subject
+            </Button>
+          </div>
+        </Field>
+
+        <ul className="list-disc px-8 text-[11px] text-muted-foreground">
+          {guideContData.newSubjects.map((sub, index) => {
+            return (
+              <li key={index}>
+                {sub.name} - {sub.summary}
+              </li>
+            );
+          })}
+        </ul>
 
         <Field className="space-y-2">
           <FieldLabel className="font-mono tracking-[0.08em] uppercase">
