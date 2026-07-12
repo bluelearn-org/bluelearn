@@ -35,13 +35,15 @@ export const FeaturedRow = ({ objectives, type }: PropTypes) => {
             ],
           };
           return (
-            <div key={objective.slug} className="w-[550px] shrink-0">
+            <div
+              key={objective.slug}
+              className="w-[calc(100vw_-_8rem)] shrink-0 sm:w-[550px]"
+            >
               <ObjectiveCard
                 key={o.slug}
                 objective={o}
                 to={ObjectiveRoute.to}
               />
-              ;
             </div>
           );
         })}

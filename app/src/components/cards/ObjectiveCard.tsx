@@ -57,14 +57,14 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
 
         {/* Graph Preview */}
         <CardContent className="space-y-2 border-t p-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             {previewLevels.map((level, index) => (
               <div
                 key={index}
-                className="flex min-w-0 flex-1 items-center gap-2"
+                className="flex flex-col items-center gap-2 sm:min-w-0 sm:flex-1 sm:flex-row"
               >
-                <div className="flex flex-col items-center justify-center">
-                  <p className="flex h-8 w-8 items-center justify-center rounded-full bg-badge px-2 text-xl">
+                <div className="flex w-40 flex-col items-center justify-center sm:w-auto sm:min-w-0">
+                  <p className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge px-2 text-xl">
                     {level.level}
                   </p>
 
@@ -75,7 +75,7 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
 
                 {(index < previewLevels.length - 1 ||
                   objective.levels.length >= 3) && (
-                  <ArrowRight className="h-5 w-5 shrink-0" />
+                  <ArrowRight className="h-5 w-5 shrink-0 rotate-90 sm:rotate-0" />
                 )}
                 {index >= previewLevels.length - 1 && (
                   <div className="text-center">
