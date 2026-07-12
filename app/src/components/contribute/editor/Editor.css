@@ -384,27 +384,35 @@
 
 /* == TABLES == */
 .mdxeditor-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1.5rem 0;
-  font-size: 0.875rem;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+  font-size: 0.875rem !important;
 }
 
 .mdxeditor-content th,
 .mdxeditor-content td {
-  border: 1px solid var(--border);
-  padding: 0.625rem 0.875rem;
-  text-align: left;
+  border: 1px solid var(--border) !important;
+  padding: 0.625rem 0.875rem !important;
+  text-align: left !important;
 }
 
 .mdxeditor-content th {
-  background-color: var(--muted);
-  font-weight: 600;
-  color: var(--foreground);
+  background-color: var(--muted) !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
 }
 
-.mdxeditor-content tr:nth-child(even) {
-  background-color: var(--secondary);
+/* Reset styling for all MDXEditor tool, spacing, and helper cells in corners/margins */
+.mdxeditor-content [class*="tableToolsColumn"],
+.mdxeditor-content tfoot th,
+.mdxeditor-content tfoot td,
+.mdxeditor-content [class*="toolCell"],
+.mdxeditor-content [data-tool-cell="true"] {
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 0 !important;
 }
 
 /* == MATH & LATEX EDITOR INTEGRATION == */
