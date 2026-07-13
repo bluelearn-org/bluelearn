@@ -174,7 +174,7 @@
     "duration": 15,
     "tags": ["3d-modelling", "blender", "animation"],
     "breadcrumbs": ["Home", "Game Development", "Blender Character Creation"],
-    "prerequisites": ["basic-3d-modelling"],
+    "prerequisites": [],
     "content": "# Starting with the character concept sketch"
   },
   {

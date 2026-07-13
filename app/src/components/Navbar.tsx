@@ -17,7 +17,7 @@ const navItems = [
   { label: "Browse", to: "/browse" },
   { label: "Subjects", to: "/subjects" },
   { label: "Objectives", to: "/objectives" },
-  { label: "Review Queue", to: "/review" },
+  { label: "Review", to: "/review" },
 ];
 
 const profileItems = [

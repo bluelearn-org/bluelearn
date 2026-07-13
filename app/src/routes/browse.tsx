@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
+import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
+import { Route as GuideRoute } from "@/routes/guides.$slug";
+
 import { hydrateObjectives } from "@/lib/getData";
 
 import objectives from "@/data/objectives.json";
@@ -83,7 +86,11 @@ function RouteComponent() {
           <Separator className="mb-8 h-[0.5px]! bg-border" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {hydratedObjectives.map((objective: HydratedObjective) => (
-              <ObjectiveCard key={objective.slug} objective={objective} />
+              <ObjectiveCard
+                key={objective.slug}
+                objective={objective}
+                to={ObjectiveRoute.to}
+              />
             ))}
           </div>
           <div className="mt-8 mb-4">
@@ -110,7 +117,7 @@ function RouteComponent() {
           <Separator className="mb-8 bg-border" />
           <div className="grid gap-6 md:grid-cols-2">
             {allGuides.map((guide, index) => (
-              <GuideCard key={index} guide={guide} />
+              <GuideCard key={index} guide={guide} to={GuideRoute.to} />
             ))}
           </div>
           <div className="mt-8 mb-4">

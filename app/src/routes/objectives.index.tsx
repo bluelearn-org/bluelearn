@@ -5,6 +5,8 @@ import type { HydratedObjective } from "@/types/objectives";
 import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
+import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
+
 import { hydrateObjectives } from "@/lib/getData";
 
 import guides from "@/data/guides.json";
@@ -41,7 +43,13 @@ function RouteComponent() {
                 { label: "Guides", data: objective.levels.length },
               ],
             };
-            return <ObjectiveCard key={p.slug} objective={p} />;
+            return (
+              <ObjectiveCard
+                key={p.slug}
+                objective={p}
+                to={ObjectiveRoute.to}
+              />
+            );
           })}
         </div>
       </section>

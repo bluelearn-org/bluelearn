@@ -25,3 +25,11 @@ export type HydratedGuide = Omit<Guide, "tags" | "prerequisites"> & {
   tags: Array<SubjectReference>;
   prerequisites: Array<GuideReference>;
 };
+
+export type GuideType = "practical" | "theoretical";
+
+export type HydratedReviewGuide = Omit<Guide, "tags" | "prerequisites"> & {
+  type: GuideType;
+  tags: Array<SubjectReference>;
+  prerequisites: Array<GuideReference>;
+};

@@ -2,20 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import type { HydratedObjective } from "@/types/objectives";
 import type { Guide } from "@/types/guides";
-import type { Subject } from "@/types/subjects";
 
 import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 import { GuideCard } from "@/components/cards/GuideCard";
 import { CustomTabs } from "@/components/Tabs";
-import { SubjectCard } from "@/components/cards/SubjectCard";
+
+import { Route as ReviewSlugRoute } from "@/routes/review.$slug";
 
 import guides from "@/data/guides.json";
 import objectives from "@/data/objectives.json";
-import subjects from "@/data/subjects.json";
 
 import { hydrateObjectives } from "@/lib/getData";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/review/")({ component: RouteComponent });
 
@@ -29,11 +27,6 @@ function RouteComponent() {
   );
 
   const tabs = [
-    {
-      id: "subjects",
-      label: "Subjects",
-      content: <ReviewGrid type="subjects" data={subjects} />,
-    },
     {
       id: "guides",
       label: "Guides",
@@ -72,45 +65,23 @@ const ReviewGrid = ({ type, data }: ReviewGridProps) => {
   if (type == "objectives") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((objective: HydratedObjective) => {
+        {data.map((objective: HydratedObjective, index: number) => {
           const o = {
             ...objective,
           };
-          return <ObjectiveCard key={o.slug} objective={o} />;
+          return (
+            <ObjectiveCard key={index} objective={o} to={ReviewSlugRoute.to} />
+          );
         })}
       </div>
     );
   } else if (type == "guides") {
     return (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((guide: Guide) => {
-          return <GuideCard key={guide.slug} guide={guide} />;
-        })}
-      </div>
-    );
-  } else if (type == "subjects") {
-    return (
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((subject: Subject) => {
-          const s = {
-            ...subject,
-            stats: [
-              { label: "Objectives", data: subject.paths_total },
-              { label: "Guides", data: subject.guides_total },
-            ],
-            actionBtns: (
-              <div className="col-span-2 mt-5 flex items-center justify-around border-t-1 p-4 pt-8 lg:mt-0 lg:border-none lg:pt-4">
-                <Button variant="destructive" size="lg">
-                  Reject
-                </Button>
-
-                <Button className="btn-pri" size="lg">
-                  Approve
-                </Button>
-              </div>
-            ),
-          };
-          return <SubjectCard key={s.slug} subject={s} />;
+        {data.map((guide: Guide, index: number) => {
+          return (
+            <GuideCard key={index} guide={guide} to={ReviewSlugRoute.to} />
+          );
         })}
       </div>
     );

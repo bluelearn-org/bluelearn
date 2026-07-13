@@ -26,6 +26,7 @@ export default function ContributionFlow() {
     title: "",
     summary: "",
     subjects: [],
+    newSubjects: [],
     prereqs: [],
     todoPrereqs: [],
   });
@@ -93,7 +94,7 @@ function Inner({
   };
 
   return (
-    <div className="flex h-[calc(100vh_-_210px)] w-full gap-8">
+    <div className="flex min-h-[calc(100vh_-_210px)] w-full gap-8">
       {/* sidebar */}
       <div className="w-64 border-r pr-4">
         <Stepper.List>

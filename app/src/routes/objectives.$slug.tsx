@@ -3,6 +3,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import type { HydratedObjective, Level } from "@/types/objectives";
 
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { GuideCard } from "@/components/cards/GuideCard";
 
 import { getPathBySlug, hydrateObjectives } from "@/lib/getData";
@@ -10,7 +11,8 @@ import { formatDuration } from "@/lib/guideUtils";
 
 import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
-import { Button } from "@/components/ui/button";
+
+import { Route as GuideRoute } from "@/routes/guides.$slug";
 
 export const Route = createFileRoute("/objectives/$slug")({
   component: PathPage,
@@ -34,8 +36,9 @@ function PathPage() {
       <section className="border-b px-8 py-8 lg:px-16">
         <div className="mb-6">
           <p className="data-label text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
-            Learning Objectives: {slug} ({hydratedObjectives[0].levels.length}{" "}
-            levels | {formatDuration(hydratedObjectives[0].duration)} total)
+            {/* FIX: should be title not slug */}
+            Objective: {slug} ({hydratedObjectives[0].levels.length} levels |{" "}
+            {formatDuration(hydratedObjectives[0].duration)} total)
           </p>
         </div>
 
@@ -67,6 +70,7 @@ function PathPage() {
                   title: hydratedObjectives[0].title,
                   path: `/objectives/${slug}`,
                 }}
+                to={GuideRoute.to}
               />
             );
           })}

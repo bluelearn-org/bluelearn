@@ -1,5 +1,10 @@
 import type { Subject, SubjectReference } from "@/types/subjects";
-import type { Guide, GuideReference, HydratedGuide } from "@/types/guides";
+import type {
+  Guide,
+  GuideReference,
+  HydratedGuide,
+  HydratedReviewGuide,
+} from "@/types/guides";
 import type { HydratedObjective, Objective } from "@/types/objectives";
 
 // TODO: update to fetch from api
@@ -66,6 +71,34 @@ export const hydrateGuide = (
 
   return {
     ...guide,
+
+    tags: guide.tags
+      .map((slug) => subjectMap[slug])
+      .map<SubjectReference>((subject) => ({
+        slug: subjectMap[subject.slug].slug,
+        name: subjectMap[subject.slug].name,
+      })),
+
+    prerequisites: guide.prerequisites
+      .map((slug) => guideMap[slug])
+      .map<GuideReference>((prereq) => ({
+        slug: prereq.slug,
+        title: prereq.title,
+      })),
+  };
+};
+
+export const hydrateReviewGuide = (
+  guide: Guide,
+  guides: Array<Guide>,
+  subjects: Array<Subject>
+): HydratedReviewGuide => {
+  const guideMap = createGuideMap(guides);
+  const subjectMap = createSubjectMap(subjects);
+
+  return {
+    ...guide,
+    type: "practical",
 
     tags: guide.tags
       .map((slug) => subjectMap[slug])

@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -439,6 +459,36 @@ export type Database = {
             columns: ["objective_id"]
             isOneToOne: false
             referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objective_subjects: {
+        Row: {
+          objective_id: string
+          subject_id: string
+        }
+        Insert: {
+          objective_id: string
+          subject_id: string
+        }
+        Update: {
+          objective_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_subjects_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -883,6 +933,20 @@ export type Database = {
       }
     }
     Functions: {
+      assemble_review_panel: {
+        Args: { p_case_id: string; p_policy_default: number }
+        Returns: string
+      }
+      cast_review_decision: {
+        Args: {
+          p_case_id: string
+          p_decision: Database["public"]["Enums"]["review_outcome"]
+          p_notes?: string
+          p_reasons?: Database["public"]["Enums"]["decision_reason"][]
+        }
+        Returns: Json
+      }
+      close_review_panel: { Args: { p_case_id: string }; Returns: undefined }
       compute_walkthrough: { Args: { p_guide_base_id: string }; Returns: Json }
       create_guide: {
         Args: {
@@ -1084,6 +1148,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["verifier", "moderator", "curator", "admin"],
@@ -1119,3 +1186,4 @@ export const Constants = {
     },
   },
 } as const
+

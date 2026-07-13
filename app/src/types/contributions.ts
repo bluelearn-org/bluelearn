@@ -5,6 +5,10 @@ export type GuideContribution = {
   title: string;
   summary: string;
   subjects: Array<string>;
+  newSubjects: Array<{
+    name: string;
+    summary: string;
+  }>;
   prereqs: Array<string>;
   todoPrereqs: Array<string>;
 };

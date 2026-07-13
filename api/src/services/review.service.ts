@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DecisionReason } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
+import { PANEL_POLICY_DEFAULTS } from "../lib/review-policy";
 
 type DB = SupabaseClient<Database>;
 type ReviewOutcome = Database["public"]["Enums"]["review_outcome"];
@@ -259,7 +260,6 @@ export async function getReviewCase(supabase: DB, caseId: string) {
 
 export async function castDecision(
   supabase: DB,
-  userId: string,
   caseId: string,
   input: {
     decision: ReviewOutcome;
@@ -267,95 +267,65 @@ export async function castDecision(
     reasons?: DecisionReason[];
   }
 ) {
-  const { data: panel, error: panelError } = await supabase
-    .from("review_panels")
-    .select("id")
-    .eq("case_id", caseId)
-    .is("closed_at", null)
-    .maybeSingle();
+  // Write the decision, its rubric reasons, and the seat completion in one
+  // transaction.
+  const { data, error } = await supabase.rpc("cast_review_decision", {
+    p_case_id: caseId,
+    p_decision: input.decision,
+    p_notes: input.notes ?? undefined,
+    p_reasons: input.decision === "rejected" ? (input.reasons ?? []) : [],
+  });
 
-  if (panelError) {
-    console.error(panelError);
-    throw new ServiceError("Failed to find active panel", 500);
-  }
-  if (!panel)
-    throw new ServiceError("No active review panel for this case", 400);
-
-  // A completed seat is still valid: re-votes revise the existing decision.
-  const { data: member, error: memberError } = await supabase
-    .from("panel_members")
-    .select("id")
-    .eq("panel_id", panel.id)
-    .eq("member_id", userId)
-    .in("status", ["assigned", "completed"])
-    .maybeSingle();
-
-  if (memberError) {
-    console.error(memberError);
-    throw new ServiceError("Failed to verify panel membership", 500);
-  }
-  if (!member)
-    throw new ServiceError("You are not an active panelist on this case", 403);
-
-  const { data: decision, error: upsertError } = await supabase
-    .from("review_decisions")
-    .upsert(
-      {
-        panel_member_id: member.id,
-        decision: input.decision,
-        notes: input.notes ?? null,
-      },
-      { onConflict: "panel_member_id" }
-    )
-    .select("id, decision, notes, created_at")
-    .single();
-
-  if (upsertError) {
-    console.error(upsertError);
+  if (error) {
+    if (error.code === "22023")
+      throw new ServiceError("No active review panel for this case", 400);
+    if (error.code === "42501")
+      throw new ServiceError(
+        "You are not an active panelist on this case",
+        403
+      );
+    console.error(error);
     throw new ServiceError("Failed to record decision", 500);
   }
 
-  // Reasons are replaced wholesale so a re-vote can change or clear them: a
-  // reject carries its cited rubric items, an approve carries none.
-  const reasons = input.decision === "rejected" ? (input.reasons ?? []) : [];
+  // This cast may be the deciding vote. close_review_panel tallies, no-ops until
+  // one outcome holds a majority, and on approval, publishes the revision.
+  const { error: closeError } = await supabase.rpc("close_review_panel", {
+    p_case_id: caseId,
+  });
 
-  const { error: clearError } = await supabase
-    .from("review_decision_reasons")
-    .delete()
-    .eq("decision_id", decision.id);
-
-  if (clearError) {
-    console.error(clearError);
+  if (closeError) {
+    console.error(closeError);
     throw new ServiceError("Failed to record decision", 500);
   }
 
-  if (reasons.length > 0) {
-    const { error: reasonError } = await supabase
-      .from("review_decision_reasons")
-      .insert(reasons.map((reason) => ({ decision_id: decision.id, reason })));
-
-    if (reasonError) {
-      console.error(reasonError);
-      throw new ServiceError("Failed to record decision", 500);
-    }
-  }
-
-  // Casting a decision completes the seat so the case leaves the caller's queue.
-  const { error: seatError } = await supabase
-    .from("panel_members")
-    .update({ status: "completed" })
-    .eq("id", member.id);
-
-  if (seatError) {
-    console.error(seatError);
-    throw new ServiceError("Failed to record decision", 500);
-  }
-
-  return {
-    id: decision.id,
-    decision: decision.decision,
-    notes: decision.notes,
-    reasons,
-    created_at: decision.created_at,
+  return data as {
+    id: string;
+    decision: ReviewOutcome;
+    notes: string | null;
+    reasons: DecisionReason[];
+    created_at: string;
   };
+}
+
+// Seat a panel on every case still waiting for one (used by cron trigger).
+export async function assemblePendingPanels(supabase: DB) {
+  const { data: cases, error } = await supabase
+    .from("review_cases")
+    .select("id, case_type")
+    .eq("status", "pending");
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load pending review cases", 500);
+  }
+
+  for (const c of cases ?? []) {
+    const { error: rpcError } = await supabase.rpc("assemble_review_panel", {
+      p_case_id: c.id,
+      p_policy_default: PANEL_POLICY_DEFAULTS[c.case_type],
+    });
+    // One case failing to seat must not stall the rest of the batch.
+    if (rpcError) console.error(rpcError);
+  }
 }

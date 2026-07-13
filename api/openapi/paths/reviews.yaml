@@ -99,7 +99,7 @@
           schema:
             $ref: "../components/schemas/reviews/CreateDecisionRequest.yaml"
     responses:
-      "201":
+      "200":
         description: The recorded decision
         content:
           application/json:

@@ -157,6 +157,25 @@
     transform: scale(1.05);
   }
 
+  .btn-reject {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-white uppercase transition-all duration-200;
+    background: #ff0000;
+  }
+
+  .btn-reject:hover {
+    background: #ff0000;
+    transform: scale(1.05);
+  }
+  .btn-approve {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-black uppercase transition-all duration-200;
+    background: #00e408;
+  }
+
+  .btn-approve:hover {
+    background: #00e408;
+    transform: scale(1.05);
+  }
+
   /* -- SURFACE BLOCK -- */
   .surface {
     @apply rounded-lg border-1 border-border bg-brand-surface;
