@@ -17,3 +17,10 @@ export function tagGuide(guideBaseId: string, subjectId: string) {
     subject_id: subjectId,
   });
 }
+
+export function tagObjective(objectiveId: string, subjectId: string) {
+  return insert("objective_subjects", {
+    objective_id: objectiveId,
+    subject_id: subjectId,
+  });
+}

@@ -7,6 +7,7 @@ import {
   createSubject,
   getSubjectBySlug,
   listSubjectGuides,
+  listSubjectObjectives,
   listSubjects,
 } from "../services/subject.service";
 
@@ -49,4 +50,13 @@ export const subjectsRouter = new Hono<HonoEnv>()
       c.req.param("slug")
     );
     return c.json({ guides }, 200);
+  })
+
+  // Alphabetical list of published objectives tagged with this subject
+  .get("/:slug/objectives", async (c) => {
+    const objectives = await listSubjectObjectives(
+      c.get("supabase"),
+      c.req.param("slug")
+    );
+    return c.json({ objectives }, 200);
   });

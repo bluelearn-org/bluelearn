@@ -112,3 +112,33 @@
               required: [guides]
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"
+
+/subjects/{slug}/objectives:
+  parameters:
+    - name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+      example: math
+  get:
+    tags: [subjects]
+    summary: List objectives tagged with this subject
+    description: Alphabetical list of published objectives carrying this subject tag.
+    operationId: listSubjectObjectives
+    responses:
+      "200":
+        description: Tagged objectives
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                objectives:
+                  type: array
+                  items:
+                    $ref: "../components/schemas/subjects/SubjectObjectiveListItem.yaml"
+              required: [objectives]
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
