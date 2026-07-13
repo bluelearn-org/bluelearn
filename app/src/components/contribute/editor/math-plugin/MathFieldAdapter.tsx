@@ -115,6 +115,7 @@ export const MathFieldAdapter = React.forwardRef<
     useImperativeHandle(forwardRef, () => ({
       focus: () => {
         if (internalRef.current) {
+          internalRef.current.readOnly = false;
           internalRef.current.focus();
         }
       },

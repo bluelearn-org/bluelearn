@@ -60,7 +60,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   };
 
   const handleBlur = (e: React.FocusEvent) => {
-    const relatedTarget = e.relatedTarget as HTMLElement;
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
     if (
       isTargetMathLive(relatedTarget) ||
       isTargetMathLive(document.activeElement as HTMLElement)
@@ -75,6 +75,20 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       setIsFocused(true);
       setSelected(true);
     }
+  };
+
+  // Helper to block events from bubbling to Lexical on placeholder interactions
+  const handlePlaceholderEvent = (e: React.SyntheticEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName.toLowerCase() !== "math-field" &&
+      !target.closest("button")
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return true;
+    }
+    return false;
   };
 
   // Handle click/pointer outside to blur
@@ -164,17 +178,17 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     }
   }, [isSelected]);
 
-  // Auto-focus empty equations immediately after insertion
+  // Focus the math field when isFocused becomes true (e.g. after clicking placeholder)
   useEffect(() => {
-    if (equation === "" && ref.current) {
+    if (isFocused && ref.current) {
       const timeoutId = setTimeout(() => {
         if (ref.current) {
           ref.current.focus();
         }
-      }, 100);
+      }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [equation]);
+  }, [isFocused]);
 
   // Update Lexical Node equation on input changes
   const handleInputChange = (newValue: string) => {
@@ -258,15 +272,30 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       <span
         ref={containerRef}
         onDragStart={(e) => e.preventDefault()}
+        onPointerUp={handlePlaceholderEvent}
+        onClick={handlePlaceholderEvent}
+        onPointerDown={(e) => {
+          if (handlePlaceholderEvent(e)) {
+            setIsFocused(true);
+            setSelected(true);
+          }
+        }}
         className={`group math-node relative inline-flex items-center rounded transition-all duration-200 ${
           isNodeSelected || isFocused
             ? "px-1 ring-2 ring-sky-500/50"
-            : "bg-transparent px-0 ring-0 hover:bg-slate-100/50 hover:ring-1 hover:ring-slate-300/50"
+            : equation === ""
+              ? "cursor-pointer border border-dashed border-slate-300 bg-slate-100/80 px-1 hover:bg-slate-200/80"
+              : "bg-transparent px-0 ring-0 hover:bg-slate-100/50 hover:ring-1 hover:ring-slate-300/50"
         }`}
         style={{
           verticalAlign: "middle",
         }}
       >
+        {equation === "" && !isFocused && (
+          <span className="pointer-events-none px-0.5 font-mono text-xs font-semibold text-slate-400 select-none">
+            ?
+          </span>
+        )}
         <MathFieldAdapter
           ref={ref}
           value={equation}
@@ -277,6 +306,9 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           onPointerDown={handlePointerDown}
           style={{
             minWidth: isFocused ? "8rem" : "0px",
+            width: equation === "" && !isFocused ? "0px" : "auto",
+            height: equation === "" && !isFocused ? "0px" : "auto",
+            overflow: "hidden",
             display: "inline-block",
             verticalAlign: "middle",
           }}
@@ -318,12 +350,27 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
         onDragStart={(e) => e.preventDefault()}
-        className={`math-node block rounded-lg border-none px-6 py-3 text-center transition-all duration-200 ${
+        onPointerUp={handlePlaceholderEvent}
+        onClick={handlePlaceholderEvent}
+        onPointerDown={(e) => {
+          if (handlePlaceholderEvent(e)) {
+            setIsFocused(true);
+            setSelected(true);
+          }
+        }}
+        className={`math-node block rounded-lg text-center transition-all duration-200 ${
           isNodeSelected || isFocused
-            ? "ring-2 ring-sky-500/50"
-            : "bg-transparent ring-0 group-hover:bg-slate-50/50 group-hover:ring-1 group-hover:ring-slate-300/50"
+            ? "px-6 py-3 ring-2 ring-sky-500/50"
+            : equation === ""
+              ? "cursor-pointer border border-dashed border-slate-300 bg-slate-100/80 px-6 py-2 hover:bg-slate-200/80"
+              : "bg-transparent px-6 py-3 ring-0 group-hover:bg-slate-50/50 group-hover:ring-1 group-hover:ring-slate-300/50"
         }`}
       >
+        {equation === "" && !isFocused && (
+          <div className="pointer-events-none py-1 font-mono text-sm font-semibold text-slate-400 select-none">
+            $$ ? $$
+          </div>
+        )}
         <MathFieldAdapter
           ref={ref}
           value={equation}
@@ -335,6 +382,8 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           style={{
             width: "100%",
             display: "block",
+            height: equation === "" && !isFocused ? "0px" : "auto",
+            overflow: "hidden",
             minWidth: "6rem",
           }}
         />
