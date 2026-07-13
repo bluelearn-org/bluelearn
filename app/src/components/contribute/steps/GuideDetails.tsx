@@ -36,6 +36,46 @@ export const GuideDetails = ({
       <StepperActionHeader title={"Guide Details"} Stepper={Stepper} />
 
       <FieldGroup>
+        <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          Type
+        </FieldLabel>
+        <Field className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+          <button
+            className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
+            style={{
+              backgroundColor:
+                guideContData.type == "theoretical"
+                  ? "var(--badge-bg)"
+                  : "var(--muted-bg)",
+            }}
+            onClick={() =>
+              setGuideContData((prev) => ({
+                ...prev,
+                type: "theoretical",
+              }))
+            }
+          >
+            Theoretical
+          </button>
+
+          <button
+            className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
+            style={{
+              backgroundColor:
+                guideContData.type == "practical"
+                  ? "var(--badge-bg)"
+                  : "var(--muted-bg)",
+            }}
+            onClick={() =>
+              setGuideContData((prev) => ({
+                ...prev,
+                type: "practical",
+              }))
+            }
+          >
+            Practical
+          </button>
+        </Field>
         <Field className="space-y-2">
           <FieldLabel className="font-mono tracking-[0.08em] uppercase">
             Title
@@ -111,7 +151,7 @@ export const GuideDetails = ({
               id="new-subject-name"
               type="text"
               maxLength={50}
-              placeholder="Enter name of new subject."
+              placeholder="Enter subject name."
               className="h-10 rounded-md"
               value={newSubject.name}
               onChange={(e) =>
