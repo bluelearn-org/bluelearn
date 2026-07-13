@@ -112,12 +112,13 @@ export async function listSubjectObjectives(supabase: DB, rawSlug: string) {
     .from("objectives")
     .select(
       `id, slug,
+       objective_subjects!inner(subject_id),
        current:objective_revisions!objectives_current_revision_id_fkey(title, summary)`
     )
     .eq("objective_subjects.subject_id", subject.id)
     .eq("status", "published")
     .order("title", {
-      foreignTable: "objective_revisions",
+      foreignTable: "current",
       ascending: true,
     });
 
@@ -126,9 +127,11 @@ export async function listSubjectObjectives(supabase: DB, rawSlug: string) {
     throw new ServiceError("Failed to load subject objectives", 500);
   }
 
-  return (data ?? []).map(({ current, ...rest }) => ({
-    ...rest,
-    title: current?.title ?? null,
-    summary: current?.summary ?? null,
-  }));
+  return (data ?? []).map(
+    ({ current, objective_subjects: _tags, ...rest }) => ({
+      ...rest,
+      title: current?.title ?? null,
+      summary: current?.summary ?? null,
+    })
+  );
 }
