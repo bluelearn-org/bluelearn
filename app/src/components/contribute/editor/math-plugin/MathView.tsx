@@ -5,6 +5,7 @@ import { lexical } from "@mdxeditor/editor";
 import { $isMathNode } from "./MathNode";
 import { MathFieldAdapter } from "./MathFieldAdapter";
 import type { MathFieldAdapterRef } from "./MathFieldAdapter";
+import { cn } from "@/lib/utils";
 
 const {
   $getNodeByKey,
@@ -22,26 +23,54 @@ interface MathViewProps {
   inline: boolean;
 }
 
-const isTargetMathLive = (el: HTMLElement | null): boolean => {
-  if (!el) return false;
+const isTargetMathLive = (target: Event | EventTarget | null): boolean => {
+  if (!target) return false;
 
-  let current: HTMLElement | null = el;
-  while (current && current !== document.body) {
-    const classes = Array.from(current.classList);
-    if (
-      classes.some(
-        (c) =>
-          c.startsWith("ML__") ||
-          c.startsWith("MLK__") ||
-          c.includes("mathfield") ||
-          c.includes("cortexjs")
-      ) ||
-      current.id.includes("cortexjs") ||
-      current.tagName.toLowerCase() === "math-field"
-    ) {
-      return true;
+  let path: Array<any> = [];
+  if ("composedPath" in target && typeof target.composedPath === "function") {
+    path = target.composedPath();
+  } else {
+    let current: any = target;
+    while (current) {
+      path.push(current);
+      current =
+        current.parentElement ||
+        (current.getRootNode && typeof current.getRootNode === "function"
+          ? current.getRootNode().host
+          : null);
     }
-    current = current.parentElement;
+  }
+
+  for (const node of path) {
+    if (node instanceof HTMLElement) {
+      const tagName = node.tagName.toLowerCase();
+      if (
+        tagName === "math-field" ||
+        tagName.includes("math") ||
+        tagName.includes("cortexjs")
+      ) {
+        return true;
+      }
+      if (
+        node.id &&
+        (node.id.includes("cortexjs") || node.id.includes("mathlive"))
+      ) {
+        return true;
+      }
+      const classes = Array.from(node.classList);
+      if (
+        classes.some(
+          (c) =>
+            c.startsWith("ML__") ||
+            c.startsWith("MLK__") ||
+            c.includes("mathfield") ||
+            c.includes("cortexjs") ||
+            c.includes("mathlive")
+        )
+      ) {
+        return true;
+      }
+    }
   }
   return false;
 };
@@ -63,7 +92,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     const relatedTarget = e.relatedTarget as HTMLElement | null;
     if (
       isTargetMathLive(relatedTarget) ||
-      isTargetMathLive(document.activeElement as HTMLElement)
+      isTargetMathLive(document.activeElement)
     ) {
       return;
     }
@@ -102,7 +131,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
         return;
       }
 
-      if (isTargetMathLive(target)) {
+      if (isTargetMathLive(e)) {
         return;
       }
 
@@ -280,23 +309,28 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             setSelected(true);
           }
         }}
-        className={`group math-node relative inline-flex items-center rounded transition-all duration-200 ${
+        className={cn(
+          "group math-node relative inline-flex items-center rounded-md transition-all duration-200 ease-in-out",
           isNodeSelected || isFocused
-            ? "px-1 ring-2 ring-sky-500/50"
+            ? "bg-primary/5 px-1.5 py-0.5 ring-2 ring-primary/40 dark:bg-primary/10"
             : equation === ""
-              ? "cursor-pointer border border-dashed border-slate-300 bg-slate-100/80 px-1 hover:bg-slate-200/80"
-              : "bg-transparent px-0 ring-0 hover:bg-slate-100/50 hover:ring-1 hover:ring-slate-300/50"
-        }`}
+              ? "cursor-pointer border border-dashed border-border bg-muted/40 px-1 hover:border-muted-foreground/30 hover:bg-muted/80"
+              : "bg-transparent px-0 ring-0 hover:bg-muted/30 hover:ring-1 hover:ring-border"
+        )}
         style={{
           verticalAlign: "middle",
         }}
       >
         {equation === "" && !isFocused && (
-          <span className="pointer-events-none px-0.5 font-mono text-xs font-semibold text-slate-400 select-none">
+          <span
+            key="placeholder"
+            className="pointer-events-none px-0.5 font-mono text-xs font-semibold text-muted-foreground/80 select-none"
+          >
             ?
           </span>
         )}
         <MathFieldAdapter
+          key="math-field-adapter"
           ref={ref}
           value={equation}
           onChange={handleInputChange}
@@ -313,6 +347,100 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             verticalAlign: "middle",
           }}
         />
+        {(isNodeSelected || isFocused) && (
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={handleDelete}
+            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground/60 transition-colors duration-200 hover:bg-destructive/15 hover:text-destructive"
+            title="Delete equation"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-2.5 w-2.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef as React.RefObject<HTMLDivElement>}
+      onDragStart={(e) => e.preventDefault()}
+      onPointerUp={handlePlaceholderEvent}
+      onClick={handlePlaceholderEvent}
+      onPointerDown={(e) => {
+        if (handlePlaceholderEvent(e)) {
+          setIsFocused(true);
+          setSelected(true);
+        }
+      }}
+      className={cn(
+        "math-node relative mx-auto my-3 block w-fit max-w-full rounded-lg text-center transition-all duration-200 ease-in-out",
+        isNodeSelected || isFocused
+          ? "bg-primary/5 px-10 py-5 ring-2 ring-primary/40 dark:bg-primary/10"
+          : equation === ""
+            ? "cursor-pointer border border-dashed border-border bg-muted/40 px-8 py-3.5 hover:border-muted-foreground/30 hover:bg-muted/80"
+            : "bg-transparent px-6 py-3 ring-0 hover:bg-muted/30 hover:ring-1 hover:ring-border"
+      )}
+    >
+      {equation === "" && !isFocused && (
+        <div
+          key="placeholder"
+          className="flex items-center justify-center gap-2.5 py-1 select-none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-primary/50 transition-colors duration-200"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M17 7H7l4 5-4 5h10"
+            />
+          </svg>
+          <span className="font-sans text-xs font-semibold tracking-wider text-muted-foreground/70 uppercase transition-colors duration-200">
+            Insert block equation
+          </span>
+        </div>
+      )}
+      <MathFieldAdapter
+        key="math-field-adapter"
+        ref={ref}
+        value={equation}
+        onChange={handleInputChange}
+        readOnly={!editor.isEditable() || !isFocused}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onPointerDown={handlePointerDown}
+        style={{
+          width: "100%",
+          display: "block",
+          height: equation === "" && !isFocused ? "0px" : "auto",
+          overflow: "hidden",
+          minWidth: "6rem",
+        }}
+      />
+      {(isNodeSelected || isFocused) && (
         <button
           type="button"
           onMouseDown={(e) => {
@@ -320,12 +448,12 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             e.stopPropagation();
           }}
           onClick={handleDelete}
-          className="absolute -top-4 -right-2.5 z-20 flex scale-90 items-center justify-center rounded-full border border-slate-200 bg-white p-1 text-slate-400 opacity-0 shadow-md transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+          className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground/60 transition-colors duration-200 hover:bg-destructive/15 hover:text-destructive"
           title="Delete equation"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-3 w-3"
+            className="h-2.5 w-2.5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -333,86 +461,12 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              strokeWidth={2.5}
+              d="M6 18L18 6M6 6l12 12"
             />
           </svg>
         </button>
-      </span>
-    );
-  }
-
-  return (
-    <div className="group relative mx-auto my-3 w-fit max-w-full">
-      <div className="pointer-events-none absolute -top-5 left-0 z-10 rounded bg-slate-200/40 px-2 py-0.5 text-[9px] font-medium tracking-wider text-slate-500 uppercase opacity-0 transition-opacity duration-200 select-none group-hover:opacity-100">
-        Equation
-      </div>
-      <div
-        ref={containerRef as React.RefObject<HTMLDivElement>}
-        onDragStart={(e) => e.preventDefault()}
-        onPointerUp={handlePlaceholderEvent}
-        onClick={handlePlaceholderEvent}
-        onPointerDown={(e) => {
-          if (handlePlaceholderEvent(e)) {
-            setIsFocused(true);
-            setSelected(true);
-          }
-        }}
-        className={`math-node block rounded-lg text-center transition-all duration-200 ${
-          isNodeSelected || isFocused
-            ? "px-6 py-3 ring-2 ring-sky-500/50"
-            : equation === ""
-              ? "cursor-pointer border border-dashed border-slate-300 bg-slate-100/80 px-6 py-2 hover:bg-slate-200/80"
-              : "bg-transparent px-6 py-3 ring-0 group-hover:bg-slate-50/50 group-hover:ring-1 group-hover:ring-slate-300/50"
-        }`}
-      >
-        {equation === "" && !isFocused && (
-          <div className="pointer-events-none py-1 font-mono text-sm font-semibold text-slate-400 select-none">
-            $$ ? $$
-          </div>
-        )}
-        <MathFieldAdapter
-          ref={ref}
-          value={equation}
-          onChange={handleInputChange}
-          readOnly={!editor.isEditable() || !isFocused}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onPointerDown={handlePointerDown}
-          style={{
-            width: "100%",
-            display: "block",
-            height: equation === "" && !isFocused ? "0px" : "auto",
-            overflow: "hidden",
-            minWidth: "6rem",
-          }}
-        />
-      </div>
-      <button
-        type="button"
-        onMouseDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onClick={handleDelete}
-        className="absolute -top-3 -right-3 z-20 flex scale-90 items-center justify-center rounded-full border border-slate-200 bg-white p-1 text-slate-400 opacity-0 shadow-md transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
-        title="Delete equation"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-3 w-3"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-          />
-        </svg>
-      </button>
+      )}
     </div>
   );
 }
