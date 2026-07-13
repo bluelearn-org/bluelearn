@@ -113,6 +113,8 @@ paths:
     $ref: "./paths/subjects.yaml#/~1subjects~1{slug}"
   /subjects/{slug}/guides:
     $ref: "./paths/subjects.yaml#/~1subjects~1{slug}~1guides"
+  /subjects/{slug}/objectives:
+    $ref: "./paths/subjects.yaml#/~1subjects~1{slug}~1objectives"
 
   /reviews/queue:
     $ref: "./paths/reviews.yaml#/~1reviews~1queue"
