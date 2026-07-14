@@ -325,7 +325,8 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             }
           }}
           onFocusOutside={(e) => {
-            if (isTargetMathLive(e)) {
+            const originalEvent = e.detail.originalEvent;
+            if (isTargetMathLive(e) || originalEvent.target === document.body) {
               e.preventDefault();
             }
           }}
@@ -433,7 +434,8 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           }
         }}
         onFocusOutside={(e) => {
-          if (isTargetMathLive(e)) {
+          const originalEvent = e.detail.originalEvent;
+          if (isTargetMathLive(e) || originalEvent.target === document.body) {
             e.preventDefault();
           }
         }}

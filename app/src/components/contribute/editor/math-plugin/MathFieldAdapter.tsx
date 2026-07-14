@@ -158,21 +158,26 @@ export const MathFieldAdapter = React.forwardRef<
       };
 
       const handleFocusOut = () => {
-        if (el && el.shadowRoot) {
-          // When math-field loses focus, MathLive visually hides the menu but leaves its internal state open.
-          // Force a clean reset by programmatically clicking its Scrim background.
-          const menuToggle = el.shadowRoot.querySelector(
-            "[part='menu-toggle']"
-          );
-          if (menuToggle) {
-            const scrim = menuToggle.querySelector("div[role='presentation']");
-            if (scrim) {
-              scrim.dispatchEvent(
-                new MouseEvent("click", { bubbles: true, cancelable: true })
+        setTimeout(() => {
+          if (el && el.shadowRoot && document.activeElement !== el) {
+            // When math-field loses focus, MathLive visually hides the menu but leaves its internal state open.
+            // Force a clean reset by programmatically clicking its Scrim background,
+            // but only if focus actually left the math-field (not just a temporary blur from clicking the menu toggle).
+            const menuToggle = el.shadowRoot.querySelector(
+              "[part='menu-toggle']"
+            );
+            if (menuToggle) {
+              const scrim = menuToggle.querySelector(
+                "div[role='presentation']"
               );
+              if (scrim) {
+                scrim.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true, cancelable: true })
+                );
+              }
             }
           }
-        }
+        }, 100);
       };
 
       el.addEventListener("input", handleInput);
