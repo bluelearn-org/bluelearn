@@ -1,6 +1,5 @@
 import { lexical } from "@mdxeditor/editor";
-import React from "react";
-import { MathView } from "./MathView";
+import React, { Suspense } from "react";
 
 import type {
   EditorConfig,
@@ -9,6 +8,10 @@ import type {
   NodeKey,
   SerializedLexicalNode,
 } from "lexical";
+
+const LazyMathView = React.lazy(() =>
+  import("./MathView").then((module) => ({ default: module.MathView }))
+);
 
 const { DecoratorNode } = lexical;
 
@@ -87,12 +90,25 @@ export class MathNode extends DecoratorNode<unknown> {
   }
 
   decorate(_editor: LexicalEditor, _config: EditorConfig): React.ReactNode {
-    return React.createElement(MathView, {
-      key: this.__key,
-      nodeKey: this.__key,
-      equation: this.__equation,
-      inline: this.__inline,
-    });
+    return React.createElement(
+      Suspense,
+      {
+        fallback: React.createElement(
+          "span",
+          {
+            className:
+              "animate-pulse text-slate-400 select-none italic text-sm",
+          },
+          "Loading math..."
+        ),
+      },
+      React.createElement(LazyMathView, {
+        key: this.__key,
+        nodeKey: this.__key,
+        equation: this.__equation,
+        inline: this.__inline,
+      })
+    );
   }
 }
 

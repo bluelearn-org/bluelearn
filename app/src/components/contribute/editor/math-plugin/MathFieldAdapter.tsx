@@ -42,6 +42,9 @@ declare module "react" {
 }
 /* eslint-enable @typescript-eslint/no-namespace */
 
+// Track if the dynamic import has already resolved across all component instances
+let globalMathLiveLoaded = false;
+
 export const MathFieldAdapter = React.forwardRef<
   MathFieldAdapterRef,
   MathFieldAdapterProps
@@ -61,13 +64,13 @@ export const MathFieldAdapter = React.forwardRef<
     forwardRef
   ) => {
     const internalRef = useRef<any>(null);
-    const lastEmittedValue = useRef<string | null>(value);
-    const [mathliveLoaded, setMathliveLoaded] = useState(false);
+    const lastEmittedValue = useRef<string | null>(null);
+    const [mathliveLoaded, setMathliveLoaded] = useState(globalMathLiveLoaded);
 
     // Dynamic loading of mathlive to prevent SSR crashes in next.js/vinxi environments
     useEffect(() => {
       let isMounted = true;
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !globalMathLiveLoaded) {
         const win = window as any;
         // Pre-emptively intercept the module-level font prefetch before the import finishes evaluating
         if (!win.MathfieldElement || !win.MathfieldElement.fontsDirectory) {
@@ -96,6 +99,7 @@ export const MathFieldAdapter = React.forwardRef<
         import("mathlive").then((ml) => {
           if (isMounted) {
             ml.MathfieldElement.fontsDirectory = "/mathlive/fonts/";
+            globalMathLiveLoaded = true;
             setMathliveLoaded(true);
           }
         });
@@ -132,26 +136,55 @@ export const MathFieldAdapter = React.forwardRef<
       },
     }));
 
+    // Use a ref for onChange to avoid re-binding event listeners on every render
+    const onChangeRef = useRef(onChange);
+    useEffect(() => {
+      onChangeRef.current = onChange;
+    }, [onChange]);
+
     // Listen to native input changes on web component and bubble up onChange callback
     useEffect(() => {
       const el = internalRef.current;
-      if (!el) {
+      if (!el || !mathliveLoaded) {
         return;
       }
 
       const handleInput = (e: Event) => {
         const val = (e.target as any).value;
         lastEmittedValue.current = val;
-        if (onChange) {
-          onChange(val);
+        if (onChangeRef.current) {
+          onChangeRef.current(val);
+        }
+      };
+
+      const handleFocusOut = () => {
+        if (el && el.shadowRoot) {
+          // When math-field loses focus, MathLive visually hides the menu but leaves its internal state open.
+          // Force a clean reset by programmatically clicking its Scrim background.
+          const menuToggle = el.shadowRoot.querySelector(
+            "[part='menu-toggle']"
+          );
+          if (menuToggle) {
+            const scrim = menuToggle.querySelector("div[role='presentation']");
+            if (scrim) {
+              scrim.dispatchEvent(
+                new MouseEvent("click", { bubbles: true, cancelable: true })
+              );
+            }
+          }
         }
       };
 
       el.addEventListener("input", handleInput);
+      el.addEventListener("focusout", handleFocusOut);
+
       return () => {
-        el.removeEventListener("input", handleInput);
+        if (el) {
+          el.removeEventListener("input", handleInput);
+          el.removeEventListener("focusout", handleFocusOut);
+        }
       };
-    }, [onChange, mathliveLoaded]);
+    }, [mathliveLoaded]);
 
     // Clean blur on unmount to release static MathLive focus references without running on every render
     useEffect(() => {

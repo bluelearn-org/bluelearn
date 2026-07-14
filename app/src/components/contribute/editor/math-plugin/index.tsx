@@ -19,17 +19,14 @@ import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { MathExportVisitor, MathImportVisitor } from "./MathVisitors";
 import { $createMathNode, MathNode } from "./MathNode";
-import type { LexicalNode, TextNode } from "lexical";
+import { applyMathLivePatches } from "./MathLivePatches";
 
 const {
   $createNodeSelection,
   $createRangeSelection,
   $getNodeByKey,
-  $getRoot,
   $getSelection,
   $insertNodes,
-  $isElementNode,
-  $isLineBreakNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -233,6 +230,7 @@ export function MathShortcutTypeListener() {
  */
 export const mathPlugin = realmPlugin({
   init: (realm) => {
+    applyMathLivePatches();
     realm.pubIn({
       [addSyntaxExtension$]: math(),
       [addMdastExtension$]: mathFromMarkdown(),

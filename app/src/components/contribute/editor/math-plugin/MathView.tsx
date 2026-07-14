@@ -15,49 +15,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
-// --- MathLive Bug Fix ---
-if (
-  typeof HTMLElement !== "undefined" &&
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  HTMLElement.prototype.showPopover &&
-  !(HTMLElement.prototype as any)._patchedForMathLive
-) {
-  const originalShowPopover = HTMLElement.prototype.showPopover;
-  HTMLElement.prototype.showPopover = function () {
-    try {
-      if (!this.isConnected) {
-        // If MathLive's singleton menu is disconnected (because its parent math-field was unmounted),
-        // we must rescue it and attach it to the currently active math-field.
-        const activeMathField =
-          document.querySelector("math-field:focus-within") ||
-          document.querySelector("math-field");
-
-        if (activeMathField && activeMathField.shadowRoot) {
-          const toggle = activeMathField.shadowRoot.querySelector(
-            "[part='menu-toggle']"
-          );
-          const container = toggle || activeMathField.shadowRoot;
-
-          const parent = this.parentNode;
-          if (parent && !parent.isConnected) {
-            container.appendChild(parent);
-          } else {
-            container.appendChild(this);
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (!this.isConnected) return;
-        } else {
-          return;
-        }
-      }
-      originalShowPopover.call(this);
-    } catch (e) {
-      console.warn("[MathLive] Suppressed showPopover error:", e);
-    }
-  };
-  (HTMLElement.prototype as any)._patchedForMathLive = true;
-}
+// ------------------------
 // ------------------------
 
 const {
@@ -223,42 +181,6 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   useEffect(() => {
     setIsOpen(isSelected);
   }, [isSelected]);
-
-  // Intercept and destroy events targeting an already-open submenu to prevent a fatal MathLive crash
-  useEffect(() => {
-    const preventCrash = (e: Event) => {
-      const path = typeof e.composedPath === "function" ? e.composedPath() : [];
-      for (const node of path) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (node && node instanceof HTMLElement) {
-          if (
-            node.tagName.toUpperCase() === "LI" &&
-            node.classList.contains("is-submenu-open")
-          ) {
-            // MathLive crashes if it processes a click on an already-open submenu.
-            // By stopping it in the capture phase, MathLive never receives the event.
-            e.stopPropagation();
-            e.preventDefault();
-            return;
-          }
-        }
-      }
-    };
-
-    window.addEventListener("click", preventCrash, true);
-    window.addEventListener("pointerdown", preventCrash, true);
-    window.addEventListener("pointerup", preventCrash, true);
-    window.addEventListener("mousedown", preventCrash, true);
-    window.addEventListener("mouseup", preventCrash, true);
-
-    return () => {
-      window.removeEventListener("click", preventCrash, true);
-      window.removeEventListener("pointerdown", preventCrash, true);
-      window.removeEventListener("pointerup", preventCrash, true);
-      window.removeEventListener("mousedown", preventCrash, true);
-      window.removeEventListener("mouseup", preventCrash, true);
-    };
-  }, []);
 
   useEffect(() => {
     if (!isSelected && isOpen) {
