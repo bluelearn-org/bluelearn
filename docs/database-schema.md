@@ -15,11 +15,7 @@ The schema deliberately keeps the database source of truth small:
 - Store governance records (votes, review cases, panels, decisions) as ground truth.
 - Do not store values that can be derived from the graph.
 
-
-
 ## Tables
-
-
 
 ### `profiles`
 
@@ -63,8 +59,6 @@ Status enum values are:
 - `published` — live; `canonical_guide_id` points at a published guide.
 - `archived` — deliberately retired; `canonical_guide_id` is left untouched so the last canonical content stays retrievable.
 - 
-
-
 
 ### `guides`
 
@@ -217,11 +211,9 @@ The curriculum: every topic in this revision's target closure, which of them are
 - `guide_id`: the guide variant the curator chose for this topic (FK to `guides`). The variant is pinned, but its content is read live through `guides.current_revision_id` (the objective shows the up-to-date guide, not a frozen body).
 - `is_target`: boolean, default `false`. `true` marks this node as one of the objective's goal topics (an endpoint the curriculum was built to reach). A revision may have several targets (an objective can climb toward Machine Learning *and* Statistics at once).
 - `is_included`: boolean, default `true`. `false` means the curator skipped this topic: the row stays as a re-includable candidate but the topic is dropped from the published curriculum and bridged over by edge projection. Skipping is a soft hide; only included rows reach the published objective.
+- `is_featured`: boolean, default `false`. `true` marks the one target whose sequence the objective's card surfaces. A published revision has exactly one featured node.
 - `note`: optional curator annotation for this node within the objective.
 - Primary key `id`. `(revision_id, guide_base_id)` is a unique constraint, so a topic still appears at most once per revision.
-- 
-
-
 
 ### `objective_revision_edges`
 
@@ -234,8 +226,6 @@ The projected prerequisite edges among included nodes, computed once at publish 
 
 These edges are derived from the global `guide_edges` graph, never hand-authored: at publish, the global prerequisite graph is projected onto the included (`is_included = true`) node set, bridging skipped prerequisites (if `A → Trig → C` and Trig is skipped, the projection stores `A → C`). They are a frozen *view* of the canonical graph, not a competing prerequisite authority (see [Objectives as frozen projections](#objectives-as-frozen-projections)). These edges power the objective's graph view, which is the secondary view. The primary view is the authored linear order in `objective_revision_node_orders` below.
 
-
-
 ### `objective_revision_node_orders`
 
 The objective's linear reading order, authored per target (sub-objective) and the objective's primary view. It holds one row per placed node per target, so a topic shared across targets can sit at a different position in each target's sequence. Rows exist only for included nodes.
@@ -245,8 +235,6 @@ The objective's linear reading order, authored per target (sub-objective) and th
 - `node_id`: the node placed in the sequence (FK to `objective_revision_nodes`).
 - `position`: integer slot in the target's sequence, starting at 0.
 - Primary key `(revision_id, target_node_id, node_id)`.
-
-
 
 ### `subjects`
 
@@ -258,8 +246,6 @@ Subject tags, such as Math, Physics, or Game Development. Subjects are not conta
 - `summary`: optional short description for subject listings and the subject header. Nullable; subjects have no revision table, so it lives on the row.
 - `creator_id`: FK to `profiles.id` (the user who created the subject).
 - `created_at`: subject creation time.
-
-
 
 ### `guide_revision_subjects`
 
@@ -275,16 +261,12 @@ Guide base: Vectors
 Subjects: Math, Physics, Game Development
 ```
 
-
-
 ### `objective_revision_subjects`
 
 Many-to-many join table between objective revisions and subjects, mirroring `guide_revision_subjects`.
 
 - `objective_revision_id`: the tagged objective revision.
 - `subject_id`: the subject tag applied to it. The pair `(objective_revision_id, subject_id)` is the primary key, so a revision cannot carry the same tag twice.
-
-
 
 ### `votes`
 
@@ -345,8 +327,6 @@ The manifest of object-storage assets, so a purge can delete media reliably inst
 
 - `revision_id`: FK to `guide_revisions`.
 - `asset_id`: FK to `media_assets`. The pair `(revision_id, asset_id)` is the primary key.
-
-
 
 ### `review_cases`, `review_panels`, and `review_decisions`
 
@@ -462,8 +442,6 @@ Contests the outcome of a prior `review_case`.
 
 ---
 
-
-
 ## Considerations
 
 Design decisions and rules that span multiple tables.
@@ -511,8 +489,6 @@ Each level still keeps its own `status` because it answers a question only that 
 - `guides.status` — is **this method/alternative** live, while its base and siblings stay published? You can archive one guide without touching the base.
 - `guide_revisions.status` — is **this specific draft** still being written or already handed to review? This is per-revision and has no meaning at the node level.
 
-
-
 ### Content removal
 
 An `action` field picks the path in the `content_holds` table: `hidden` (reversible) or `purge` (irreversible). Content only lives on `guide_revisions`, so every actual content destruction lands there (`guides` and `guide_bases` hold no `body` to destroy).
@@ -551,8 +527,6 @@ How a guide slug is decided:
 1. Default to `slugify(title)` of the guide's title (author may override).
 2. Resolve collisions against siblings under the **same base only** by appending a counter (`visual-method`, `visual-method-2`). This is a last resort, as it will only be used if the author decides to not change the guide's title to be unique. On guide submission, there will be a warning signaling the author that there is another guide with the same name, and they should change it unless they are okay with the numbered slug being used. Per-base scoping means a slug like `visual-method` can be reused under a different topic.
 3. Assign at **first publish**, once the title has settled through review; drafts are addressed by id until then. After that the slug is frozen, and later title edits never move it.
-
-
 
 ### Snapshots vs. Deltas
 
@@ -619,8 +593,6 @@ For the reverse-direction lookups to stay fast, `to_guide_base_id` needs its own
 ```sql
 CREATE INDEX guide_edges_to_guide_base_id ON guide_edges (to_guide_base_id);
 ```
-
-
 
 ### Deciding panel size
 
@@ -731,161 +703,3 @@ Objectives currently have **no review gate**: a curator's submit publishes the r
 #### Objective post-publish governance
 
 The first-pass objective schema covers authoring and frozen publishing. Post-publish governance (learner **votes** on an objective, vote-triggered **re-review**, **disputes** against an objective, and **content holds** (hide/purge) over an objective) is deliberately deferred. Objectives reference guides that already carry their own votes, holds, and disputes, so a bad guide is still governed at the guide level; what is missing is governance of the *curation* itself (e.g. an objective that skips a load-bearing prerequisite or pushes a fringe variant). When added, it should reuse the same machinery rather than grow a parallel one: a `re_review`/`dispute` case type targeting a `objective_id`, and a `content_holds` scope column for objectives.
-
----
-
-
-
-## Table Flows in Practice
-
-This section traces the main user actions end to end, showing which rows are written, in which tables, and in what order. It exists to check the schema against real usage. Each flow lists the steps as `table` → what is written.
-
-### 1. Create a new topic and publish its first guide
-
-A user starts a brand-new topic from scratch.
-
-1. `guide_bases` → insert the node: `title`, `slug`, `knowledge_type`, `status = 'draft'`, `canonical_guide_id = NULL`. No content yet.
-2. `guides` → insert the first guide under it: `guide_base_id`, `author_id`, `status = 'draft'`, `current_revision_id = NULL`, `slug = NULL` (addressed by id until first publish).
-3. `guide_revisions` → insert the first revision while the author writes: `guide_id`, `title`, `summary`, `body`, `author_id`, `status = 'draft'`.
-4. `media_assets` / `revision_assets` → for each asset embedded in the body, upsert the asset (`storage_key`) and insert a `(revision_id, asset_id)` link. This manifest is what a later purge deletes from object storage, instead of scraping URLs from markdown.
-
-The author edits freely; each save can overwrite the draft revision (drafts are mutable up to submission; published revisions are immutable).
-
-1. **Submit for review** (one transaction):
-  - `guide_revisions` → set the revision `status = 'submitted'`.
-  - `review_cases` → insert root: `case_type = 'guide_publish'`, `status = 'pending'`, `created_by = author`.
-  - `guide_review_cases` → insert satellite: `case_id`, `guide_revision_id` (pins the exact snapshot).
-2. **Panel assembled** (verifier pool, odd count):
-  - Decide the size: `target = round_to_odd(min(policy_default(case_type), eligible_pool_size))`, where the eligible pool is the right role pool (verifiers here) minus anyone recused, conflicted, suspended, or the author. See [Deciding panel size](#deciding-panel-size).
-  - `review_panels` → insert: `case_id`, `target_seat_count` = that value (frozen here), `outcome = NULL`, `opened_at`.
-  - `panel_members` → insert one row per seat up to `target_seat_count`: `panel_id`, `member_id`, `status = 'assigned'`, `assigned_at`. `review_cases.status` → `in_review`.
-3. **Each verifier votes**:
-  - `review_decisions` → insert: `panel_member_id`, `decision`, `notes`. Seat `panel_members.status` → `completed`.
-  - On a `rejected` decision: `review_decision_reasons` → one or more rubric rows for that decision.
-  - Seats that miss `review_cases.time_limit`: `panel_members.status` → `replaced`, and a fresh `panel_members` row is drawn (history preserved).
-4. **Panel closes on majority**:
-  - `review_panels` → set `outcome`, `closed_at`. `review_cases.status` → `approved` or `rejected`.
-5. **On approval** (publish, one transaction):
-  - `guides` → set `current_revision_id` = the approved revision, `status = 'published'`, `slug = slugify(title)` (frozen from here; collisions resolved against siblings under the same base).
-  - `guide_bases` → set `status = 'published'`, and `canonical_guide_id` = this guide (first published guide is canonical by default).
-
-On rejection nothing publishes; the revision stays as a rejected snapshot (status derived from the case), and the author can revise and resubmit, which creates a new revision and a new case.
-
-### 2. Add a method / alternative to an existing topic
-
-A second author adds another guide under a topic that already has a canonical guide.
-
-1. `guides` → insert a new guide: same `guide_base_id`, new `author_id`, `status = 'draft'`.
-2. `guide_revisions` → revision 1 of the new guide.
-3. Submit → review → publish: identical to flow 1 steps 4–8, **except** `guide_bases.canonical_guide_id` is **not** touched. The new guide publishes as a sibling; whether it becomes canonical is decided later by votes (flow 4), not by publishing.
-
-
-
-### 3. Edit an existing published guide
-
-1. `guide_revisions` → insert the next revision: edited `title`/`summary`/`body`, `change_summary`, `author_id` (may differ from original author → spreads edit credit), `status = 'draft'` then `submitted` on handoff. `media_assets` / `revision_assets` → link this revision's assets, same as flow 1 step 4.
-2. `review_cases` → `case_type = 'guide_edit'`; `guide_review_cases` → points at the new `guide_revision_id`.
-3. Panel / decisions / close: same as flow 1 steps 5–7.
-4. **On approval**: `guides.current_revision_id` → the new revision. `guides.slug` is **not** changed even if the title changed (slug frozen at first publish). The previous revision stays in history.
-
-**Rollback** is a special edit: insert a new revision copying an older snapshot's content (with a `change_summary` noting the rollback), then move `current_revision_id` to it. Older rows are never deleted.
-
-### 4. Vote on a guide (and trigger re-review)
-
-1. `votes` → insert: `(voter_id, guide_id)` composite PK, `direction`. On `down`, `reason` (rubric enum) is required; `note` optional. Re-voting updates the existing row (one vote per voter per guide).
-2. **Canonical recompute** (derived, not stored): net votes order siblings under a guide base. If a non-canonical sibling overtakes the canonical guide, `guide_bases.canonical_guide_id` is repointed. No rank column is written.
-3. **Re-review trigger** (post-publish, fired by accumulated votes):
-  - `review_cases` → `case_type = 're_review'`, opened by the system/moderator.
-  - `re_review_cases` → `guide_id`, `trigger_type` (`ratio | rubric_weighted | section_density`).
-  - Panel is drawn from the **moderator** pool (not verifiers), then decisions/close as in flow 1.
-
-
-
-### 5. File a dispute
-
-A member contests content, a reviewer's conduct, a governance decision, or a cross-subject conflict.
-
-1. `review_cases` → `case_type = 'dispute'`, `created_by = filer`.
-2. `disputes` → `dispute_type`, the matching target FK arm (`target_guide_id` for `factual`, `target_base_id` for `cross_subject`, `target_profile_id` for `reviewer_misconduct`, none for `governance`), `claim_text`.
-3. **Moderator** panel → decisions → close (flow 1 shape).
-4. **If** `cross_subject` **resolves into a spin-off**: `guide_bases` → insert a new subject-specific node with `forked_from_guide_base_id` = the original. The fork is an explicit, governed exception to "one canonical base per topic."
-
-
-
-### 6. Appeal a resolved case
-
-1. `review_cases` → `case_type = 'appeal'`, `created_by = appellant`.
-2. `appeals` → `appealed_case_id` (the prior resolved case being challenged), `appeal_reason`. An appeal targets a **case**, not content.
-3. **Moderator** panel → decisions → close. Outcome may overturn the original ruling, driving the corresponding publish/edit/disposition change.
-
-
-
-### 7. Declare prerequisites and graph edges
-
-When authoring a guide base, the author wires it into the graph.
-
-- **Real prerequisite exists**: `guide_edges` → insert `from_guide_base_id`, `to_guide_base_id`, `edge_type = 'prerequisite'`. A trigger rejects the insert if it would create a prerequisite cycle.
-- **Related link**: `guide_edges` → insert with `edge_type = 'related'`, pair swapped into canonical order (`from < to`) by the `addRelation` helper so `(A,B)`/`(B,A)` cannot both exist.
-- **Prerequisite topic does not exist yet**: `todo_prerequisites` → insert `dependent_guide_base_id`, `title` (free text), `status = 'open'`. Acts as a recruitment surface.
-- **TODO later filled**: when a real base is created for that topic, `todo_prerequisites` → set `status = 'resolved'`, `resolved_guide_base_id` = the new base; typically a real `prerequisite` edge is added in `guide_edges` at the same time.
-
-
-
-### 8. Tag a topic into subjects
-
-1. `subjects` → row exists (or insert if new, governance-gated).
-2. `guide_revision_subjects` → insert `(guide_revision_id, subject_id)` per tag on the draft revision being authored. A base surfaces under a subject once its canonical variant's current revision carries the tag.
-3. `objective_revision_subjects` → insert `(objective_revision_id, subject_id)` per tag on the draft objective revision. Just like guides, an objective surfaces under a subject once its current revision carries the tag.
-
-
-
-### 9. Hide content (reversible, e.g. DMCA)
-
-A moderator takes content out of view without destroying it. See [Content removal](#content-removal).
-
-1. `content_holds` → insert: `action = 'hidden'`, `hold_type`, `actor_id`, `reason`, and exactly one scope (`revision_id` / `guide_id` / `guide_base_id`).
-2. Display layer hides any content with an active hold (`released_at IS NULL`). No content row is touched, so immutability and history are preserved.
-3. **To lift:** `content_holds` → set `released_at` and `released_by`. Content reappears; the hold row remains as the audit trail.
-
-
-
-### 10. Purge content (irreversible, e.g. CSAM / court order)
-
-A moderator destroys content while keeping the audit trail. See [Content removal](#content-removal).
-
-1. `content_holds` → insert: `action = 'purge'`, `hold_type`, `actor_id`, `reason`, scope. For a `csam` hold, place a `legal_hold` and preserve-and-report **before** purging.
-2. **Check for an active legal hold.** If any covering `content_holds` row has `action = 'legal_hold'` with `preserve_until > now()`, the purge is blocked until the window passes. Preservation outranks destruction.
-3. **Resolve scope to revisions.** A `revision_id` hold targets that row; a `guide_id` / `guide_base_id` hold fans out to every revision beneath it.
-4. `guide_revisions` → for each target, null the content fields (`body`, `title`, `summary`, `change_summary`) and set `is_purged = true`; keep the skeleton row as a tombstone. Pointers (`current_revision_id`, review cases) still resolve.
-5. **Object storage** → for each target revision, read `revision_assets → media_assets.storage_key`, delete each key from the bucket and verify, skipping any asset still referenced by a non-purged revision. Queue one delete job per asset; the purge is complete only when all jobs verify.
-6. **Node scope only** → scrub the node's own content — `guides.slug`, or `guide_bases.title` + `slug` — and set `status = 'archived'`. If a purged guide was canonical, re-point or leave `guide_bases.canonical_guide_id` per policy (it resolves to the tombstone).
-7. `content_holds` → set `purged_at` and `purged_by`. The revision carries `is_purged = true`; who/when stays on this hold row.
-
-
-
-### 11. Author and publish an objective
-
-A curator builds a curated curriculum from one or more targets. Most of the work (DAG closure, projection) happens at authoring/publish time; opening the objective later (flow 12) reads a frozen snapshot.
-
-1. `objectives` → insert the shell: `slug = NULL` (addressed by id until first publish), `status = 'draft'`, `current_revision_id = NULL`, `created_by`.
-2. `objective_revisions` → insert the first revision: `objective_id`, `title`, `summary`, `change_summary`, `author_id`, `status = 'draft'`.
-3. **Pick targets:** the curator chooses one or more goal topics (and a variant for each). These are held in the editor until seeding; a target becomes a node flagged `is_target` in the next step.
-4. **Seed the curriculum:** the system computes the transitive prerequisite DAG closure of the chosen targets over `guide_edges`, picks a default variant per topic, and immediately materializes the whole closure: `objective_revision_nodes` → insert one row per closure topic (`revision_id`, `guide_base_id`, `guide_id`), setting `is_target = true` (with the curator's chosen variant) on the target topics and `false` on the rest, and `is_included = true` on all of them. The draft starts as "everything included," and the curator narrows from there. Seeding into the real table (rather than holding the set in memory until submit) keeps a node row's meaning identical in every state. Every closure topic has a row; `is_included` says whether it reaches the published curriculum, so a `draft` revision and a `published` one read the same way and submit needs no convert-set-into-rows step. The draft persists server-side, so the curator can leave and resume.
-5. **Curator edits the draft in place:** skip a topic → `PATCH` that node's `is_included = false` (a soft hide; the row stays as a re-includable candidate). Re-include → `is_included = true`. Swap a variant → update that row's `guide_id`. Annotate → set `note`. Toggle a goal → `is_target`. Edit metadata → update the revision's `title`/`summary`. Drafts are mutable up to submission (same as guide draft revisions). Whatever rows carry `is_included = true` at submit *are* the published set.
-6. **Submit (direct publish), one transaction** (no review gate for now):
-  - `objective_revisions` → `status = 'published'`, `published_at = now()`.
-  - **Freeze the projection.** Project the current `guide_edges` graph onto the revision's included (`is_included = true`) node set, bridging skipped topics, and `objective_revision_edges` → insert one row per projected edge: `revision_id`, `from_guide_base_id`, `to_guide_base_id`. This is the only time these rows are written; the revision is now immutable.
-  - `objectives` → set `current_revision_id` = this revision, `status = 'published'`, and on revision 1 `slug = slugify(revision.title)` (frozen from here).
-
-A later edit is the same flow starting at step 2, except the new draft is **cloned** from the live revision rather than seeded from scratch: copy the current revision's node rows (`guide_id`, `is_target`, `is_included`, `note`) under the new `revision_id`, preserving every prior choice. The system then **tops up** the clone against the current closure — `insert ... on conflict (revision_id, guide_base_id) do nothing` adds any topic that newly entered the closure as a skipped (`is_included = false`) candidate, never overwriting a cloned row (see [Objective draft reconciliation](#objective-draft-reconciliation)). The curator reconciles, then submits; `current_revision_id` repoints and the slug is untouched. **Rollback** is a soft rollback: create a new revision cloning an older revision's targets/nodes, then submit to repoint `current_revision_id`. (A pre-publish gate is [deferred](#objective-review-gate); if added, submit would open a verifier case instead of publishing outright.)
-
-### 12. Open an objective
-
-A learner visits `/objectives/{slug}`. No DAG traversal happens; the response is read straight from the frozen snapshot.
-
-1. `objectives` → resolve `slug` to the row; read `current_revision_id`.
-2. `objective_revisions` → load the live revision's metadata (`title`, `summary`).
-3. `objective_revision_nodes` → load the included nodes (`is_included = true`; skipped rows never reach the public view); join `guides` → `guides.current_revision_id` → `guide_revisions` for each node's live title/summary (the variant is frozen, its content is current).
-4. `objective_revision_edges` → load the frozen projected edges for the revision.
-5. **Derive levels in the app** by topological layering over the loaded edges (not stored; see [Objective levels](#objective-levels)), and return `{ nodes, edges }` for the graph UI to render. The `is_target` nodes drive the "this objective helps you reach …" display.
-
