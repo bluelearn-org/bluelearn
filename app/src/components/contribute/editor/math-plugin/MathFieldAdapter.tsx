@@ -104,10 +104,11 @@ export const MathFieldAdapter = React.forwardRef<
       };
     }, []);
 
-    // Synchronize readOnly state to raw custom element properties
+    // Synchronize readOnly state and disable context menu to raw custom element properties
     useLayoutEffect(() => {
       if (mathliveLoaded && internalRef.current) {
         internalRef.current.readOnly = readOnly;
+        internalRef.current.menuItems = [];
       }
     }, [readOnly, mathliveLoaded]);
 

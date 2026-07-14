@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 const {
   $getNodeByKey,
@@ -33,10 +34,22 @@ const isTargetMathLive = (target: any): boolean => {
   if (!target) return false;
 
   let path: Array<any> = [];
-  if (target instanceof Event || (target.target && target.composedPath)) {
-    path = target.composedPath();
-  } else {
-    let current = target;
+
+  // Extract the original native event from Radix CustomEvent detail if available
+  const originalEvent =
+    target.detail?.originalEvent || (target instanceof Event ? target : null);
+  const element =
+    originalEvent?.target ||
+    target.target ||
+    (target instanceof HTMLElement ? target : null);
+
+  if (originalEvent && typeof originalEvent.composedPath === "function") {
+    path = originalEvent.composedPath();
+  }
+
+  // Fallback to manual DOM traversal crossing shadow boundaries
+  if (path.length === 0 && element) {
+    let current = element;
     while (current) {
       path.push(current);
       current =
@@ -71,8 +84,7 @@ const isTargetMathLive = (target: any): boolean => {
             c.startsWith("MLK__") ||
             c.includes("mathfield") ||
             c.includes("cortexjs") ||
-            c.includes("mathlive") ||
-            c.includes("ui-menu")
+            c.includes("mathlive")
         )
       ) {
         return true;
@@ -80,6 +92,64 @@ const isTargetMathLive = (target: any): boolean => {
     }
   }
   return false;
+};
+
+// Helper to determine if an event target is a MathLive/CortexJS overlay (menu/keyboard) appended to the body (outside math-field)
+const isTargetMathLiveOverlay = (target: any): boolean => {
+  if (!target) return false;
+
+  let path: Array<any> = [];
+
+  // Extract the original native event from Radix CustomEvent detail if available
+  const originalEvent =
+    target.detail?.originalEvent || (target instanceof Event ? target : null);
+  const element =
+    originalEvent?.target ||
+    target.target ||
+    (target instanceof HTMLElement ? target : null);
+
+  if (originalEvent && typeof originalEvent.composedPath === "function") {
+    path = originalEvent.composedPath();
+  }
+
+  // Fallback to manual DOM traversal crossing shadow boundaries
+  if (path.length === 0 && element) {
+    let current = element;
+    while (current) {
+      path.push(current);
+      current =
+        current.parentElement ||
+        (current.getRootNode && typeof current.getRootNode === "function"
+          ? current.getRootNode().host
+          : null);
+    }
+  }
+
+  let isKeyboard = false;
+
+  for (const node of path) {
+    if (node && (node.nodeType === 1 || node instanceof HTMLElement)) {
+      const tagName = (node.tagName || "").toLowerCase();
+      const id = (node.id || "").toLowerCase();
+
+      if (tagName.includes("keyboard") || id.includes("keyboard")) {
+        isKeyboard = true;
+      }
+      const classes = Array.from(node.classList || []);
+      if (
+        classes.some(
+          (c: any) =>
+            c.startsWith("MLK__") ||
+            c.includes("keyboard") ||
+            (c.startsWith("ML__") && c.includes("keyboard"))
+        )
+      ) {
+        isKeyboard = true;
+      }
+    }
+  }
+
+  return isKeyboard;
 };
 
 // Helper to render static equation HTML using KaTeX
@@ -153,6 +223,25 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     setIsOpen(isSelected);
   }, [isSelected]);
 
+  // Intercept pointer/mouse events in the capture phase to prevent Lexical from clearing node selection
+  useEffect(() => {
+    const handleCapture = (e: Event) => {
+      if (isTargetMathLiveOverlay(e)) {
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener("pointerdown", handleCapture, true);
+    document.addEventListener("mousedown", handleCapture, true);
+    document.addEventListener("touchstart", handleCapture, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handleCapture, true);
+      document.removeEventListener("mousedown", handleCapture, true);
+      document.removeEventListener("touchstart", handleCapture, true);
+    };
+  }, []);
+
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     setSelected(open);
@@ -224,11 +313,9 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   }, [editor, nodeKey, isSelected, isOpen]);
 
   const handleInputChange = (newValue: string) => {
-    console.log("[Diagnostic] handleInputChange. newValue:", newValue);
     editor.update(() => {
       const node = $getNodeByKey(nodeKey);
       if ($isMathNode(node)) {
-        console.log("[Diagnostic] MathNode setEquation to:", newValue);
         node.setEquation(newValue);
       } else {
         console.warn("[Diagnostic] MathNode not found for key:", nodeKey);
@@ -290,33 +377,37 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           }}
         >
           <div className="flex items-center justify-between border-b border-border pb-1.5">
-            <span className="text-xs font-semibold text-foreground">
+            <span className="text-xs font-semibold tracking-tight text-foreground">
               Edit Inline Equation
             </span>
-            <button
+            <Button
               type="button"
-              onClick={() => handleDelete()}
-              className="text-xs font-medium text-destructive hover:underline"
+              variant="destructive"
+              size="xs"
+              onClick={handleDelete}
             >
               Delete
-            </button>
+            </Button>
           </div>
-          <div className="flex w-full items-center rounded-md border border-border border-input bg-background/50 px-2 py-1.5 text-sm shadow-xs focus-within:ring-1 focus-within:ring-ring">
+          <div className="flex w-full items-center rounded-md border border-input bg-input/20 px-2 py-1.5 text-sm shadow-xs transition-colors focus-within:border-ring focus-within:bg-background focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30">
             <MathPopoverEditor
               equation={equation}
               onChange={handleInputChange}
               onClose={() => handleOpenChange(false)}
             />
           </div>
-          <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Press Enter to save</span>
-            <button
+          <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span className="font-medium tracking-wide">
+              Press Enter to save
+            </span>
+            <Button
               type="button"
+              variant="secondary"
+              size="xs"
               onClick={() => handleOpenChange(false)}
-              className="rounded border border-border bg-muted px-2 py-0.5 font-semibold text-foreground hover:bg-muted/80"
             >
               Done
-            </button>
+            </Button>
           </div>
         </PopoverContent>
       </Popover>
@@ -389,33 +480,35 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
         }}
       >
         <div className="flex items-center justify-between border-b border-border pb-1.5">
-          <span className="text-xs font-semibold text-foreground">
+          <span className="text-xs font-semibold tracking-tight text-foreground">
             Edit Block Equation
           </span>
-          <button
+          <Button
             type="button"
-            onClick={() => handleDelete()}
-            className="text-xs font-medium text-destructive hover:underline"
+            variant="destructive"
+            size="xs"
+            onClick={handleDelete}
           >
             Delete
-          </button>
+          </Button>
         </div>
-        <div className="flex w-full items-center rounded-md border border-border border-input bg-background/50 px-2 py-1.5 text-sm shadow-xs focus-within:ring-1 focus-within:ring-ring">
+        <div className="flex w-full items-center rounded-md border border-input bg-input/20 px-2 py-1.5 text-sm shadow-xs transition-colors focus-within:border-ring focus-within:bg-background focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30">
           <MathPopoverEditor
             equation={equation}
             onChange={handleInputChange}
             onClose={() => handleOpenChange(false)}
           />
         </div>
-        <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>Press Enter to save</span>
-          <button
+        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+          <span className="font-medium tracking-wide">Press Enter to save</span>
+          <Button
             type="button"
+            variant="secondary"
+            size="xs"
             onClick={() => handleOpenChange(false)}
-            className="rounded border border-border bg-muted px-2 py-0.5 font-semibold text-foreground hover:bg-muted/80"
           >
             Done
-          </button>
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
