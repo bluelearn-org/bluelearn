@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -367,7 +347,7 @@ export type Database = {
           },
         ]
       }
-      objective_revision_node_placements: {
+      objective_revision_node_orders: {
         Row: {
           node_id: string
           position: number
@@ -388,21 +368,21 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "objective_revision_node_placements_node_is_node"
+            foreignKeyName: "objective_revision_node_orders_node_is_node"
             columns: ["node_id", "revision_id"]
             isOneToOne: false
             referencedRelation: "objective_revision_nodes"
             referencedColumns: ["id", "revision_id"]
           },
           {
-            foreignKeyName: "objective_revision_node_placements_revision_id_fkey"
+            foreignKeyName: "objective_revision_node_orders_revision_id_fkey"
             columns: ["revision_id"]
             isOneToOne: false
             referencedRelation: "objective_revisions"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "objective_revision_node_placements_target_is_node"
+            foreignKeyName: "objective_revision_node_orders_target_is_node"
             columns: ["target_node_id", "revision_id"]
             isOneToOne: false
             referencedRelation: "objective_revision_nodes"
@@ -1194,9 +1174,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["verifier", "moderator", "curator", "admin"],
@@ -1232,4 +1209,3 @@ export const Constants = {
     },
   },
 } as const
-
