@@ -191,27 +191,27 @@ export const variantsRouter = new Hono<HonoEnv>()
   );
 
 export const guideRevisionsRouter = new Hono<HonoEnv>()
-  // Returns one revision snapshot as { revision }.
+  // Returns one revision snapshot and its subject tags as { revision, subjects }.
   .get("/:id", async (c) => {
-    const { revision } = await getRevision(
+    const { revision, subjects } = await getRevision(
       c.get("supabase"),
       c.req.param("id")
     );
-    return c.json({ revision });
+    return c.json({ revision, subjects });
   })
 
-  // Overwrites a draft revision in place; returns { revision }. 404 once submitted.
+  // Overwrites a draft revision in place; returns { revision, subjects }. 404 once submitted.
   .patch(
     "/:id",
     requireUser,
     zValidator("json", updateRevisionSchema),
     async (c) => {
-      const { revision } = await updateRevision(
+      const { revision, subjects } = await updateRevision(
         c.get("supabase"),
         c.req.param("id"),
         c.req.valid("json")
       );
-      return c.json({ revision });
+      return c.json({ revision, subjects });
     }
   )
 

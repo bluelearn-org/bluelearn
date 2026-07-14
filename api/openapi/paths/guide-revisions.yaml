@@ -21,7 +21,11 @@
               properties:
                 revision:
                   $ref: "../components/schemas/guide-revisions/GuideRevision.yaml"
-              required: [revision]
+                subjects:
+                  type: array
+                  items:
+                    $ref: "../components/schemas/subjects/SubjectTag.yaml"
+              required: [revision, subjects]
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"
   patch:
@@ -48,7 +52,11 @@
               properties:
                 revision:
                   $ref: "../components/schemas/guide-revisions/GuideRevision.yaml"
-              required: [revision]
+                subjects:
+                  type: array
+                  items:
+                    $ref: "../components/schemas/subjects/SubjectTag.yaml"
+              required: [revision, subjects]
       "400":
         $ref: "../components/responses/_shared.yaml#/BadRequest"
       "401":

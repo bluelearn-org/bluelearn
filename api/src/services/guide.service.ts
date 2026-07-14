@@ -43,6 +43,23 @@ const CANONICAL_CONTENT = `
   )
 `;
 
+// Get a guide base's tags, which live on its canonical variant's current
+// revision.
+async function loadCanonicalTags(supabase: DB, revisionId: string | null) {
+  if (!revisionId) return [];
+
+  const { data, error } = await supabase
+    .from("guide_revision_subjects")
+    .select("subjects(id, slug, name)")
+    .eq("guide_revision_id", revisionId);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load guide subjects", 500);
+  }
+  return (data ?? []).map((r) => r.subjects).filter((s) => s !== null);
+}
+
 // Resolve a base slug to its id, or 404. Shared by the variant/walkthrough
 // reads that key off a base. RLS hides drafts, so an unseen base reads as
 // missing.
@@ -121,18 +138,10 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
   }
   if (!guide) throw new ServiceError("Guide not found", 404);
 
-  const { data: tagRows, error: tagError } = await supabase
-    .from("guide_subjects")
-    .select("subjects(id, slug, name)")
-    .eq("guide_base_id", guide.id);
-
-  if (tagError) {
-    console.error(tagError);
-    throw new ServiceError("Failed to load guide subjects", 500);
-  }
-  const subjects = (tagRows ?? [])
-    .map((r) => r.subjects)
-    .filter((s) => s !== null);
+  const subjects = await loadCanonicalTags(
+    supabase,
+    guide.canonical?.current?.id ?? null
+  );
 
   return { guide, subjects };
 }

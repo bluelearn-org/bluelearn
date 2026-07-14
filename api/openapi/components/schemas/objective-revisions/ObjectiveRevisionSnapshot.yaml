@@ -10,4 +10,8 @@ properties:
     $ref: "./ObjectiveRevision.yaml"
   snapshot:
     $ref: "../objectives/ObjectiveSnapshot.yaml"
-required: [revision, snapshot]
+  subjects:
+    type: array
+    items:
+      $ref: "../subjects/SubjectTag.yaml"
+required: [revision, snapshot, subjects]

@@ -5,8 +5,10 @@ import remarkMath from "remark-math";
 
 import type { SubjectReference } from "@/types/subjects";
 import type { GuideType, HydratedGuide } from "@/types/guides";
+import type { ReactElement } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components//ui/badge";
+import { CodeBlock } from "@/components/CodeBlock";
 
 import { formatDuration } from "@/lib/guideUtils";
 
@@ -57,6 +59,31 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}
+          components={{
+            pre({ children }) {
+              const child = children as ReactElement<{
+                className?: string;
+                children?: React.ReactNode;
+              }>;
+
+              const code = String(child.props.children).replace(/\n$/, "");
+              const language = child.props.className?.replace("language-", "");
+
+              return <CodeBlock code={code} language={language} />;
+            },
+
+            code({ children, className }) {
+              if (className) {
+                return <code className={className}>{children}</code>;
+              }
+
+              return (
+                <code className="rounded bg-muted px-1 py-0.5 font-mono">
+                  {children}
+                </code>
+              );
+            },
+          }}
         >
           {guide.content}
         </ReactMarkdown>

@@ -4,6 +4,7 @@ import {
   objectiveSummarySchema,
   objectiveTitleSchema,
 } from "./fields";
+import { subjectSlugSchema } from "../subjects";
 
 // Create a draft objective. The objective is built to reach target_ids (at least one
 // goal); title is optional at creation and only required to publish.
@@ -20,6 +21,7 @@ export const updateObjectiveRevisionSchema = z
     title: objectiveTitleSchema,
     summary: objectiveSummarySchema.nullish(),
     change_summary: objectiveChangeSummarySchema.nullish(),
+    tags: z.array(subjectSlugSchema),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, {

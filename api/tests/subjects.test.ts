@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
 import { env, jsonAuth, makeUser } from "./helpers";
-import { createSubject, tagGuide } from "./factories/subjects";
+import {
+  createSubject,
+  tagGuideRevision,
+  tagObjectiveRevision,
+} from "./factories/subjects";
 import { createPublishedGuide } from "./factories/guides";
+import { createPublishedObjective } from "./factories/objectives";
 import { expectToMatchSpec } from "./openapi";
 
 describe("GET /subjects", () => {
@@ -78,7 +83,7 @@ describe("GET /subjects/{slug}/guides", () => {
     const subject = await createSubject();
     const tagged = await createPublishedGuide({ summary: "Tagged" });
     const untagged = await createPublishedGuide();
-    await tagGuide(tagged.base.id, subject.id);
+    await tagGuideRevision(tagged.revision.id, subject.id);
 
     const res = await app.request(`/subjects/${subject.slug}/guides`, {}, env);
 
@@ -93,5 +98,43 @@ describe("GET /subjects/{slug}/guides", () => {
     expect(body.guides.find((g) => g.id === tagged.base.id)?.summary).toBe(
       "Tagged"
     );
+  });
+});
+
+describe("GET /subjects/{slug}/objectives", () => {
+  it("lists tagged objectives only, sorted alphabetically", async () => {
+    const { userId } = await makeUser();
+    const subject = await createSubject();
+    const target = await createPublishedGuide();
+
+    // Seed out of alphabetical order so a passing sort assertion means the
+    // endpoint sorts, not the insert order.
+    const beta = await createPublishedObjective(userId, target, {
+      title: "Beta",
+    });
+    const alpha = await createPublishedObjective(userId, target, {
+      title: "Alpha",
+    });
+    const untagged = await createPublishedObjective(userId, target, {
+      title: "Gamma",
+    });
+    await tagObjectiveRevision(beta.revision.id, subject.id);
+    await tagObjectiveRevision(alpha.revision.id, subject.id);
+
+    const res = await app.request(
+      `/subjects/${subject.slug}/objectives`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/subjects/{slug}/objectives");
+    const body = (await res.json()) as {
+      objectives: Array<{ id: string; title: string | null }>;
+    };
+    const ids = body.objectives.map((o) => o.id);
+    // Scoped to this subject's tags, alphabetical by revision title.
+    expect(ids).toEqual([alpha.objective.id, beta.objective.id]);
+    expect(ids).not.toContain(untagged.objective.id);
   });
 });

@@ -78,27 +78,27 @@ export const objectivesRouter = new Hono<HonoEnv>()
   );
 
 export const objectiveRevisionsRouter = new Hono<HonoEnv>()
-  // Returns the revision's metadata and snapshot as { revision, snapshot }.
+  // Returns the revision's metadata, snapshot, and subject tags as { revision, snapshot, subjects }.
   .get("/:id", async (c) => {
-    const { revision, snapshot } = await getObjectiveRevision(
+    const { revision, snapshot, subjects } = await getObjectiveRevision(
       c.get("supabase"),
       c.req.param("id")
     );
-    return c.json({ revision, snapshot });
+    return c.json({ revision, snapshot, subjects });
   })
 
-  // Overwrites a draft's metadata. Returns { revision }; 404 if not an editable draft.
+  // Overwrites a draft's metadata and/or tags. Returns { revision, subjects }; 404 if not an editable draft.
   .patch(
     "/:id",
     requireUser,
     zValidator("json", updateObjectiveRevisionSchema),
     async (c) => {
-      const { revision } = await updateObjectiveRevision(
+      const { revision, subjects } = await updateObjectiveRevision(
         c.get("supabase"),
         c.req.param("id"),
         c.req.valid("json")
       );
-      return c.json({ revision });
+      return c.json({ revision, subjects });
     }
   )
 

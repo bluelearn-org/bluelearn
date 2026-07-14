@@ -294,7 +294,7 @@
     @apply list-decimal space-y-1 pl-5;
   }
 
-  .markdown pre {
+  .markdown pre:not(.codeblock-pre) {
     @apply my-4 max-w-full overflow-x-auto rounded-lg border border-border bg-muted p-4 font-mono text-sm;
   }
 

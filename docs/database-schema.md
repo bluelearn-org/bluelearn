@@ -9,7 +9,7 @@ BLUE stores one global graph of topics. A guide base is a node in the learning g
 The schema deliberately keeps the database source of truth small:
 
 - Store guide bases and the relationships between them.
-- Store subjects as tags on guide bases, not as separate trees.
+- Store subjects as revision-scoped tags, not as separate trees; a guide base's live tags are its canonical variant's current revision's.
 - Store methods and alternatives as guides under their parent guide base.
 - Store version history for every guide (original write-up, methods, and alternatives).
 - Store governance records (votes, review cases, panels, decisions) as ground truth.
@@ -234,26 +234,26 @@ Subject tags, such as Math, Physics, or Game Development. Subjects are not conta
 - `creator_id`: FK to `profiles.id` (the user who created the subject).
 - `created_at`: subject creation time.
 
-### `guide_subjects`
+### `guide_revision_subjects`
 
-Many-to-many join table between guide bases and subjects. Lets one guide base appear in multiple subject views without duplicating content.
+Many-to-many join table between guide revisions and subjects. Tagging is revision-scoped: each guide revision carries its own tag set, edited while the revision is a draft and frozen once submitted. A variant's live tags are its current revision's, and a guide base's live tags are its canonical variant's current revision's.
 
-- `guide_base_id`: the tagged guide base.
-- `subject_id`: the subject tag applied to it. The pair `(guide_base_id, subject_id)` is the primary key, so a guide base cannot carry the same tag twice.
+- `guide_revision_id`: the tagged guide revision.
+- `subject_id`: the subject tag applied to it. The pair `(guide_revision_id, subject_id)` is the primary key, so a revision cannot carry the same tag twice.
 
-Example:
+Example (a base's live tags resolved through its canonical current revision):
 
 ```text
 Guide base: Vectors
 Subjects: Math, Physics, Game Development
 ```
 
-### `objective_subjects`
+### `objective_revision_subjects`
 
-Many-to-many join table between objectives and subjects, mirroring `guide_subjects`. It tags the stable `objectives` node, not a revision, so an objective's subject membership is live metadata rather than versioned curriculum content.
+Many-to-many join table between objective revisions and subjects, mirroring `guide_revision_subjects`.
 
-- `objective_id`: the tagged objective.
-- `subject_id`: the subject tag applied to it. The pair `(objective_id, subject_id)` is the primary key, so an objective cannot carry the same tag twice.
+- `objective_revision_id`: the tagged objective revision.
+- `subject_id`: the subject tag applied to it. The pair `(objective_revision_id, subject_id)` is the primary key, so a revision cannot carry the same tag twice.
 
 ### `votes`
 
@@ -803,8 +803,8 @@ When authoring a guide base, the author wires it into the graph.
 ### 8. Tag a topic into subjects
 
 1. `subjects` → row exists (or insert if new, governance-gated).
-2. `guide_subjects` → insert `(guide_base_id, subject_id)` per tag. One base can be tagged into several subjects; the composite PK blocks duplicate tags. Subject views and floors then filter the global graph through these rows.
-3. `objective_subjects` → insert `(objective_id, subject_id)` per tag to surface an objective under a subject. Same composite-PK dedupe; any curator can tag and untag, and moderators/admins can untag.
+2. `guide_revision_subjects` → insert `(guide_revision_id, subject_id)` per tag on the draft revision being authored. A base surfaces under a subject once its canonical variant's current revision carries the tag.
+3. `objective_revision_subjects` → insert `(objective_revision_id, subject_id)` per tag on the draft objective revision. Just like guides, an objective surfaces under a subject once its current revision carries the tag.
 
 
 

@@ -1,0 +1,15 @@
+type: object
+additionalProperties: false
+description: An objective carrying this subject tag.
+properties:
+  id:
+    $ref: "../common/Uuid.yaml"
+  slug:
+    type: string
+    example: backend-engineer
+  title:
+    type: [string, "null"]
+    example: Backend Engineer
+  summary:
+    type: [string, "null"]
+required: [id, slug]

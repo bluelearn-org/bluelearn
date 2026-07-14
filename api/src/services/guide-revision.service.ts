@@ -16,7 +16,68 @@ const REVISION_DETAIL =
 const DIFF_REVISION_DETAIL =
   "id, author_id, title, summary, body, change_summary, created_at";
 
-// Resolve a revision by id to its snapshot. 404 when RLS hides it.
+// The revision's subject tags, resolved to {slug, name} references for the editor.
+async function loadRevisionTags(supabase: DB, id: string) {
+  const { data, error } = await supabase
+    .from("guide_revision_subjects")
+    .select("subject:subjects(id, slug, name)")
+    .eq("guide_revision_id", id);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load revision subjects", 500);
+  }
+  return (data ?? []).map((r) => r.subject).filter((s) => s !== null);
+}
+
+// Replace a draft revision's subject tag set with the given slugs. Resolving
+// slugs up front makes an unknown tag fail the whole write; the delete/insert
+// are RLS-gated to the author's draft. Callers confirm editability first.
+async function replaceRevisionTags(supabase: DB, id: string, slugs: string[]) {
+  const unique = [...new Set(slugs)];
+
+  let subjectIds: string[] = [];
+  if (unique.length > 0) {
+    const { data, error } = await supabase
+      .from("subjects")
+      .select("id")
+      .in("slug", unique);
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Failed to resolve subjects", 500);
+    }
+    if ((data ?? []).length !== unique.length) {
+      throw new ServiceError("Unknown subject tag", 400);
+    }
+    subjectIds = (data ?? []).map((s) => s.id);
+  }
+
+  const { error: delError } = await supabase
+    .from("guide_revision_subjects")
+    .delete()
+    .eq("guide_revision_id", id);
+
+  if (delError) {
+    console.error(delError);
+    throw new ServiceError("Unable to update revision subjects", 400);
+  }
+
+  if (subjectIds.length > 0) {
+    const { error: insError } = await supabase
+      .from("guide_revision_subjects")
+      .insert(
+        subjectIds.map((subject_id) => ({ guide_revision_id: id, subject_id }))
+      );
+
+    if (insError) {
+      console.error(insError);
+      throw new ServiceError("Unable to update revision subjects", 400);
+    }
+  }
+}
+
+// Resolve a revision by id to its snapshot and subject tags. 404 when RLS hides it.
 export async function getRevision(supabase: DB, id: string) {
   const { data: revision, error } = await supabase
     .from("guide_revisions")
@@ -30,37 +91,72 @@ export async function getRevision(supabase: DB, id: string) {
   }
   if (!revision) throw new ServiceError("Revision not found", 404);
 
-  return { revision };
+  const subjects = await loadRevisionTags(supabase, id);
+  return { revision, subjects };
 }
 
 // Overwrite a draft revision in place. RLS permits this only on the author's own
 // draft, so an out-of-reach or already-submitted revision matches zero rows.
-// Blank summary/body/change_summary are stored as NULL.
 export async function updateRevision(
   supabase: DB,
   id: string,
   input: UpdateRevisionInput
 ) {
+  const { tags, ...fields } = input;
+
   const patch = {
-    ...input,
-    ...("summary" in input && { summary: input.summary || null }),
-    ...("body" in input && { body: input.body || null }),
-    ...("change_summary" in input && {
-      change_summary: input.change_summary || null,
+    ...fields,
+    ...("summary" in fields && { summary: fields.summary || null }),
+    ...("body" in fields && { body: fields.body || null }),
+    ...("change_summary" in fields && {
+      change_summary: fields.change_summary || null,
     }),
   };
 
-  const { data, error } = await supabase
-    .from("guide_revisions")
-    .update(patch)
-    .eq("id", id)
-    .select(REVISION_DETAIL);
+  // Check if metadata changes are present.
+  let revision;
+  if (Object.keys(patch).length > 0) {
+    const { data, error } = await supabase
+      .from("guide_revisions")
+      .update(patch)
+      .eq("id", id)
+      .select(REVISION_DETAIL);
 
-  if (error) throw new ServiceError("Unable to update revision", 400);
-  if (!data || data.length === 0) {
-    throw new ServiceError("Revision not found or not an editable draft", 404);
+    if (error) throw new ServiceError("Unable to update revision", 400);
+    if (!data || data.length === 0) {
+      throw new ServiceError(
+        "Revision not found or not an editable draft",
+        404
+      );
+    }
+    revision = data[0];
+  } else {
+    const { data, error } = await supabase
+      .from("guide_revisions")
+      .select(REVISION_DETAIL)
+      .eq("id", id)
+      .eq("status", "draft")
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update revision", 400);
+    }
+    if (!data) {
+      throw new ServiceError(
+        "Revision not found or not an editable draft",
+        404
+      );
+    }
+    revision = data;
   }
-  return { revision: data[0] };
+
+  if (tags !== undefined) {
+    await replaceRevisionTags(supabase, id, tags);
+  }
+
+  const subjects = await loadRevisionTags(supabase, id);
+  return { revision, subjects };
 }
 
 // Submit a draft for review: flips it to submitted, opens a review case, and

@@ -10,7 +10,6 @@ export const flows = {
   ],
 
   variant: [
-    { id: "base-guide", title: "Select Base Guide" },
     { id: "variant-details", title: "Variant Details" },
     { id: "content", title: "Content" },
     { id: "submit", title: "Submit" },
@@ -18,7 +17,6 @@ export const flows = {
 
   objective: [
     { id: "objective-details", title: "Objective Details" },
-    { id: "objective-guides", title: "Select Guides" },
     { id: "objective-ordering", title: "Order Guides" },
     { id: "submit", title: "Submit" },
   ],
