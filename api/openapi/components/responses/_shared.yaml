@@ -34,3 +34,17 @@ NotFound:
         $ref: "../schemas/common/Error.yaml"
       example:
         error: Not found
+RateLimited:
+  description: Too many requests
+  headers:
+    Retry-After:
+      description: Seconds until the next request is allowed
+      schema:
+        type: integer
+        minimum: 1
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common/Error.yaml"
+      example:
+        error: Rate limit exceeded

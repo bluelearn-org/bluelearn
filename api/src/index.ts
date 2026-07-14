@@ -62,3 +62,5 @@ async function scheduled(_event: ScheduledController, env: Bindings) {
 // fetch and scheduled runs assembly. Tests import it to call app.request().
 export default Object.assign(app, { scheduled });
 export type AppType = typeof app;
+
+export { RateLimiterDurableObject } from "./durable-objects/rate-limiter.do";

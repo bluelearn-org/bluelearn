@@ -18,7 +18,7 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │  api/   Hono on Cloudflare Workers                                   │
 │         Routes: /subjects · /walkthroughs · /guides                  │
-│         Middleware: cors, supabaseMiddleware (auth)                  │
+│         Middleware: cors, supabaseMiddleware (auth), rateLimit (POST /guides) │
 │         Validation: @hono/zod-validator                              │
 └───────────────────────────────┬──────────────────────────────────────┘
                                 │  PostgREST / RPC

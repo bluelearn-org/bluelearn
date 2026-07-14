@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { requireUser } from "../middleware/auth.middleware";
+import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
 import type { HonoEnv } from "../types";
 import { zValidator } from "@hono/zod-validator";
 import {
@@ -53,14 +54,21 @@ export const guidesRouter = new Hono<HonoEnv>()
     return c.json({ guides });
   })
 
-  // 201 with { revision_id } for the editor route.
-  .post("/", requireUser, zValidator("json", createGuideBody), async (c) => {
-    const { revision_id } = await createGuide(
-      c.get("supabase"),
-      c.req.valid("json")
-    );
-    return c.json({ revision_id }, 201);
-  })
+  // 201 with { revision_id } for the editor route. Rate-limited to 15
+  // guide creations per 24h per user to prevent spam.
+  .post(
+    "/",
+    requireUser,
+    rateLimitMiddleware({ windowSeconds: 86_400, max: 15 }),
+    zValidator("json", createGuideBody),
+    async (c) => {
+      const { revision_id } = await createGuide(
+        c.get("supabase"),
+        c.req.valid("json")
+      );
+      return c.json({ revision_id }, 201);
+    }
+  )
 
   // Returns the guide content and its subject tags.
   .get("/:slug", async (c) => {

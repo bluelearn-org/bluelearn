@@ -51,6 +51,8 @@
         $ref: "../components/responses/_shared.yaml#/BadRequest"
       "401":
         $ref: "../components/responses/_shared.yaml#/Unauthorized"
+      "429":
+        $ref: "../components/responses/_shared.yaml#/RateLimited"
 
 /guides/{slug}:
   parameters:

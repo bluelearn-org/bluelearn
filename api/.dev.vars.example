@@ -15,3 +15,9 @@ TYPESENSE_API_KEY=
 
 # Frontend origin for CORS (Vite dev server)
 APP_URL=http://localhost:3000
+
+# Rate limiting: RATE_LIMITER is a Durable Object binding declared in
+# wrangler.jsonc (not a secret, so not here). `wrangler dev` creates the
+# DO locally and stores its state in .wrangler/state/v3/do/. No setup
+# needed. Tests run without the binding and fall back to in-memory
+# counters automatically.
