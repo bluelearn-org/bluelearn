@@ -16,8 +16,8 @@ TYPESENSE_API_KEY=
 # Frontend origin for CORS (Vite dev server)
 APP_URL=http://localhost:3000
 
-# Rate limiting: RATE_LIMIT_KV is bound in wrangler.jsonc, not here,
-# since it's a KV namespace, not a secret. Create it locally with:
-#   pnpm --filter api exec wrangler kv namespace create RATE_LIMIT_KV
-# Then paste the printed id into wrangler.jsonc. Without it, wrangler dev
-# falls back to in-memory counters (reset on every restart).
+# Rate limiting: RATE_LIMITER is a Durable Object binding declared in
+# wrangler.jsonc (not a secret, so not here). `wrangler dev` creates the
+# DO locally and stores its state in .wrangler/state/v3/do/. No setup
+# needed. Tests run without the binding and fall back to in-memory
+# counters automatically.
