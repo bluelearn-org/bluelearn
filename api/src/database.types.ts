@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -140,6 +160,36 @@ export type Database = {
           },
         ]
       }
+      guide_revision_subjects: {
+        Row: {
+          guide_revision_id: string
+          subject_id: string
+        }
+        Insert: {
+          guide_revision_id: string
+          subject_id: string
+        }
+        Update: {
+          guide_revision_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_revision_subjects_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_revisions: {
         Row: {
           approved_at: string | null
@@ -196,36 +246,6 @@ export type Database = {
             columns: ["guide_id"]
             isOneToOne: false
             referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guide_subjects: {
-        Row: {
-          guide_base_id: string
-          subject_id: string
-        }
-        Insert: {
-          guide_base_id: string
-          subject_id: string
-        }
-        Update: {
-          guide_base_id?: string
-          subject_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_subjects_guide_base_id_fkey"
-            columns: ["guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "guide_bases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "guide_subjects_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -389,6 +409,36 @@ export type Database = {
           },
         ]
       }
+      objective_revision_subjects: {
+        Row: {
+          objective_revision_id: string
+          subject_id: string
+        }
+        Insert: {
+          objective_revision_id: string
+          subject_id: string
+        }
+        Update: {
+          objective_revision_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_revision_subjects_objective_revision_id_fkey"
+            columns: ["objective_revision_id"]
+            isOneToOne: false
+            referencedRelation: "objective_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_revision_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       objective_revisions: {
         Row: {
           author_id: string | null
@@ -439,36 +489,6 @@ export type Database = {
             columns: ["objective_id"]
             isOneToOne: false
             referencedRelation: "objectives"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      objective_subjects: {
-        Row: {
-          objective_id: string
-          subject_id: string
-        }
-        Insert: {
-          objective_id: string
-          subject_id: string
-        }
-        Update: {
-          objective_id?: string
-          subject_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "objective_subjects_objective_id_fkey"
-            columns: ["objective_id"]
-            isOneToOne: false
-            referencedRelation: "objectives"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "objective_subjects_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -1128,6 +1148,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["verifier", "moderator", "curator", "admin"],
@@ -1163,3 +1186,4 @@ export const Constants = {
     },
   },
 } as const
+
