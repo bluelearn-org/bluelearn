@@ -205,6 +205,10 @@ Keep the PR scope limited to one feature across the stack—the monorepo enables
 6. **The root `package.json` scripts use `pnpm -r` (recursive).** If you need to run a command only in one package, use `pnpm --filter <package> <script>`.
 7. **Prettier is configured with a Tailwind plugin.** It sorts classes automatically; don’t manually reorder them.
 8. **Only the `profiles` table exists.** The extensive schema described in `docs/database‑schema.md` is not yet implemented. Start by adding migrations for the missing tables when building new features.
+9. **Lexical + MathLive Popovers:** MathLive uses a singleton global "Scrim" for its menus, and Lexical frequently mounts/unmounts its popovers when selection changes.
+   - **The Bug:** If Lexical unmounts the `<math-field>` while a MathLive menu is open, the singleton Scrim gets ripped out of the DOM. When a new `<math-field>` tries to open its menu, it throws an `HTMLElement.showPopover: Element is not connected` fatal error.
+   - **The Fix:** We have a monkey patch for `HTMLElement.prototype.showPopover` in `MathView.tsx` that catches this exact scenario, rescues the orphaned Scrim, and dynamically attaches it to the newly active `<math-field>`. Do not remove this patch without testing rapid clicks outside the popover.
+   - **MathLive Submenu Crash:** MathLive has an internal bug where clicking a non-terminating submenu item that is *already open* causes it to crash. A global capture-phase interceptor in `MathView.tsx` stops these clicks from ever reaching MathLive to prevent the crash.
 
 ## Environment Variables
 
@@ -243,6 +247,12 @@ The repository uses GitHub Actions defined in `.github/workflows/ci.yml`. Two jo
 - **`api`** – Type checking and a dry‑run deployment (`wrangler deploy --dry-run`).
 
 The workflow triggers on pushes to `main` and on pull requests.
+
+## Communication Guidelines
+
+When communicating with users:
+- **Be Concise and Technical**: Provide high-level technical updates and design paths without being overly verbose or dramatic. Focus on implementation details clearly and directly.
+- **Consult Before Committing**: Present design choices and wait for explicit feedback/approval before committing code to the repository.
 
 ## Where to Look Next
 

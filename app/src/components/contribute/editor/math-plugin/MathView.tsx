@@ -6,12 +6,59 @@ import katex from "katex";
 import { $isMathNode } from "./MathNode";
 import { MathFieldAdapter } from "./MathFieldAdapter";
 import { cn } from "@/lib/utils";
+// ------------------------
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+
+// --- MathLive Bug Fix ---
+if (
+  typeof HTMLElement !== "undefined" &&
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  HTMLElement.prototype.showPopover &&
+  !(HTMLElement.prototype as any)._patchedForMathLive
+) {
+  const originalShowPopover = HTMLElement.prototype.showPopover;
+  HTMLElement.prototype.showPopover = function () {
+    try {
+      if (!this.isConnected) {
+        // If MathLive's singleton menu is disconnected (because its parent math-field was unmounted),
+        // we must rescue it and attach it to the currently active math-field.
+        const activeMathField =
+          document.querySelector("math-field:focus-within") ||
+          document.querySelector("math-field");
+
+        if (activeMathField && activeMathField.shadowRoot) {
+          const toggle = activeMathField.shadowRoot.querySelector(
+            "[part='menu-toggle']"
+          );
+          const container = toggle || activeMathField.shadowRoot;
+
+          const parent = this.parentNode;
+          if (parent && !parent.isConnected) {
+            container.appendChild(parent);
+          } else {
+            container.appendChild(this);
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          if (!this.isConnected) return;
+        } else {
+          return;
+        }
+      }
+      originalShowPopover.call(this);
+    } catch (e) {
+      console.warn("[MathLive] Suppressed showPopover error:", e);
+    }
+  };
+  (HTMLElement.prototype as any)._patchedForMathLive = true;
+}
+// ------------------------
 
 const {
   $getNodeByKey,
@@ -63,10 +110,15 @@ const isTargetMathLive = (target: any): boolean => {
   for (const node of path) {
     if (node && (node.nodeType === 1 || node instanceof HTMLElement)) {
       const tagName = (node.tagName || "").toLowerCase();
+      const role = (node.getAttribute && node.getAttribute("role")) || "";
+      const part = (node.getAttribute && node.getAttribute("part")) || "";
+
       if (
         tagName === "math-field" ||
         tagName.includes("math") ||
-        tagName.includes("cortexjs")
+        tagName.includes("cortexjs") ||
+        tagName === "menu" ||
+        tagName === "li"
       ) {
         return true;
       }
@@ -74,6 +126,12 @@ const isTargetMathLive = (target: any): boolean => {
         node.id &&
         (node.id.includes("cortexjs") || node.id.includes("mathlive"))
       ) {
+        return true;
+      }
+      if (role === "presentation" || role === "menu" || role === "menuitem") {
+        return true;
+      }
+      if (part.includes("menu") || part.includes("scrim")) {
         return true;
       }
       const classes = Array.from(node.classList || []);
@@ -84,7 +142,8 @@ const isTargetMathLive = (target: any): boolean => {
             c.startsWith("MLK__") ||
             c.includes("mathfield") ||
             c.includes("cortexjs") ||
-            c.includes("mathlive")
+            c.includes("mathlive") ||
+            c.includes("ui-menu")
         )
       ) {
         return true;
@@ -92,64 +151,6 @@ const isTargetMathLive = (target: any): boolean => {
     }
   }
   return false;
-};
-
-// Helper to determine if an event target is a MathLive/CortexJS overlay (menu/keyboard) appended to the body (outside math-field)
-const isTargetMathLiveOverlay = (target: any): boolean => {
-  if (!target) return false;
-
-  let path: Array<any> = [];
-
-  // Extract the original native event from Radix CustomEvent detail if available
-  const originalEvent =
-    target.detail?.originalEvent || (target instanceof Event ? target : null);
-  const element =
-    originalEvent?.target ||
-    target.target ||
-    (target instanceof HTMLElement ? target : null);
-
-  if (originalEvent && typeof originalEvent.composedPath === "function") {
-    path = originalEvent.composedPath();
-  }
-
-  // Fallback to manual DOM traversal crossing shadow boundaries
-  if (path.length === 0 && element) {
-    let current = element;
-    while (current) {
-      path.push(current);
-      current =
-        current.parentElement ||
-        (current.getRootNode && typeof current.getRootNode === "function"
-          ? current.getRootNode().host
-          : null);
-    }
-  }
-
-  let isKeyboard = false;
-
-  for (const node of path) {
-    if (node && (node.nodeType === 1 || node instanceof HTMLElement)) {
-      const tagName = (node.tagName || "").toLowerCase();
-      const id = (node.id || "").toLowerCase();
-
-      if (tagName.includes("keyboard") || id.includes("keyboard")) {
-        isKeyboard = true;
-      }
-      const classes = Array.from(node.classList || []);
-      if (
-        classes.some(
-          (c: any) =>
-            c.startsWith("MLK__") ||
-            c.includes("keyboard") ||
-            (c.startsWith("ML__") && c.includes("keyboard"))
-        )
-      ) {
-        isKeyboard = true;
-      }
-    }
-  }
-
-  return isKeyboard;
 };
 
 // Helper to render static equation HTML using KaTeX
@@ -223,26 +224,52 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     setIsOpen(isSelected);
   }, [isSelected]);
 
-  // Intercept pointer/mouse events in the capture phase to prevent Lexical from clearing node selection
+  // Intercept and destroy events targeting an already-open submenu to prevent a fatal MathLive crash
   useEffect(() => {
-    const handleCapture = (e: Event) => {
-      if (isTargetMathLiveOverlay(e)) {
-        e.stopPropagation();
+    const preventCrash = (e: Event) => {
+      const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+      for (const node of path) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (node && node instanceof HTMLElement) {
+          if (
+            node.tagName.toUpperCase() === "LI" &&
+            node.classList.contains("is-submenu-open")
+          ) {
+            // MathLive crashes if it processes a click on an already-open submenu.
+            // By stopping it in the capture phase, MathLive never receives the event.
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+          }
+        }
       }
     };
 
-    document.addEventListener("pointerdown", handleCapture, true);
-    document.addEventListener("mousedown", handleCapture, true);
-    document.addEventListener("touchstart", handleCapture, true);
+    window.addEventListener("click", preventCrash, true);
+    window.addEventListener("pointerdown", preventCrash, true);
+    window.addEventListener("pointerup", preventCrash, true);
+    window.addEventListener("mousedown", preventCrash, true);
+    window.addEventListener("mouseup", preventCrash, true);
 
     return () => {
-      document.removeEventListener("pointerdown", handleCapture, true);
-      document.removeEventListener("mousedown", handleCapture, true);
-      document.removeEventListener("touchstart", handleCapture, true);
+      window.removeEventListener("click", preventCrash, true);
+      window.removeEventListener("pointerdown", preventCrash, true);
+      window.removeEventListener("pointerup", preventCrash, true);
+      window.removeEventListener("mousedown", preventCrash, true);
+      window.removeEventListener("mouseup", preventCrash, true);
     };
   }, []);
 
+  useEffect(() => {
+    if (!isSelected && isOpen) {
+      console.trace("[DEBUG] Lexical cleared selection internally!");
+    }
+  }, [isSelected, isOpen]);
+
   const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      console.trace("[DEBUG] Radix Popover requested close!");
+    }
     setIsOpen(open);
     setSelected(open);
     if (!open) {
@@ -364,6 +391,11 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           className="z-50 flex w-80 flex-col gap-2.5 rounded-lg bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10"
           align="start"
           sideOffset={8}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
           onOpenAutoFocus={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => {
             if (isTargetMathLive(e)) {
@@ -467,6 +499,11 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
         className="z-50 flex w-96 flex-col gap-2.5 rounded-lg bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10"
         align="center"
         sideOffset={8}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => {
           if (isTargetMathLive(e)) {

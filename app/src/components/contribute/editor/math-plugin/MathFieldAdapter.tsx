@@ -61,6 +61,7 @@ export const MathFieldAdapter = React.forwardRef<
     forwardRef
   ) => {
     const internalRef = useRef<any>(null);
+    const lastEmittedValue = useRef<string | null>(value);
     const [mathliveLoaded, setMathliveLoaded] = useState(false);
 
     // Dynamic loading of mathlive to prevent SSR crashes in next.js/vinxi environments
@@ -104,11 +105,10 @@ export const MathFieldAdapter = React.forwardRef<
       };
     }, []);
 
-    // Synchronize readOnly state and disable context menu to raw custom element properties
+    // Synchronize readOnly state to raw custom element properties
     useLayoutEffect(() => {
       if (mathliveLoaded && internalRef.current) {
         internalRef.current.readOnly = readOnly;
-        internalRef.current.menuItems = [];
       }
     }, [readOnly, mathliveLoaded]);
 
@@ -141,6 +141,7 @@ export const MathFieldAdapter = React.forwardRef<
 
       const handleInput = (e: Event) => {
         const val = (e.target as any).value;
+        lastEmittedValue.current = val;
         if (onChange) {
           onChange(val);
         }
@@ -169,6 +170,12 @@ export const MathFieldAdapter = React.forwardRef<
     // Sync value changes from parent components
     useEffect(() => {
       if (mathliveLoaded && internalRef.current) {
+        // If the incoming value is exactly what MathLive just emitted, do not force an update.
+        // This prevents MathLive from destroying and rebuilding its internal shadow DOM (which breaks menus).
+        if (value === lastEmittedValue.current) {
+          return;
+        }
+
         if (internalRef.current.value !== value) {
           internalRef.current.value = value;
         }
