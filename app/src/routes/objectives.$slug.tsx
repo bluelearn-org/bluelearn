@@ -35,16 +35,30 @@ function PathPage() {
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
       <section className="border-b px-8 py-8 lg:px-16">
-        <div className="mb-6">
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h1 className="data-label text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
             Objective: {objective.title} ({objective.levels.length} levels |{" "}
             {formatDuration(objective.duration)} total)
           </h1>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="h-9 rounded-full">
+              See Graph View
+            </Button>
+
+            <select
+              aria-label="Sub Objective"
+              className="h-9 min-w-[140px] rounded-full border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="">Sub Objective</option>
+              <option value={slug}>{objective.title}</option>
+            </select>
+          </div>
         </div>
 
         <Separator className="mb-4 bg-border" />
 
-        <ol className="m-0 flex w-full list-none flex-col gap-4 p-0">
+        <ol className="m-0 flex w-full list-none flex-col gap-3 p-0">
           {objective.levels.map((level: Level, index: number) => {
             const g = {
               ...level.guide,
@@ -68,9 +82,9 @@ function PathPage() {
             return (
               <li
                 key={g.slug}
-                className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4"
+                className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-badge-border bg-badge font-mono text-sm font-semibold text-badge-foreground">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-badge-border bg-badge font-mono text-base font-semibold text-badge-foreground">
                   {index + 1}
                 </div>
 
