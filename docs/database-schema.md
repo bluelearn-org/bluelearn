@@ -19,6 +19,8 @@ The schema deliberately keeps the database source of truth small:
 
 ## Tables
 
+
+
 ### `profiles`
 
 - `id`: primary key, references the auth user.
@@ -31,8 +33,6 @@ The schema deliberately keeps the database source of truth small:
 
 `roles` is not a column on `profiles`. Every user is a `learner` implicitly; granted roles (`verifier`, `moderator`, `curator`, `admin`) live in `user_roles`.
 
-
-
 ### `user_roles`
 
 The roles a user holds. A user may hold several at once (e.g. both `verifier` and `moderator`). `learner` is the implicit baseline and is not stored here; absence of any row means learner-only.
@@ -42,8 +42,6 @@ The roles a user holds. A user may hold several at once (e.g. both `verifier` an
 - `granted_at`: when the role was granted.
 
 For now, roles are granted directly by an admin inserting the `user_roles` row. A self-service application flow is deferred for later; see [Role applications](#role-applications) under Not Yet Implemented.
-
-
 
 ### `guide_bases`
 
@@ -66,6 +64,8 @@ Status enum values are:
 - `archived` — deliberately retired; `canonical_guide_id` is left untouched so the last canonical content stays retrievable.
 - 
 
+
+
 ### `guides`
 
 Methods, alternatives, and the original write-up all live here as **guides** under a topic. Each guide is its own page with its own URL, revision history, and votes. The parent guide base designates one of them canonical via `guide_bases.canonical_guide_id`.
@@ -86,8 +86,6 @@ Status enum values are:
 - `archived` — deliberately retired.
 
 A guide stores no `title` or `summary` of its own: both are **versioned content** living on `guide_revisions`, so a rename is captured in history and restored on rollback like any other edit. A guide's live title/summary is its current revision's; lists and walkthrough previews read them by joining through `current_revision_id` (most often the canonical guide's). Ordering among sibling guides under the same guide base is **derived** from votes, not stored here.
-
-
 
 ### `guide_revisions`
 
@@ -118,8 +116,6 @@ Submitting a revision is the action that creates its `guide_review_cases` row, i
 Note: `accepted` is not a stored revision value. A revision "reads as accepted" when its review case has `status = approved`. `published` is also deliberately **not** a revision value: "published" describes the guide or guide base node. A revision also never becomes `archived`; archiving happens at the guide or guide base level.
 
 **Rollback.** Rollback never deletes newer rows. It inserts a new revision that copies an older one's content. Through this, the version history shows that a rollback occurred through the change_summary.
-
-
 
 ### `guide_edges`
 
@@ -157,8 +153,6 @@ Only `prerequisite` edges form the learning DAG. Walkthrough generation, level c
 
 There must be a trigger that prevents cycles among prerequisite edges. Related edges may be cyclic because they do not define learning order. Related edges are used for "related" or "see also" links, discovery/navigation, and contextual suggestions. See [Related Edges in Practice](#related-edges-in-practice) for how the directed table represents these undirected links.
 
-
-
 ### `todo_prerequisites`
 
 Missing prerequisite topics declared by authors when a real guide base does not exist yet. Also acts as a recruitment surface for topics that still need writing.
@@ -182,8 +176,6 @@ Because walkthrough and level generation use the **longest** path, redundant tra
 
 What over-declaration does cost is **graph bloat**: redundant edges clutter the DAG, walkthroughs, and diffs. A later **transitive reduction** pass can drop any edge `A -> C` when a longer path `A -> ... -> C` already exists. This is a tidiness optimization, not a correctness requirement, since levels stay correct without it. 
 
-
-
 ### `objectives`
 
 The stable identity of an objective: it stores no curriculum content of its own and points at whichever revision is currently live.
@@ -197,8 +189,6 @@ The stable identity of an objective: it stores no curriculum content of its own 
 - `updated_at`: last update time, maintained by a trigger.
 
 An objective stores no `title` or `summary`: both are versioned content on `objective_revisions`, so a rename lives in history and is restored on rollback.
-
-
 
 ### `objective_revisions`
 
@@ -217,13 +207,11 @@ Append-only version history plus the objective's editorial metadata, mirroring `
 
 Submitting a revision is a direct publish: in one transaction it flips `status = draft → published`, stamps `published_at`, freezes the revision's projected edges and linear order, and points `objectives.current_revision_id` at it (setting `objectives.status = published`, and freezing the slug on first publish). Whether a revision is currently live is read from `objectives.current_revision_id`, not from its status.
 
-
-
 ### `objective_revision_nodes`
 
 The curriculum: every topic in this revision's target closure, which of them are the objective's goals, and which the curator skipped. A row exists for every closure topic; `is_included` distinguishes a kept topic from a skipped one (a soft hide, not a delete), so the editor can still list a skipped topic as a re-includable candidate and edge projection can bridge across it. An absent row means the topic was never in the closure at all.
 
-- `id`: primary key for the node, so other tables (notably `objective_revision_items`) can reference a node by a single id.
+- `id`: primary key for the node, so other tables (notably `objective_revision_node_placements`) can reference a node by a single id.
 - `revision_id`: FK to `objective_revisions`.
 - `guide_base_id`: the topic (FK to `guide_bases`).
 - `guide_id`: the guide variant the curator chose for this topic (FK to `guides`). The variant is pinned, but its content is read live through `guides.current_revision_id` (the objective shows the up-to-date guide, not a frozen body).
@@ -232,6 +220,8 @@ The curriculum: every topic in this revision's target closure, which of them are
 - `note`: optional curator annotation for this node within the objective.
 - Primary key `id`. `(revision_id, guide_base_id)` is a unique constraint, so a topic still appears at most once per revision.
 - 
+
+
 
 ### `objective_revision_edges`
 
@@ -242,11 +232,11 @@ The projected prerequisite edges among included nodes, computed once at publish 
 - `to_guide_base_id`: target endpoint (FK to `guide_bases`), an included node of this revision.
 - Primary key `(revision_id, from_guide_base_id, to_guide_base_id)`.
 
-These edges are derived from the global `guide_edges` graph, never hand-authored: at publish, the global prerequisite graph is projected onto the included (`is_included = true`) node set, bridging skipped prerequisites (if `A → Trig → C` and Trig is skipped, the projection stores `A → C`). They are a frozen *view* of the canonical graph, not a competing prerequisite authority (see [Objectives as frozen projections](#objectives-as-frozen-projections)). These edges power the objective's graph view, which is the secondary view. The primary view is the authored linear order in `objective_revision_items` below.
+These edges are derived from the global `guide_edges` graph, never hand-authored: at publish, the global prerequisite graph is projected onto the included (`is_included = true`) node set, bridging skipped prerequisites (if `A → Trig → C` and Trig is skipped, the projection stores `A → C`). They are a frozen *view* of the canonical graph, not a competing prerequisite authority (see [Objectives as frozen projections](#objectives-as-frozen-projections)). These edges power the objective's graph view, which is the secondary view. The primary view is the authored linear order in `objective_revision_node_placements` below.
 
 
 
-### `objective_revision_items`
+### `objective_revision_node_placements`
 
 The objective's linear reading order, authored per target (sub-objective) and the objective's primary view. It holds one row per placed node per target, so a topic shared across targets can sit at a different position in each target's sequence. Rows exist only for included nodes.
 
@@ -317,8 +307,6 @@ Constraints:
 
 Display rules: public users see upvote/downvote totals only. The rubric breakdown is visible to moderators only, enforced by row level security. Guide ordering among siblings is **derived** from net votes, not stored as a rank column.
 
-
-
 ### `content_holds`
 
 Moderation record for hiding or purging content (see [Content removal](#content-removal)). Decoupled from the content so `guide_revisions` stays immutable for hides.
@@ -341,8 +329,6 @@ Moderation record for hiding or purging content (see [Content removal](#content-
 Exactly one of `revision_id` / `guide_id` / `guide_base_id` is set. A node-scoped hold fans out to the revisions beneath it at purge time.
 
 Holds are multi-row: one piece of content can carry several at once (e.g. a `hidden` hold to take it out of view *and* a `legal_hold` to preserve it for reporting). A `csam` item is typically held this way (hidden, preserved, reported) and only purged after the preservation window passes.
-
-
 
 ### `media_assets` and `revision_assets`
 
@@ -475,6 +461,8 @@ Contests the outcome of a prior `review_case`.
 - `appeal_reason`: the filer's written argument for why the ruling was wrong. The filer may be the original author contesting a ruling on their own work, or any standing-gated member challenging a moderation/re-review outcome.
 
 ---
+
+
 
 ## Considerations
 
