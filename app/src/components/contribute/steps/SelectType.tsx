@@ -14,7 +14,7 @@ export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
         title={"Select Contribution Type"}
         Stepper={Stepper}
       />
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
         <button
           className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
           style={{
