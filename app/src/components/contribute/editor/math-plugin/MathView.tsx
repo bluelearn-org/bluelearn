@@ -285,18 +285,34 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
               setSelected(true);
             }}
             className={cn(
-              "group math-node relative inline-flex cursor-pointer items-center rounded-md px-1.5 py-0.5 transition-all duration-200 ease-in-out select-none",
+              "group math-node relative inline-flex cursor-pointer items-center rounded-md border transition-all duration-200 ease-in-out select-none",
+              equation === "" ? "px-1.5 py-0.5" : "px-1.5 py-0",
               isSelected
-                ? "bg-primary/10 ring-2 ring-primary/50 dark:bg-primary/20"
-                : "bg-transparent ring-0 hover:bg-muted/40 hover:ring-1 hover:ring-border"
+                ? "border-transparent bg-primary/10 ring-2 ring-primary/50 dark:bg-primary/20"
+                : equation === ""
+                  ? "border-dashed border-border bg-muted/30 hover:border-muted-foreground/40 hover:bg-muted/50"
+                  : "border-transparent bg-transparent hover:border-border hover:bg-muted/40"
             )}
             style={{
               verticalAlign: "middle",
             }}
           >
             {equation === "" ? (
-              <span className="font-mono text-xs font-semibold text-muted-foreground/80">
-                f(x)
+              <span className="inline-flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-primary/50"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17 7H7l4 5-4 5h10"
+                  />
+                </svg>
               </span>
             ) : (
               <span
