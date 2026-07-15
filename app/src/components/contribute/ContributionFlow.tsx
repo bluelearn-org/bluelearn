@@ -123,23 +123,7 @@ function Inner({
   };
 
   return (
-    <div className="flex h-[calc(100vh-210px)] w-full gap-8">
-      {/* sidebar */}
-      <div className="w-64 border-r pr-4">
-        <Stepper.List>
-          <Stepper.Items>
-            {(step: any, index: number) => (
-              <Stepper.Item
-                key={step.id}
-                step={step.id}
-                className="flex items-center gap-2 py-2"
-              >
-                <Stepper.Indicator className="grid size-8 place-items-center rounded-full border bg-badge text-xl">
-                  {index + 1}
-                </Stepper.Indicator>
-
-                <Stepper.Title />
-    <>
+    <div className="flex h-[calc(100vh-210px)] w-full flex-col gap-8">
       {/* horizontal breadcrumb stepper */}
       <Stepper.List className="flex w-full items-center justify-center text-sm">
         <Stepper.Items>
@@ -185,43 +169,7 @@ function Inner({
         />
 
         <Submit Stepper={Stepper} />
-      <div className="flex-1">
-        <Stepper.Content step="type">
-          <SelectType pickType={pickType} type={type} Stepper={Stepper} />
-        </Stepper.Content>
-
-        <Stepper.Content step="guide-details">
-          <GuideDetails
-            Stepper={Stepper}
-            guideContData={guideContData}
-            setGuideContData={setGuideContData}
-          />
-        </Stepper.Content>
-
-        <Stepper.Content step="variant-details">
-          <VariantDetails Stepper={Stepper} />
-        </Stepper.Content>
-
-        <Stepper.Content step="objective-details">
-          <ObjectiveDetails
-            Stepper={Stepper}
-            objectiveContData={objectiveContData}
-            setObjectiveContData={setObjectiveContData}
-          />
-        </Stepper.Content>
-
-        <Stepper.Content step="content">
-          <Content Stepper={Stepper} />
-        </Stepper.Content>
-
-        <Stepper.Content step="objective-ordering">
-          <OrderObjectiveGuides Stepper={Stepper} />
-        </Stepper.Content>
-
-        <Stepper.Content step="submit">
-          <Submit Stepper={Stepper} />
-        </Stepper.Content>
       </div>
-    </>
+    </div>
   );
 }
