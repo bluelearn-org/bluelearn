@@ -398,11 +398,13 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           }}
           className={cn(
             "math-node relative mx-auto my-3 block w-fit max-w-full cursor-pointer rounded-lg text-center transition-all duration-200 ease-in-out select-none",
-            isSelected
-              ? "bg-primary/5 px-10 py-5 ring-2 ring-primary/40 dark:bg-primary/10"
-              : equation === ""
-                ? "border border-dashed border-border bg-muted/40 px-8 py-3.5 hover:border-muted-foreground/30 hover:bg-muted/80"
-                : "bg-transparent px-6 py-3 ring-0 hover:bg-muted/30 hover:ring-1 hover:ring-border"
+            equation === ""
+              ? isSelected
+                ? "bg-primary/5 px-8 py-3.5 ring-2 ring-primary/40 dark:bg-primary/10"
+                : "border border-dashed border-border bg-muted/40 px-8 py-3.5 hover:border-muted-foreground/30 hover:bg-muted/80"
+              : isSelected
+                ? "bg-primary/5 px-8 py-1.5 ring-2 ring-primary/40 dark:bg-primary/10"
+                : "bg-transparent px-8 py-1.5 ring-0 hover:bg-muted/30 hover:ring-1 hover:ring-border"
           )}
         >
           {equation === "" ? (
@@ -428,7 +430,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           ) : (
             <div
               dangerouslySetInnerHTML={{ __html: renderKatex(equation, false) }}
-              className="math-preview mx-auto"
+              className="math-preview mx-auto [&>.katex-display]:m-0"
             />
           )}
         </div>
