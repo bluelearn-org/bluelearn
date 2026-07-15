@@ -13,6 +13,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "types": "wrangler types",
+    "search:sync": "node --experimental-strip-types scripts/typesense-sync.ts",
     "docs:serve": "serve openapi -l 4000"
   },
   "dependencies": {

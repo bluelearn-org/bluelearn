@@ -9,6 +9,12 @@ export const env: Bindings = {
   SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY!,
   SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY!,
   APP_URL: process.env.APP_URL ?? "http://localhost:3000",
+  // Search sync is best-effort and logs instead of failing when Typesense
+  // isn't running, so tests don't need a live instance.
+  TYPESENSE_HOST: process.env.TYPESENSE_HOST ?? "127.0.0.1",
+  TYPESENSE_PORT: process.env.TYPESENSE_PORT ?? "8108",
+  TYPESENSE_PROTOCOL: process.env.TYPESENSE_PROTOCOL ?? "http",
+  TYPESENSE_API_KEY: process.env.TYPESENSE_API_KEY ?? "xyz-dev-key",
 };
 
 // Refuses to run against anything but a local Supabase.

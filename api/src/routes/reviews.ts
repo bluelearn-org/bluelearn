@@ -9,6 +9,10 @@ import {
   getReviewQueue,
   listReviewCases,
 } from "../services/review.service";
+import {
+  scheduleSearchSync,
+  syncGuideForReviewCase,
+} from "../services/search.service";
 
 export const reviewsRouter = new Hono<HonoEnv>()
   // Open cases needing action from the current reviewer
@@ -40,6 +44,12 @@ export const reviewsRouter = new Hono<HonoEnv>()
         c.get("supabase"),
         c.req.param("id"),
         input
+      );
+      // This vote may have published the revision — refresh the search index
+      // for the guide behind this case (best-effort).
+      scheduleSearchSync(
+        c,
+        syncGuideForReviewCase(c.env, c.get("supabase"), c.req.param("id"))
       );
       return c.json({ decision: result }, 200);
     }
