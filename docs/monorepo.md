@@ -1,6 +1,6 @@
 # Why a monorepo
 
-BlueLearn started across two separate GitHub repos:
+Bluelearn started across two separate GitHub repos:
 
 - **`blue-prototype`** — pnpm workspace with `api/` (Hono on Workers) and
   an early `app/` (Vite), plus `supabase/` migrations.

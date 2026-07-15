@@ -183,7 +183,7 @@ When assessing the suitability of an applicant for the role of Moderator, the fo
 
 This Code of Conduct applies to all project spaces — the GitHub
 organization, issues, pull requests, the Discord server, project events,
-and any time someone is representing BlueLearn in public.
+and any time someone is representing Bluelearn in public.
 
 ## Reporting
 

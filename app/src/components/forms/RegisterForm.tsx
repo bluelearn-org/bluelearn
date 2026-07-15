@@ -37,7 +37,7 @@ export function RegisterForm({
             </CardTitle>
 
             <CardDescription className="text-sm text-muted-foreground">
-              Join BlueLearn to start creating, learning, and collaborating.
+              Join Bluelearn to start creating, learning, and collaborating.
             </CardDescription>
           </div>
         </CardHeader>

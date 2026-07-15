@@ -38,7 +38,7 @@ export function Navbar() {
             <Link to="/" className="flex items-center gap-3">
               <img src="/assets/logo.png" className="h-8 w-8" />
               <p className="text-[17px] font-semibold tracking-tight">
-                BlueLearn
+                Bluelearn
               </p>
             </Link>
 

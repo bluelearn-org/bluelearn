@@ -51,7 +51,7 @@ function RouteComponent() {
             <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
               <img
                 src="/assets/hero.png"
-                alt="BlueLearn"
+                alt="Bluelearn"
                 className="h-full w-full object-cover"
               />
             </div>

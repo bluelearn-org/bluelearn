@@ -1,4 +1,4 @@
-# Contributing to BlueLearn
+# Contributing to Bluelearn
 
 Thanks for being here. This document is the whole
 contributor path, from "I want to help" to "my change is merged."
@@ -75,7 +75,7 @@ respond within a week, usually within a day or two.
 
 ## Licensing and sign-off
 
-BlueLearn is dual-licensed:
+Bluelearn is dual-licensed:
 
 - **Source code** — [AGPL-3.0-or-later](LICENSE). Copyleft for networked
   services: forks hosted as a service must publish their source.
@@ -333,7 +333,7 @@ privately to **conduct@bluelearn.org**.
 How decisions get made, who has merge rights, how disagreements get
 resolved: [`GOVERNANCE.md`](GOVERNANCE.md).
 
-In one line: BlueLearn is a benevolent-dictator-for-now model that's
+In one line: Bluelearn is a benevolent-dictator-for-now model that's
 moving toward a small steering committee as the contributor pool grows.
 
 ---
