@@ -4,7 +4,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 import { FieldGroup } from "@/components/ui/field";
-import guidesData from "@/data/guides.json";
+import guidesData from "@/data/blueguides.json";
 import { Button } from "@/components/ui/button";
 import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
 

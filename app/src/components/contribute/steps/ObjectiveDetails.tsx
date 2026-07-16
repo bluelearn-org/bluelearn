@@ -7,7 +7,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 
-import guidesData from "@/data/guides.json";
+import guidesData from "@/data/blueguides.json";
 
 type PropTypes = {
   Stepper: any;

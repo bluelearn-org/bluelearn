@@ -30,7 +30,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
-import guidesData from "@/data/guides.json";
+import guidesData from "@/data/blueguides.json";
 
 // Map for O(1) guide lookup
 const guidesMap = new Map(guidesData.map((g) => [g.slug, g]));
@@ -279,12 +279,15 @@ export const OrderObjectiveGuides = ({
   };
 
   return (
-    <Stepper.Content step="objective-ordering">
+    <Stepper.Content
+      step="objective-ordering"
+      className="flex min-h-0 w-full flex-1 flex-col"
+    >
       <StepperActionHeader title={"Order Guides"} Stepper={Stepper} />
 
-      <FieldGroup className="space-y-6">
+      <FieldGroup className="mt-4 flex min-h-0 flex-1 flex-col">
         {/* Target Guide Sequence */}
-        <Field className="space-y-3">
+        <Field className="mb-4 shrink-0 space-y-2">
           <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
             Target Guide Sequence
           </FieldLabel>
@@ -334,12 +337,12 @@ export const OrderObjectiveGuides = ({
           className={
             isFullscreen
               ? "fixed inset-0 z-50 grid animate-in grid-cols-1 items-stretch gap-6 bg-background/95 p-6 backdrop-blur-md fade-in lg:grid-cols-12"
-              : "grid h-[calc(100vh-450px)] min-h-87.5 w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-12"
+              : "grid min-h-0 w-full flex-1 grid-cols-1 items-stretch gap-6 lg:grid-cols-12"
           }
         >
           {/* Left Pane: Curated Sequence */}
           <Card
-            className={`flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm ${
+            className={`flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm ${
               isFullscreen ? "lg:col-span-4" : "lg:col-span-5"
             }`}
           >
@@ -362,7 +365,7 @@ export const OrderObjectiveGuides = ({
                 Build the sequential learning plan by ordering selected guides.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4">
+            <CardContent className="min-h-0 flex-1 overflow-y-auto p-4">
               {curatedSequence.length === 0 && walkthroughNodes.length > 1 && (
                 <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                   <Info className="mb-2 h-8 w-8 text-muted-foreground opacity-50" />
@@ -515,7 +518,7 @@ export const OrderObjectiveGuides = ({
 
           {/* Right Pane: Generated Walkthrough by Level */}
           <Card
-            className={`flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/10 shadow-none ${
+            className={`flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-muted/10 shadow-none ${
               isFullscreen ? "lg:col-span-8" : "lg:col-span-7"
             }`}
           >
@@ -546,7 +549,7 @@ export const OrderObjectiveGuides = ({
                 include in your curation.
               </CardDescription>
             </CardHeader>
-            <CardContent className="relative flex-1 overflow-hidden p-0">
+            <CardContent className="relative min-h-0 flex-1 overflow-hidden p-0">
               <GuideGraph
                 walkthroughNodes={walkthroughNodes}
                 curatedSequence={curatedSequence}
