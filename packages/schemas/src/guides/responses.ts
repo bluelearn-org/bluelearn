@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { subjectReferenceSchema } from "../subjects";
+import { guideStatusSchema, knowledgeTypeSchema } from "./enums";
 import { guideReferenceSchema } from "./references";
 
 export const guideSchema = z.object({
@@ -33,5 +34,22 @@ export const walkthroughSchema = z.object({
   ),
 });
 
+// A guide as listed anywhere it renders as a card (GET /guides, subject
+// pages). author is the canonical variant's author; duration_minutes derives
+// from the stored body word count; tags are subject slugs.
+export const guideListItemSchema = z.object({
+  id: z.uuid(),
+  slug: z.string().nullable(),
+  title: z.string().nullable(),
+  knowledge_type: knowledgeTypeSchema,
+  summary: z.string().nullable(),
+  status: guideStatusSchema,
+  created_at: z.iso.datetime(),
+  author: z.string().nullable(),
+  duration_minutes: z.number().int(),
+  tags: z.array(z.string()),
+});
+
 export type Guide = z.infer<typeof guideSchema>;
+export type GuideListItem = z.infer<typeof guideListItemSchema>;
 export type Walkthrough = z.infer<typeof walkthroughSchema>;

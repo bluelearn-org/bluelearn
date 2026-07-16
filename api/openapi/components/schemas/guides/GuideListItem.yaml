@@ -1,17 +1,53 @@
 type: object
 additionalProperties: false
+description: A guide shaped for listing cards.
 properties:
   id:
     $ref: "../common/Uuid.yaml"
   slug:
-    type: string
+    type: [string, "null"]
     example: calculus
   title:
-    type: string
+    type: [string, "null"]
     example: Calculus
   knowledge_type:
     $ref: "./KnowledgeType.yaml"
   summary:
     type: [string, "null"]
     example: The study of continuous change.
-required: [id, slug, title, knowledge_type, summary]
+  status:
+    type: string
+    description: The guide base's lifecycle status.
+    enum: [draft, published, archived]
+    example: published
+  created_at:
+    $ref: "../common/Timestamp.yaml"
+  author:
+    description: >
+      Username of the guide's original author (the author of its first
+      revision). Null if that profile is unavailable.
+    type: [string, "null"]
+    example: bluelearn
+  duration_minutes:
+    description: Estimated reading time, derived from the body's word count.
+    type: integer
+    example: 15
+  tags:
+    description: Slugs of every subject the guide is tagged with.
+    type: array
+    items:
+      type: string
+    example: [game-development, blender]
+required:
+  [
+    id,
+    slug,
+    title,
+    knowledge_type,
+    summary,
+    status,
+    created_at,
+    author,
+    duration_minutes,
+    tags,
+  ]

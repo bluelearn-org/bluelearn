@@ -1,6 +1,6 @@
 type: string
 description: >
-  theory => a grand explanation; its guides display as "alternatives".
-  practice => a route to a goal; its guides display as "methods".
-enum: [theory, practice]
-example: theory
+  theoretical => a grand explanation; its guides display as "alternatives".
+  practical => a route to a goal; its guides display as "methods".
+enum: [theoretical, practical]
+example: theoretical

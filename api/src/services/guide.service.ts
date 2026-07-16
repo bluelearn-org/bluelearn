@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CreateGuideInput, CreateVariantInput } from "@bluelearn/schemas";
+import type {
+  CreateGuideInput,
+  CreateVariantInput,
+  GuideListItem,
+} from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
+import { readingMinutes } from "../lib/reading";
+import { loadUsernames } from "./identity.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -19,16 +25,8 @@ type Walkthrough = {
 };
 
 // A guide's title/summary/body live on the canonical guide's current
-// revision, not on the base. These embeds walk guide_bases -> canonical
+// revision, not on the base. This embed walks guide_bases -> canonical
 // guide -> its live revision.
-export const CANONICAL_SUMMARY = `
-  canonical:guides!guide_bases_canonical_guide_id_fkey(
-    current:guide_revisions!guides_current_revision_id_fkey(
-      summary
-    )
-  )
-`;
-
 const CANONICAL_CONTENT = `
   canonical:guides!guide_bases_canonical_guide_id_fkey(
     id,
@@ -78,11 +76,99 @@ async function resolveBaseId(supabase: DB, rawSlug: string) {
   return data.id;
 }
 
-// List published guides, alphabetical. RLS hides drafts from non-authors.
-export async function listPublishedGuides(supabase: DB) {
+// Subject slugs carried by each guide revision, keyed by revision id. Card
+// listings show the guide's full tag set regardless of how they filtered.
+async function loadGuideTags(supabase: DB, revisionIds: string[]) {
+  const map = new Map<string, string[]>();
+  if (revisionIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("guide_revision_subjects")
+    .select("guide_revision_id, subject:subjects(slug)")
+    .in("guide_revision_id", revisionIds);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load guide tags", 500);
+  }
+  for (const row of data ?? []) {
+    const slug = row.subject?.slug;
+    if (!slug) continue;
+    const list = map.get(row.guide_revision_id) ?? [];
+    list.push(slug);
+    map.set(row.guide_revision_id, list);
+  }
+  for (const list of map.values()) list.sort();
+  return map;
+}
+
+// The guide_bases row shape every card listing selects: the base columns plus
+// the canonical guide's author and live revision. Rows carrying extra embeds
+// (e.g. a subject filter join) still fit.
+type GuideCardRow = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  knowledge_type: Database["public"]["Enums"]["knowledge_type"];
+  status: Database["public"]["Enums"]["node_status"];
+  created_at: string;
+  canonical: {
+    author_id: string | null;
+    current: { id: string; summary: string | null; word_count: number };
+  };
+};
+
+// Assemble card list items from guide_bases rows: join in the tag set and
+// author usernames, turn stored word counts into reading minutes.
+export async function buildGuideListItems(
+  supabase: DB,
+  rows: GuideCardRow[]
+): Promise<GuideListItem[]> {
+  const [tagsByRevision, usernames] = await Promise.all([
+    loadGuideTags(
+      supabase,
+      rows.map((r) => r.canonical.current.id)
+    ),
+    loadUsernames(
+      supabase,
+      rows.map((r) => r.canonical.author_id)
+    ),
+  ]);
+
+  return rows.map((base) => {
+    const current = base.canonical.current;
+    const authorId = base.canonical.author_id;
+    return {
+      id: base.id,
+      slug: base.slug,
+      title: base.title,
+      knowledge_type: base.knowledge_type,
+      summary: current.summary,
+      status: base.status,
+      created_at: base.created_at,
+      author: authorId ? (usernames.get(authorId) ?? null) : null,
+      duration_minutes: readingMinutes(current.word_count),
+      tags: tagsByRevision.get(current.id) ?? [],
+    };
+  });
+}
+
+// List published guides as cards, alphabetical. RLS hides drafts from
+// non-authors.
+export async function listPublishedGuides(
+  supabase: DB
+): Promise<GuideListItem[]> {
   const { data, error } = await supabase
     .from("guide_bases")
-    .select(`id, slug, title, knowledge_type, ${CANONICAL_SUMMARY}`)
+    .select(
+      `id, slug, title, knowledge_type, status, created_at,
+       canonical:guides!guide_bases_canonical_guide_id_fkey!inner(
+         author_id,
+         current:guide_revisions!guides_current_revision_id_fkey!inner(
+           id, summary, word_count
+         )
+       )`
+    )
     .eq("status", "published")
     .order("title");
 
@@ -91,10 +177,7 @@ export async function listPublishedGuides(supabase: DB) {
     throw new ServiceError("Failed to load guides", 500);
   }
 
-  return (data ?? []).map(({ canonical, ...base }) => ({
-    ...base,
-    summary: canonical?.current?.summary ?? null,
-  }));
+  return buildGuideListItems(supabase, data ?? []);
 }
 
 // Create a guide: bundles the guide_base + first guide + draft revision in one

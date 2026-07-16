@@ -1,8 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CreateObjectiveInput } from "@bluelearn/schemas";
+import type {
+  CreateObjectiveInput,
+  FeaturedNode,
+  ObjectiveListItem,
+} from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
+import { readingMinutes } from "../lib/reading";
 import { getRevisionSnapshot } from "./objective-revision.service";
+import { loadUsernames } from "./identity.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -32,11 +38,211 @@ async function resolveObjective(supabase: DB, rawSlug: string) {
   return data;
 }
 
-// List published objectives, newest first. RLS hides drafts from non-authors.
-export async function listPublishedObjectives(supabase: DB) {
+type ObjectiveCardData = Pick<
+  ObjectiveListItem,
+  "guides_total" | "duration_minutes" | "featured_sub_objective"
+>;
+type CardNode = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  is_featured: boolean;
+};
+type NodeOrder = {
+  target_node_id: string;
+  node_id: string;
+  position: number;
+};
+
+// The featured target's ordered guides, as the curator placed them. Ordering
+// comes from objective_revision_node_orders (the curator's placement), not the
+// prerequisite edges. Empty when the objective has no featured target or no
+// placement yet.
+function buildFeaturedSubObjective(
+  nodes: CardNode[],
+  orders: NodeOrder[]
+): FeaturedNode[] {
+  const featured = nodes.find((n) => n.is_featured);
+  if (!featured) return [];
+
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  return orders
+    .filter((o) => o.target_node_id === featured.id)
+    .sort((a, b) => a.position - b.position)
+    .map((o, i) => {
+      const node = byId.get(o.node_id);
+      return {
+        position: i + 1,
+        slug: node?.slug ?? null,
+        title: node?.title ?? null,
+      };
+    });
+}
+
+async function loadGuideBaseMeta(supabase: DB, baseIds: string[]) {
+  const map = new Map<string, { slug: string | null; title: string | null }>();
+  if (baseIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("guide_bases")
+    .select("id, slug, title")
+    .in("id", baseIds);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load objective guides", 500);
+  }
+  for (const b of data ?? []) map.set(b.id, { slug: b.slug, title: b.title });
+  return map;
+}
+
+// Stored word count of each node guide's live body, keyed by guide id, for
+// the objective's summed reading duration.
+async function loadGuideWordCounts(supabase: DB, guideIds: string[]) {
+  const map = new Map<string, number>();
+  if (guideIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("guides")
+    .select(
+      "id, current:guide_revisions!guides_current_revision_id_fkey(word_count)"
+    )
+    .in("id", guideIds);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load objective guides", 500);
+  }
+  for (const g of data ?? []) map.set(g.id, g.current?.word_count ?? 0);
+  return map;
+}
+
+// Per-objective card figures (guide tally, reading duration, featured
+// sub-objective), keyed by the current revision id and batched across every
+// listed objective.
+async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
+  const cards = new Map<string, ObjectiveCardData>();
+  if (revisionIds.length === 0) return cards;
+
+  const [nodesRes, ordersRes] = await Promise.all([
+    supabase
+      .from("objective_revision_nodes")
+      .select(
+        "revision_id, id, guide_base_id, guide_id, is_featured, is_included"
+      )
+      .in("revision_id", revisionIds),
+    supabase
+      .from("objective_revision_node_orders")
+      .select("revision_id, target_node_id, node_id, position")
+      .in("revision_id", revisionIds),
+  ]);
+
+  if (nodesRes.error) {
+    console.error(nodesRes.error);
+    throw new ServiceError("Failed to load objective nodes", 500);
+  }
+  if (ordersRes.error) {
+    console.error(ordersRes.error);
+    throw new ServiceError("Failed to load objective node orders", 500);
+  }
+
+  // Included nodes drive the guide tally and duration; the featured
+  // sub-objective also needs the featured target, so build the per-revision
+  // node set from all rows and filter to included where a count is meant.
+  const nodeRows = nodesRes.data ?? [];
+  const allBaseIds = [...new Set(nodeRows.map((n) => n.guide_base_id))];
+  const guideIds = [
+    ...new Set(nodeRows.filter((n) => n.is_included).map((n) => n.guide_id)),
+  ];
+
+  const [baseMeta, wordsByGuide] = await Promise.all([
+    loadGuideBaseMeta(supabase, allBaseIds),
+    loadGuideWordCounts(supabase, guideIds),
+  ]);
+
+  for (const revisionId of revisionIds) {
+    const revisionNodes = nodeRows.filter((n) => n.revision_id === revisionId);
+    const nodes: CardNode[] = revisionNodes.map((n) => ({
+      id: n.id,
+      slug: baseMeta.get(n.guide_base_id)?.slug ?? null,
+      title: baseMeta.get(n.guide_base_id)?.title ?? null,
+      is_featured: n.is_featured,
+    }));
+    const orders = (ordersRes.data ?? []).filter(
+      (o) => o.revision_id === revisionId
+    );
+    const words = revisionNodes
+      .filter((n) => n.is_included)
+      .reduce((sum, n) => sum + (wordsByGuide.get(n.guide_id) ?? 0), 0);
+
+    cards.set(revisionId, {
+      guides_total: revisionNodes.filter((n) => n.is_included).length,
+      duration_minutes: readingMinutes(words),
+      featured_sub_objective: buildFeaturedSubObjective(nodes, orders),
+    });
+  }
+
+  return cards;
+}
+
+// The objectives row shape every card listing selects. Rows carrying extra
+// embeds (e.g. a subject filter join) still fit.
+type ObjectiveCardRow = {
+  id: string;
+  slug: string | null;
+  created_by: string | null;
+  created_at: string;
+  current_revision_id: string | null;
+  current: { title: string | null; summary: string | null } | null;
+};
+
+// Assemble card list items from objectives rows: join in the curator
+// usernames and the per-revision card figures.
+export async function buildObjectiveListItems(
+  supabase: DB,
+  rows: ObjectiveCardRow[]
+): Promise<ObjectiveListItem[]> {
+  const [cards, usernames] = await Promise.all([
+    loadObjectiveCards(
+      supabase,
+      rows
+        .map((r) => r.current_revision_id)
+        .filter((id): id is string => id !== null)
+    ),
+    loadUsernames(
+      supabase,
+      rows.map((r) => r.created_by)
+    ),
+  ]);
+
+  return rows.map((row) => {
+    const card = row.current_revision_id
+      ? cards.get(row.current_revision_id)
+      : undefined;
+    return {
+      id: row.id,
+      slug: row.slug,
+      title: row.current?.title ?? null,
+      summary: row.current?.summary ?? null,
+      curator: row.created_by ? (usernames.get(row.created_by) ?? null) : null,
+      created_at: row.created_at,
+      guides_total: card?.guides_total ?? 0,
+      duration_minutes: card?.duration_minutes ?? 0,
+      featured_sub_objective: card?.featured_sub_objective ?? [],
+    };
+  });
+}
+
+// List published objectives as cards, newest first. RLS hides drafts from
+// non-authors.
+export async function listPublishedObjectives(
+  supabase: DB
+): Promise<ObjectiveListItem[]> {
   const { data, error } = await supabase
     .from("objectives")
-    .select(`id, slug, created_at, ${CURRENT_META}`)
+    .select(
+      `id, slug, created_by, created_at, current_revision_id, ${CURRENT_META}`
+    )
     .eq("status", "published")
     .order("created_at", { ascending: false });
 
@@ -45,11 +251,7 @@ export async function listPublishedObjectives(supabase: DB) {
     throw new ServiceError("Failed to load objectives", 500);
   }
 
-  return (data ?? []).map(({ current, ...objective }) => ({
-    ...objective,
-    title: current?.title ?? null,
-    summary: current?.summary ?? null,
-  }));
+  return buildObjectiveListItems(supabase, data ?? []);
 }
 
 // Create a objective: bundles the objective shell + revision 1 + the targets' prerequisite

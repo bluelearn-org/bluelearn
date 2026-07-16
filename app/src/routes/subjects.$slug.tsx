@@ -87,7 +87,7 @@ function SubjectPage() {
                 summary: objective.summary,
                 curator: objective.curator,
                 created_at: formatDate(objective.created_at),
-                featuredPath: objective.featured_path,
+                featuredSubObjective: objective.featured_sub_objective,
                 stats: [
                   {
                     label: "Duration",

@@ -7,12 +7,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/cards/Footer";
 
-type PathStep = { position: number; slug: string | null; title: string | null };
+type FeaturedNode = {
+  position: number;
+  slug: string | null;
+  title: string | null;
+};
 
 // Only the fields the card renders. Callers pass a superset (a full static
 // HydratedObjective, or an API list item mapped to these keys). The graph reads
-// featuredPath when present and otherwise falls back to the legacy levels shape
-// that routes still on static data supply.
+// featuredSubObjective when present and otherwise falls back to the legacy
+// levels shape that routes still on static data supply.
 type ObjectiveProp = {
   slug: string;
   title: string | null;
@@ -20,7 +24,7 @@ type ObjectiveProp = {
   curator?: string | null;
   created_at?: string;
   status?: string;
-  featuredPath?: Array<PathStep>;
+  featuredSubObjective?: Array<FeaturedNode>;
   levels?: Array<{ level: number; guide: { title: string } }>;
   stats?: Array<{ label: string; data: string | number }>;
   actionBtns?: React.ReactNode;
@@ -43,11 +47,11 @@ const stepTitle = "line-clamp-3 text-sm leading-snug text-muted-foreground";
 const arrow =
   "mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0";
 
-// The featured target plus the guides leading up to it. Only the last three
-// steps are drawn; the rest collapse into a leading "N guides" marker.
-function FeaturedPathGraph({ path }: { path: Array<PathStep> }) {
-  const shown = path.slice(-3);
-  const hidden = path.length - shown.length;
+// The featured sub-objective's guides, as the curator placed them. Only the
+// last three are drawn; the rest collapse into a leading "N more guides" marker.
+function FeaturedSubObjective({ nodes }: { nodes: Array<FeaturedNode> }) {
+  const shown = nodes.slice(-3);
+  const hidden = nodes.length - shown.length;
 
   return (
     <CardContent className="border-t p-4">
@@ -145,9 +149,9 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
         </CardHeader>
 
         {/* Graph Preview */}
-        {objective.featuredPath !== undefined
-          ? objective.featuredPath.length > 0 && (
-              <FeaturedPathGraph path={objective.featuredPath} />
+        {objective.featuredSubObjective !== undefined
+          ? objective.featuredSubObjective.length > 0 && (
+              <FeaturedSubObjective nodes={objective.featuredSubObjective} />
             )
           : objective.levels && <LevelsGraph levels={objective.levels} />}
 

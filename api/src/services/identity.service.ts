@@ -46,6 +46,26 @@ async function fetchPublicBadges(service: DB, userId: string) {
 // rather than as a wildcard.
 const escapeLike = (value: string) => value.replace(/[%_\\]/g, "\\$&");
 
+// Map profile ids to their @username. Listing cards show the original
+// author/curator, so callers pass creator ids and read the handle back.
+export async function loadUsernames(supabase: DB, ids: Array<string | null>) {
+  const map = new Map<string, string>();
+  const unique = [...new Set(ids.filter((id): id is string => id !== null))];
+  if (unique.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("id", unique);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load authors", 500);
+  }
+  for (const p of data ?? []) map.set(p.id, p.username);
+  return map;
+}
+
 // The caller's own profile row and roles.
 export async function getMyIdentity(supabase: DB, userId: string) {
   const { data: profile, error } = await supabase

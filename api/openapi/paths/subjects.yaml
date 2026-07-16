@@ -108,7 +108,7 @@
                 guides:
                   type: array
                   items:
-                    $ref: "../components/schemas/subjects/SubjectGuideListItem.yaml"
+                    $ref: "../components/schemas/guides/GuideListItem.yaml"
               required: [guides]
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"
@@ -138,7 +138,7 @@
                 objectives:
                   type: array
                   items:
-                    $ref: "../components/schemas/subjects/SubjectObjectiveListItem.yaml"
+                    $ref: "../components/schemas/objectives/ObjectiveListItem.yaml"
               required: [objectives]
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"

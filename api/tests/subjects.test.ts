@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { admin, env, insert, jsonAuth, makeUser } from "./helpers";
+import { admin, env, jsonAuth, makeUser } from "./helpers";
 import {
   createSubject,
   tagGuideRevision,
@@ -9,13 +9,15 @@ import {
 import { createPublishedGuide } from "./factories/guides";
 import {
   addObjectiveNode,
+  addObjectiveNodeOrder,
   createObjective,
   createObjectiveRevision,
   createPublishedObjective,
 } from "./factories/objectives";
 import { expectToMatchSpec } from "./openapi";
 
-// Repeat a filler word so countWords sees exactly `n` whitespace-separated words.
+// Repeat a filler word so the stored word_count sees exactly `n`
+// whitespace-separated words.
 const words = (n: number) => Array(n).fill("word").join(" ");
 
 describe("GET /subjects", () => {
@@ -228,7 +230,7 @@ describe("GET /subjects/{slug}/objectives", () => {
     expect(ids).not.toContain(untagged.objective.id);
   });
 
-  it("builds the card: featured path, guide tally, curator, duration", async () => {
+  it("builds the card: featured sub-objective, guide tally, curator, duration", async () => {
     const { userId } = await makeUser();
     const subject = await createSubject();
 
@@ -252,24 +254,17 @@ describe("GET /subjects/{slug}/objectives", () => {
       published_at: new Date().toISOString(),
       author_id: userId,
     });
-    await addObjectiveNode(revision.id, a.base.id, a.guide.id, {
+    const nodeA = await addObjectiveNode(revision.id, a.base.id, a.guide.id, {
       is_target: true,
       is_featured: true,
     });
-    await addObjectiveNode(revision.id, b.base.id, b.guide.id);
-    await addObjectiveNode(revision.id, c.base.id, c.guide.id);
-    // Prerequisite chain C -> B -> A (from = prerequisite), so the path leading
-    // up to the featured target A orders as C, B, A.
-    await insert("objective_revision_edges", {
-      revision_id: revision.id,
-      from_guide_base_id: c.base.id,
-      to_guide_base_id: b.base.id,
-    });
-    await insert("objective_revision_edges", {
-      revision_id: revision.id,
-      from_guide_base_id: b.base.id,
-      to_guide_base_id: a.base.id,
-    });
+    const nodeB = await addObjectiveNode(revision.id, b.base.id, b.guide.id);
+    const nodeC = await addObjectiveNode(revision.id, c.base.id, c.guide.id);
+    // The curator places C, B, A under the featured target A, so the featured
+    // path renders in that order.
+    await addObjectiveNodeOrder(revision.id, nodeA.id, nodeC.id, 0);
+    await addObjectiveNodeOrder(revision.id, nodeA.id, nodeB.id, 1);
+    await addObjectiveNodeOrder(revision.id, nodeA.id, nodeA.id, 2);
     await admin
       .from("objectives")
       .update({ current_revision_id: revision.id })
@@ -291,18 +286,23 @@ describe("GET /subjects/{slug}/objectives", () => {
         guides_total: number;
         duration_minutes: number;
         curator: string | null;
-        featured_path: Array<{ position: number; title: string | null }>;
+        featured_sub_objective: Array<{
+          position: number;
+          title: string | null;
+        }>;
       }>;
     };
     const found = body.objectives.find((o) => o.id === objective.id);
     expect(found?.guides_total).toBe(3);
     expect(found?.duration_minutes).toBe(3); // 600 words / 200 wpm
     expect(found?.curator).not.toBeNull();
-    expect(found?.featured_path.map((p) => p.title)).toEqual([
+    expect(found?.featured_sub_objective.map((p) => p.title)).toEqual([
       "Base C",
       "Middle B",
       "Target A",
     ]);
-    expect(found?.featured_path.map((p) => p.position)).toEqual([1, 2, 3]);
+    expect(found?.featured_sub_objective.map((p) => p.position)).toEqual([
+      1, 2, 3,
+    ]);
   });
 });
