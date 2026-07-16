@@ -1,6 +1,6 @@
 type StatProps = {
   label: string;
-  data: number;
+  data: string | number;
 };
 
 export const FooterStats = ({ label, data }: StatProps) => {

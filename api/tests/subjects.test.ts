@@ -1,14 +1,22 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { env, jsonAuth, makeUser } from "./helpers";
+import { admin, env, insert, jsonAuth, makeUser } from "./helpers";
 import {
   createSubject,
   tagGuideRevision,
   tagObjectiveRevision,
 } from "./factories/subjects";
 import { createPublishedGuide } from "./factories/guides";
-import { createPublishedObjective } from "./factories/objectives";
+import {
+  addObjectiveNode,
+  createObjective,
+  createObjectiveRevision,
+  createPublishedObjective,
+} from "./factories/objectives";
 import { expectToMatchSpec } from "./openapi";
+
+// Repeat a filler word so countWords sees exactly `n` whitespace-separated words.
+const words = (n: number) => Array(n).fill("word").join(" ");
 
 describe("GET /subjects", () => {
   it("lists subjects", async () => {
@@ -148,6 +156,39 @@ describe("GET /subjects/{slug}/guides", () => {
       "Tagged"
     );
   });
+
+  it("shapes each guide for the card: duration, author, tags", async () => {
+    const { userId } = await makeUser();
+    const subject = await createSubject();
+    const other = await createSubject();
+    const guide = await createPublishedGuide({
+      body: words(400),
+      authorId: userId,
+    });
+    await tagGuideRevision(guide.revision.id, subject.id);
+    await tagGuideRevision(guide.revision.id, other.id);
+
+    const res = await app.request(`/subjects/${subject.slug}/guides`, {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/subjects/{slug}/guides");
+    const body = (await res.json()) as {
+      guides: Array<{
+        id: string;
+        duration_minutes: number;
+        author: string | null;
+        tags: string[];
+        created_at: string;
+      }>;
+    };
+    const found = body.guides.find((g) => g.id === guide.base.id);
+    expect(found?.duration_minutes).toBe(2); // 400 words / 200 wpm
+    expect(found?.author).not.toBeNull();
+    expect(found?.tags).toEqual(
+      expect.arrayContaining([subject.slug, other.slug])
+    );
+    expect(found?.created_at).toBeTruthy();
+  });
 });
 
 describe("GET /subjects/{slug}/objectives", () => {
@@ -185,5 +226,83 @@ describe("GET /subjects/{slug}/objectives", () => {
     // Scoped to this subject's tags, alphabetical by revision title.
     expect(ids).toEqual([alpha.objective.id, beta.objective.id]);
     expect(ids).not.toContain(untagged.objective.id);
+  });
+
+  it("builds the card: featured path, guide tally, curator, duration", async () => {
+    const { userId } = await makeUser();
+    const subject = await createSubject();
+
+    const a = await createPublishedGuide({
+      title: "Target A",
+      body: words(200),
+    });
+    const b = await createPublishedGuide({
+      title: "Middle B",
+      body: words(200),
+    });
+    const c = await createPublishedGuide({ title: "Base C", body: words(200) });
+
+    const objective = await createObjective(userId, {
+      slug: `objective-${crypto.randomUUID()}`,
+      status: "published",
+    });
+    const revision = await createObjectiveRevision(objective.id, {
+      title: "My Objective",
+      status: "published",
+      published_at: new Date().toISOString(),
+      author_id: userId,
+    });
+    await addObjectiveNode(revision.id, a.base.id, a.guide.id, {
+      is_target: true,
+      is_featured: true,
+    });
+    await addObjectiveNode(revision.id, b.base.id, b.guide.id);
+    await addObjectiveNode(revision.id, c.base.id, c.guide.id);
+    // Prerequisite chain C -> B -> A (from = prerequisite), so the path leading
+    // up to the featured target A orders as C, B, A.
+    await insert("objective_revision_edges", {
+      revision_id: revision.id,
+      from_guide_base_id: c.base.id,
+      to_guide_base_id: b.base.id,
+    });
+    await insert("objective_revision_edges", {
+      revision_id: revision.id,
+      from_guide_base_id: b.base.id,
+      to_guide_base_id: a.base.id,
+    });
+    await admin
+      .from("objectives")
+      .update({ current_revision_id: revision.id })
+      .eq("id", objective.id)
+      .throwOnError();
+    await tagObjectiveRevision(revision.id, subject.id);
+
+    const res = await app.request(
+      `/subjects/${subject.slug}/objectives`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/subjects/{slug}/objectives");
+    const body = (await res.json()) as {
+      objectives: Array<{
+        id: string;
+        guides_total: number;
+        duration_minutes: number;
+        curator: string | null;
+        featured_path: Array<{ position: number; title: string | null }>;
+      }>;
+    };
+    const found = body.objectives.find((o) => o.id === objective.id);
+    expect(found?.guides_total).toBe(3);
+    expect(found?.duration_minutes).toBe(3); // 600 words / 200 wpm
+    expect(found?.curator).not.toBeNull();
+    expect(found?.featured_path.map((p) => p.title)).toEqual([
+      "Base C",
+      "Middle B",
+      "Target A",
+    ]);
+    expect(found?.featured_path.map((p) => p.position)).toEqual([1, 2, 3]);
   });
 });

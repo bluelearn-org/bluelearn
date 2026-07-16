@@ -1,6 +1,6 @@
 type: object
 additionalProperties: false
-description: An objective carrying this subject tag.
+description: An objective carrying this subject tag, shaped for the subject page card.
 properties:
   id:
     $ref: "../common/Uuid.yaml"
@@ -12,4 +12,52 @@ properties:
     example: Backend Engineer
   summary:
     type: [string, "null"]
-required: [id, slug]
+  curator:
+    description: >
+      Username of the objective's original curator (its creator). Null if that
+      profile is unavailable.
+    type: [string, "null"]
+    example: bluelearn
+  created_at:
+    $ref: "../common/Timestamp.yaml"
+  guides_total:
+    description: Number of guides included in the objective.
+    type: integer
+    example: 8
+  duration_minutes:
+    description: >
+      Estimated reading time across every included guide, derived from their
+      combined word count.
+    type: integer
+    example: 360
+  featured_path:
+    description: >
+      The featured target guide plus the guides leading up to it, ordered
+      prerequisite -> target. The last entry is the featured target.
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        position:
+          type: integer
+          example: 1
+        slug:
+          type: [string, "null"]
+          example: intro-to-arithmetic
+        title:
+          type: [string, "null"]
+          example: Introduction to Arithmetic
+      required: [position, slug, title]
+required:
+  [
+    id,
+    slug,
+    title,
+    summary,
+    curator,
+    created_at,
+    guides_total,
+    duration_minutes,
+    featured_path,
+  ]

@@ -1,15 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import type { RegisteredRouter, ToPathOption } from "@tanstack/react-router";
 
-import type { Guide } from "@/types/guides";
 import type { BreadcrumbOrigin } from "@/lib/breadcrumbs";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/cards/Footer";
 
-type GuideProp = Guide & {
-  stats?: Array<{ label: string; data: number }>;
+// Only the fields the card renders. Callers pass a superset (a full static
+// Guide, or an API list item mapped to these keys).
+type GuideProp = {
+  slug: string;
+  title: string;
+  author?: string | null;
+  summary?: string | null;
+  created_at?: string;
+  status?: string;
+  tags?: Array<string>;
+  stats?: Array<{ label: string; data: string | number }>;
   actionBtns?: React.ReactNode;
 };
 
@@ -63,7 +71,7 @@ export const GuideCard = ({ guide, origin, to }: PropTypes) => {
 
           {/* Tags */}
           <div className="flex flex-wrap gap-2 pt-4">
-            {guide.tags.map((tag) => (
+            {(guide.tags ?? []).map((tag) => (
               <Badge
                 key={tag}
                 variant="outline"

@@ -1,6 +1,6 @@
 type: object
 additionalProperties: false
-description: A guide carrying this subject tag.
+description: A guide carrying this subject tag, shaped for the subject page card.
 properties:
   id:
     $ref: "../common/Uuid.yaml"
@@ -12,4 +12,27 @@ properties:
     example: Calculus
   summary:
     type: [string, "null"]
-required: [id, slug, title]
+  status:
+    type: string
+    description: The guide base's lifecycle status.
+    example: published
+  created_at:
+    $ref: "../common/Timestamp.yaml"
+  author:
+    description: >
+      Username of the guide's original author (the author of its first
+      revision). Null if that profile is unavailable.
+    type: [string, "null"]
+    example: bluelearn
+  duration_minutes:
+    description: Estimated reading time, derived from the body's word count.
+    type: integer
+    example: 15
+  tags:
+    description: Slugs of every subject the guide is tagged with.
+    type: array
+    items:
+      type: string
+    example: [game-development, blender]
+required:
+  [id, slug, title, summary, status, created_at, author, duration_minutes, tags]
