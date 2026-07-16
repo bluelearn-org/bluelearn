@@ -1,6 +1,6 @@
 import { defineStepper } from "@stepperize/react";
 import { ChevronRight } from "lucide-react";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import type { Dispatch, SetStateAction } from "react";
 
