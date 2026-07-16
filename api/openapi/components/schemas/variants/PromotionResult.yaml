@@ -1,0 +1,19 @@
+type: object
+additionalProperties: false
+description: >
+  Result of the canonical-promotion check after a vote. Wilson score lower
+  bound ranks sibling variants; a challenger that beats the incumbent by
+  the configured margin (default 0.05) with at least the minimum vote
+  floor (default 5) takes the canonical pointer.
+properties:
+  canonical_guide_id:
+    description: >
+      The base's canonical_guide_id after the check. Null if the base
+      could not be loaded (race with deletion).
+    type: string
+    format: uuid
+    nullable: true
+  promoted:
+    type: boolean
+    description: True if the canonical pointer was moved by this vote.
+required: [canonical_guide_id, promoted]

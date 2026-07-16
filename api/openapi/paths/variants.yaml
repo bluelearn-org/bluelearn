@@ -85,7 +85,7 @@
             $ref: "../components/schemas/variants/VoteRequest.yaml"
     responses:
       "200":
-        description: The stored vote
+        description: The stored vote, plus the canonical-promotion result
         content:
           application/json:
             schema:
@@ -94,7 +94,9 @@
               properties:
                 vote:
                   $ref: "../components/schemas/variants/Vote.yaml"
-              required: [vote]
+                promotion:
+                  $ref: "../components/schemas/variants/PromotionResult.yaml"
+              required: [vote, promotion]
       "400":
         $ref: "../components/responses/_shared.yaml#/BadRequest"
       "401":
@@ -104,12 +106,24 @@
   delete:
     tags: [variants]
     summary: Retract the caller's vote
+    description: >
+      Returns the canonical-promotion result so the client can refresh if
+      retracting the vote dropped the incumbent below the margin.
     operationId: retractVote
     security:
       - bearerAuth: []
     responses:
-      "204":
-        description: Vote retracted
+      "200":
+        description: Vote retracted; promotion check result
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                promotion:
+                  $ref: "../components/schemas/variants/PromotionResult.yaml"
+              required: [promotion]
       "401":
         $ref: "../components/responses/_shared.yaml#/Unauthorized"
       "404":

@@ -152,7 +152,8 @@ describe("DELETE /variants/{id}/vote", () => {
       env
     );
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "DELETE", "/variants/{id}/vote");
     const { data: votes } = await admin
       .from("votes")
       .select("voter_id")
@@ -161,7 +162,7 @@ describe("DELETE /variants/{id}/vote", () => {
     expect(votes).toHaveLength(0);
   });
 
-  it("is a no-op 204 when there is no vote to retract", async () => {
+  it("is a no-op 200 when there is no vote to retract", async () => {
     const { guide } = await createPublishedGuide();
     const voter = await makeUser();
 
@@ -171,7 +172,8 @@ describe("DELETE /variants/{id}/vote", () => {
       env
     );
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "DELETE", "/variants/{id}/vote");
   });
 });
 
