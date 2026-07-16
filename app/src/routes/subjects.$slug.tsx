@@ -13,7 +13,7 @@ import {
   listSubjectGuides,
   listSubjectObjectives,
 } from "@/lib/api/subjects";
-import { formatDurationCompact } from "@/lib/guideUtils";
+import { formatDuration } from "@/lib/guideUtils";
 
 export const Route = createFileRoute("/subjects/$slug")({
   loader: async ({ params, abortController }) => {
@@ -83,7 +83,7 @@ function SubjectPage() {
                 stats: [
                   {
                     label: "Duration",
-                    data: formatDurationCompact(objective.duration_minutes),
+                    data: formatDuration(objective.duration_minutes),
                   },
                   { label: "Guides", data: objective.guides_total },
                 ],
@@ -126,7 +126,7 @@ function SubjectPage() {
                 stats: [
                   {
                     label: "Duration",
-                    data: formatDurationCompact(guide.duration_minutes),
+                    data: formatDuration(guide.duration_minutes),
                   },
                 ],
                 actionBtns: (
