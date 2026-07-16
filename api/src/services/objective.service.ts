@@ -12,6 +12,16 @@ import { loadUsernames } from "./identity.service";
 
 type DB = SupabaseClient<Database>;
 
+// The row shape buildObjectiveListItems needs.
+type ObjectiveCardRow = {
+  id: string;
+  slug: string | null;
+  created_by: string | null;
+  created_at: string;
+  current_revision_id: string | null;
+  current: { title: string | null; summary: string | null } | null;
+};
+
 // This embed walks objectives -> current revision through the live pointer FK.
 const CURRENT_META = `
   current:objective_revisions!objectives_current_revision_id_fkey(
@@ -54,10 +64,6 @@ type NodeOrder = {
   position: number;
 };
 
-// The featured target's ordered guides, as the curator placed them. Ordering
-// comes from objective_revision_node_orders (the curator's placement), not the
-// prerequisite edges. Empty when the objective has no featured target or no
-// placement yet.
 function buildFeaturedSubObjective(
   nodes: CardNode[],
   orders: NodeOrder[]
@@ -96,8 +102,6 @@ async function loadGuideBaseMeta(supabase: DB, baseIds: string[]) {
   return map;
 }
 
-// Stored word count of each node guide's live body, keyed by guide id, for
-// the objective's summed reading duration.
 async function loadGuideWordCounts(supabase: DB, guideIds: string[]) {
   const map = new Map<string, number>();
   if (guideIds.length === 0) return map;
@@ -118,8 +122,7 @@ async function loadGuideWordCounts(supabase: DB, guideIds: string[]) {
 }
 
 // Per-objective card figures (guide tally, reading duration, featured
-// sub-objective), keyed by the current revision id and batched across every
-// listed objective.
+// sub-objective).
 async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
   const cards = new Map<string, ObjectiveCardData>();
   if (revisionIds.length === 0) return cards;
@@ -146,9 +149,6 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
     throw new ServiceError("Failed to load objective node orders", 500);
   }
 
-  // Included nodes drive the guide tally and duration; the featured
-  // sub-objective also needs the featured target, so build the per-revision
-  // node set from all rows and filter to included where a count is meant.
   const nodeRows = nodesRes.data ?? [];
   const allBaseIds = [...new Set(nodeRows.map((n) => n.guide_base_id))];
   const guideIds = [
@@ -185,19 +185,7 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
   return cards;
 }
 
-// The objectives row shape every card listing selects. Rows carrying extra
-// embeds (e.g. a subject filter join) still fit.
-type ObjectiveCardRow = {
-  id: string;
-  slug: string | null;
-  created_by: string | null;
-  created_at: string;
-  current_revision_id: string | null;
-  current: { title: string | null; summary: string | null } | null;
-};
-
-// Assemble card list items from objectives rows: join in the curator
-// usernames and the per-revision card figures.
+// Assemble card list items from objectives rows.
 export async function buildObjectiveListItems(
   supabase: DB,
   rows: ObjectiveCardRow[]

@@ -11,6 +11,20 @@ import { loadUsernames } from "./identity.service";
 
 type DB = SupabaseClient<Database>;
 
+// The guide_bases row shape every card listing selects.
+type GuideCardRow = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  knowledge_type: Database["public"]["Enums"]["knowledge_type"];
+  status: Database["public"]["Enums"]["node_status"];
+  created_at: string;
+  canonical: {
+    author_id: string | null;
+    current: { id: string; summary: string | null; word_count: number };
+  };
+};
+
 // Shape of compute_walkthrough's jsonb payload. Narrowing the RPC's recursive
 // Json return gives the route (and the typed client) a concrete shape.
 type Walkthrough = {
@@ -102,24 +116,7 @@ async function loadGuideTags(supabase: DB, revisionIds: string[]) {
   return map;
 }
 
-// The guide_bases row shape every card listing selects: the base columns plus
-// the canonical guide's author and live revision. Rows carrying extra embeds
-// (e.g. a subject filter join) still fit.
-type GuideCardRow = {
-  id: string;
-  slug: string | null;
-  title: string | null;
-  knowledge_type: Database["public"]["Enums"]["knowledge_type"];
-  status: Database["public"]["Enums"]["node_status"];
-  created_at: string;
-  canonical: {
-    author_id: string | null;
-    current: { id: string; summary: string | null; word_count: number };
-  };
-};
-
-// Assemble card list items from guide_bases rows: join in the tag set and
-// author usernames, turn stored word counts into reading minutes.
+// Assemble card list items from guide_bases rows.
 export async function buildGuideListItems(
   supabase: DB,
   rows: GuideCardRow[]
