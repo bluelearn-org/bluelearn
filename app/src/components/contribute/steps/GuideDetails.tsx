@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { GuideContribution } from "@/types/contributions";
@@ -6,6 +7,7 @@ import { StepperActionHeader } from "@/components/contribute/StepperActionHeader
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 
@@ -214,15 +216,30 @@ export const GuideDetails = ({
           </div>
         </Field>
 
-        <ul className="list-disc px-8 text-[11px] text-muted-foreground">
-          {guideContData.newSubjects.map((sub, index) => {
-            return (
-              <li key={index}>
+        {guideContData.newSubjects.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1">
+            {guideContData.newSubjects.map((sub, index) => (
+              <Badge key={index} variant="outline" className="gap-1.5">
                 {sub.name} - {sub.summary}
-              </li>
-            );
-          })}
-        </ul>
+                <button
+                  type="button"
+                  aria-label={`Remove ${sub.name}`}
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setGuideContData((prev) => ({
+                      ...prev,
+                      newSubjects: prev.newSubjects.filter(
+                        (_, i) => i !== index
+                      ),
+                    }))
+                  }
+                >
+                  <X className="size-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
 
         <Field className="space-y-2">
           <FieldLabel className="font-mono tracking-[0.08em] uppercase">
@@ -285,11 +302,30 @@ export const GuideDetails = ({
             </Button>
           </div>
         </Field>
-        <ul className="list-disc px-8 text-[11px] text-muted-foreground">
-          {guideContData.todoPrereqs.map((todo, index) => {
-            return <li key={index}>{todo}</li>;
-          })}
-        </ul>
+        {guideContData.todoPrereqs.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1">
+            {guideContData.todoPrereqs.map((todo, index) => (
+              <Badge key={index} variant="outline" className="gap-1.5">
+                {todo}
+                <button
+                  type="button"
+                  aria-label={`Remove ${todo}`}
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setGuideContData((prev) => ({
+                      ...prev,
+                      todoPrereqs: prev.todoPrereqs.filter(
+                        (_, i) => i !== index
+                      ),
+                    }))
+                  }
+                >
+                  <X className="size-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
       </FieldGroup>
     </Stepper.Content>
   );

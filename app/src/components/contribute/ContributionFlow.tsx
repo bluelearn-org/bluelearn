@@ -283,7 +283,7 @@ function Inner({
       </Stepper.List>
 
       {/* content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col pb-24">
         <SelectType pickType={pickType} type={type} Stepper={Stepper} />
 
         <GuideDetails
