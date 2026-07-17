@@ -28,8 +28,7 @@ async function resolveSubjectId(supabase: DB, rawSlug: string) {
   return data;
 }
 
-// Tally rows carrying nested subject tags into a subject_id -> count map. Each
-// row is one guide or objective, so counting tags counts the nodes per subject.
+// Used to count the number of guides and objectives under a subject.
 function tallyBySubject(tagsPerRow: Array<Array<{ subject_id: string }>>) {
   const counts = new Map<string, number>();
 

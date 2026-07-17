@@ -91,9 +91,9 @@ async function resolveBaseId(supabase: DB, rawSlug: string) {
   return data.id;
 }
 
-// Subjects carried by each guide revision, keyed by revision id. Cards need the
-// slug to link and the name to label. Listings show the guide's full tag set
-// even when the list itself was filtered to one subject.
+// Subjects carried by each guide revision. Used to show the
+// guide's full tag set even when the list itself was
+// filtered to one subject.
 async function loadGuideTags(supabase: DB, revisionIds: string[]) {
   const map = new Map<string, SubjectReference[]>();
   if (revisionIds.length === 0) return map;
