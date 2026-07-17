@@ -73,6 +73,7 @@ export default function Editor() {
       }),
       codeMirrorPlugin({
         codeBlockLanguages: {
+          text: "Plain Text",
           javascript: "JavaScript",
           typescript: "TypeScript",
           html: "HTML",

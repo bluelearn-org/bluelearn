@@ -26,6 +26,7 @@ import {
 import { InsertBlockMath, InsertInlineMath } from "./math-plugin/index.tsx";
 import MarkdownLinkImageShortcutListener from "./MarkdownLinkImageShortcutListener";
 import H1RestrictionListener from "./H1RestrictionListener.tsx";
+import CodeBlockShortcutListener from "./CodeBlockShortcutListener";
 import type { MDXEditorMethods } from "@mdxeditor/editor";
 import {
   Popover,
@@ -101,6 +102,7 @@ export default function EditorToolbar({
     <div className="mdxeditor-toolbar-custom">
       <MarkdownLinkImageShortcutListener />
       <H1RestrictionListener onH1Attempted={onH1Attempted} />
+      <CodeBlockShortcutListener />
       <UndoRedo />
       <div className="mdx-toolbar-divider"></div>
       <BoldItalicUnderlineToggles />

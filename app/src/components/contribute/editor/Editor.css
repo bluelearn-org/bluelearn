@@ -365,6 +365,46 @@
   border-radius: 0 !important;
 }
 
+/* Premium Code Editor Container Style */
+.mdxeditor-content [class*="_codeMirrorWrapper"] {
+  background-color: var(
+    --muted
+  ) !important; /* Adaptable light/dark background */
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  margin: 1.25rem 0 !important;
+  padding: 1rem !important;
+  padding-top: 2.25rem !important; /* Space for the floating language badge */
+  position: relative !important;
+}
+
+/* Glow ring on focus */
+.mdxeditor-content [class*="_codeMirrorWrapper"]:focus-within {
+  border-color: var(--ring) !important;
+  box-shadow:
+    0 0 0 2px rgba(0, 87, 118, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Customizing the CodeMirror editor font & text colors */
+.mdxeditor-content [class*="_codeMirrorWrapper"] .cm-editor {
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.875rem !important;
+}
+
+/* Customizing the line number gutters */
+.mdxeditor-content [class*="_codeMirrorWrapper"] .cm-gutters {
+  background-color: transparent !important;
+  border-right: 1px solid var(--border) !important;
+  color: var(--muted-foreground) !important;
+}
+
 .mdxeditor-content hr {
   border: 0;
   border-top: 1px solid var(--border);
@@ -384,27 +424,35 @@
 
 /* == TABLES == */
 .mdxeditor-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1.5rem 0;
-  font-size: 0.875rem;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+  font-size: 0.875rem !important;
 }
 
 .mdxeditor-content th,
 .mdxeditor-content td {
-  border: 1px solid var(--border);
-  padding: 0.625rem 0.875rem;
-  text-align: left;
+  border: 1px solid var(--border) !important;
+  padding: 0.625rem 0.875rem !important;
+  text-align: left !important;
 }
 
 .mdxeditor-content th {
-  background-color: var(--muted);
-  font-weight: 600;
-  color: var(--foreground);
+  background-color: var(--muted) !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
 }
 
-.mdxeditor-content tr:nth-child(even) {
-  background-color: var(--secondary);
+/* Reset styling for all MDXEditor tool, spacing, and helper cells in corners/margins */
+.mdxeditor-content [class*="tableToolsColumn"],
+.mdxeditor-content tfoot th,
+.mdxeditor-content tfoot td,
+.mdxeditor-content [class*="toolCell"],
+.mdxeditor-content [data-tool-cell="true"] {
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 0 !important;
 }
 
 /* == MATH & LATEX EDITOR INTEGRATION == */
