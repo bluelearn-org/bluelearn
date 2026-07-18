@@ -5,6 +5,7 @@ import {
   createGuideBase,
   createGuide,
   createGuideRevision,
+  createPublishedGuide,
 } from "./factories/guides";
 import { expectToMatchSpec } from "./openapi";
 
@@ -157,5 +158,98 @@ describe("GET /guide-revisions/{id}/diff/{otherId}", () => {
 
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "GET", "/guide-revisions/{id}/diff/{otherId}");
+  });
+});
+
+describe("GET /guide-revisions/{id}/diff/prev", () => {
+  it("returns the diff against the previous approved revision", async () => {
+    const author = await makeUser();
+    const { guide, revision: older } = await createPublishedGuide({
+      authorId: author.userId,
+    });
+    const newer = await createGuideRevision(guide.id, {
+      status: "submitted",
+      author_id: author.userId,
+      approved_at: new Date().toISOString(),
+    });
+
+    const res = await app.request(
+      `/guide-revisions/${newer.id}/diff/prev`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/guide-revisions/{id}/diff/prev");
+    const body = (await res.json()) as {
+      from: { id: string };
+      to: { id: string };
+      fields: unknown;
+    };
+    expect(body.from.id).toBe(older.id);
+    expect(body.to.id).toBe(newer.id);
+  });
+
+  it("diffs against the direct predecessor, not the newest revision", async () => {
+    const author = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const a = await createGuideRevision(guide.id, {
+      status: "submitted",
+      author_id: author.userId,
+      approved_at: new Date(Date.now() - 30000).toISOString(),
+    });
+    const b = await createGuideRevision(guide.id, {
+      status: "submitted",
+      author_id: author.userId,
+      approved_at: new Date(Date.now() - 20000).toISOString(),
+    });
+    // newer than b, must be ignored when diffing b/diff/prev
+    await createGuideRevision(guide.id, {
+      status: "submitted",
+      author_id: author.userId,
+      approved_at: new Date(Date.now() - 10000).toISOString(),
+    });
+
+    const res = await app.request(
+      `/guide-revisions/${b.id}/diff/prev`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/guide-revisions/{id}/diff/prev");
+    const body = (await res.json()) as {
+      from: { id: string };
+      to: { id: string };
+    };
+    expect(body.from.id).toBe(a.id);
+    expect(body.to.id).toBe(b.id);
+  });
+
+  it("returns 404 when no previous revision exists", async () => {
+    const author = await makeUser();
+    const { revision } = await createPublishedGuide({
+      authorId: author.userId,
+    });
+
+    const res = await app.request(
+      `/guide-revisions/${revision.id}/diff/prev`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(404);
+    await expectToMatchSpec(res, "GET", "/guide-revisions/{id}/diff/prev");
+  });
+
+  it("returns 404 for a non-existent revision", async () => {
+    const res = await app.request(
+      `/guide-revisions/00000000-0000-0000-0000-000000000000/diff/prev`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(404);
+    await expectToMatchSpec(res, "GET", "/guide-revisions/{id}/diff/prev");
   });
 });
