@@ -1,15 +1,28 @@
+import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import type { RegisteredRouter, ToPathOption } from "@tanstack/react-router";
-
-import type { HydratedObjective } from "@/types/objectives";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/cards/Footer";
 
-type ObjectiveProp = HydratedObjective & {
-  stats?: Array<{ label: string; data: number }>;
+type FeaturedNode = {
+  position: number;
+  slug: string | null;
+  title: string | null;
+};
+
+type ObjectiveProp = {
+  slug: string;
+  title: string | null;
+  summary?: string | null;
+  curator?: string | null;
+  created_at?: string;
+  status?: string;
+  featuredSubObjective?: Array<FeaturedNode>;
+  levels?: Array<{ level: number; guide: { title: string } }>;
+  stats?: Array<{ label: string; data: string | number }>;
   actionBtns?: React.ReactNode;
 };
 
@@ -18,9 +31,91 @@ type PropTypes = {
   to: ToPathOption<RegisteredRouter>;
 };
 
-export const ObjectiveCard = ({ objective, to }: PropTypes) => {
-  const previewLevels = objective.levels.slice(0, 3);
+// Only the last three guides are drawn. The rest collapse into a leading
+// "N more guides" marker.
+function FeaturedSubObjective({ nodes }: { nodes: Array<FeaturedNode> }) {
+  const shown = nodes.slice(-3);
+  const hidden = nodes.length - shown.length;
 
+  return (
+    <CardContent className="border-t p-4">
+      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start sm:gap-2">
+        {hidden > 0 && (
+          <>
+            <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
+              <span className="flex h-8 shrink-0 items-center justify-center text-base font-medium">
+                {hidden}
+              </span>
+              <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
+                more guides
+              </span>
+            </div>
+            <ArrowRight className="mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+          </>
+        )}
+        {shown.map((step, index) => (
+          <Fragment key={step.position}>
+            <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-base font-medium">
+                {step.position}
+              </span>
+              <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
+                {step.title}
+              </span>
+            </div>
+            {index < shown.length - 1 && (
+              <ArrowRight className="mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+            )}
+          </Fragment>
+        ))}
+      </div>
+    </CardContent>
+  );
+}
+
+// Legacy graph for routes still feeding static level data.
+function LevelsGraph({
+  levels,
+}: {
+  levels: Array<{ level: number; guide: { title: string } }>;
+}) {
+  const previewLevels = levels.slice(0, 3);
+  const remaining = levels.length - previewLevels.length;
+
+  return (
+    <CardContent className="border-t p-4">
+      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start sm:gap-2">
+        {previewLevels.map((level, index) => (
+          <Fragment key={index}>
+            <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-base font-medium">
+                {level.level}
+              </span>
+              <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
+                {level.guide.title}
+              </span>
+            </div>
+            {(index < previewLevels.length - 1 || remaining > 0) && (
+              <ArrowRight className="mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+            )}
+          </Fragment>
+        ))}
+        {remaining > 0 && (
+          <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
+            <span className="flex h-8 shrink-0 items-center justify-center text-base font-medium">
+              {remaining}
+            </span>
+            <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
+              more levels
+            </span>
+          </div>
+        )}
+      </div>
+    </CardContent>
+  );
+}
+
+export const ObjectiveCard = ({ objective, to }: PropTypes) => {
   return (
     <Link to={to} params={{ slug: objective.slug }}>
       <Card className="group flex flex-col justify-between rounded-md bg-background shadow-none transition-colors hover:bg-muted">
@@ -56,38 +151,11 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
         </CardHeader>
 
         {/* Graph Preview */}
-        <CardContent className="space-y-2 border-t p-4">
-          <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            {previewLevels.map((level, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-center gap-2 sm:min-w-0 sm:flex-1 sm:flex-row"
-              >
-                <div className="flex w-40 flex-col items-center justify-center sm:w-auto sm:min-w-0">
-                  <p className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge px-2 text-xl">
-                    {level.level}
-                  </p>
-
-                  <p className="line-clamp-4 py-2 text-center text-sm">
-                    {level.guide.title}
-                  </p>
-                </div>
-
-                {(index < previewLevels.length - 1 ||
-                  objective.levels.length >= 3) && (
-                  <ArrowRight className="h-5 w-5 shrink-0 rotate-90 sm:rotate-0" />
-                )}
-                {index >= previewLevels.length - 1 && (
-                  <div className="text-center">
-                    <p>{objective.levels.length - 3}</p>
-
-                    <p className="text-xs text-muted-foreground">more levels</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
+        {objective.featuredSubObjective !== undefined
+          ? objective.featuredSubObjective.length > 0 && (
+              <FeaturedSubObjective nodes={objective.featuredSubObjective} />
+            )
+          : objective.levels && <LevelsGraph levels={objective.levels} />}
 
         {/* Footer */}
         {(objective.stats || objective.actionBtns) && (

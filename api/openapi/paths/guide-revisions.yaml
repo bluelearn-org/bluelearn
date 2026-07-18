@@ -97,6 +97,31 @@
       "422":
         $ref: "../components/responses/_shared.yaml#/Unprocessable"
 
+/guide-revisions/{id}/diff/prev:
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        $ref: "../components/schemas/common/Uuid.yaml"
+  get:
+    tags: [guide-revisions]
+    summary: Diff against the previous approved revision
+    description: >
+      Automatically resolves the prior published revision of the same guide
+      (ordered by approved_at) and returns the same { from, to, fields } diff
+      as the two-id endpoint.
+    operationId: diffGuideRevisionWithPrevious
+    responses:
+      "200":
+        description: The rendered diff
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/guide-revisions/GuideRevisionDiff.yaml"
+      "404":
+        $ref: "../components/responses/_shared.yaml#/NotFound"
+
 /guide-revisions/{id}/diff/{otherId}:
   parameters:
     - name: id

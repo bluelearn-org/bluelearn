@@ -32,6 +32,22 @@ export function addObjectiveNode(
   });
 }
 
+// Place a node under a target in the curator's ordering. The featured
+// sub-objective is read from these rows, ascending by position.
+export function addObjectiveNodeOrder(
+  revisionId: string,
+  targetNodeId: string,
+  nodeId: string,
+  position: number
+) {
+  return insert("objective_revision_node_orders", {
+    revision_id: revisionId,
+    target_node_id: targetNodeId,
+    node_id: nodeId,
+    position,
+  });
+}
+
 // A published objective: slugged shell + published revision + one node with the
 // live pointer set.
 export async function createPublishedObjective(

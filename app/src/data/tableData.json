@@ -1,0 +1,50 @@
+[
+  {
+    "type": "guide creation",
+    "title": "How to guide title here",
+    "change_summary": "Change Summary here",
+    "date": "07-12-2026",
+    "status": "In review",
+    "review_case": "view case"
+  },
+  {
+    "type": "guide revision",
+    "title": "How to guide title here",
+    "change_summary": "Change Summary here",
+    "date": "07-12-2026",
+    "status": "In review",
+    "review_case": "view case"
+  },
+  {
+    "type": "variant creation",
+    "title": "How to guide title here",
+    "change_summary": "Change Summary here",
+    "date": "07-12-2026",
+    "status": "In review",
+    "review_case": "view case"
+  },
+  {
+    "type": "variant revision",
+    "title": "How to guide title here",
+    "change_summary": "Change Summary here",
+    "date": "07-12-2026",
+    "status": "In review",
+    "review_case": "view case"
+  },
+  {
+    "type": "objective creation",
+    "title": "Objective title here",
+    "change_summary": "Change Summary here",
+    "date": "07-12-2026",
+    "status": "In review",
+    "review_case": "view case"
+  },
+  {
+    "type": "objective revision",
+    "title": "Objective title here",
+    "change_summary": "Change Summary here",
+    "date": "07-12-2026",
+    "status": "In review",
+    "review_case": "view case"
+  }
+]

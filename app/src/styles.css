@@ -311,11 +311,11 @@
   }
 
   .markdown th {
-    @apply border border-border bg-muted px-4 py-2 text-left text-sm font-semibold;
+    @apply border border-border bg-muted px-4 py-2.5 text-left text-sm font-semibold text-foreground;
   }
 
   .markdown td {
-    @apply border border-border px-4 py-2 text-sm text-muted-foreground;
+    @apply border border-border px-4 py-2.5 text-sm text-muted-foreground;
   }
 
   .markdown .katex-display {

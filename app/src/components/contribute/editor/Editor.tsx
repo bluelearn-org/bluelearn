@@ -80,6 +80,7 @@ export default function Editor({ value, onChange }: EditorProps) {
       }),
       codeMirrorPlugin({
         codeBlockLanguages: {
+          text: "Plain Text",
           javascript: "JavaScript",
           typescript: "TypeScript",
           html: "HTML",
