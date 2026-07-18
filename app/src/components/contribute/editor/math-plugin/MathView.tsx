@@ -3,6 +3,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { lexical } from "@mdxeditor/editor";
 import katex from "katex";
+import { Keyboard, Trash2 } from "lucide-react";
 import { $isMathNode } from "./MathNode";
 import { MathFieldAdapter } from "./MathFieldAdapter";
 import { cn } from "@/lib/utils";
@@ -343,7 +344,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
         </PopoverTrigger>
 
         <PopoverContent
-          className="z-50 flex w-80 flex-col gap-2.5 rounded-lg bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+          className="z-50 flex w-[22rem] flex-col gap-2 rounded-xl bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-border"
           align="start"
           sideOffset={8}
           onPointerDown={(e) => e.stopPropagation()}
@@ -364,55 +365,69 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             }
           }}
         >
-          <div className="flex items-center justify-between border-b border-border pb-1.5">
-            <span className="text-xs font-semibold tracking-tight text-foreground">
-              Edit Inline Equation
-            </span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if ((window as any).mathVirtualKeyboard) {
-                    (window as any).mathVirtualKeyboard.show();
-                  }
-                }}
-              >
-                Keyboard
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="xs"
-                onClick={handleDelete}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-          <div className="flex w-full items-center rounded-md border border-input bg-input/20 px-2 py-1.5 text-sm shadow-xs transition-colors focus-within:border-ring focus-within:bg-background focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30">
+          {/* Main Editor Area */}
+          <div className="flex w-full items-center rounded-md border border-input bg-background px-2 py-2 text-sm shadow-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
             <MathPopoverEditor
               equation={equation}
               onChange={handleInputChange}
               onClose={() => handleOpenChange(false)}
             />
           </div>
-          <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="font-medium tracking-wide">
-              Press Enter to save
-            </span>
-            <Button
-              type="button"
-              variant="secondary"
-              size="xs"
-              onClick={() => handleOpenChange(false)}
-            >
-              Done
-            </Button>
+
+          {/* Minimalist Toolbar Footer */}
+          <div className="flex items-center justify-between px-0.5">
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const vk = (window as any).mathVirtualKeyboard;
+                  if (vk) {
+                    if (vk.visible) {
+                      vk.hide();
+                    } else {
+                      vk.show();
+                    }
+                  }
+                }}
+                title="Show Virtual Keyboard"
+              >
+                <Keyboard className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleDelete}
+                title="Delete Equation"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground/70">
+                <kbd className="pointer-events-none inline-flex h-4 items-center gap-1 rounded border border-border bg-muted/50 px-1 font-mono text-[9px] font-medium text-muted-foreground">
+                  <span className="text-[10px]">↵</span> Enter
+                </kbd>
+                to save
+              </span>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                className="h-7 rounded-md px-3 text-xs"
+                onClick={() => handleOpenChange(false)}
+              >
+                Done
+              </Button>
+            </div>
           </div>
         </PopoverContent>
       </Popover>
@@ -472,7 +487,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       </PopoverTrigger>
 
       <PopoverContent
-        className="z-50 flex w-96 flex-col gap-2.5 rounded-lg bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+        className="z-50 flex w-[22rem] flex-col gap-2 rounded-xl bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-border"
         align="center"
         sideOffset={8}
         onPointerDown={(e) => e.stopPropagation()}
@@ -493,53 +508,69 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           }
         }}
       >
-        <div className="flex items-center justify-between border-b border-border pb-1.5">
-          <span className="text-xs font-semibold tracking-tight text-foreground">
-            Edit Block Equation
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                if ((window as any).mathVirtualKeyboard) {
-                  (window as any).mathVirtualKeyboard.show();
-                }
-              }}
-            >
-              Keyboard
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="xs"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
-          </div>
-        </div>
-        <div className="flex w-full items-center rounded-md border border-input bg-input/20 px-2 py-1.5 text-sm shadow-xs transition-colors focus-within:border-ring focus-within:bg-background focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30">
+        {/* Main Editor Area */}
+        <div className="flex w-full items-center rounded-md border border-input bg-background px-2 py-2 text-sm shadow-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
           <MathPopoverEditor
             equation={equation}
             onChange={handleInputChange}
             onClose={() => handleOpenChange(false)}
           />
         </div>
-        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-          <span className="font-medium tracking-wide">Press Enter to save</span>
-          <Button
-            type="button"
-            variant="secondary"
-            size="xs"
-            onClick={() => handleOpenChange(false)}
-          >
-            Done
-          </Button>
+
+        {/* Minimalist Toolbar Footer */}
+        <div className="flex items-center justify-between px-0.5">
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const vk = (window as any).mathVirtualKeyboard;
+                if (vk) {
+                  if (vk.visible) {
+                    vk.hide();
+                  } else {
+                    vk.show();
+                  }
+                }
+              }}
+              title="Show Virtual Keyboard"
+            >
+              <Keyboard className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleDelete}
+              title="Delete Equation"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground/70">
+              <kbd className="pointer-events-none inline-flex h-4 items-center gap-1 rounded border border-border bg-muted/50 px-1 font-mono text-[9px] font-medium text-muted-foreground">
+                <span className="text-[10px]">↵</span> Enter
+              </kbd>
+              to save
+            </span>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="h-7 rounded-md px-3 text-xs"
+              onClick={() => handleOpenChange(false)}
+            >
+              Done
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

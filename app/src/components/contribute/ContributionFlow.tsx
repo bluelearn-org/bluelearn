@@ -66,10 +66,7 @@ export default function ContributionFlow({ type, setType }: PropTypes) {
   const { Stepper } = StepperInstance;
 
   return (
-    <Stepper.Root
-      linear
-      className="flex min-h-[calc(100vh_-_210px)] w-full flex-col gap-8"
-    >
+    <Stepper.Root linear className="flex min-h-0 w-full flex-1 flex-col gap-8">
       {({ stepper }: any) => (
         <Inner
           Stepper={Stepper}
