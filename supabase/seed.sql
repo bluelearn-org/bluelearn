@@ -1,9 +1,4 @@
--- Local demo seed: one browsable subject ("Game Development") with five
--- published guides and a linear objective whose featured sub-objective is
--- populated via objective_revision_node_orders (the curator's placement). It is
--- re-runnable: it
--- clears its own fixed-id rows first. Applied automatically on `supabase db
--- reset`, or by hand with `psql < supabase/seed.sql`.
+-- Local demo seed: applied automatically on supabase db reset.
 do $$
 declare
   v_author  uuid := 'aaaaaaaa-0000-4000-8000-000000000001';
