@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Link,
   createFileRoute,
@@ -18,14 +18,13 @@ import {
   Users,
 } from "lucide-react";
 
-import type { GuideReference, HydratedGuide } from "@/types/guides";
+import type { HydratedGuide } from "@/types/guides";
 
+import type { Action } from "@/components/Sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
-import { extractHeadings } from "@/lib/guideUtils";
 import { getGuideBySlug, hydrateGuide } from "@/lib/getData";
 
 import guides from "@/data/guides.json";
@@ -40,6 +39,32 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const SIDEBAR_ACTIONS: Array<Action> = [
+  { icon: Replace, label: "View Variants" },
+  { icon: Target, label: "View Objectives" },
+  { icon: Users, label: "View Contributors" },
+  { icon: History, label: "View Revisions" },
+];
+
+function useVote() {
+  const [vote, setVote] = useState<"up" | "down" | null>(null);
+
+  const toggleVote = (type: "up" | "down") => {
+    setVote((current) => (current === type ? null : type));
+  };
+
+  return {
+    vote,
+    upvote: () => toggleVote("up"),
+    downvote: () => toggleVote("down"),
+  };
+}
 
 export const Route = createFileRoute("/guides/$slug")({
   component: RouteComponent,
@@ -48,11 +73,11 @@ export const Route = createFileRoute("/guides/$slug")({
 function RouteComponent() {
   const { slug } = Route.useParams();
 
+  const { vote, upvote, downvote } = useVote();
+
   const breadcrumbOrigin = useLocation({
     select: (location) => location.state.breadcrumbOrigin,
   });
-
-  const [vote, setVote] = useState<string | null>(null);
 
   const guide = getGuideBySlug(guides, slug);
 
@@ -60,17 +85,12 @@ function RouteComponent() {
     throw notFound();
   }
 
-  const hydratedGuide: HydratedGuide = hydrateGuide(guide, guides, subjects);
-
-  const breadcrumbs = buildBreadcrumbs(hydratedGuide.title, breadcrumbOrigin);
-
-  const headings = useMemo(
-    () => extractHeadings(guide.content),
-    [guide.content]
-  );
-
   const guideMenuItems = [
-    { label: "Edit Guide", to: "/edit", icon: <Pencil className="h-4 w-4" /> },
+    {
+      label: "Edit Guide",
+      to: `/edit/${slug}`,
+      icon: <Pencil className="h-4 w-4" />,
+    },
     {
       label: "Create Variant",
       to: "/contribute",
@@ -79,83 +99,34 @@ function RouteComponent() {
     // { label: "Report", to: "/report", <Flag className="h-4 w-4" /> },// TODO: Implement post v1
   ];
 
+  const hydratedGuide: HydratedGuide = hydrateGuide(guide, guides, subjects);
+
+  const breadcrumbs = buildBreadcrumbs(hydratedGuide.title, breadcrumbOrigin);
+
   return (
     <div className="mx-auto h-[calc(100vh-70px)] max-w-[1280px] border-x bg-background">
       <section className="grid grid-cols-[320px_1fr] border-b">
-        <Sidebar>
-          <div className="flex items-center justify-start gap-4">
-            <Button variant="outline" size="lg" onClick={() => {}}>
-              <Replace className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => {}}>
-              <Target className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => {}}>
-              <Users className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => {}}>
-              <History className="h-4 w-4" />
-            </Button>
-          </div>
-          {/* Prerequisites */}
-          <CollapsibleSection
-            title={<p className="ml-auto">Prerequisites</p>}
-            defaultOpen={true}
-          >
-            <ul className="space-y-2">
-              {hydratedGuide.prerequisites.map((prereq: GuideReference) => (
-                <li
-                  key={prereq.slug}
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                  style={{
-                    paddingLeft: 6,
-                  }}
-                >
-                  <Link
-                    to="/guides/$slug"
-                    params={{ slug: prereq.slug }}
-                    state={{
-                      breadcrumbOrigin: {
-                        type: "guide",
-                        title: hydratedGuide.title,
-                        path: `/guides/${slug}`,
-                      },
-                    }}
-                  >
-                    {prereq.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </CollapsibleSection>
+        <Sidebar
+          sidebarActions={
+            <div className="flex items-center justify-start gap-4">
+              {SIDEBAR_ACTIONS.map((action: Action) => (
+                <Tooltip key={action.label}>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="lg">
+                      <action.icon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
 
-          {/* TOC */}
-          <CollapsibleSection
-            title={<p className="ml-auto">Table of Contents</p>}
-            defaultOpen={true}
-          >
-            <ul className="space-y-2">
-              {headings.map((h, idx) => (
-                <li
-                  key={idx}
-                  className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
-                  style={{
-                    paddingLeft:
-                      h.level === 1
-                        ? 6
-                        : h.level === 2
-                          ? 12
-                          : h.level === 3
-                            ? 24
-                            : 28,
-                  }}
-                >
-                  {h.text}
-                </li>
+                  <TooltipContent>
+                    <p>{action.label}</p>
+                  </TooltipContent>
+                </Tooltip>
               ))}
-            </ul>
-          </CollapsibleSection>
-        </Sidebar>
+            </div>
+          }
+          guide={hydratedGuide}
+          slug={slug}
+        />
 
         {/* MAIN */}
         <main className="h-[calc(100vh-70px)] min-w-0 overflow-y-auto px-10 py-4 lg:px-16">
@@ -197,17 +168,7 @@ function RouteComponent() {
                 View Walkthrough
               </Button>
 
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  if (vote == "up") {
-                    setVote(null);
-                  } else {
-                    setVote("up");
-                  }
-                }}
-              >
+              <Button variant="outline" size="lg" onClick={() => upvote()}>
                 <ArrowBigUp
                   className="h-4 w-4"
                   color={vote == "up" ? "#3D80DD" : "#000000"}
@@ -215,17 +176,7 @@ function RouteComponent() {
                 />
               </Button>
 
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  if (vote == "down") {
-                    setVote(null);
-                  } else {
-                    setVote("down");
-                  }
-                }}
-              >
+              <Button variant="outline" size="lg" onClick={() => downvote()}>
                 <ArrowBigDown
                   className="h-4 w-4"
                   color={vote == "down" ? "#3D80DD" : "#000000"}
