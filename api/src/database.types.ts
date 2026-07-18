@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1033,6 +1013,15 @@ export type Database = {
           to_guide_base_id: string
         }[]
       }
+      promote_canonical_guide: {
+        Args: {
+          p_guide_base_id: string
+          p_margin?: number
+          p_min_votes?: number
+          p_z?: number
+        }
+        Returns: string
+      }
       publish_objective_revision: {
         Args: { p_revision_id: string }
         Returns: string
@@ -1200,9 +1189,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["verifier", "moderator", "curator", "admin"],
@@ -1238,4 +1224,3 @@ export const Constants = {
     },
   },
 } as const
-
