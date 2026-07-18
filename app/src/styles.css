@@ -136,6 +136,8 @@
   }
 
   .btn-cta:hover {
+    background: var(--brand-cta);
+    color: var(--muted);
     transform: scale(1.05);
   }
 

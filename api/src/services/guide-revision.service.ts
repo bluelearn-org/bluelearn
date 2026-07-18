@@ -227,6 +227,42 @@ export async function diffRevisions(supabase: DB, id: string, otherId: string) {
   };
 }
 
+// Diff a revision against the revision approved directly before it (same guide,
+// ordered by approved_at). Returns the same { from, to, fields } shape as
+// diffRevisions. 404 if no previous revision exists.
+export async function diffWithPrevious(supabase: DB, id: string) {
+  const { data: current, error: currentError } = await supabase
+    .from("guide_revisions")
+    .select("id, guide_id, approved_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (currentError) {
+    console.error(currentError);
+    throw new ServiceError("Failed to load revision", 500);
+  }
+  if (!current) throw new ServiceError("Revision not found", 404);
+
+  const { data: prev, error: prevError } = await supabase
+    .from("guide_revisions")
+    .select("id")
+    .eq("guide_id", current.guide_id)
+    .not("approved_at", "is", null)
+    .neq("id", id)
+    .lt("approved_at", current.approved_at)
+    .order("approved_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (prevError) {
+    console.error(prevError);
+    throw new ServiceError("Failed to load previous revision", 500);
+  }
+  if (!prev) throw new ServiceError("No previous revision found", 404);
+
+  return diffRevisions(supabase, prev.id, id);
+}
+
 // Project a revision row down to the RevisionRef shape used in diff headers.
 function toRevisionRef(row: {
   id: string;

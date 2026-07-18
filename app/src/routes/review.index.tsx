@@ -34,7 +34,7 @@ function RouteComponent() {
     },
     {
       id: "objectives",
-      label: "Learning Objectives",
+      label: "Objectives",
       content: <ReviewGrid type="objectives" data={hydratedObjectives} />,
     },
   ];

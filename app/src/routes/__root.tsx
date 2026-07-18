@@ -4,6 +4,7 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/Navbar";
 import { NotFound } from "@/components/NotFound";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -38,8 +39,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Navbar />
-
-        {children}
+        <TooltipProvider>{children}</TooltipProvider>
         <Toaster />
 
         <Scripts />

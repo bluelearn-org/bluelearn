@@ -184,6 +184,7 @@ export type Database = {
           summary: string | null
           title: string | null
           updated_at: string
+          word_count: number
         }
         Insert: {
           approved_at?: string | null
@@ -198,6 +199,7 @@ export type Database = {
           summary?: string | null
           title?: string | null
           updated_at?: string
+          word_count?: number
         }
         Update: {
           approved_at?: string | null
@@ -212,6 +214,7 @@ export type Database = {
           summary?: string | null
           title?: string | null
           updated_at?: string
+          word_count?: number
         }
         Relationships: [
           {
@@ -1009,6 +1012,15 @@ export type Database = {
           from_guide_base_id: string
           to_guide_base_id: string
         }[]
+      }
+      promote_canonical_guide: {
+        Args: {
+          p_guide_base_id: string
+          p_margin?: number
+          p_min_votes?: number
+          p_z?: number
+        }
+        Returns: string
       }
       publish_objective_revision: {
         Args: { p_revision_id: string }
