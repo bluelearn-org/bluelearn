@@ -19,7 +19,6 @@ import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { MathExportVisitor, MathImportVisitor } from "./MathVisitors";
 import { $createMathNode, MathNode } from "./MathNode";
-import { applyMathLivePatches } from "./MathLivePatches";
 
 const {
   $createNodeSelection,
@@ -230,7 +229,6 @@ export function MathShortcutTypeListener() {
  */
 export const mathPlugin = realmPlugin({
   init: (realm) => {
-    applyMathLivePatches();
     realm.pubIn({
       [addSyntaxExtension$]: math(),
       [addMdastExtension$]: mathFromMarkdown(),

@@ -45,6 +45,17 @@ declare module "react" {
 // Track if the dynamic import has already resolved across all component instances
 let globalMathLiveLoaded = false;
 
+// Inject CSS to permanently hide the native hamburger menu toggle
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById("mathlive-patches-css")
+) {
+  const style = document.createElement("style");
+  style.id = "mathlive-patches-css";
+  style.innerHTML = `math-field::part(menu-toggle) { display: none !important; }`;
+  document.head.appendChild(style);
+}
+
 export const MathFieldAdapter = React.forwardRef<
   MathFieldAdapterRef,
   MathFieldAdapterProps
@@ -109,10 +120,34 @@ export const MathFieldAdapter = React.forwardRef<
       };
     }, []);
 
-    // Synchronize readOnly state to raw custom element properties
+    // Synchronize readOnly state and brutally remove the native menu
     useLayoutEffect(() => {
       if (mathliveLoaded && internalRef.current) {
         internalRef.current.readOnly = readOnly;
+
+        // Official MathLive API to disable the context menu
+        try {
+          internalRef.current.menuItems = [];
+        } catch (e) {
+          // Ignore if this version of MathLive doesn't support menuItems
+        }
+
+        // Brute-force physical removal of the toggle element from the shadow DOM
+        const removeToggle = () => {
+          if (internalRef.current && internalRef.current.shadowRoot) {
+            const toggle = internalRef.current.shadowRoot.querySelector(
+              "[part='menu-toggle']"
+            );
+            if (toggle) {
+              toggle.remove();
+            }
+          }
+        };
+
+        // Run immediately and after a short delay to ensure MathLive has finished rendering
+        removeToggle();
+        setTimeout(removeToggle, 50);
+        setTimeout(removeToggle, 200);
       }
     }, [readOnly, mathliveLoaded]);
 
@@ -157,36 +192,11 @@ export const MathFieldAdapter = React.forwardRef<
         }
       };
 
-      const handleFocusOut = () => {
-        setTimeout(() => {
-          if (el && el.shadowRoot && document.activeElement !== el) {
-            // When math-field loses focus, MathLive visually hides the menu but leaves its internal state open.
-            // Force a clean reset by programmatically clicking its Scrim background,
-            // but only if focus actually left the math-field (not just a temporary blur from clicking the menu toggle).
-            const menuToggle = el.shadowRoot.querySelector(
-              "[part='menu-toggle']"
-            );
-            if (menuToggle) {
-              const scrim = menuToggle.querySelector(
-                "div[role='presentation']"
-              );
-              if (scrim) {
-                scrim.dispatchEvent(
-                  new MouseEvent("click", { bubbles: true, cancelable: true })
-                );
-              }
-            }
-          }
-        }, 100);
-      };
-
       el.addEventListener("input", handleInput);
-      el.addEventListener("focusout", handleFocusOut);
 
       return () => {
         if (el) {
           el.removeEventListener("input", handleInput);
-          el.removeEventListener("focusout", handleFocusOut);
         }
       };
     }, [mathliveLoaded]);

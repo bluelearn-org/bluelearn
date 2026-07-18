@@ -184,6 +184,18 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
     }
   }, [isSelected, isOpen]);
 
+  // Clean up virtual keyboard if the entire math node is deleted
+  useEffect(() => {
+    return () => {
+      if (
+        typeof window !== "undefined" &&
+        (window as any).mathVirtualKeyboard
+      ) {
+        (window as any).mathVirtualKeyboard.hide();
+      }
+    };
+  }, []);
+
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       console.trace("[DEBUG] Radix Popover requested close!");
@@ -200,6 +212,14 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       });
       // Force editor focus back to text cursor
       editor.getRootElement()?.focus();
+
+      // Hide the virtual keyboard when the popover closes
+      if (
+        typeof window !== "undefined" &&
+        (window as any).mathVirtualKeyboard
+      ) {
+        (window as any).mathVirtualKeyboard.hide();
+      }
     }
   };
 
@@ -348,14 +368,31 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             <span className="text-xs font-semibold tracking-tight text-foreground">
               Edit Inline Equation
             </span>
-            <Button
-              type="button"
-              variant="destructive"
-              size="xs"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if ((window as any).mathVirtualKeyboard) {
+                    (window as any).mathVirtualKeyboard.show();
+                  }
+                }}
+              >
+                Keyboard
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="xs"
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
           <div className="flex w-full items-center rounded-md border border-input bg-input/20 px-2 py-1.5 text-sm shadow-xs transition-colors focus-within:border-ring focus-within:bg-background focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30">
             <MathPopoverEditor
@@ -460,14 +497,31 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
           <span className="text-xs font-semibold tracking-tight text-foreground">
             Edit Block Equation
           </span>
-          <Button
-            type="button"
-            variant="destructive"
-            size="xs"
-            onClick={handleDelete}
-          >
-            Delete
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if ((window as any).mathVirtualKeyboard) {
+                  (window as any).mathVirtualKeyboard.show();
+                }
+              }}
+            >
+              Keyboard
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="xs"
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
+          </div>
         </div>
         <div className="flex w-full items-center rounded-md border border-input bg-input/20 px-2 py-1.5 text-sm shadow-xs transition-colors focus-within:border-ring focus-within:bg-background focus-within:ring-2 focus-within:ring-ring/30 dark:bg-input/30">
           <MathPopoverEditor
