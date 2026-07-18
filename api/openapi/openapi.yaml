@@ -75,6 +75,8 @@ paths:
     $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}"
   /guide-revisions/{id}/submit:
     $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1submit"
+  /guide-revisions/{id}/diff/prev:
+    $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1diff~1prev"
   /guide-revisions/{id}/diff/{otherId}:
     $ref: "./paths/guide-revisions.yaml#/~1guide-revisions~1{id}~1diff~1{otherId}"
 
