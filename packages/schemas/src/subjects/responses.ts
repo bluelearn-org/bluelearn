@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 // A subject as listed/browsed. guides_total and objectives_total are aggregates
-// the API derives from guide_subjects and objective_subjects count.
-export const subjectSchema = z.object({
+// counting the guides/objectives whose current revision carries the tag.
+export const subjectListItemSchema = z.object({
+  id: z.uuid(),
   slug: z.string(),
   name: z.string(),
   summary: z.string().nullable(),
@@ -10,4 +11,4 @@ export const subjectSchema = z.object({
   objectives_total: z.number().int(),
 });
 
-export type Subject = z.infer<typeof subjectSchema>;
+export type SubjectListItem = z.infer<typeof subjectListItemSchema>;
