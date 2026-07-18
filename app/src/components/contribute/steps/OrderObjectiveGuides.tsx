@@ -333,7 +333,7 @@ export const OrderObjectiveGuides = ({
                 <div className="flex items-center gap-2 text-primary">
                   <ListOrdered className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base font-semibold">
-                    Create a Curated Sequence
+                    Curate Guide Sequence
                   </CardTitle>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 pr-3 select-none">
@@ -442,19 +442,19 @@ export const OrderObjectiveGuides = ({
                         targetGuide.duration) && (
                         <div className="mt-1 ml-7 flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground/80">
                           {targetGuide.author && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 font-mono uppercase">
                               <User className="h-3 w-3 text-primary/70" />@
                               {targetGuide.author}
                             </span>
                           )}
                           {targetGuide.created_at && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 font-mono uppercase">
                               <Calendar className="h-3 w-3 text-primary/70" />
                               {targetGuide.created_at}
                             </span>
                           )}
                           {targetGuide.duration && (
-                            <span className="flex items-center gap-1 font-medium">
+                            <span className="flex items-center gap-1 font-mono font-medium uppercase">
                               <Clock className="h-3 w-3 text-primary/70" />
                               {targetGuide.duration}m
                             </span>
