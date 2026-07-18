@@ -6,8 +6,8 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 import {
-  ChevronDown,
-  ChevronUp,
+  ArrowBigDown,
+  ArrowBigUp,
   Ellipsis,
   House,
   Pencil,
@@ -186,11 +186,15 @@ function RouteComponent() {
               </Button>
 
               <Button variant="ghost" size="icon">
-                <ChevronUp className="h-4 w-4" />
+                <ArrowBigUp
+                  className="h-4 w-4"
+                  color="#3D80DD"
+                  fill="#3D80DD"
+                />
               </Button>
 
               <Button variant="ghost" size="icon">
-                <ChevronDown className="h-4 w-4" />
+                <ArrowBigDown className="h-4 w-4" />
               </Button>
 
               <DropdownMenu>
