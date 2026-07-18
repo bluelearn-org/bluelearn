@@ -1,12 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import type { RegisteredRouter, ToPathOption } from "@tanstack/react-router";
-import type { Subject } from "@/types/subjects";
 
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/cards/Footer";
 
-type SubjectProp = Subject & {
+type SubjectProp = {
+  slug: string;
+  name: string;
+  summary?: string | null;
+  status?: string;
   stats?: Array<{ label: string; data: number }>;
   actionBtns?: React.ReactNode;
 };

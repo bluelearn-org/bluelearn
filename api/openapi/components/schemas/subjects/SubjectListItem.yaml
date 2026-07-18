@@ -1,0 +1,23 @@
+type: object
+additionalProperties: false
+properties:
+  id:
+    $ref: "../common/Uuid.yaml"
+  slug:
+    type: string
+    example: math
+  name:
+    type: string
+    example: Mathematics
+  summary:
+    type: [string, "null"]
+    example: Guides covering arithmetic, algebra, geometry and logical reasoning.
+  guides_total:
+    type: integer
+    description: Guides whose canonical revision carries this subject tag.
+    example: 12
+  objectives_total:
+    type: integer
+    description: Published objectives whose current revision carries this subject tag.
+    example: 3
+required: [id, slug, name, summary, guides_total, objectives_total]
