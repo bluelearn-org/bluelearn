@@ -1,12 +1,13 @@
--- Helper: lower bound of the Wilson score interval for up/down votes and a
--- given confidence level (default 0.95 i.e. z = 1.96). Returns 0 when there
--- are no votes, so unrated guides rank below any guide with positive evidence.
--- https://www.evanmiller.org/how-not-to-sort-by-average-rating.html
+-- Helper: lower bound of the Wilson score interval for up/down votes. z is the
+-- standard-normal critical value (1.96 = 95%, 1.645 = 90%, 2.576 = 99%).
+-- Uncorrected form, which is the standard for sort-by-rating. Returns 0 when
+-- there are no votes, so unrated guides rank below any guide with positive
+-- evidence.
 
 create or replace function public.wilson_lower_bound(
   upvotes bigint,
   downvotes bigint,
-  confidence float8 default 0.95
+  z float8 default 1.96
 )
 returns float8
 language sql immutable
@@ -22,18 +23,7 @@ as $$
     select
       upvotes::float8 / (upvotes + downvotes) as proportion,
       (upvotes + downvotes)::float8 as n,
-      case confidence
-        when 0.90 then 1.645::float8
-        when 0.95 then 1.960::float8
-        when 0.99 then 2.576::float8
-        else 1.960::float8
-      end as z,
-      case confidence
-        when 0.90 then 2.706::float8
-        when 0.95 then 3.842::float8
-        when 0.99 then 6.635::float8
-        else 3.842::float8
-      end as z_sq
+      z * z as z_sq
   ) params
 $$;
 
@@ -77,7 +67,7 @@ begin
 
   -- Top-scoring published sibling variant that clears the vote floor.
   select g.id,
-         public.wilson_lower_bound(coalesce(t.upvotes, 0), coalesce(t.downvotes, 0)) as score
+         public.wilson_lower_bound(coalesce(t.upvotes, 0), coalesce(t.downvotes, 0), p_z) as score
   into v_top_id, v_top_score
   from public.guides g
   left join public.guide_vote_tallies t on t.guide_id = g.id
@@ -104,7 +94,7 @@ begin
     return v_top_id;
   end if;
 
-  select public.wilson_lower_bound(coalesce(t.upvotes, 0), coalesce(t.downvotes, 0))
+  select public.wilson_lower_bound(coalesce(t.upvotes, 0), coalesce(t.downvotes, 0), p_z)
     into v_current_score
     from public.guides g
     left join public.guide_vote_tallies t on t.guide_id = g.id
