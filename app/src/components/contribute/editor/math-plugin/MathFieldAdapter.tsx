@@ -31,6 +31,7 @@ declare module "react" {
       "math-field": React.DetailedHTMLProps<
         React.HTMLAttributes<HTMLElement> & {
           "virtual-keyboard-mode"?: string;
+          "math-virtual-keyboard-policy"?: string;
           value?: string;
           readOnly?: boolean;
           "read-only"?: string;
@@ -257,6 +258,7 @@ export const MathFieldAdapter = React.forwardRef<
     return (
       <math-field
         ref={internalRef}
+        math-virtual-keyboard-policy="manual"
         onFocus={onFocus}
         onBlur={onBlur}
         onKeyDown={onKeyDown}

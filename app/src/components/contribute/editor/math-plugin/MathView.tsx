@@ -130,13 +130,13 @@ function MathPopoverEditor({
   equation,
   onChange,
   onClose,
+  editorRef,
 }: {
   equation: string;
   onChange: (val: string) => void;
   onClose: () => void;
+  editorRef: React.MutableRefObject<any>;
 }) {
-  const editorRef = useRef<any>(null);
-
   useEffect(() => {
     // Focus the math-field input when the editor mounts in the popover
     const timeoutId = setTimeout(() => {
@@ -145,7 +145,7 @@ function MathPopoverEditor({
       }
     }, 150);
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [editorRef]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === "Escape") {
@@ -177,6 +177,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | HTMLSpanElement>(null);
+  const editorRef = useRef<any>(null);
 
   // Close popover if selection is lost externally
   useEffect(() => {
@@ -371,6 +372,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
               equation={equation}
               onChange={handleInputChange}
               onClose={() => handleOpenChange(false)}
+              editorRef={editorRef}
             />
           </div>
 
@@ -386,6 +388,11 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
+
+                  if (editorRef.current) {
+                    editorRef.current.focus();
+                  }
+
                   const vk = (window as any).mathVirtualKeyboard;
                   if (vk) {
                     if (vk.visible) {
@@ -514,6 +521,7 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
             equation={equation}
             onChange={handleInputChange}
             onClose={() => handleOpenChange(false)}
+            editorRef={editorRef}
           />
         </div>
 
@@ -529,6 +537,11 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
+
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                }
+
                 const vk = (window as any).mathVirtualKeyboard;
                 if (vk) {
                   if (vk.visible) {
