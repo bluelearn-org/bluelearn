@@ -89,7 +89,7 @@ function ProfilePage({
               {statsRows.map((stat) => (
                 <li key={stat.label} className="flex flex-col items-center">
                   <h3 className="data-label">{stat.label}</h3>
-                  <p className="font-semibold">{stat.value}</p>
+                  <p className="data-value">{stat.value}</p>
                 </li>
               ))}
             </ul>
