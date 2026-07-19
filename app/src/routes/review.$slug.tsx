@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
-import type { HydratedReviewGuide } from "@/types/guides";
-
+import type { HydratedGuide } from "@/types/guides";
 import { Separator } from "@/components/ui/separator";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
-
-import { getGuideBySlug, hydrateReviewGuide } from "@/lib/getData";
-
-import guides from "@/data/guides.json";
-import subjects from "@/data/subjects.json";
-
-import "katex/dist/katex.min.css";
 import { Sidebar } from "@/components/Sidebar";
 import { GuideReader } from "@/components/GuideReader";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
+
+import { getReviewCase } from "@/lib/api/reviews";
+
+import "katex/dist/katex.min.css";
 
 export type Review = {
   decision: string;
@@ -25,53 +21,75 @@ export type Review = {
 };
 
 export const Route = createFileRoute("/review/$slug")({
+  loader: async ({ params, abortController }) => {
+    const data = await getReviewCase(params.slug, {
+      signal: abortController.signal,
+    });
+    if (!data.revision) throw notFound();
+    return data;
+  },
+  errorComponent: ReviewDetailError,
   component: RouteComponent,
 });
 
+const REASONS = [
+  { value: "hierarchy_issue", label: "Hierarchy Issues" },
+  { value: "factual_error", label: "Factual Error" },
+  { value: "duplicate_content", label: "Duplicate Content" },
+  { value: "scope_violation", label: "Scope Violation" },
+  { value: "clarity_issue", label: "Clarity Issues" },
+  {
+    value: "missing_required_information",
+    label: "Missing Required Information",
+  },
+];
+
+function ReviewDetailError() {
+  return (
+    <div className="mx-auto max-w-[1280px] border-x bg-background">
+      <section className="border-b px-8 py-8 lg:px-16">
+        <p className="text-sm text-muted-foreground">
+          This review case could not be loaded. Try again shortly.
+        </p>
+      </section>
+    </div>
+  );
+}
+
 function RouteComponent() {
-  const { slug } = Route.useParams();
+  const { revision } = Route.useLoaderData();
+
   const [review, setReview] = useState<Review>({
     decision: "",
     notes: "",
     reasons: [],
   });
 
-  const REASONS = [
-    { value: "hierarchy_issue", label: "Hierarchy Issues" },
-    { value: "factual_error", label: "Factual Error" },
-    { value: "duplicate_content", label: "Duplicate Content" },
-    { value: "scope_violation", label: "Scope Violation" },
-    { value: "clarity_issue", label: "Clarity Issues" },
-    {
-      value: "missing_required_information",
-      label: "Missing Required Information",
-    },
-  ];
-
-  const guide = getGuideBySlug(guides, slug);
-
-  if (!guide) {
-    throw notFound();
-  }
-
-  const hydratedGuide: HydratedReviewGuide = hydrateReviewGuide(
-    guide,
-    guides,
-    subjects
-  );
+  // Build a simplified guide object from the revision data for the reader.
+  const guide: HydratedGuide = {
+    title: revision.title ?? "",
+    content: revision.body ?? "",
+    summary: revision.summary ?? "",
+    author: "",
+    created_at: revision.created_at,
+    duration: 0,
+    tags: [],
+    breadcrumbs: [],
+    prerequisites: [],
+    slug: "",
+  };
 
   return (
     <div className="mx-auto h-[calc(100vh-70px)] max-w-[1280px] border-x bg-background">
       <section className="grid grid-cols-[320px_1fr] border-b">
         <Sidebar
-          guide={hydratedGuide}
-          slug={slug}
+          guide={guide}
+          slug={revision.id}
           reviewSection={
             <CollapsibleSection
               title={<p className="ml-auto">Submission Review</p>}
               defaultOpen={true}
             >
-              {/* <FieldGroup className="flex"> */}
               <div className="flex justify-around">
                 <Button
                   className="btn-reject"
@@ -173,9 +191,7 @@ function RouteComponent() {
           </p>
           <Separator className="mb-8" />
 
-          {/* Header */}
-
-          <GuideReader guide={hydratedGuide} guideType={hydratedGuide.type} />
+          <GuideReader guide={guide} />
         </main>
       </section>
     </div>

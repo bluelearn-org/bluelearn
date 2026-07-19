@@ -255,6 +255,7 @@ export async function getReviewCase(supabase: DB, caseId: string) {
           created_at: d.created_at,
         };
       }),
+    revision: data.guide_review_cases?.guide_revisions ?? null,
   };
 }
 
