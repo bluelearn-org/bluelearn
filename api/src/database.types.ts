@@ -1006,6 +1006,15 @@ export type Database = {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      list_guide_variants_by_score: {
+        Args: { p_guide_base_id: string; p_z?: number }
+        Returns: {
+          id: string
+          slug: string
+          title: string
+          summary: string
+        }[]
+      }
       project_objective_edges: {
         Args: { p_revision_id: string }
         Returns: {
