@@ -57,7 +57,9 @@ function ReviewDetailError() {
 }
 
 function RouteComponent() {
-  const { revision } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  if (!data.revision) throw notFound();
+  const { revision } = data;
 
   const [review, setReview] = useState<Review>({
     decision: "",
