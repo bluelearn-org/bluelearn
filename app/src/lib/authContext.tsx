@@ -21,8 +21,6 @@ const AuthContext = createContext<AuthState>({
   rolesLoading: true,
 });
 
-// Reads the current session once on mount, then keeps it in sync via
-// onAuthStateChange (login, logout, token refresh, password recovery).
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<Array<string>>([]);
