@@ -1,4 +1,5 @@
 // import { useState } from "react";
+import { useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { VariantContribution } from "@/types/contributions";
 
@@ -21,13 +22,32 @@ export const VariantDetails = ({
   variantContData,
   setVariantContData,
 }: PropTypes) => {
+  const isNextDisabled = useMemo(() => {
+    return (
+      variantContData.title.trim() === "" ||
+      variantContData.summary.trim() === "" ||
+      variantContData.baseGuide.length === 0
+    );
+  }, [
+    variantContData.title,
+    variantContData.summary,
+    variantContData.baseGuide,
+  ]);
+
   return (
     <Stepper.Content step="variant-details">
-      <StepperActionHeader title={"Variant Details"} Stepper={Stepper} />
+      <StepperActionHeader
+        title={"Variant Details"}
+        Stepper={Stepper}
+        nextDisabled={isNextDisabled}
+      />
 
       <FieldGroup>
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Title
           </FieldLabel>
 
@@ -50,7 +70,10 @@ export const VariantDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Summary
           </FieldLabel>
 
@@ -70,7 +93,10 @@ export const VariantDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Base Guide
           </FieldLabel>
 
@@ -92,7 +118,10 @@ export const VariantDetails = ({
           />
         </Field>
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Subjects
           </FieldLabel>
 
