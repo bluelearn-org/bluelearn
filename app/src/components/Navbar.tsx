@@ -15,11 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
-const navItems = [
+// `role`, when set, hides the item from anyone who doesn't hold it.
+const navItems: Array<{ label: string; to: string; role?: string }> = [
   { label: "Browse", to: "/browse" },
   { label: "Subjects", to: "/subjects" },
   { label: "Objectives", to: "/objectives" },
-  { label: "Review", to: "/review" },
+  { label: "Review", to: "/review", role: "verifier" },
 ];
 
 const profileItems = [
@@ -30,8 +31,12 @@ const profileItems = [
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { session } = useAuth();
+  const { session, roles } = useAuth();
   const navigate = useNavigate();
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.role || roles.includes(item.role)
+  );
 
   async function handleSignOut() {
     await signOut();
@@ -53,7 +58,7 @@ export function Navbar() {
             </Link>
 
             <nav className="hidden items-center gap-6 md:flex">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
@@ -159,7 +164,7 @@ export function Navbar() {
 
               {/* Nav */}
               <div className="flex flex-col gap-3 py-3">
-                {navItems.map((item) => (
+                {visibleNavItems.map((item) => (
                   <Link
                     key={item.to}
                     to={item.to}
