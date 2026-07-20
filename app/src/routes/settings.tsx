@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { client } from "@/lib/apiClient";
+import { client } from "@/lib/api/apiClient";
 
 export const Route = createFileRoute("/settings")({
   component: RouteComponent,
