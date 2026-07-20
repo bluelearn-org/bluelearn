@@ -13,6 +13,14 @@ export type GuideContribution = {
   todoPrereqs: Array<string>;
 };
 
+export type VariantContribution = {
+  type: string;
+  title: string;
+  summary: string;
+  baseGuide: string;
+  subjects: Array<string>;
+};
+
 export type SubObjective = {
   targetSlug: string;
   selectedSlugs: Array<string>;
