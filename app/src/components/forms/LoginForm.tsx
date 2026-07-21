@@ -1,4 +1,9 @@
+import { useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+
 import { cn } from "@/lib/utils";
+import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +27,30 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!acceptedTerms) {
+      toast.error("You must accept the terms of service");
+      return;
+    }
+    setSubmitting(true);
+
+    const { error } = await signIn(email, password);
+
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    navigate({ to: "/" });
+  }
+
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="rounded-md bg-background shadow-none">
@@ -42,9 +71,9 @@ export function LoginForm({
           </div>
         </CardHeader>
 
-        {/* Form */}
-        <CardContent className="border-t p-6">
-          <form className="space-y-6">
+        <form onSubmit={handleSubmit}>
+          {/* Form */}
+          <CardContent className="border-t p-6">
             <FieldGroup className="space-y-5">
               <Field className="space-y-2">
                 <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
@@ -57,6 +86,8 @@ export function LoginForm({
                   placeholder="me@example.com"
                   autoComplete="email"
                   className="h-10 rounded-md"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </Field>
@@ -67,12 +98,12 @@ export function LoginForm({
                     Password
                   </FieldLabel>
 
-                  <a
-                    href="/forgot-password"
+                  <Link
+                    to="/forgot-password"
                     className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                   >
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
 
                 <Input
@@ -80,46 +111,53 @@ export function LoginForm({
                   type="password"
                   autoComplete="current-password"
                   className="h-10 rounded-md"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </Field>
             </FieldGroup>
-          </form>
-        </CardContent>
+          </CardContent>
 
-        {/* Footer */}
-        <CardFooter className="flex flex-col gap-5 border-t p-6">
-          <Field orientation="horizontal">
-            <Checkbox
-              id="terms-checkbox-2"
-              name="terms-checkbox-2"
-              defaultChecked
-            />
-            <FieldContent>
-              <FieldLabel htmlFor="terms-checkbox-2">
-                Accept terms of service
-              </FieldLabel>
-              <FieldDescription className="font-mono">
-                By clicking this checkbox, you agree to the terms of service and
-                privacy policy.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+          {/* Footer */}
+          <CardFooter className="flex flex-col gap-5 border-t p-6">
+            <Field orientation="horizontal">
+              <Checkbox
+                id="terms-checkbox-2"
+                name="terms-checkbox-2"
+                checked={acceptedTerms}
+                onCheckedChange={(v) => setAcceptedTerms(v === true)}
+              />
+              <FieldContent>
+                <FieldLabel htmlFor="terms-checkbox-2">
+                  Accept terms of service
+                </FieldLabel>
+                <FieldDescription className="font-mono">
+                  By clicking this checkbox, you agree to the terms of service
+                  and privacy policy.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
 
-          <Button type="submit" className="btn-pri w-full">
-            Sign in
-          </Button>
-
-          <FieldDescription className="text-center text-sm">
-            Don't have an account?{" "}
-            <a
-              href="/signup"
-              className="font-medium text-foreground transition-colors hover:underline"
+            <Button
+              type="submit"
+              className="btn-pri w-full"
+              disabled={submitting}
             >
-              Create one
-            </a>
-          </FieldDescription>
-        </CardFooter>
+              {submitting ? "Signing in..." : "Sign in"}
+            </Button>
+
+            <FieldDescription className="text-center text-sm">
+              Don't have an account?{" "}
+              <Link
+                to="/register"
+                className="font-medium text-foreground transition-colors hover:underline"
+              >
+                Create one
+              </Link>
+            </FieldDescription>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   );

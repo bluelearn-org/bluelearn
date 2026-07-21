@@ -17,6 +17,7 @@ import { Content } from "@/components/contribute/steps/Content";
 import { ObjectiveDetails } from "@/components/contribute/steps/ObjectiveDetails";
 import { Submit } from "@/components/contribute/steps/Submit";
 import { OrderObjectiveGuides } from "@/components/contribute/steps/OrderObjectiveGuides";
+import { OrderTargetGuides } from "@/components/contribute/steps/OrderTargetGuides";
 
 import { flows, typeStep } from "@/lib/contributionFlow";
 
@@ -128,7 +129,7 @@ function Inner({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-210px)] w-full flex-col gap-8">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-6">
       {/* horizontal breadcrumb stepper */}
       <Stepper.List className="flex w-full items-center justify-center text-sm">
         <Stepper.Items>
@@ -149,7 +150,7 @@ function Inner({
       </Stepper.List>
 
       {/* content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <SelectType pickType={pickType} type={type} Stepper={Stepper} />
 
         <GuideDetails
@@ -161,6 +162,12 @@ function Inner({
         <VariantDetails Stepper={Stepper} />
 
         <ObjectiveDetails
+          Stepper={Stepper}
+          objectiveContData={objectiveContData}
+          setObjectiveContData={setObjectiveContData}
+        />
+
+        <OrderTargetGuides
           Stepper={Stepper}
           objectiveContData={objectiveContData}
           setObjectiveContData={setObjectiveContData}
