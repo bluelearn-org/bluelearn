@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import type { RegisteredRouter, ToPathOption } from "@tanstack/react-router";
