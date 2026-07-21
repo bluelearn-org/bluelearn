@@ -180,7 +180,12 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
         />
 
-        <Submit Stepper={Stepper} />
+        <Submit
+          Stepper={Stepper}
+          type={type}
+          guideContData={guideContData}
+          objectiveContData={objectiveContData}
+        />
       </div>
     </div>
   );

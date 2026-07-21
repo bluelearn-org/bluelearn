@@ -4,10 +4,12 @@ export const StepperActionHeader = ({
   title,
   Stepper,
   nextDisabled,
+  hideNext,
 }: {
   title: string;
   Stepper: any;
   nextDisabled?: boolean;
+  hideNext?: boolean;
 }) => {
   return (
     <>
@@ -19,9 +21,11 @@ export const StepperActionHeader = ({
         <div className="text-mono flex justify-between gap-4">
           <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
 
-          <Stepper.Next className="btn-pri" disabled={nextDisabled}>
-            Next
-          </Stepper.Next>
+          {!hideNext && (
+            <Stepper.Next className="btn-pri" disabled={nextDisabled}>
+              Next
+            </Stepper.Next>
+          )}
         </div>
       </div>
 
