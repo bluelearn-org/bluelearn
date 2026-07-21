@@ -11,13 +11,13 @@
   --brand-body: #161a1e;
   --brand-grey: #59636d;
   --brand-border: #d9dfe4;
-  --brand-blue: #005776;
+  --brand-blue: #042f6a;
   --brand-dark: #0a0a0a;
   --brand-cta: #111827;
   --brand-surface: #fafafa;
   --brand-surface-hover: #f6f9fc;
-  --brand-lt-blue: #e3f3fb;
-  --brand-chip-border: rgb(217, 223, 228);
+  --brand-lt-blue: #d9e7f8;
+  --brand-chip-border: #cfe4f7;
 }
 
 /* == SHADCN UI LAYER == */
@@ -69,7 +69,7 @@
   --popover: #171b1f;
   --popover-foreground: var(--foreground);
 
-  --primary: #0087ab;
+  --primary: #042f6a;
   --primary-foreground: #ffffff;
 
   --secondary: #202429;
