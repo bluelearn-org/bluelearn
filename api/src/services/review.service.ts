@@ -15,6 +15,7 @@ type QueueRow = {
   member_id: string | null;
   status: string;
   assigned_at: string;
+  review_decisions: { decision: ReviewOutcome } | null;
   review_panels: {
     id: string;
     target_seat_count: number;
@@ -109,6 +110,7 @@ export async function getReviewQueue(supabase: DB, userId: string) {
     .from("panel_members")
     .select(
       `id, panel_id, member_id, status, assigned_at,
+       review_decisions(decision),
        review_panels!inner(
          id, target_seat_count, outcome, opened_at, closed_at, case_id,
          review_cases!inner(id, case_type, status, created_at, created_by, time_limit, updated_at)
@@ -150,17 +152,25 @@ export async function getReviewQueue(supabase: DB, userId: string) {
     guideLinks = (links ?? []) as unknown as GuideLinkRow[];
   }
 
-  return open.map((m) => {
-    const rc = m.review_panels.review_cases;
-    const link = guideLinks.find((l) => l.case_id === rc.id);
-    return {
-      id: rc.id,
-      case_type: rc.case_type,
-      status: rc.status,
-      title: link?.guide_revisions?.title ?? null,
-      created_at: rc.created_at,
-    };
-  });
+  return open
+    .map((m) => {
+      const rc = m.review_panels.review_cases;
+      const link = guideLinks.find((l) => l.case_id === rc.id);
+      return {
+        id: rc.id,
+        case_type: rc.case_type,
+        status: rc.status,
+        title: link?.guide_revisions?.title ?? null,
+        created_at: rc.created_at,
+        decision: m.review_decisions?.decision ?? null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        // cases still needing a vote first, then newest
+        Number(a.decision !== null) - Number(b.decision !== null) ||
+        b.created_at.localeCompare(a.created_at)
+    );
 }
 
 export async function listReviewCases(supabase: DB) {

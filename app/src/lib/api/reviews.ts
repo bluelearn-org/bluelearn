@@ -5,7 +5,7 @@ const reviews = client.reviews;
 
 type FetchOptions = { signal?: AbortSignal };
 
-export async function listReviewCases({ signal }: FetchOptions = {}) {
+export async function getReviewQueue({ signal }: FetchOptions = {}) {
   const res = await reviews.queue.$get(undefined, { init: { signal } });
   await assertOk(res);
 

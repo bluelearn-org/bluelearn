@@ -4,12 +4,12 @@ import { Separator } from "@/components/ui/separator";
 
 import { Route as ReviewSlugRoute } from "@/routes/review.$slug";
 
-import { listReviewCases } from "@/lib/api/reviews";
+import { getReviewQueue } from "@/lib/api/reviews";
 
 export const Route = createFileRoute("/review/")({
   loader: async ({ abortController }) => {
     try {
-      return await listReviewCases({ signal: abortController.signal });
+      return await getReviewQueue({ signal: abortController.signal });
     } catch {
       return [];
     }
@@ -53,24 +53,20 @@ function RouteComponent() {
   );
 }
 
-function CaseGrid({
-  cases,
-}: {
-  cases: Array<{
-    id: string;
-    title: string | null;
-    status: string;
-    created_at: string;
-  }>;
-}) {
-  if (cases.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Nothing to review here yet.
-      </p>
-    );
-  }
+type QueueCase = {
+  id: string;
+  title: string | null;
+  created_at: string;
+  decision: "approved" | "rejected" | null;
+};
 
+// Not voted yet = still needs the reviewer's attention. Once voted, echo the
+// standing vote and flag that it can still be changed until the panel closes.
+function reviewerStatus(decision: QueueCase["decision"]) {
+  return decision ? `${decision} • editable` : "needs review";
+}
+
+function CaseGrid({ cases }: { cases: Array<QueueCase> }) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {cases.map((c) => (
@@ -85,19 +81,14 @@ function CaseGrid({
               {c.title ?? "Untitled Guide"}
             </h3>
 
-            <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="font-mono text-[11px] tracking-[0.08em] uppercase">
-                {c.status}
-              </span>
-
-              <span className="font-mono text-[11px] tracking-[0.08em] uppercase">
-                {new Date(c.created_at).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
+            <p className="mt-2 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+              {reviewerStatus(c.decision)} |{" "}
+              {new Date(c.created_at).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
           </div>
         </Link>
       ))}

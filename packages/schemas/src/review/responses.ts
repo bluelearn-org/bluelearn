@@ -1,13 +1,10 @@
 import { z } from "zod";
 
-export const reviewCaseStatusSchema = z.enum([
-  "pending",
-  "in_review",
-  "approved",
-  "rejected",
-]);
-
-export const reviewCaseTypeSchema = z.enum(["guide_publish", "guide_edit"]);
+import {
+  reviewCaseStatusSchema,
+  reviewCaseTypeSchema,
+  reviewOutcomeSchema,
+} from "./enums";
 
 export const reviewCaseListItemSchema = z.object({
   id: z.string(),
@@ -15,6 +12,10 @@ export const reviewCaseListItemSchema = z.object({
   status: reviewCaseStatusSchema,
   title: z.string().nullable(),
   created_at: z.string(),
+});
+
+export const reviewQueueItemSchema = reviewCaseListItemSchema.extend({
+  decision: reviewOutcomeSchema.nullable(),
 });
 
 export const reviewCaseDetailSchema = z.object({
@@ -59,6 +60,7 @@ export const reviewCaseDetailResponseSchema = z.object({
 });
 
 export type ReviewCaseListItem = z.infer<typeof reviewCaseListItemSchema>;
+export type ReviewQueueItem = z.infer<typeof reviewQueueItemSchema>;
 export type ReviewCaseDetail = z.infer<typeof reviewCaseDetailSchema>;
 export type ReviewCaseDetailResponse = z.infer<
   typeof reviewCaseDetailResponseSchema
