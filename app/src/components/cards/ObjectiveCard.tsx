@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import type { RegisteredRouter, ToPathOption } from "@tanstack/react-router";
@@ -39,24 +38,27 @@ function FeaturedSubObjective({ nodes }: { nodes: Array<FeaturedNode> }) {
 
   return (
     <CardContent className="border-t p-4">
-      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start sm:gap-2">
+      <div className="flex items-center justify-between">
         {hidden > 0 && (
-          <>
-            <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
-              <span className="flex h-8 shrink-0 items-center justify-center text-base font-medium">
+          <div className="flex items-center justify-between">
+            <div className="flex w-full flex-col items-center justify-center text-center sm:w-18 md:w-22">
+              <span className="flex h-8 shrink-0 items-center justify-center text-sm font-medium">
                 {hidden}
               </span>
               <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
-                more guides
+                guides
               </span>
             </div>
             <ArrowRight className="mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
-          </>
+          </div>
         )}
         {shown.map((step, index) => (
-          <Fragment key={step.position}>
-            <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-base font-medium">
+          <div
+            key={step.position}
+            className="flex items-center justify-between"
+          >
+            <div className="flex w-full flex-col items-center justify-center text-center sm:w-24 md:w-28">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-sm font-medium">
                 {step.position}
               </span>
               <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
@@ -64,9 +66,11 @@ function FeaturedSubObjective({ nodes }: { nodes: Array<FeaturedNode> }) {
               </span>
             </div>
             {index < shown.length - 1 && (
-              <ArrowRight className="mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+              <div className="flex items-center justify-center">
+                <ArrowRight className="h-5 w-5 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+              </div>
             )}
-          </Fragment>
+          </div>
         ))}
       </div>
     </CardContent>
@@ -84,32 +88,41 @@ function LevelsGraph({
 
   return (
     <CardContent className="border-t p-4">
-      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start sm:gap-2">
+      <div className="flex items-center justify-between">
+        {remaining > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="flex w-full flex-col items-center justify-center text-center sm:w-18 md:w-22">
+              <span className="flex h-8 shrink-0 items-center justify-center text-sm font-medium">
+                {remaining}
+              </span>
+              <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
+                guides
+              </span>
+            </div>
+            <div className="flex items-center justify-center">
+              <ArrowRight className="h-5 w-5 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+            </div>
+          </div>
+        )}
+
         {previewLevels.map((level, index) => (
-          <Fragment key={index}>
-            <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-base font-medium">
+          <div key={index} className="flex items-center justify-between">
+            <div className="flex w-full flex-col items-center justify-center text-center sm:w-24 md:w-28">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-sm font-medium">
                 {level.level}
               </span>
               <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
                 {level.guide.title}
               </span>
             </div>
-            {(index < previewLevels.length - 1 || remaining > 0) && (
-              <ArrowRight className="mt-1.5 h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+
+            {index < previewLevels.length - 1 && (
+              <div className="flex items-center justify-center">
+                <ArrowRight className="h-5 w-5 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
+              </div>
             )}
-          </Fragment>
-        ))}
-        {remaining > 0 && (
-          <div className="flex w-full flex-col items-center gap-2 text-center sm:w-24 md:w-28">
-            <span className="flex h-8 shrink-0 items-center justify-center text-base font-medium">
-              {remaining}
-            </span>
-            <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
-              more levels
-            </span>
           </div>
-        )}
+        ))}
       </div>
     </CardContent>
   );
@@ -143,7 +156,7 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
             {objective.summary}
           </p>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between">
             <p className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
               @{objective.curator} | {objective.created_at}
             </p>
