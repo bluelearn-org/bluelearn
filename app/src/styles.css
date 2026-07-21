@@ -11,13 +11,13 @@
   --brand-body: #161a1e;
   --brand-grey: #59636d;
   --brand-border: #d9dfe4;
-  --brand-blue: #005776;
+  --brand-blue: #3d80dd;
   --brand-dark: #0a0a0a;
   --brand-cta: #111827;
   --brand-surface: #fafafa;
   --brand-surface-hover: #f6f9fc;
-  --brand-lt-blue: #e3f3fb;
-  --brand-chip-border: rgb(217, 223, 228);
+  --brand-lt-blue: #d9e7f8;
+  --brand-chip-border: #cfe4f7;
 }
 
 /* == SHADCN UI LAYER == */
@@ -69,7 +69,7 @@
   --popover: #171b1f;
   --popover-foreground: var(--foreground);
 
-  --primary: #0087ab;
+  --primary: #042f6a;
   --primary-foreground: #ffffff;
 
   --secondary: #202429;
@@ -131,7 +131,7 @@
 
   /* -- CTA BUTTON -- */
   .btn-cta {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-white uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-white uppercase transition-all duration-200;
     background: var(--brand-cta);
   }
 
@@ -142,7 +142,7 @@
   }
 
   .btn-pri {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-white uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
     background: var(--brand-blue);
   }
 
@@ -151,7 +151,7 @@
   }
 
   .btn-sec {
-    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono text-xs text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono font-bold text-black uppercase transition-all duration-200;
     background: var(--muted);
   }
 
@@ -160,7 +160,7 @@
   }
 
   .btn-reject {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-white uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-white uppercase transition-all duration-200;
     background: #ff0000;
   }
 
@@ -169,7 +169,7 @@
     transform: scale(1.05);
   }
   .btn-approve {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
     background: #00e408;
   }
 
