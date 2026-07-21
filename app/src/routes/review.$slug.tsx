@@ -22,13 +22,16 @@ export type Review = {
 
 export const Route = createFileRoute("/review/$slug")({
   loader: async ({ params, abortController }) => {
-    const data = await getReviewCase(params.slug, {
-      signal: abortController.signal,
-    });
-    if (!data.revision) throw notFound();
-    return data;
+    try {
+      const data = await getReviewCase(params.slug, {
+        signal: abortController.signal,
+      });
+      if (!data.revision) throw notFound();
+      return data;
+    } catch {
+      throw notFound();
+    }
   },
-  errorComponent: ReviewDetailError,
   component: RouteComponent,
 });
 
@@ -44,22 +47,9 @@ const REASONS = [
   },
 ];
 
-function ReviewDetailError() {
-  return (
-    <div className="mx-auto max-w-[1280px] border-x bg-background">
-      <section className="border-b px-8 py-8 lg:px-16">
-        <p className="text-sm text-muted-foreground">
-          This review case could not be loaded. Try again shortly.
-        </p>
-      </section>
-    </div>
-  );
-}
-
 function RouteComponent() {
   const data = Route.useLoaderData();
-  if (!data.revision) throw notFound();
-  const { revision } = data;
+  const revision = data.revision!;
 
   const [review, setReview] = useState<Review>({
     decision: "",

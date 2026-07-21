@@ -1,16 +1,19 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { Separator } from "@/components/ui/separator";
-import { CustomTabs } from "@/components/Tabs";
 
 import { Route as ReviewSlugRoute } from "@/routes/review.$slug";
 
 import { listReviewCases } from "@/lib/api/reviews";
 
 export const Route = createFileRoute("/review/")({
-  loader: ({ abortController }) =>
-    listReviewCases({ signal: abortController.signal }),
-  errorComponent: ReviewError,
+  loader: async ({ abortController }) => {
+    try {
+      return await listReviewCases({ signal: abortController.signal });
+    } catch {
+      return [];
+    }
+  },
   component: RouteComponent,
 });
 
@@ -32,38 +35,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ReviewError() {
-  return (
-    <Shell>
-      <p className="text-sm text-muted-foreground">
-        Review cases could not be loaded. Try again shortly.
-      </p>
-    </Shell>
-  );
-}
-
 function RouteComponent() {
   const cases = Route.useLoaderData();
-
-  const guideCases = cases.filter(
-    (c: { case_type: string }) => c.case_type === "guide_publish"
-  );
-  const objectiveCases = cases.filter(
-    (c: { case_type: string }) => c.case_type === "guide_edit"
-  );
-
-  const tabs = [
-    {
-      id: "guides",
-      label: "Guides",
-      content: <CaseGrid cases={guideCases} />,
-    },
-    {
-      id: "objectives",
-      label: "Objectives",
-      content: <CaseGrid cases={objectiveCases} />,
-    },
-  ];
 
   if (cases.length === 0) {
     return (
@@ -75,7 +48,7 @@ function RouteComponent() {
 
   return (
     <Shell>
-      <CustomTabs tabs={tabs} />
+      <CaseGrid cases={cases} />
     </Shell>
   );
 }
