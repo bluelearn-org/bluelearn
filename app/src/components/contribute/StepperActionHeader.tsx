@@ -5,11 +5,13 @@ export const StepperActionHeader = ({
   Stepper,
   nextDisabled,
   hideNext,
+  onNextClick,
 }: {
   title: string;
   Stepper: any;
   nextDisabled?: boolean;
   hideNext?: boolean;
+  onNextClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) => {
   return (
     <>
@@ -22,7 +24,11 @@ export const StepperActionHeader = ({
           <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
 
           {!hideNext && (
-            <Stepper.Next className="btn-pri" disabled={nextDisabled}>
+            <Stepper.Next
+              className="btn-pri"
+              disabled={nextDisabled}
+              onClick={onNextClick}
+            >
               Next
             </Stepper.Next>
           )}

@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
 
@@ -27,6 +28,7 @@ export const ObjectiveDetails = ({
   objectiveContData,
   setObjectiveContData,
 }: PropTypes) => {
+  const [showErrors, setShowErrors] = useState(false);
   const guides = guidesData.map((g) => {
     return {
       value: g.slug,
@@ -57,12 +59,20 @@ export const ObjectiveDetails = ({
     objectiveContData.featured,
   ]);
 
+  const handleNextClick = (e: React.MouseEvent) => {
+    if (isNextDisabled) {
+      e.preventDefault();
+      setShowErrors(true);
+      toast.error("Please fill out all required fields.");
+    }
+  };
+
   return (
     <Stepper.Content step="objective-details">
       <StepperActionHeader
         title={"Objective Details"}
         Stepper={Stepper}
-        nextDisabled={isNextDisabled}
+        onNextClick={handleNextClick}
       />
 
       <FieldGroup>
@@ -85,7 +95,11 @@ export const ObjectiveDetails = ({
             autoComplete="Title"
             maxLength={50}
             placeholder="Choose a title. (Maximum 50 characters)."
-            className="h-10 rounded-md"
+            className={`h-10 rounded-md ${
+              showErrors && !objectiveContData.title.trim()
+                ? "border-destructive focus-visible:ring-destructive/20"
+                : ""
+            }`}
             required
             value={objectiveContData.title}
             onChange={(e) =>
@@ -112,7 +126,11 @@ export const ObjectiveDetails = ({
           </div>
 
           <Textarea
-            className="h-32 w-full min-w-0 resize-none"
+            className={`h-32 w-full min-w-0 resize-none ${
+              showErrors && !objectiveContData.summary.trim()
+                ? "border-destructive focus-visible:ring-destructive/20"
+                : ""
+            }`}
             rows={4}
             maxLength={250}
             placeholder="Write a summary for the objective."
@@ -142,6 +160,11 @@ export const ObjectiveDetails = ({
 
           <Combobox
             multiple
+            className={
+              showErrors && objectiveContData.subjects.length === 0
+                ? "border-destructive focus-visible:ring-destructive/20"
+                : ""
+            }
             items={subjectsData.map((s) => ({
               value: s.slug,
               label: s.name,
@@ -173,6 +196,11 @@ export const ObjectiveDetails = ({
 
           <Combobox
             multiple
+            className={
+              showErrors && objectiveContData.targets.length === 0
+                ? "border-destructive focus-visible:ring-destructive/20"
+                : ""
+            }
             items={guides}
             value={objectiveContData.targets}
             onValueChange={(targets) => {
@@ -211,6 +239,11 @@ export const ObjectiveDetails = ({
 
           <Combobox
             disabled={targs.length === 0}
+            className={
+              showErrors && !objectiveContData.featured
+                ? "border-destructive focus-visible:ring-destructive/20"
+                : ""
+            }
             items={targs}
             value={objectiveContData.featured}
             onValueChange={(featured) =>
