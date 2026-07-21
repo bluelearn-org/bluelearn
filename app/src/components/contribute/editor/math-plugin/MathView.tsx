@@ -199,9 +199,6 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
   }, []);
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      console.trace("[DEBUG] Radix Popover requested close!");
-    }
     setIsOpen(open);
     setSelected(open);
     if (!open) {
@@ -284,8 +281,6 @@ export function MathView({ nodeKey, equation, inline }: MathViewProps) {
       const node = $getNodeByKey(nodeKey);
       if ($isMathNode(node)) {
         node.setEquation(newValue);
-      } else {
-        console.warn("[Diagnostic] MathNode not found for key:", nodeKey);
       }
     });
   };
