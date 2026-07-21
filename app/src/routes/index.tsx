@@ -1,8 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 
-import { useEffect, useState } from "react";
-import type { SubjectListItem } from "@bluelearn/schemas";
 import type { HydratedObjective } from "@/types/objectives";
 
 import { Route as SubjectRoute } from "@/routes/subjects.$slug";
@@ -18,22 +16,28 @@ import guides from "@/data/guides.json";
 
 import { hydrateObjectives } from "@/lib/getData";
 
-export const Route = createFileRoute("/")({ component: RouteComponent });
+// subjects failing shouldn't take down the rest of the homepage, so the
+// failure is data instead of an errorComponent
+export const Route = createFileRoute("/")({
+  loader: async ({ abortController }) => {
+    try {
+      return {
+        subjects: await listSubjects({ signal: abortController.signal }),
+        subjectsFailed: false,
+      };
+    } catch {
+      return { subjects: [], subjectsFailed: true };
+    }
+  },
+  component: RouteComponent,
+});
 
 function RouteComponent() {
   const hydratedObjectives: Array<HydratedObjective> = hydrateObjectives(
     guides,
     objectives
   );
-  const [subjects, setSubjects] = useState<Array<SubjectListItem>>([]);
-  useEffect(() => {
-    async function loadSubjects() {
-      const data = await listSubjects();
-      setSubjects(data);
-    }
-
-    loadSubjects().catch(console.error);
-  }, []);
+  const { subjects, subjectsFailed } = Route.useLoaderData();
 
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
@@ -110,6 +114,16 @@ function RouteComponent() {
         </div>
 
         <Separator className="mb-4 bg-border" />
+
+        {subjectsFailed && (
+          <p className="text-sm text-muted-foreground">
+            Subjects could not be loaded. Try again shortly.
+          </p>
+        )}
+
+        {!subjectsFailed && subjects.length === 0 && (
+          <p className="text-sm text-muted-foreground">No subjects yet.</p>
+        )}
 
         <div className="flex flex-wrap gap-3">
           {[...subjects]
