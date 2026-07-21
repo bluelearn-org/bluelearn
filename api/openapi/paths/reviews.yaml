@@ -19,7 +19,7 @@
                 cases:
                   type: array
                   items:
-                    $ref: "../components/schemas/reviews/ReviewCaseListItem.yaml"
+                    $ref: "../components/schemas/reviews/ReviewQueueItem.yaml"
               required: [cases]
       "401":
         $ref: "../components/responses/_shared.yaml#/Unauthorized"
@@ -74,7 +74,11 @@
                   type: array
                   items:
                     $ref: "../components/schemas/reviews/ReviewDecision.yaml"
-              required: [case, panel, decisions]
+                revision:
+                  oneOf:
+                    - $ref: "../components/schemas/reviews/GuideRevisionSummary.yaml"
+                    - type: "null"
+              required: [case, panel, decisions, revision]
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"
 

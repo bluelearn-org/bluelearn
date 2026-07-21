@@ -90,6 +90,9 @@ importers:
 
   app:
     dependencies:
+      '@bluelearn/schemas':
+        specifier: workspace:*
+        version: link:../packages/schemas
       '@fontsource-variable/geist':
         specifier: ^5.2.9
         version: 5.2.9

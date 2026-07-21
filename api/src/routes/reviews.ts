@@ -21,13 +21,13 @@ export const reviewsRouter = new Hono<HonoEnv>()
     return c.json({ cases }, 200);
   })
 
-  // All finished review cases — public browse
+  // All finished review cases (public — only returns approved/rejected)
   .get("/cases", async (c) => {
     const cases = await listReviewCases(c.get("supabase"));
     return c.json({ cases }, 200);
   })
 
-  // Case detail with panel, members, decisions, and linked revision
+  // Case detail with panel, members, decisions, and linked revision (public)
   .get("/cases/:id", async (c) => {
     const result = await getReviewCase(c.get("supabase"), c.req.param("id"));
     return c.json(result, 200);

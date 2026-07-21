@@ -83,3 +83,5 @@ Three guards prevent canonical flipping on each and every vote:
 A challenging guide must lead the current leader's by (by default) 0.05.
 
 Promotion runs eagerly in castVote and retractVote ( with one extra RPC per vote) and lazily on the cron tick (promoteAllCanonicals), this to reconcile any missed eager calls. The cron path mirrors assemblePendingPanels: making it so one base failing does not stall the rest.
+
+The Wilson lower bound ranks the variant list returned by GET /guides/{slug}/variants, without a margin or minimum votes guard, since those exist only to prevent canonical flip-flopping and don't apply to a read-only listing. The list_guide_variants_by_score SQL function does the join and the ranking in one query.

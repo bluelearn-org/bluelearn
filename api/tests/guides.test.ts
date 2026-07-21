@@ -5,6 +5,7 @@ import { grantRole } from "./factories/identity";
 import {
   createGuideBase,
   createGuide,
+  createGuideRevision,
   createPublishedGuide,
   createVote,
 } from "./factories/guides";
@@ -158,6 +159,26 @@ describe("GET /guides/{slug}/walkthrough", () => {
   });
 });
 
+// A second published variant under the same base, with a live revision.
+async function publishSiblingVariant(baseId: string, title: string) {
+  const guide = await createGuide(baseId, {
+    status: "published",
+    slug: `variant-${crypto.randomUUID().slice(0, 8)}`,
+  });
+  const revision = await createGuideRevision(guide.id, {
+    title,
+    body: "Body",
+    status: "submitted",
+    approved_at: new Date().toISOString(),
+  });
+  await admin
+    .from("guides")
+    .update({ current_revision_id: revision.id })
+    .eq("id", guide.id)
+    .throwOnError();
+  return guide;
+}
+
 describe("GET /guides/{slug}/variants", () => {
   it("lists published variants and omits drafts", async () => {
     const { base, guide } = await createPublishedGuide();
@@ -171,6 +192,35 @@ describe("GET /guides/{slug}/variants", () => {
     const ids = body.variants.map((v) => v.id);
     expect(ids).toContain(guide.id);
     expect(ids).not.toContain(draft.id);
+  });
+
+  // 1 up / 1 down scores ~0.09, 3 up scores ~0.44, so the challenger leads
+  // despite sorting later by slug.
+  it("orders variants by Wilson score, not by slug", async () => {
+    const { base, guide: incumbent } = await createPublishedGuide({
+      title: "Incumbent",
+    });
+    const challenger = await publishSiblingVariant(base.id, "Challenger");
+
+    const up = await makeUser();
+    const down = await makeUser();
+    await createVote(up.userId, incumbent.id, { direction: "up" });
+    await createVote(down.userId, incumbent.id, {
+      direction: "down",
+      reason: "unclear",
+    });
+    for (let i = 0; i < 3; i++) {
+      const voter = await makeUser();
+      await createVote(voter.userId, challenger.id, { direction: "up" });
+    }
+
+    const res = await app.request(`/guides/${base.slug}/variants`, {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/guides/{slug}/variants");
+    const body = (await res.json()) as { variants: Array<{ id: string }> };
+    const ids = body.variants.map((v) => v.id);
+    expect(ids).toEqual([challenger.id, incumbent.id]);
   });
 });
 
