@@ -48,7 +48,7 @@
 
   --badge-bg: var(--brand-lt-blue);
   --badge-border: var(--brand-chip-border);
-  --badge-text: var(--brand-body);
+  --badge-text: var(--foreground);
 
   --ring: var(--brand-blue);
 
@@ -85,6 +85,8 @@
   --input: #2f3338;
 
   --ring: var(--primary);
+
+  --badge-bg: #1a2f38;
 }
 
 /* == BASE STYLES == */
