@@ -151,7 +151,7 @@
   }
 
   .btn-sec {
-    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono font-bold text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
     background: var(--muted);
   }
 
