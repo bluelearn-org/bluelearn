@@ -3,7 +3,7 @@
     "slug": "aeronautics",
     "name": "Aeronautics",
     "summary": "Guides covering the fundamentals of flight science and engineering, including aircraft design, aerodynamics, propulsion systems, and flight mechanics.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 142,
     "contributors_total": 38,
     "languages_total": 12
@@ -12,7 +12,7 @@
     "slug": "ai",
     "name": "AI",
     "summary": "Guides covering Artificial Intelligence (AI), Machine Learning (ML) and Deep Learning.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 142,
     "contributors_total": 38,
     "languages_total": 12
@@ -21,7 +21,7 @@
     "slug": "archery",
     "name": "Archery",
     "summary": "Guides on learning archery, including bow handling, shooting techniques, aiming accuracy, form, and target practice fundamentals.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 67,
     "contributors_total": 19,
     "languages_total": 8
@@ -30,7 +30,7 @@
     "slug": "astro-physics",
     "name": "Astro-physics",
     "summary": "Guides exploring astrophysics concepts, including celestial objects, space phenomena, gravity, and the physical laws governing the universe.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 184,
     "contributors_total": 44,
     "languages_total": 14
@@ -39,7 +39,7 @@
     "slug": "baking",
     "name": "Baking",
     "summary": "Guides on baking techniques, including bread, cakes, pastries, ingredient handling, oven use, and recipe fundamentals.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 231,
     "contributors_total": 62,
     "languages_total": 18
@@ -48,7 +48,7 @@
     "slug": "biomedical-sciences",
     "name": "Biomedical Sciences",
     "summary": "Guides covering human biology and disease, including medical research methods, diagnostics, and healthcare science fundamentals.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 196,
     "contributors_total": 51,
     "languages_total": 15
@@ -57,7 +57,7 @@
     "slug": "car",
     "name": "Car",
     "summary": "Guides on cars, including how they work, types of vehicles, basic mechanics, driving systems, and automotive fundamentals.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 158,
     "contributors_total": 42,
     "languages_total": 13
@@ -66,7 +66,7 @@
     "slug": "computer-architecture",
     "name": "Computer Architecture",
     "summary": "Guides explaining how computer systems are built, including CPUs, memory systems, instruction processing, and hardware design principles.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 173,
     "contributors_total": 47,
     "languages_total": 14
@@ -75,7 +75,7 @@
     "slug": "cybersecurity",
     "name": "Cybersecurity",
     "summary": "Guides on protecting systems and data, including threat detection, network security, encryption, and safe digital practices.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 287,
     "contributors_total": 78,
     "languages_total": 22
@@ -84,7 +84,7 @@
     "slug": "diy",
     "name": "DIY",
     "summary": "Guides for do-it-yourself projects, including home repairs, crafting, building, and practical hands-on creation without professional help.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 205,
     "contributors_total": 56,
     "languages_total": 17
@@ -93,7 +93,7 @@
     "slug": "food-preservation",
     "name": "Food Preservation",
     "summary": "Guides on preserving food, including freezing, drying, canning, fermenting, and extending shelf life safely.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 94,
     "contributors_total": 24,
     "languages_total": 10
@@ -102,7 +102,7 @@
     "slug": "gardening-plant-life",
     "name": "Gardening & Plant Life",
     "summary": "Guides on gardening and plant care, including growing techniques, soil health, plant biology, and maintenance of gardens and greenery.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 223,
     "contributors_total": 59,
     "languages_total": 19
@@ -111,7 +111,7 @@
     "slug": "mathematics",
     "name": "Mathematics",
     "summary": "Guides covering mathematical concepts, including arithmetic, algebra, geometry, problem-solving techniques, and logical reasoning.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 341,
     "contributors_total": 89,
     "languages_total": 24
@@ -120,7 +120,7 @@
     "slug": "arithmetic",
     "name": "Arithmetic",
     "summary": "Foundational number operations including addition, subtraction, multiplication, division, fractions, decimals, percentages, and ratios.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -129,7 +129,7 @@
     "slug": "pre-algebra",
     "name": "Pre-Algebra",
     "summary": "Bridging arithmetic and algebra including integers, expressions, basic equations, and introductory problem solving.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -138,7 +138,7 @@
     "slug": "algebra",
     "name": "Algebra",
     "summary": "Core algebraic manipulation including expressions, equations, inequalities, factorisation, and quadratic functions.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -147,7 +147,7 @@
     "slug": "calculus",
     "name": "Calculus",
     "summary": "Study of limits, derivatives, integrals, and continuous change with applications in science and engineering.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -156,7 +156,7 @@
     "slug": "logic-reasoning",
     "name": "Logic & Reasoning",
     "summary": "Logical thinking, proof techniques, problem-solving strategies, and mathematical reasoning foundations.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -165,7 +165,7 @@
     "slug": "game-development",
     "name": "Game Development",
     "summary": "Guides on all thinngs game development, including: 2D, 3D, board games, card games, table-top RPGs.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 149,
     "contributors_total": 37,
     "languages_total": 12
@@ -174,7 +174,7 @@
     "slug": "geometry",
     "name": "Geometry",
     "summary": "Shapes, space, angles, measurement, trigonometry foundations, and spatial reasoning.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -183,7 +183,7 @@
     "slug": "programming",
     "name": "Programming",
     "summary": "Guides on writing and understanding code, including programming languages, software development, debugging, and building applications.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 512,
     "contributors_total": 134,
     "languages_total": 31
@@ -192,7 +192,7 @@
     "slug": "music",
     "name": "Music",
     "summary": "Guides on music theory and practice, including rhythm, melody, composition, instruments, and understanding musical structure.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 178,
     "contributors_total": 48,
     "languages_total": 15
@@ -201,7 +201,7 @@
     "slug": "unity",
     "name": "Unity",
     "summary": "Guides on developing 3D and 2D games, AR and VR applications, and animation and cinematics.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 149,
     "contributors_total": 37,
     "languages_total": 12
@@ -210,7 +210,7 @@
     "slug": "vehicle-maintenance",
     "name": "Vehicle Maintenance",
     "summary": "Guides on maintaining and repairing vehicles, including servicing, diagnostics, troubleshooting, and routine upkeep.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 149,
     "contributors_total": 37,
     "languages_total": 12
@@ -219,7 +219,7 @@
     "slug": "probability",
     "name": "Probability",
     "summary": "Guides covering probability theory, random events, likelihood calculations, probability distributions, and reasoning under uncertainty.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -228,7 +228,7 @@
     "slug": "statistics",
     "name": "Statistics",
     "summary": "Guides covering data collection, analysis, interpretation, visualisation, statistical testing, and drawing conclusions from data.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -237,7 +237,7 @@
     "slug": "vectors",
     "name": "Vectors",
     "summary": "Guides covering vector mathematics, magnitude, direction, vector operations, coordinate systems, and applications in science and engineering.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -246,7 +246,7 @@
     "slug": "physics",
     "name": "Physics",
     "summary": "Guides covering the fundamental laws of nature, including motion, forces, energy, matter, waves, electricity, and modern physics.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -255,7 +255,7 @@
     "slug": "mechanics",
     "name": "Mechanics",
     "summary": "Guides covering motion, forces, momentum, energy, statics, dynamics, and the behaviour of physical systems.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -264,7 +264,7 @@
     "slug": "machine-learning",
     "name": "Machine Learning",
     "summary": "Guides covering supervised and unsupervised learning, model training, feature engineering, evaluation techniques, and practical machine learning systems.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -273,7 +273,7 @@
     "slug": "simulation",
     "name": "Simulation",
     "summary": "Guides covering the creation of simulations, modelling real-world systems, numerical methods, and virtual experimentation.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -282,7 +282,7 @@
     "slug": "computer-science",
     "name": "Computer Science",
     "summary": "Guides covering algorithms, computation, software systems, data structures, programming principles, and theoretical foundations of computing.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -291,7 +291,7 @@
     "slug": "data-structures",
     "name": "Data Structures",
     "summary": "Guides covering arrays, linked lists, stacks, queues, trees, graphs, hash tables, and efficient data organisation techniques.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -300,7 +300,7 @@
     "slug": "3d-modelling",
     "name": "3D Modelling",
     "summary": "Guides covering the creation of three-dimensional assets, including modelling techniques, topology, sculpting, texturing, and optimisation.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -309,7 +309,7 @@
     "slug": "blender",
     "name": "Blender",
     "summary": "Guides covering the Blender software suite, including modelling, sculpting, animation, rendering, compositing, and asset creation workflows.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -318,7 +318,7 @@
     "slug": "animation",
     "name": "Animation",
     "summary": "Guides covering animation principles, character movement, rigging, keyframing, motion workflows, and visual storytelling.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
@@ -327,7 +327,7 @@
     "slug": "3d",
     "name": "3D",
     "summary": "Guides covering three-dimensional graphics, environments, assets, rendering techniques, and interactive 3D applications.",
-    "paths_total": 5,
+    "objectives_total": 5,
     "guides_total": 0,
     "contributors_total": 0,
     "languages_total": 0
