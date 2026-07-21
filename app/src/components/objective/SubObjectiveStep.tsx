@@ -60,29 +60,12 @@ export function SubObjectiveStep({ Stepper, stepper, target }: Props) {
                 </div>
 
                 <div className="w-full min-w-0 flex-1">
-                  <GuideCard
-                    guide={guide}
-                    origin={{
-                      type: "objective",
-                      title: target.title,
-                      path: `/objectives/${target.slug}`,
-                    }}
-                    to={GuideRoute.to}
-                  />
+                  <GuideCard guide={guide} />
                 </div>
               </li>
             );
           })}
         </ol>
-
-        {/* step navigation */}
-        <div className="mt-auto flex justify-between border-t pt-6">
-          <Button variant="outline" onClick={() => stepper.prev()}>
-            Previous
-          </Button>
-
-          <Button onClick={() => stepper.next()}>Next</Button>
-        </div>
       </div>
     </Stepper.Content>
   );
