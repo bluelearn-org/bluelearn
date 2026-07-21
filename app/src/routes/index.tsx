@@ -3,7 +3,7 @@ import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 
 import type { HydratedObjective } from "@/types/objectives";
 
-import { Route as SubjectRoute } from "@/routes/subjects.$slug";
+import { Route as SubjectRoute } from "@/routes/guides/$slug/index";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

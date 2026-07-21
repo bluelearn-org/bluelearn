@@ -123,10 +123,7 @@ export function Navbar() {
               </div>
             ) : (
               <div className="hidden md:flex">
-                <Link
-                  to="/login"
-                  className="rounded-md border border-border px-4 py-2 font-mono text-xs tracking-[0.08em] uppercase transition-colors hover:text-foreground"
-                >
+                <Link to="/login" className="btn-outline">
                   Sign In
                 </Link>
               </div>

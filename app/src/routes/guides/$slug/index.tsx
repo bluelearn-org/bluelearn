@@ -45,6 +45,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import { Route as GuideWalkthroughRoute } from "@/routes/guides/$slug/walkthrough";
+
 const SIDEBAR_ACTIONS: Array<Action> = [
   { icon: Replace, label: "View Variants" },
   { icon: Target, label: "View Objectives" },
@@ -66,7 +68,7 @@ function useVote() {
   };
 }
 
-export const Route = createFileRoute("/guides/$slug")({
+export const Route = createFileRoute("/guides/$slug/")({
   component: RouteComponent,
 });
 
@@ -164,9 +166,20 @@ function RouteComponent() {
 
             {/* Actions */}
             <div className="flex shrink-0 items-center gap-2">
-              <Button variant="outline" className="btn-sec">
+              <Link
+                to={GuideWalkthroughRoute.to}
+                params={{ slug: slug }}
+                // state={{
+                //   breadcrumbOrigin: {
+                //     type: "objective",
+                //     title: objective.title,
+                //     path: `/objectives/${slug}`,
+                //   },
+                // }}
+                className="btn-outline"
+              >
                 View Walkthrough
-              </Button>
+              </Link>
 
               <Button variant="outline" size="lg" onClick={() => upvote()}>
                 <ArrowBigUp
