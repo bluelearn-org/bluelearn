@@ -114,7 +114,7 @@
   }
 
   .data-label {
-    @apply font-mono text-sm tracking-[0.08em] text-muted-foreground uppercase;
+    @apply font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase;
   }
 
   .data-value {

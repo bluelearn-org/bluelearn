@@ -56,7 +56,7 @@ export const GuideCard = ({ guide, origin, to }: PropTypes) => {
           </h3>
 
           <div className="flex items-center justify-between text-sm">
-            <p className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+            <p className="mono-micro text-muted-foreground">
               @{guide.author} | {guide.created_at}
             </p>
           </div>

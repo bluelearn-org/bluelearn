@@ -22,9 +22,7 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
     <>
       <header className="mb-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-[-0.04em]">
-            {guide.title}
-          </h1>
+          <h1 className="text-3xl font-bold">{guide.title}</h1>
           {guideType && (
             <Badge
               key={guideType}
@@ -36,11 +34,11 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
           )}
         </div>
 
-        <div className="mono-micro mt-3">
+        <div className="mono-micro py-2 text-muted-foreground">
           {guide.author} | {guide.created_at} | {formatDuration(guide.duration)}
         </div>
 
-        <div className="mt-4 flex gap-2">
+        <div className="flex gap-2">
           {guide.tags.map((tag: SubjectReference) => (
             <Badge
               key={tag.slug}
@@ -50,6 +48,12 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
               {tag.name}
             </Badge>
           ))}
+        </div>
+
+        <div>
+          <p className="py-4 text-sm whitespace-pre-line text-muted-foreground">
+            {guide.summary}
+          </p>
         </div>
       </header>
 
