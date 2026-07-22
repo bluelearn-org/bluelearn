@@ -41,17 +41,18 @@ describe("POST /guides", () => {
     await expectToMatchSpec(res, "POST", "/guides");
   });
 
-  it("creates a draft guide and returns its revision id", async () => {
+  it("creates a draft guide with its tags", async () => {
     const { token } = await makeUser();
+    const subject = await createSubject();
 
     const res = await app.request(
       "/guides",
       jsonAuth(token, "POST", {
-        tags: ["algebra"],
         knowledge_type: "theoretical",
         title: "Limits",
-        slug: `limits-${crypto.randomUUID().slice(0, 8)}`,
+        summary: "A first look at limits.",
         body: "A first look at limits.",
+        tags: [subject.slug],
       }),
       env
     );
@@ -62,10 +63,76 @@ describe("POST /guides", () => {
 
     const { data: revision } = await admin
       .from("guide_revisions")
-      .select("status, title")
+      .select("status")
       .eq("id", revision_id)
       .single();
     expect(revision?.status).toBe("draft");
+
+    const { data: tags } = await admin
+      .from("guide_revision_subjects")
+      .select("subject_id")
+      .eq("guide_revision_id", revision_id);
+    expect(tags?.map((t) => t.subject_id)).toEqual([subject.id]);
+  });
+
+  it("persists prerequisites, todos, and inline subjects", async () => {
+    const { token } = await makeUser();
+    const prereq = await createGuideBase({ status: "published" });
+    const newName = `Fresh ${crypto.randomUUID().slice(0, 8)}`;
+
+    const res = await app.request(
+      "/guides",
+      jsonAuth(token, "POST", {
+        title: "Derivatives",
+        summary: "Rates of change.",
+        body: "Body.",
+        newSubjects: [{ name: newName, summary: "About it" }],
+        prerequisites: [prereq.slug],
+        todoPrereqs: ["Learn limits"],
+      }),
+      env
+    );
+
+    expect(res.status).toBe(201);
+    const { revision_id } = (await res.json()) as { revision_id: string };
+
+    const { data: subject } = await admin
+      .from("subjects")
+      .select("id, status")
+      .eq("slug", newName.toLowerCase().replace(" ", "-"))
+      .single();
+    expect(subject?.status).toBe("draft");
+
+    const { data: tags } = await admin
+      .from("guide_revision_subjects")
+      .select("subject_id")
+      .eq("guide_revision_id", revision_id);
+    expect(tags?.map((t) => t.subject_id)).toEqual([subject?.id]);
+
+    const { data: rev } = await admin
+      .from("guide_revisions")
+      .select("guide_id")
+      .eq("id", revision_id)
+      .single();
+    const { data: guide } = await admin
+      .from("guides")
+      .select("guide_base_id")
+      .eq("id", rev!.guide_id)
+      .single();
+    const baseId = guide!.guide_base_id;
+
+    const { data: edges } = await admin
+      .from("guide_edges")
+      .select("from_guide_base_id")
+      .eq("to_guide_base_id", baseId)
+      .eq("edge_type", "prerequisite");
+    expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
+
+    const { data: todos } = await admin
+      .from("todo_prerequisites")
+      .select("title")
+      .eq("dependent_guide_base_id", baseId);
+    expect(todos?.map((t) => t.title)).toEqual(["Learn limits"]);
   });
 });
 

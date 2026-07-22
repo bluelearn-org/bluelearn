@@ -69,6 +69,7 @@ export const guidesRouter = new Hono<HonoEnv>()
     async (c) => {
       const { revision_id } = await createGuide(
         c.get("supabase"),
+        c.get("user").id,
         c.req.valid("json")
       );
       return c.json({ revision_id }, 201);
@@ -226,6 +227,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
     async (c) => {
       const { revision, subjects } = await updateRevision(
         c.get("supabase"),
+        c.get("user").id,
         c.req.param("id"),
         c.req.valid("json")
       );

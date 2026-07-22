@@ -44,7 +44,8 @@ function tallyBySubject(tagsPerRow: Array<Array<{ subject_id: string }>>) {
 export async function listSubjects(supabase: DB): Promise<SubjectListItem[]> {
   const { data, error } = await supabase
     .from("subjects")
-    .select("id, slug, name, summary");
+    .select("id, slug, name, summary")
+    .eq("status", "published");
 
   if (error) {
     console.error(error);
@@ -108,28 +109,38 @@ async function countObjectivesBySubject(supabase: DB) {
   );
 }
 
+// Creates new subject or returns subject if it already exists.
 export async function createSubject(
   supabase: DB,
   userId: string,
-  name: string
+  name: string,
+  summary?: string | null
 ) {
   const slug = slugify(name);
   if (!slug)
     throw new ServiceError(
-      "Title must contain at least one letter or number",
+      "Subject must contain at least one letter or number",
       400
     );
 
+  const { data: existing, error: findError } = await supabase
+    .from("subjects")
+    .select("id, slug, name")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (findError) {
+    console.error(findError);
+    throw new ServiceError("Failed to resolve subject", 500);
+  }
+  if (existing) return existing;
+
   const { data, error } = await supabase
     .from("subjects")
-    .insert({ slug, name, creator_id: userId })
+    .insert({ slug, name, summary: summary ?? null, creator_id: userId })
     .select("id, slug, name")
     .single();
 
   if (error) {
-    if (error.code === "23505") {
-      throw new ServiceError("Subject already exists", 409);
-    }
     console.error(error);
     throw new ServiceError("Failed to create subject", 500);
   }
