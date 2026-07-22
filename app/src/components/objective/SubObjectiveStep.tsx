@@ -39,7 +39,7 @@ export function SubObjectiveStep({ Stepper, target, objective }: Props) {
                     guide={guide}
                     to={GuideRoute.to}
                     origin={{
-                      type: "subject",
+                      type: "objective",
                       title: objective.title,
                       path: `/objectives/${objective.slug}`,
                     }}
