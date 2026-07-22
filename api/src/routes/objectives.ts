@@ -23,6 +23,11 @@ import {
   updateObjectiveRevision,
   updateObjectiveNode,
 } from "../services/objective-revision.service";
+import {
+  scheduleSearchSync,
+  syncObjectiveDocument,
+  syncObjectiveForRevision,
+} from "../services/search.service";
 
 export const objectivesRouter = new Hono<HonoEnv>()
   // Returns published objectives as { objectives }.
@@ -59,6 +64,11 @@ export const objectivesRouter = new Hono<HonoEnv>()
     const objective = await archiveObjective(
       c.get("supabase"),
       c.req.param("slug")
+    );
+    // Drop the archived objective from the search index (best-effort).
+    scheduleSearchSync(
+      c,
+      syncObjectiveDocument(c.env, c.get("supabase"), objective.id)
     );
     return c.json({ objective });
   })
@@ -135,6 +145,11 @@ export const objectiveRevisionsRouter = new Hono<HonoEnv>()
     const { slug } = await publishObjectiveRevision(
       c.get("supabase"),
       c.req.param("id")
+    );
+    // The objective just went (or stayed) live — refresh its search document.
+    scheduleSearchSync(
+      c,
+      syncObjectiveForRevision(c.env, c.get("supabase"), c.req.param("id"))
     );
     return c.json({ slug });
   })

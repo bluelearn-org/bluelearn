@@ -1,0 +1,14 @@
+type: object
+additionalProperties: false
+description: A subject proposed inline while drafting a guide.
+properties:
+  name:
+    type: string
+    minLength: 3
+    maxLength: 35
+    example: Vector Calculus
+  summary:
+    type: [string, "null"]
+    maxLength: 500
+    example: Calculus over vector fields.
+required: [name]
