@@ -76,7 +76,9 @@
   --secondary-foreground: var(--foreground);
 
   --muted: #1c2024;
-  --muted-foreground: #a9afb4;
+  --muted-foreground: #9ba3ab;
+
+  --brand-cta: #111827;
 
   --accent: #1f2b31;
   --accent-foreground: var(--foreground);
