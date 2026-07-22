@@ -5,8 +5,9 @@ import {
   guideSlugSchema,
   guideSummarySchema,
   guideTitleSchema,
+  guideTodoTitleSchema,
 } from "./fields";
-import { subjectSlugSchema } from "../subjects";
+import { subjectNameSchema, subjectSlugSchema } from "../subjects";
 import {
   downvoteReasonSchema,
   knowledgeTypeSchema,
@@ -20,17 +21,20 @@ const revisionContentSchema = z.object({
   body: guideBodySchema.nullish(),
 });
 
-// The full guide-creation payload, submitted in one POST once the multistep
-// contribution form is complete. title, slug, knowledge_type, body, and at
-// least one subject are required; summary/prerequisites/related are optional.
-export const createGuideSchema = z.object({
-  tags: z.array(guideSlugSchema).min(1),
-  knowledge_type: knowledgeTypeSchema.default("theoretical"),
-  title: guideTitleSchema,
-  slug: guideSlugSchema,
+export const newSubjectSchema = z.object({
+  name: subjectNameSchema,
   summary: guideSummarySchema.nullish(),
+});
+
+export const createGuideSchema = z.object({
+  knowledge_type: knowledgeTypeSchema.default("theoretical"),
+  title: guideTitleSchema.nullish(),
+  summary: guideSummarySchema.nullish(),
+  body: guideBodySchema.nullish(),
+  tags: z.array(subjectSlugSchema).default([]),
   prerequisites: z.array(guideSlugSchema).default([]),
-  body: guideBodySchema.min(1),
+  newSubjects: z.array(newSubjectSchema).default([]),
+  todoPrereqs: z.array(guideTodoTitleSchema).default([]),
 });
 
 // Variants share the parent base's subjects, and a variant's own slug is assigned
@@ -39,12 +43,15 @@ export const createGuideSchema = z.object({
 export const createVariantSchema = revisionContentSchema;
 
 // Edits to a draft revision before it goes for review. Send only the fields you
-// want to change (at least one is required). A user can clear summary, body, or
-// change_summary by sending an empty value, but a present title must stay set.
+// want to change (at least one is required).
 export const updateRevisionSchema = revisionContentSchema
   .extend({
+    title: guideTitleSchema.nullish(),
     change_summary: guideChangeSummarySchema.nullish(),
     tags: z.array(subjectSlugSchema),
+    prerequisites: z.array(guideSlugSchema),
+    newSubjects: z.array(newSubjectSchema),
+    todoPrereqs: z.array(guideTodoTitleSchema),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, {

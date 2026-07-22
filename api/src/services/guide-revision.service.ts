@@ -3,8 +3,18 @@ import type { UpdateRevisionInput } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 import { diffField } from "../lib/diff";
+import { createSubject } from "./subject.service";
+import { createPrerequisite } from "./prerequisite.service";
+import { createTodo } from "./todo.service";
 
 type DB = SupabaseClient<Database>;
+
+type DraftTagsAndEdges = {
+  tags?: string[];
+  prerequisites?: string[];
+  newSubjects?: { name: string; summary?: string | null }[];
+  todoPrereqs?: string[];
+};
 
 // The full snapshot of a single revision. RLS exposes a revision once it is
 // submitted, or earlier to its own author.
@@ -77,6 +87,121 @@ async function replaceRevisionTags(supabase: DB, id: string, slugs: string[]) {
   }
 }
 
+async function resolveRevisionBase(supabase: DB, revisionId: string) {
+  const { data: rev, error } = await supabase
+    .from("guide_revisions")
+    .select("guide_id")
+    .eq("id", revisionId)
+    .maybeSingle();
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to resolve guide base", 500);
+  }
+  if (!rev) throw new ServiceError("Revision not found", 404);
+
+  const { data: guide, error: guideError } = await supabase
+    .from("guides")
+    .select("guide_base_id")
+    .eq("id", rev.guide_id)
+    .single();
+  if (guideError) {
+    console.error(guideError);
+    throw new ServiceError("Failed to resolve guide base", 500);
+  }
+  return guide.guide_base_id;
+}
+
+// Wipe the base's prerequisite edges and re-add them from the given guide slugs.
+// Edge direction is prereq -> this base. An unknown slug fails the whole update.
+async function replacePrerequisites(
+  supabase: DB,
+  baseId: string,
+  slugs: string[]
+) {
+  const unique = [...new Set(slugs.map((s) => s.toLowerCase()))];
+
+  let prereqIds: string[] = [];
+  if (unique.length > 0) {
+    const { data, error } = await supabase
+      .from("guide_bases")
+      .select("id, slug")
+      .in("slug", unique);
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Failed to resolve prerequisites", 500);
+    }
+    if ((data ?? []).length !== unique.length) {
+      throw new ServiceError("Unknown prerequisite guide", 400);
+    }
+    prereqIds = (data ?? []).map((b) => b.id);
+  }
+
+  const { error: delError } = await supabase
+    .from("guide_edges")
+    .delete()
+    .eq("to_guide_base_id", baseId)
+    .eq("edge_type", "prerequisite");
+  if (delError) {
+    console.error(delError);
+    throw new ServiceError("Unable to update prerequisites", 400);
+  }
+
+  for (const fromId of prereqIds) {
+    await createPrerequisite(supabase, fromId, baseId);
+  }
+}
+
+// Replace a draft guide's open todos.
+async function replaceTodos(supabase: DB, baseId: string, titles: string[]) {
+  const { error: delError } = await supabase
+    .from("todo_prerequisites")
+    .delete()
+    .eq("dependent_guide_base_id", baseId)
+    .eq("status", "open");
+  if (delError) {
+    console.error(delError);
+    throw new ServiceError("Unable to update todos", 400);
+  }
+
+  for (const title of titles) {
+    await createTodo(supabase, baseId, title);
+  }
+}
+
+// Saves a draft's subject tags, prerequisite links, and todo notes.
+export async function syncDraftTagsAndEdges(
+  supabase: DB,
+  userId: string,
+  revisionId: string,
+  input: DraftTagsAndEdges
+) {
+  const { tags, prerequisites, newSubjects = [], todoPrereqs } = input;
+
+  const createdSlugs: string[] = [];
+  for (const s of newSubjects) {
+    const subject = await createSubject(supabase, userId, s.name, s.summary);
+    createdSlugs.push(subject.slug);
+  }
+
+  if (tags !== undefined || createdSlugs.length > 0) {
+    const kept =
+      tags !== undefined
+        ? tags
+        : (await loadRevisionTags(supabase, revisionId)).map((t) => t.slug);
+    await replaceRevisionTags(supabase, revisionId, [...kept, ...createdSlugs]);
+  }
+
+  if (prerequisites !== undefined || todoPrereqs !== undefined) {
+    const baseId = await resolveRevisionBase(supabase, revisionId);
+    if (prerequisites !== undefined) {
+      await replacePrerequisites(supabase, baseId, prerequisites);
+    }
+    if (todoPrereqs !== undefined) {
+      await replaceTodos(supabase, baseId, todoPrereqs);
+    }
+  }
+}
+
 // Resolve a revision by id to its snapshot and subject tags. 404 when RLS hides it.
 export async function getRevision(supabase: DB, id: string) {
   const { data: revision, error } = await supabase
@@ -99,10 +224,11 @@ export async function getRevision(supabase: DB, id: string) {
 // draft, so an out-of-reach or already-submitted revision matches zero rows.
 export async function updateRevision(
   supabase: DB,
+  userId: string,
   id: string,
   input: UpdateRevisionInput
 ) {
-  const { tags, ...fields } = input;
+  const { tags, prerequisites, newSubjects, todoPrereqs, ...fields } = input;
 
   const patch = {
     ...fields,
@@ -151,9 +277,12 @@ export async function updateRevision(
     revision = data;
   }
 
-  if (tags !== undefined) {
-    await replaceRevisionTags(supabase, id, tags);
-  }
+  await syncDraftTagsAndEdges(supabase, userId, id, {
+    tags,
+    prerequisites,
+    newSubjects,
+    todoPrereqs,
+  });
 
   const subjects = await loadRevisionTags(supabase, id);
   return { revision, subjects };
@@ -175,6 +304,13 @@ export async function submitRevision(supabase: DB, id: string) {
       throw new ServiceError(
         "Revision not found or not an editable draft",
         404
+      );
+    }
+    // The RPC raises check_violation when the draft is missing a required field.
+    if (error.code === "23514") {
+      throw new ServiceError(
+        "Add a title, summary, body, and at least one tag before submitting",
+        422
       );
     }
     throw new ServiceError("Unable to submit revision", 400);

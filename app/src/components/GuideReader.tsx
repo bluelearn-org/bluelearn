@@ -1,5 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
@@ -12,6 +14,14 @@ import { Badge } from "@/components//ui/badge";
 import { CodeBlock } from "@/components/CodeBlock";
 
 import { formatDuration } from "@/lib/guideUtils";
+
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    img: [...(defaultSchema.attributes?.img ?? []), "width", "height"],
+  },
+};
 
 type PropTypes = {
   guide: HydratedGuide;
@@ -69,7 +79,11 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
       <article className="markdown">
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
+          rehypePlugins={[
+            rehypeRaw,
+            [rehypeSanitize, sanitizeSchema],
+            rehypeKatex,
+          ]}
           components={{
             pre({ children }) {
               const child = children as ReactElement<{

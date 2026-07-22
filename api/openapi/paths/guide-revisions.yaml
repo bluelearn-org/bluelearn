@@ -94,6 +94,8 @@
         $ref: "../components/responses/_shared.yaml#/Unauthorized"
       "404":
         $ref: "../components/responses/_shared.yaml#/NotFound"
+      "422":
+        $ref: "../components/responses/_shared.yaml#/Unprocessable"
 
 /guide-revisions/{id}/diff/prev:
   parameters:

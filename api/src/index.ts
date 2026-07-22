@@ -21,6 +21,7 @@ import { prerequisitesRouter, todosRouter } from "./routes/graph";
 import { subjectsRouter } from "./routes/subjects";
 import { reviewsRouter } from "./routes/reviews";
 import { mediaRouter } from "./routes/media";
+import { searchRouter } from "./routes/search";
 
 const app = new Hono<HonoEnv>()
   .use((c, next) => cors({ origin: c.env.APP_URL })(c, next))
@@ -38,7 +39,8 @@ const app = new Hono<HonoEnv>()
   .route("/todos", todosRouter)
   .route("/subjects", subjectsRouter)
   .route("/reviews", reviewsRouter)
-  .route("/media", mediaRouter);
+  .route("/media", mediaRouter)
+  .route("/search", searchRouter);
 
 // Services throw ServiceError to signal HTTP-meaningful failures; map them to
 // JSON here so handlers stay free of repeated `if (error) return c.json(...)`.

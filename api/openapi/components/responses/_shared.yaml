@@ -34,6 +34,14 @@ NotFound:
         $ref: "../schemas/common/Error.yaml"
       example:
         error: Not found
+Unprocessable:
+  description: Well-formed but not ready for this action (e.g. an incomplete draft)
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common/Error.yaml"
+      example:
+        error: Not ready
 RateLimited:
   description: Too many requests
   headers:

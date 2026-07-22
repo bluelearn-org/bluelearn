@@ -1,9 +1,9 @@
 services:
   typesense:
-    image: typesense/typesense:0.25.0
+    image: typesense/typesense:30.2
     env_file:
       - .dev.vars
-    command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
+    command: --data-dir /data --api-key=${TYPESENSE_API_KEY} --enable-cors
     ports:
       - "8108:8108"
     volumes:

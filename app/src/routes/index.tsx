@@ -4,26 +4,40 @@ import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 import type { HydratedObjective } from "@/types/objectives";
 
 import { Route as SubjectRoute } from "@/routes/subjects.$slug";
-
+import { listSubjects } from "@/lib/api/subjects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FeaturedRow } from "@/components/FeaturedRow";
 
-import subjects from "@/data/subjects.json";
 import objectives from "@/data/objectives.json";
 import guides from "@/data/guides.json";
 
 import { hydrateObjectives } from "@/lib/getData";
 
-export const Route = createFileRoute("/")({ component: RouteComponent });
+// subjects failing shouldn't take down the rest of the homepage, so the
+// failure is data instead of an errorComponent
+export const Route = createFileRoute("/")({
+  loader: async ({ abortController }) => {
+    try {
+      return {
+        subjects: await listSubjects({ signal: abortController.signal }),
+        subjectsFailed: false,
+      };
+    } catch {
+      return { subjects: [], subjectsFailed: true };
+    }
+  },
+  component: RouteComponent,
+});
 
 function RouteComponent() {
   const hydratedObjectives: Array<HydratedObjective> = hydrateObjectives(
     guides,
     objectives
   );
+  const { subjects, subjectsFailed } = Route.useLoaderData();
 
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
@@ -37,7 +51,7 @@ function RouteComponent() {
             </p>
             <h1 className="max-w-3xl text-4xl font-bold tracking-[-0.04em] lg:text-6xl">
               Welcome to{" "}
-              <span className="text-brand-blue italic">BlueLearn</span>,
+              <span className="text-brand-blue italic">Bluelearn</span>,
               <br />
               have a look around...
             </h1>
@@ -100,6 +114,16 @@ function RouteComponent() {
         </div>
 
         <Separator className="mb-4 bg-border" />
+
+        {subjectsFailed && (
+          <p className="text-sm text-muted-foreground">
+            Subjects could not be loaded. Try again shortly.
+          </p>
+        )}
+
+        {!subjectsFailed && subjects.length === 0 && (
+          <p className="text-sm text-muted-foreground">No subjects yet.</p>
+        )}
 
         <div className="flex flex-wrap gap-3">
           {[...subjects]
