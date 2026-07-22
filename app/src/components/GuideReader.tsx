@@ -1,8 +1,11 @@
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
+import { Calendar, Clock, User } from "lucide-react";
 import type { SubjectReference } from "@/types/subjects";
 import type { GuideType, HydratedGuide } from "@/types/guides";
 import type { ReactElement } from "react";
@@ -11,6 +14,14 @@ import { Badge } from "@/components//ui/badge";
 import { CodeBlock } from "@/components/CodeBlock";
 
 import { formatDuration } from "@/lib/guideUtils";
+
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    img: [...(defaultSchema.attributes?.img ?? []), "width", "height"],
+  },
+};
 
 type PropTypes = {
   guide: HydratedGuide;
@@ -34,11 +45,21 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
           )}
         </div>
 
-        <div className="mono-micro py-2 text-muted-foreground">
-          {guide.author} | {guide.created_at} | {formatDuration(guide.duration)}
+        <div className="mono-micro my-2 flex flex-wrap items-center gap-2.5 text-muted-foreground/80">
+          <span className="flex items-center gap-1">
+            <User className="h-3 w-3 text-muted-foreground/75" />@{guide.author}
+          </span>
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-muted-foreground/75" />
+            {guide.created_at}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3 text-muted-foreground/75" />
+            {formatDuration(guide.duration)}m
+          </span>
         </div>
 
-        <div className="flex gap-2">
+        <div className="my-4 flex gap-2">
           {guide.tags.map((tag: SubjectReference) => (
             <Badge
               key={tag.slug}
@@ -62,7 +83,11 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
       <article className="markdown">
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
+          rehypePlugins={[
+            rehypeRaw,
+            [rehypeSanitize, sanitizeSchema],
+            rehypeKatex,
+          ]}
           components={{
             pre({ children }) {
               const child = children as ReactElement<{

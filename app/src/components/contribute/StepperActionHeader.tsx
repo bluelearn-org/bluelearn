@@ -1,14 +1,24 @@
+import { Save } from "lucide-react";
+
 import { Separator } from "@/components/ui/separator";
+
+type PropTypes = {
+  title: string;
+  Stepper: any;
+  nextDisabled?: boolean;
+  onSaveDraft?: () => void;
+  submitting?: boolean;
+  hideBackBtn?: boolean;
+};
 
 export const StepperActionHeader = ({
   title,
   Stepper,
   nextDisabled,
-}: {
-  title: string;
-  Stepper: any;
-  nextDisabled?: boolean;
-}) => {
+  onSaveDraft,
+  submitting,
+  hideBackBtn,
+}: PropTypes) => {
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
@@ -17,7 +27,21 @@ export const StepperActionHeader = ({
         </h1>
 
         <div className="text-mono flex justify-between gap-4">
-          <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
+          {onSaveDraft && (
+            <button
+              type="button"
+              className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
+              disabled={submitting}
+              onClick={onSaveDraft}
+            >
+              <Save className="size-4" />
+              Save Draft
+            </button>
+          )}
+
+          {!hideBackBtn && (
+            <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
+          )}
 
           <Stepper.Next className="btn-pri" disabled={nextDisabled}>
             Next

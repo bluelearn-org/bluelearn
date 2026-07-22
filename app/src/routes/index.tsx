@@ -51,7 +51,7 @@ function RouteComponent() {
             </p>
             <h1 className="max-w-3xl text-4xl font-bold tracking-[-0.04em] lg:text-6xl">
               Welcome to{" "}
-              <span className="text-brand-blue italic">BlueLearn</span>,
+              <span className="text-brand-blue italic">Bluelearn</span>,
               <br />
               have a look around...
             </h1>

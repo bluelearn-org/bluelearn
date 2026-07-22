@@ -807,6 +807,7 @@ export type Database = {
           id: string
           name: string
           slug: string
+          status: Database["public"]["Enums"]["subject_status"]
           summary: string | null
         }
         Insert: {
@@ -815,6 +816,7 @@ export type Database = {
           id?: string
           name: string
           slug: string
+          status?: Database["public"]["Enums"]["subject_status"]
           summary?: string | null
         }
         Update: {
@@ -823,6 +825,7 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          status?: Database["public"]["Enums"]["subject_status"]
           summary?: string | null
         }
         Relationships: [
@@ -1078,6 +1081,7 @@ export type Database = {
       review_outcome: "approved" | "rejected"
       revision_status: "draft" | "submitted"
       seat_status: "assigned" | "recused" | "replaced" | "completed"
+      subject_status: "draft" | "published"
       todo_status: "open" | "resolved"
       vote_direction: "up" | "down"
     }
@@ -1235,6 +1239,7 @@ export const Constants = {
       review_outcome: ["approved", "rejected"],
       revision_status: ["draft", "submitted"],
       seat_status: ["assigned", "recused", "replaced", "completed"],
+      subject_status: ["draft", "published"],
       todo_status: ["open", "resolved"],
       vote_direction: ["up", "down"],
     },
