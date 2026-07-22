@@ -266,30 +266,21 @@ export async function getWalkthrough(supabase: DB, rawSlug: string) {
   return data as unknown as Walkthrough;
 }
 
-// List the published variants (methods/alternatives) under a guide. Title and
-// summary live on each variant's live revision.
+// List the published variants (methods/alternatives) under a guide, ranked
+// by Wilson score lower bound
 export async function listGuideVariants(supabase: DB, rawSlug: string) {
   const baseId = await resolveBaseId(supabase, rawSlug);
 
-  const { data, error } = await supabase
-    .from("guides")
-    .select(
-      `id, slug, current:guide_revisions!guides_current_revision_id_fkey(title, summary)`
-    )
-    .eq("guide_base_id", baseId)
-    .eq("status", "published")
-    .order("slug");
+  const { data, error } = await supabase.rpc("list_guide_variants_by_score", {
+    p_guide_base_id: baseId,
+  });
 
   if (error) {
     console.error(error);
     throw new ServiceError("Failed to load variants", 500);
   }
 
-  return (data ?? []).map(({ current, ...variant }) => ({
-    ...variant,
-    title: current?.title ?? null,
-    summary: current?.summary ?? null,
-  }));
+  return data ?? [];
 }
 
 // Add a variant under a guide: a draft guide + first revision via the

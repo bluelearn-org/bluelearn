@@ -36,6 +36,10 @@ import {
   submitRevision,
   updateRevision,
 } from "../services/guide-revision.service";
+import {
+  scheduleSearchSync,
+  syncGuideDocument,
+} from "../services/search.service";
 
 // Normalize a blank summary to NULL to match the create_guide RPC defaults.
 const createGuideBody = createGuideSchema.extend({
@@ -83,6 +87,11 @@ export const guidesRouter = new Hono<HonoEnv>()
   // Archives the guide. 404 if missing or not permitted.
   .delete("/:slug", requireUser, async (c) => {
     const guide = await archiveGuide(c.get("supabase"), c.req.param("slug"));
+    // Drop the archived guide from the search index (best-effort).
+    scheduleSearchSync(
+      c,
+      syncGuideDocument(c.env, c.get("supabase"), guide.id)
+    );
     return c.json({ guide });
   })
 

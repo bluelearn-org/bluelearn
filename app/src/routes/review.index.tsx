@@ -1,44 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 
-import type { HydratedObjective } from "@/types/objectives";
-import type { Guide } from "@/types/guides";
-
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
-import { GuideCard } from "@/components/cards/GuideCard";
-import { CustomTabs } from "@/components/Tabs";
 
 import { Route as ReviewSlugRoute } from "@/routes/review.$slug";
 
-import guides from "@/data/guides.json";
-import objectives from "@/data/objectives.json";
+import { getReviewQueue } from "@/lib/api/reviews";
 
-import { hydrateObjectives } from "@/lib/getData";
+export const Route = createFileRoute("/review/")({
+  loader: async ({ abortController }) => {
+    try {
+      return await getReviewQueue({ signal: abortController.signal });
+    } catch {
+      return [];
+    }
+  },
+  component: RouteComponent,
+});
 
-export const Route = createFileRoute("/review/")({ component: RouteComponent });
-
-function RouteComponent() {
-  const hydratedObjectives: Array<HydratedObjective> = hydrateObjectives(
-    guides,
-    objectives
-  );
-  const allGuides: Array<Guide> = hydratedObjectives.flatMap((p) =>
-    p.levels.map((l) => l.guide)
-  );
-
-  const tabs = [
-    {
-      id: "guides",
-      label: "Guides",
-      content: <ReviewGrid type="guides" data={allGuides} />,
-    },
-    {
-      id: "objectives",
-      label: "Objectives",
-      content: <ReviewGrid type="objectives" data={hydratedObjectives} />,
-    },
-  ];
-
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
       <section className="border-b px-8 py-8 lg:px-16">
@@ -50,40 +30,80 @@ function RouteComponent() {
 
         <Separator className="mb-4 bg-border" />
 
-        <CustomTabs tabs={tabs} />
+        {children}
       </section>
     </div>
   );
 }
 
-type ReviewGridProps = {
-  type: string;
-  data: any;
-};
+function RouteComponent() {
+  const cases = Route.useLoaderData();
 
-const ReviewGrid = ({ type, data }: ReviewGridProps) => {
-  if (type == "objectives") {
+  if (cases.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((objective: HydratedObjective, index: number) => {
-          const o = {
-            ...objective,
-          };
-          return (
-            <ObjectiveCard key={index} objective={o} to={ReviewSlugRoute.to} />
-          );
-        })}
-      </div>
-    );
-  } else if (type == "guides") {
-    return (
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {data.map((guide: Guide, index: number) => {
-          return (
-            <GuideCard key={index} guide={guide} to={ReviewSlugRoute.to} />
-          );
-        })}
-      </div>
+      <Shell>
+        <p className="text-sm text-muted-foreground">No review cases yet.</p>
+      </Shell>
     );
   }
+
+  return (
+    <Shell>
+      <CaseGrid cases={cases} />
+    </Shell>
+  );
+}
+
+type QueueCase = {
+  id: string;
+  title: string | null;
+  created_at: string;
+  decision: "approved" | "rejected" | null;
 };
+
+// Not voted yet = still needs the reviewer's attention. Once voted, echo the
+// standing vote and flag that it can still be changed until the panel closes.
+function reviewerStatus(decision: QueueCase["decision"]) {
+  return decision ? `${decision} • editable` : "needs review";
+}
+
+function CaseGrid({ cases }: { cases: Array<QueueCase> }) {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {cases.map((c) => (
+        <Link
+          key={c.id}
+          to={ReviewSlugRoute.to}
+          params={{ slug: c.id }}
+          className="block"
+        >
+          <div className="rounded-md border bg-background p-4 shadow-none transition-colors hover:bg-muted">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
+                Review Case
+              </p>
+              <Badge
+                variant="outline"
+                className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+              >
+                {reviewerStatus(c.decision)}
+              </Badge>
+            </div>
+
+            <h3 className="mt-2 text-xl font-semibold tracking-tight">
+              {c.title ?? "Untitled Guide"}
+            </h3>
+
+            <p className="mt-2 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+              {new Date(c.created_at).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
