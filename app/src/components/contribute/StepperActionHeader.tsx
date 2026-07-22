@@ -6,18 +6,20 @@ type PropTypes = {
   title: string;
   Stepper: any;
   nextDisabled?: boolean;
-  onSaveDraft?: () => void;
-  submitting?: boolean;
   hideBackBtn?: boolean;
+  submitting?: boolean;
+  onSaveDraft?: () => void;
+  onPublish?: () => void;
 };
 
 export const StepperActionHeader = ({
   title,
   Stepper,
   nextDisabled,
-  onSaveDraft,
   submitting,
   hideBackBtn,
+  onSaveDraft,
+  onPublish,
 }: PropTypes) => {
   return (
     <>
@@ -43,9 +45,20 @@ export const StepperActionHeader = ({
             <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
           )}
 
-          <Stepper.Next className="btn-pri" disabled={nextDisabled}>
-            Next
-          </Stepper.Next>
+          {onPublish ? (
+            <button
+              type="button"
+              className="btn-pri disabled:pointer-events-none disabled:opacity-50"
+              disabled={submitting}
+              onClick={onPublish}
+            >
+              Submit for Review
+            </button>
+          ) : (
+            <Stepper.Next className="btn-pri" disabled={nextDisabled}>
+              Next
+            </Stepper.Next>
+          )}
         </div>
       </div>
 

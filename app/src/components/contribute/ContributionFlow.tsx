@@ -23,11 +23,12 @@ import { GuideDetails } from "@/components/contribute/steps/GuideDetails";
 import { VariantDetails } from "@/components/contribute/steps/VariantDetails";
 import { Content } from "@/components/contribute/steps/Content";
 import { ObjectiveDetails } from "@/components/contribute/steps/ObjectiveDetails";
-import { Submit } from "@/components/contribute/steps/Submit";
+import { PreviewGuide } from "@/components/contribute/steps/PreviewGuide";
 import { OrderObjectiveGuides } from "@/components/contribute/steps/OrderObjectiveGuides";
 import { OrderTargetGuides } from "@/components/contribute/steps/OrderTargetGuides";
 
 import { flows, typeStep } from "@/lib/contributionFlow";
+import { PreviewObjective } from "@/components/contribute/steps/PreviewObjective";
 
 type PropTypes = {
   type: ContributionType | null;
@@ -348,11 +349,16 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
         />
 
-        <Submit
+        <PreviewGuide
           Stepper={Stepper}
           guide={previewGuide}
           guideType={guideType}
           onSaveDraft={saveDraft}
+          onPublish={publish}
+          submitting={submitting}
+        />
+        <PreviewObjective
+          Stepper={Stepper}
           onPublish={publish}
           submitting={submitting}
         />
