@@ -5,6 +5,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
+import { Calendar, Clock, User } from "lucide-react";
 import type { SubjectReference } from "@/types/subjects";
 import type { GuideType, HydratedGuide } from "@/types/guides";
 import type { ReactElement } from "react";
@@ -46,19 +47,21 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
           )}
         </div>
 
-        {(guide.author || guide.created_at || guide.duration) && (
-          <div className="mono-micro mt-3">
-            {[
-              guide.author,
-              guide.created_at,
-              guide.duration ? formatDuration(guide.duration) : null,
-            ]
-              .filter(Boolean)
-              .join(" | ")}
-          </div>
-        )}
+        <div className="mono-micro my-2 flex flex-wrap items-center gap-2.5 text-muted-foreground/80">
+          <span className="flex items-center gap-1">
+            <User className="h-3 w-3 text-muted-foreground/75" />@{guide.author}
+          </span>
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-muted-foreground/75" />
+            {guide.created_at}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3 text-muted-foreground/75" />
+            {formatDuration(guide.duration)}m
+          </span>
+        </div>
 
-        <div className="mt-4 flex gap-2">
+        <div className="my-4 flex gap-2">
           {guide.tags.map((tag: SubjectReference) => (
             <Badge
               key={tag.slug}
