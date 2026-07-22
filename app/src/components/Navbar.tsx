@@ -1,7 +1,9 @@
 import { Menu, Search, User, X } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { useAuth } from "@/lib/authContext";
+import { signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,21 +15,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
-const navItems = [
+// `role`, when set, hides the item from anyone who doesn't hold it.
+const navItems: Array<{ label: string; to: string; role?: string }> = [
   { label: "Browse", to: "/browse" },
   { label: "Subjects", to: "/subjects" },
   { label: "Objectives", to: "/objectives" },
-  { label: "Review", to: "/review" },
+  { label: "Review", to: "/review", role: "verifier" },
 ];
 
 const profileItems = [
   { label: "Profile", to: "/profile" },
-  { label: "Saved", to: "/saved" },
   { label: "Settings", to: "/settings" },
 ];
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { session, roles } = useAuth();
+  const navigate = useNavigate();
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.role || roles.includes(item.role)
+  );
+
+  async function handleSignOut() {
+    await signOut();
+    setMobileOpen(false);
+    navigate({ to: "/" });
+  }
 
   return (
     <header className="sticky top-0 z-50">
@@ -43,7 +57,7 @@ export function Navbar() {
             </Link>
 
             <nav className="hidden items-center gap-6 md:flex">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
@@ -73,38 +87,50 @@ export function Navbar() {
               </Link>
             </div>
 
-            {/* Desktop Profile Dropdown */}
-            <div className="hidden md:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-md"
-                  >
-                    <User className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+            {session ? (
+              /* Desktop Profile Dropdown */
+              <div className="hidden md:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-md"
+                    >
+                      <User className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-48 font-mono">
-                  {profileItems.map((item) => (
-                    <DropdownMenuItem key={item.to} asChild>
-                      <Link to={item.to} className="text-xs">
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuContent align="end" className="w-48 font-mono">
+                    {profileItems.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to} className="text-xs">
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
 
-                  <DropdownMenuSeparator />
+                    <DropdownMenuSeparator />
 
-                  <DropdownMenuItem asChild>
-                    <Link to="/" className="text-xs text-destructive">
+                    <DropdownMenuItem
+                      onSelect={handleSignOut}
+                      className="text-xs text-destructive"
+                    >
                       Sign Out
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <div className="hidden md:flex">
+                <Link
+                  to="/login"
+                  className="rounded-md border border-border px-4 py-2 font-mono text-xs tracking-[0.08em] uppercase transition-colors hover:text-foreground"
+                >
+                  Sign In
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* MOBILE */}
@@ -137,7 +163,7 @@ export function Navbar() {
 
               {/* Nav */}
               <div className="flex flex-col gap-3 py-3">
-                {navItems.map((item) => (
+                {visibleNavItems.map((item) => (
                   <Link
                     key={item.to}
                     to={item.to}
@@ -161,26 +187,46 @@ export function Navbar() {
 
                 <Separator />
 
-                {profileItems.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMobileOpen(false)}
-                    className="py-2 font-mono text-sm text-muted-foreground uppercase hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {session ? (
+                  <>
+                    {profileItems.map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setMobileOpen(false)}
+                        className="py-2 font-mono text-sm text-muted-foreground uppercase hover:text-foreground"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
 
-                <Separator />
+                    <Separator />
 
-                <Link
-                  to="/"
-                  onClick={() => setMobileOpen(false)}
-                  className="py-3 font-mono text-sm text-destructive uppercase"
-                >
-                  Sign Out
-                </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="py-3 text-left font-mono text-sm text-destructive uppercase"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="py-2 font-mono text-sm text-muted-foreground uppercase hover:text-foreground"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      to="/register"
+                      onClick={() => setMobileOpen(false)}
+                      className="py-2 font-mono text-sm uppercase hover:text-foreground"
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

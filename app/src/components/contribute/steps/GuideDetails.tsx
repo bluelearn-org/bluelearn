@@ -97,7 +97,10 @@ export const GuideDetails = ({
           </button>
         </Field>
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Title
           </FieldLabel>
 
@@ -120,7 +123,10 @@ export const GuideDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Summary
           </FieldLabel>
 
@@ -140,7 +146,10 @@ export const GuideDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
             Subjects
           </FieldLabel>
 

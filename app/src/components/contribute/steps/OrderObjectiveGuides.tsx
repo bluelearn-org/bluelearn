@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
   Clock,
-  GripVertical,
   Info,
   ListOrdered,
   Maximize,
@@ -14,9 +13,9 @@ import {
 import { GuideGraph } from "../graph-view/GuideGraph";
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
+import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
 import { Badge } from "@/components/ui/badge";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
-import { Combobox } from "@/components/ui/combobox";
 import {
   Card,
   CardContent,
@@ -113,6 +112,7 @@ export const OrderObjectiveGuides = ({
   const [curatedSequence, setCuratedSequence] = useState<Array<string>>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoveredGuide, setHoveredGuide] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"sequence" | "graph">("sequence");
 
   const targetGuide = targetSlug ? guidesMap.get(targetSlug) : undefined;
 
@@ -135,10 +135,6 @@ export const OrderObjectiveGuides = ({
     if (h > 0) return `${h}h`;
     return `${m}m`;
   }, [totalDuration]);
-
-  const selectedGuidesList = guidesData.filter((g) =>
-    objectiveContData.targets.includes(g.slug)
-  );
 
   // Compute walkthrough nodes for the target
   const walkthroughNodes = useMemo(() => {
@@ -267,54 +263,105 @@ export const OrderObjectiveGuides = ({
   };
 
   return (
-    <Stepper.Content step="objective-ordering">
+    <Stepper.Content
+      step="objective-ordering"
+      className="flex min-h-0 w-full flex-1 flex-col"
+    >
       <StepperActionHeader title={"Order Guides"} Stepper={Stepper} />
 
-      <FieldGroup className="space-y-6">
-        {/* Dropdown: Pick Target Guide */}
-        <Field className="max-w-3xl space-y-2">
-          <FieldLabel className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
-            Target Guide
-          </FieldLabel>
-          <div className="flex items-center gap-4">
-            <div className="w-75 shrink-0">
-              <Combobox
-                items={selectedGuidesList.map((g) => ({
-                  value: g.slug,
-                  label: g.title,
-                  description: g.summary,
-                }))}
-                value={targetSlug}
-                onValueChange={(val) => setTargetSlug(val)}
-              />
-            </div>
-            <div className="self-stretch border-l border-border/80" />
-            <FieldDescription className="mt-0 max-w-xs text-[11px] leading-normal text-muted-foreground/75">
-              Select which guide represents the final endpoint (target) of this
-              sub-objective.
+      <FieldGroup className="mt-0 flex min-h-0 flex-1 flex-col">
+        {/* Target Guide Sequence */}
+        <Field className="mb-0 min-w-0 shrink-0 space-y-2">
+          <div className="flex items-baseline gap-4">
+            <FieldLabel className="font-mono text-[11px] tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase">
+              Target Guide Sequence
+            </FieldLabel>
+            <FieldDescription className="m-0 text-[11px] text-muted-foreground/75">
+              Select a target guide from your sequence to curate its
+              prerequisites.
             </FieldDescription>
           </div>
+          <div className="flex scrollbar-thin [scrollbar-color:var(--border)_transparent] items-center gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+            {objectiveContData.targets.map((slug, index) => {
+              const guide = guidesMap.get(slug);
+              if (!guide) return null;
+
+              const isActive = slug === targetSlug;
+
+              return (
+                <div key={slug} className="flex shrink-0 items-center gap-2">
+                  {index > 0 && <div className="h-px w-4 bg-border/60" />}
+                  <button
+                    type="button"
+                    onClick={() => setTargetSlug(slug)}
+                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:bg-muted"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted-foreground/20 text-muted-foreground"
+                      }`}
+                    >
+                      {index + 1}
+                    </span>
+                    {guide.title}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </Field>
+
+        {/* Mobile Tab Switcher */}
+        <div className="mb-4 flex w-full shrink-0 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileTab("sequence")}
+            className={`inline-flex flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all ${
+              mobileTab === "sequence"
+                ? "bg-background text-foreground shadow-sm"
+                : "hover:bg-muted-foreground/10 hover:text-foreground"
+            }`}
+          >
+            Sequence
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("graph")}
+            className={`inline-flex flex-1 items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all ${
+              mobileTab === "graph"
+                ? "bg-background text-foreground shadow-sm"
+                : "hover:bg-muted-foreground/10 hover:text-foreground"
+            }`}
+          >
+            Graph
+          </button>
+        </div>
 
         <div
           className={
             isFullscreen
-              ? "fixed inset-0 z-50 grid animate-in grid-cols-1 items-stretch gap-6 bg-background/95 p-6 backdrop-blur-md fade-in lg:grid-cols-12"
-              : "grid h-[calc(100vh-450px)] min-h-87.5 w-full grid-cols-1 items-stretch gap-6 lg:grid-cols-12"
+              ? "fixed inset-0 z-50 grid animate-in grid-cols-1 items-stretch gap-6 bg-background/95 p-6 backdrop-blur-md fade-in lg:grid-cols-12 lg:grid-rows-1"
+              : "grid min-h-0 w-full flex-1 grid-cols-1 items-stretch gap-6 lg:grid-cols-12 lg:grid-rows-1"
           }
         >
           {/* Left Pane: Curated Sequence */}
           <Card
-            className={`flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm ${
-              isFullscreen ? "lg:col-span-4" : "lg:col-span-7"
-            }`}
+            className={`min-h-0 w-full flex-col self-start overflow-hidden rounded-lg border border-border bg-card/35 shadow-none backdrop-blur-sm ${
+              mobileTab === "sequence" ? "flex" : "hidden lg:flex"
+            } ${isFullscreen ? "lg:col-span-4" : "lg:col-span-5"}`}
           >
             <CardHeader className="border-b pb-4">
               <div className="flex w-full items-center justify-between">
                 <div className="flex items-center gap-2 text-primary">
                   <ListOrdered className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base font-semibold">
-                    Create a Curated Sequence
+                    Curate Guide Sequence
                   </CardTitle>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 pr-3 select-none">
@@ -328,7 +375,7 @@ export const OrderObjectiveGuides = ({
                 Build the sequential learning plan by ordering selected guides.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4">
+            <CardContent className="max-h-128 min-h-0 flex-1 scrollbar-thin [scrollbar-color:var(--border)_transparent] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
               {curatedSequence.length === 0 && walkthroughNodes.length > 1 && (
                 <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                   <Info className="mb-2 h-8 w-8 text-muted-foreground opacity-50" />
@@ -350,17 +397,15 @@ export const OrderObjectiveGuides = ({
                   const isDragging = index === draggedIndex;
 
                   return (
-                    <div
+                    <DraggableGuideCard
                       key={slug}
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
+                      guide={guide}
+                      index={index}
+                      isDragging={isDragging}
+                      isHovered={hoveredGuide === slug}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
                       onDragEnd={handleDragEnd}
-                      className={`relative flex items-center justify-between gap-3 rounded-lg border p-3 pl-12 shadow-sm transition-all duration-150 select-none ${
-                        isDragging
-                          ? "z-10 scale-[1.02] cursor-grabbing border-2 border-dashed border-primary bg-primary/10 opacity-80 ring-4 ring-primary/20"
-                          : "cursor-grab border-border bg-background hover:border-primary/30"
-                      } ${hoveredGuide === slug ? "border-primary/50 ring-2 ring-primary/40" : ""}`}
                       onMouseEnter={() => {
                         if (draggedIndex === null) setHoveredGuide(slug);
                       }}
@@ -368,94 +413,26 @@ export const OrderObjectiveGuides = ({
                         if (draggedIndex === null) setHoveredGuide(null);
                       }}
                     >
-                      {/* Left controls column positioned absolutely with background and border separation */}
-                      <div className="absolute inset-y-0 left-0 z-10 w-9 rounded-l-lg border-r border-border/70 bg-muted/40">
-                        {/* Drag Icon completely centered vertically */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab text-muted-foreground/60 hover:text-foreground">
-                          <GripVertical className="h-4 w-4" />
-                        </div>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 border-none text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleToggleGuide(slug, false)}
+                        title="Remove from Sequence"
+                      >
+                        <span className="text-lg leading-none">&times;</span>
+                      </Button>
 
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-semibold text-primary">
-                              {index + 1}
-                            </span>
-                            <h4 className="truncate text-sm font-medium text-foreground">
-                              {guide.title}
-                            </h4>
-                          </div>
-                          {/* Author, Date, & Duration under title, before description */}
-                          {(guide.author ||
-                            guide.created_at ||
-                            guide.duration) && (
-                            <div className="mt-1 ml-8 flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground/80">
-                              {guide.author && (
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3 text-muted-foreground/75" />
-                                  @{guide.author}
-                                </span>
-                              )}
-                              {guide.created_at && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3 text-muted-foreground/75" />
-                                  {guide.created_at}
-                                </span>
-                              )}
-                              {guide.duration && (
-                                <span className="flex items-center gap-1 font-medium">
-                                  <Clock className="h-3 w-3 text-muted-foreground/75" />
-                                  {guide.duration}m
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <p className="mt-1.5 ml-8 text-xs text-muted-foreground">
-                            {guide.summary}
-                          </p>
-                          {/* Tags below description */}
-                          {guide.tags.length > 0 && (
-                            <div className="mt-2 ml-8 flex flex-wrap gap-1">
-                              {guide.tags.map((tag) => (
-                                <Badge
-                                  key={tag}
-                                  variant="outline"
-                                  className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right controls column: Remove (top-right) and Swap Variant (bottom-right) */}
-                      <div className="flex shrink-0 flex-col items-center justify-between gap-3 self-stretch">
-                        {/* Remove Button in the upper right */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 border-none text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleToggleGuide(slug, false)}
-                          title="Remove from Sequence"
-                        >
-                          <span className="text-lg leading-none">&times;</span>
-                        </Button>
-
-                        {/* Swap Variant Button in the bottom right */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled
-                          className="h-8 w-8 cursor-not-allowed border-none p-0 text-muted-foreground/40 hover:bg-transparent"
-                          title="Variants Coming Soon"
-                        >
-                          <Replace className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled
+                        className="h-8 w-8 cursor-not-allowed border-none p-0 text-muted-foreground/40 hover:bg-transparent"
+                        title="Variants Coming Soon"
+                      >
+                        <Replace className="h-5 w-5" />
+                      </Button>
+                    </DraggableGuideCard>
                   );
                 })}
 
@@ -465,7 +442,7 @@ export const OrderObjectiveGuides = ({
                     className={`flex items-start gap-3 rounded-lg border border-primary bg-primary/5 p-3 shadow-sm transition-all duration-150 ${
                       hoveredGuide === targetGuide.slug
                         ? "shadow-md ring-2 ring-primary/40"
-                        : ""
+                        : "hover:shadow-md hover:ring-2 hover:ring-primary/40"
                     }`}
                     onMouseEnter={() => {
                       if (draggedIndex === null)
@@ -493,19 +470,19 @@ export const OrderObjectiveGuides = ({
                         targetGuide.duration) && (
                         <div className="mt-1 ml-7 flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground/80">
                           {targetGuide.author && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 font-mono uppercase">
                               <User className="h-3 w-3 text-primary/70" />@
                               {targetGuide.author}
                             </span>
                           )}
                           {targetGuide.created_at && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 font-mono uppercase">
                               <Calendar className="h-3 w-3 text-primary/70" />
                               {targetGuide.created_at}
                             </span>
                           )}
                           {targetGuide.duration && (
-                            <span className="flex items-center gap-1 font-medium">
+                            <span className="flex items-center gap-1 font-mono font-medium uppercase">
                               <Clock className="h-3 w-3 text-primary/70" />
                               {targetGuide.duration}m
                             </span>
@@ -551,9 +528,9 @@ export const OrderObjectiveGuides = ({
 
           {/* Right Pane: Generated Walkthrough by Level */}
           <Card
-            className={`flex h-full max-h-full flex-col overflow-hidden rounded-lg border border-border bg-muted/10 shadow-none ${
-              isFullscreen ? "lg:col-span-8" : "lg:col-span-5"
-            }`}
+            className={`h-full max-h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-muted/10 shadow-none ${
+              mobileTab === "graph" ? "flex" : "hidden lg:flex"
+            } ${isFullscreen ? "lg:col-span-8" : "lg:col-span-7"}`}
           >
             <CardHeader className="border-b pb-4">
               <div className="flex w-full items-center justify-between">
@@ -582,7 +559,7 @@ export const OrderObjectiveGuides = ({
                 include in your curation.
               </CardDescription>
             </CardHeader>
-            <CardContent className="relative flex-1 overflow-hidden p-0">
+            <CardContent className="relative min-h-0 flex-1 overflow-hidden p-0">
               <GuideGraph
                 walkthroughNodes={walkthroughNodes}
                 curatedSequence={curatedSequence}

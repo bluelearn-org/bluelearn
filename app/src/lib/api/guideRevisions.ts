@@ -1,9 +1,10 @@
 import type { InferRequestType } from "hono/client";
-import type { FetchOptions } from "@/lib/api/http";
 import { client } from "@/lib/api/apiClient";
-import { assertOk } from "@/lib/api/http";
+import { assertOk } from "@/lib/api/apiHelpers";
 
 const revisions = client["guide-revisions"];
+
+type FetchOptions = { signal?: AbortSignal };
 
 export async function getRevision(id: string, { signal }: FetchOptions = {}) {
   const res = await revisions[":id"].$get(

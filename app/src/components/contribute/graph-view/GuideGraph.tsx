@@ -90,28 +90,68 @@ export function GuideGraph({
       });
     });
 
-    const newEdges: Array<Edge> = [];
+    // Transitive Reduction: Build a map of valid prerequisites for each node
+    const prereqMap = new Map<string, Array<string>>();
     walkthroughNodes.forEach((node) => {
       const guide = guidesMap.get(node.slug);
       if (guide && guide.prerequisites) {
-        guide.prerequisites.forEach((prereqSlug: string) => {
-          if (walkthroughNodes.some((n) => n.slug === prereqSlug)) {
-            newEdges.push({
-              id: `e-${prereqSlug}-${node.slug}`,
-              source: prereqSlug,
-              target: node.slug,
-              type: "default",
-              style: { stroke: "#94a3b8", strokeWidth: 2 },
-              animated: false,
-              zIndex: 0,
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: "#94a3b8",
-              },
-            });
-          }
-        });
+        const validPrereqs = guide.prerequisites.filter((p: string) =>
+          walkthroughNodes.some((n) => n.slug === p)
+        );
+        prereqMap.set(node.slug, validPrereqs);
+      } else {
+        prereqMap.set(node.slug, []);
       }
+    });
+
+    // Helper to check if `ancestor` is reachable from `node` (meaning `node` transitively depends on `ancestor`)
+    const isAncestor = (ancestor: string, node: string): boolean => {
+      const queue = prereqMap.get(node) ? [...prereqMap.get(node)!] : [];
+      const visited = new Set<string>(queue);
+
+      while (queue.length > 0) {
+        const curr = queue.shift()!;
+        if (curr === ancestor) return true;
+
+        const currPrereqs = prereqMap.get(curr) || [];
+        for (const p of currPrereqs) {
+          if (!visited.has(p)) {
+            visited.add(p);
+            queue.push(p);
+          }
+        }
+      }
+      return false;
+    };
+
+    const newEdges: Array<Edge> = [];
+    walkthroughNodes.forEach((node) => {
+      const prereqs = prereqMap.get(node.slug) || [];
+
+      prereqs.forEach((prereqSlug) => {
+        // Check if this dependency is transient (redundant).
+        // It is redundant if ANY OTHER prerequisite of this node already transitively depends on prereqSlug.
+        const isTransient = prereqs.some(
+          (otherPrereq) =>
+            otherPrereq !== prereqSlug && isAncestor(prereqSlug, otherPrereq)
+        );
+
+        if (!isTransient) {
+          newEdges.push({
+            id: `e-${prereqSlug}-${node.slug}`,
+            source: prereqSlug,
+            target: node.slug,
+            type: "default",
+            style: { stroke: "#94a3b8", strokeWidth: 2 },
+            animated: false,
+            zIndex: 0,
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: "#94a3b8",
+            },
+          });
+        }
+      });
     });
 
     setNodes(newNodes);
@@ -260,7 +300,10 @@ export function GuideGraph({
           gap={24}
           size={2}
         />
-        <Controls className="overflow-hidden rounded-xl !border-border !bg-background !shadow-md [&>button]:!border-b-border [&>button]:!text-foreground hover:[&>button]:!bg-muted" />
+        <Controls
+          showInteractive={false}
+          className="overflow-hidden rounded-xl border-border! bg-background! shadow-md! [&>button]:border-b-border! [&>button]:text-foreground! hover:[&>button]:bg-muted!"
+        />
       </ReactFlow>
     </div>
   );

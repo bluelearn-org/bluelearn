@@ -423,6 +423,7 @@ export type Database = {
           is_target: boolean
           note: string | null
           revision_id: string
+          target_position: number | null
         }
         Insert: {
           guide_base_id: string
@@ -433,6 +434,7 @@ export type Database = {
           is_target?: boolean
           note?: string | null
           revision_id: string
+          target_position?: number | null
         }
         Update: {
           guide_base_id?: string
@@ -443,6 +445,7 @@ export type Database = {
           is_target?: boolean
           note?: string | null
           revision_id?: string
+          target_position?: number | null
         }
         Relationships: [
           {
@@ -1028,6 +1031,15 @@ export type Database = {
       has_role: {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      list_guide_variants_by_score: {
+        Args: { p_guide_base_id: string; p_z?: number }
+        Returns: {
+          id: string
+          slug: string
+          summary: string
+          title: string
+        }[]
       }
       project_objective_edges: {
         Args: { p_revision_id: string }

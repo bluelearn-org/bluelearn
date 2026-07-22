@@ -1,8 +1,9 @@
-import type { FetchOptions } from "@/lib/api/http";
 import { client } from "@/lib/api/apiClient";
-import { assertOk } from "@/lib/api/http";
+import { assertOk } from "@/lib/api/apiHelpers";
 
 const subjects = client.subjects;
+
+type FetchOptions = { signal?: AbortSignal };
 
 export async function listSubjects({ signal }: FetchOptions = {}) {
   const res = await subjects.$get(undefined, { init: { signal } });

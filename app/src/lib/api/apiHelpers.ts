@@ -1,6 +1,4 @@
-export type FetchOptions = { signal?: AbortSignal };
-
-// The API answers failures with `{ error: string }`; surface that message so
+// The API answers failures with { error: string }, so surface that message so
 // callers can render it, and fall back to the status when the body isn't JSON.
 export async function assertOk(res: Response) {
   if (res.ok) return;

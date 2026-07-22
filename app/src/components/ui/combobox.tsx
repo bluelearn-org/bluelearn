@@ -27,6 +27,7 @@ export type ComboboxItem = {
 type ComboboxBaseProps = {
   items: Array<ComboboxItem>;
   placeholder?: string;
+  disabled?: boolean;
 };
 
 type SingleProps = ComboboxBaseProps & {
@@ -48,6 +49,7 @@ export function Combobox({
   items,
   value,
   onValueChange,
+  disabled,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -74,7 +76,11 @@ export function Combobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-[300px] justify-between">
+        <Button
+          variant="outline"
+          className="w-[300px] justify-between"
+          disabled={disabled}
+        >
           <div className="flex flex-wrap gap-1">
             {selected.length === 0 && (
               <span className="text-muted-foreground">Select...</span>

@@ -36,9 +36,17 @@ export const GuideReader = ({ guide, guideType }: PropTypes) => {
           )}
         </div>
 
-        <div className="mono-micro mt-3">
-          {guide.author} | {guide.created_at} | {formatDuration(guide.duration)}
-        </div>
+        {(guide.author || guide.created_at || guide.duration) && (
+          <div className="mono-micro mt-3">
+            {[
+              guide.author,
+              guide.created_at,
+              guide.duration ? formatDuration(guide.duration) : null,
+            ]
+              .filter(Boolean)
+              .join(" | ")}
+          </div>
+        )}
 
         <div className="mt-4 flex gap-2">
           {guide.tags.map((tag: SubjectReference) => (
