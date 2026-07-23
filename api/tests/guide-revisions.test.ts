@@ -7,16 +7,32 @@ import {
   createGuideRevision,
   createPublishedGuide,
 } from "./factories/guides";
+import { createSubject, tagGuideRevision } from "./factories/subjects";
 import { expectToMatchSpec } from "./openapi";
 
 // A draft revision owned by `authorId`, hanging off a fresh draft guide.
 async function createDraftRevision(authorId: string) {
   const base = await createGuideBase();
   const guide = await createGuide(base.id, { author_id: authorId });
-  return createGuideRevision(guide.id, {
+  const revision = await createGuideRevision(guide.id, {
     status: "draft",
     author_id: authorId,
   });
+  return { base, guide, revision };
+}
+
+// A draft that passes the submit completeness check: title, summary, body,
+// and tags.
+async function createCompleteDraft(authorId: string) {
+  const { base, guide, revision } = await createDraftRevision(authorId);
+  await admin
+    .from("guide_revisions")
+    .update({ summary: "A summary", body: "Some body" })
+    .eq("id", revision.id)
+    .throwOnError();
+  const subject = await createSubject();
+  await tagGuideRevision(revision.id, subject.id);
+  return { base, guide, revision, subject };
 }
 
 describe("GET /guide-revisions/{id}", () => {
@@ -44,7 +60,7 @@ describe("GET /guide-revisions/{id}", () => {
 
   it("hides another author's draft revision", async () => {
     const author = await makeUser();
-    const revision = await createDraftRevision(author.userId);
+    const { revision } = await createDraftRevision(author.userId);
 
     const stranger = await makeUser();
     const res = await app.request(
@@ -61,7 +77,7 @@ describe("GET /guide-revisions/{id}", () => {
 describe("PATCH /guide-revisions/{id}", () => {
   it("edits the author's own draft", async () => {
     const author = await makeUser();
-    const revision = await createDraftRevision(author.userId);
+    const { revision } = await createDraftRevision(author.userId);
 
     const res = await app.request(
       `/guide-revisions/${revision.id}`,
@@ -77,7 +93,7 @@ describe("PATCH /guide-revisions/{id}", () => {
 
   it("404s for a non-author", async () => {
     const author = await makeUser();
-    const revision = await createDraftRevision(author.userId);
+    const { revision } = await createDraftRevision(author.userId);
 
     const stranger = await makeUser();
     const res = await app.request(
@@ -89,12 +105,61 @@ describe("PATCH /guide-revisions/{id}", () => {
     expect(res.status).toBe(404);
     await expectToMatchSpec(res, "PATCH", "/guide-revisions/{id}");
   });
+
+  it("applies tags, a new subject, a prerequisite, and a todo", async () => {
+    const author = await makeUser();
+    const { base, revision } = await createDraftRevision(author.userId);
+    const existing = await createSubject();
+    const prereq = await createGuideBase({ status: "published" });
+    const newName = `Fresh ${crypto.randomUUID().slice(0, 8)}`;
+
+    const res = await app.request(
+      `/guide-revisions/${revision.id}`,
+      jsonAuth(author.token, "PATCH", {
+        tags: [existing.slug],
+        prerequisites: [prereq.slug],
+        newSubjects: [{ name: newName }],
+        todoPrereqs: ["Learn functions"],
+      }),
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "PATCH", "/guide-revisions/{id}");
+
+    const { data: tags } = await admin
+      .from("guide_revision_subjects")
+      .select("subject_id")
+      .eq("guide_revision_id", revision.id);
+    expect(tags?.length).toBe(2);
+
+    const { data: edges } = await admin
+      .from("guide_edges")
+      .select("from_guide_base_id")
+      .eq("to_guide_base_id", base.id)
+      .eq("edge_type", "prerequisite");
+    expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
+
+    const { data: todos } = await admin
+      .from("todo_prerequisites")
+      .select("title")
+      .eq("dependent_guide_base_id", base.id);
+    expect(todos?.map((t) => t.title)).toEqual(["Learn functions"]);
+
+    // The inline subject lands as a draft, hidden until this guide is approved.
+    const { data: created } = await admin
+      .from("subjects")
+      .select("status")
+      .eq("slug", newName.toLowerCase().replace(" ", "-"))
+      .single();
+    expect(created?.status).toBe("draft");
+  });
 });
 
 describe("POST /guide-revisions/{id}/submit", () => {
   it("submits a draft and opens a review case", async () => {
     const author = await makeUser();
-    const revision = await createDraftRevision(author.userId);
+    const { revision } = await createCompleteDraft(author.userId);
 
     const res = await app.request(
       `/guide-revisions/${revision.id}/submit`,
@@ -115,9 +180,24 @@ describe("POST /guide-revisions/{id}/submit", () => {
     expect(revised?.status).toBe("submitted");
   });
 
+  it("422s when the draft is incomplete", async () => {
+    const author = await makeUser();
+    // Missing summary, body, and a tag.
+    const { revision } = await createDraftRevision(author.userId);
+
+    const res = await app.request(
+      `/guide-revisions/${revision.id}/submit`,
+      { method: "POST", ...auth(author.token) },
+      env
+    );
+
+    expect(res.status).toBe(422);
+    await expectToMatchSpec(res, "POST", "/guide-revisions/{id}/submit");
+  });
+
   it("404s when the revision is no longer an editable draft", async () => {
     const author = await makeUser();
-    const revision = await createDraftRevision(author.userId);
+    const { revision } = await createCompleteDraft(author.userId);
 
     await app.request(
       `/guide-revisions/${revision.id}/submit`,

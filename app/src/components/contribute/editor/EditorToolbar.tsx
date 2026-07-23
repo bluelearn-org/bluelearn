@@ -4,7 +4,6 @@ import {
   BoldItalicUnderlineToggles,
   CreateLink,
   InsertCodeBlock,
-  InsertImage,
   InsertTable,
   InsertThematicBreak,
   ListsToggle,
@@ -16,7 +15,6 @@ import {
   Code,
   Copy,
   Download,
-  Image,
   Link as LinkIcon,
   Minus,
   Plus,
@@ -48,7 +46,6 @@ export default function EditorToolbar({
 
   // Refs for hidden native buttons to trigger programmatically from our custom Popovers
   const linkRef = useRef<HTMLSpanElement>(null);
-  const imageRef = useRef<HTMLSpanElement>(null);
   const tableRef = useRef<HTMLSpanElement>(null);
   const thematicBreakRef = useRef<HTMLSpanElement>(null);
   const codeBlockRef = useRef<HTMLSpanElement>(null);
@@ -201,14 +198,6 @@ export default function EditorToolbar({
           <button
             type="button"
             className="toolbar-popover-item"
-            onClick={() => imageRef.current?.querySelector("button")?.click()}
-          >
-            <Image className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Image</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
             onClick={() => linkRef.current?.querySelector("button")?.click()}
           >
             <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
@@ -262,9 +251,6 @@ export default function EditorToolbar({
       <div style={{ display: "none" }}>
         <span ref={tableRef}>
           <InsertTable />
-        </span>
-        <span ref={imageRef}>
-          <InsertImage />
         </span>
         <span ref={codeBlockRef}>
           <InsertCodeBlock />

@@ -6,3 +6,4 @@ export * from "./objectives";
 export * from "./graph";
 export * from "./media";
 export * from "./review";
+export * from "./search";

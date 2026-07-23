@@ -4,6 +4,7 @@ export type GuideContribution = {
   type: string;
   title: string;
   summary: string;
+  body: string;
   subjects: Array<string>;
   newSubjects: Array<{
     name: string;

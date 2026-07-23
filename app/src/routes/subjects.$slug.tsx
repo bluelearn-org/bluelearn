@@ -6,7 +6,7 @@ import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 import { GuideCard } from "@/components/cards/GuideCard";
 
 import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
-import { Route as GuideRoute } from "@/routes/guides.$slug";
+import { Route as GuideRoute } from "@/routes/guides/$slug/index";
 
 import {
   getSubjectBySlug,
@@ -145,12 +145,12 @@ function SubjectPage() {
                 <GuideCard
                   key={guide.id}
                   guide={g}
+                  to={GuideRoute.to}
                   origin={{
                     type: "subject",
                     title: subject.name,
                     path: `/subjects/${slug}`,
                   }}
-                  to={GuideRoute.to}
                 />
               );
             })}

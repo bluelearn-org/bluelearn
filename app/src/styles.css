@@ -114,7 +114,7 @@
   }
 
   .data-label {
-    @apply font-mono text-sm tracking-[0.08em] text-muted-foreground uppercase;
+    @apply font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase;
   }
 
   .data-value {
@@ -151,11 +151,19 @@
   }
 
   .btn-sec {
-    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono font-bold text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
     background: var(--muted);
   }
 
   .btn-sec:hover {
+    transform: scale(1.05);
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border bg-muted px-4 py-2 font-mono text-xs text-black uppercase transition-all transition-colors duration-200 hover:bg-input/50 hover:text-foreground;
+  }
+
+  .btn-outline:hover {
     transform: scale(1.05);
   }
 
