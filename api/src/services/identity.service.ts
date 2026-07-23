@@ -276,6 +276,7 @@ export type ProfileActivityRow = {
     | "published";
   target_slug: string | null;
   review_case_id: string | null;
+  revision_id: string | null;
 };
 
 // Earliest revision id per parent, so a row can be tagged as the "creation"
@@ -383,11 +384,12 @@ export async function getMyActivity(
             ? (statusByCase.get(caseId) ?? "submitted")
             : "submitted";
       const status = caseStatus === "approved" ? "published" : caseStatus;
+
+      // It's a variant when its guide base has a canonical guide that isn't itself.
+      const canonical = guide ? canonicalByBase.get(guide.guide_base_id) : null;
       rows.push({
         content_kind: "guide",
-        is_variant: guide
-          ? canonicalByBase.get(guide.guide_base_id) !== guide.id
-          : false,
+        is_variant: canonical != null && canonical !== guide?.id,
         is_creation: firstRev.get(rev.guide_id) === rev.id,
         title: rev.title ?? "Untitled",
         change_summary: rev.change_summary,
@@ -395,6 +397,7 @@ export async function getMyActivity(
         status,
         target_slug: guide?.slug ?? null,
         review_case_id: caseId,
+        revision_id: rev.id,
       });
     }
   }
@@ -439,6 +442,7 @@ export async function getMyActivity(
         status: rev.status,
         target_slug: slugById.get(rev.objective_id) ?? null,
         review_case_id: null,
+        revision_id: rev.id,
       });
     }
   }
@@ -533,6 +537,7 @@ export async function getMyActivity(
             ? (slugByGuide.get(revData.guide_id) ?? null)
             : null,
           review_case_id: caseId,
+          revision_id: rev ?? null,
         });
       }
     }

@@ -14,7 +14,11 @@ import type { GuideType, HydratedGuide } from "@/types/guides";
 import { createGuide, listGuides } from "@/lib/api/guides";
 import { getMyIdentity } from "@/lib/api/identity";
 import { listSubjects } from "@/lib/api/subjects";
-import { submitRevision, updateRevision } from "@/lib/api/guideRevisions";
+import {
+  getRevision,
+  submitRevision,
+  updateRevision,
+} from "@/lib/api/guideRevisions";
 import { uploadMedia } from "@/lib/api/media";
 import { estimateReadMinutes, formatDate } from "@/lib/guideUtils";
 
@@ -32,6 +36,7 @@ import { flows, typeStep } from "@/lib/contributionFlow";
 type PropTypes = {
   type: ContributionType | null;
   setType: (value: ContributionType) => void;
+  draftId?: string;
 };
 
 const createGuideContData = (): GuideContribution => ({
@@ -53,7 +58,11 @@ const createObjectiveContData = (): ObjectiveContribution => ({
   subObjectives: [],
 });
 
-export default function ContributionFlow({ type, setType }: PropTypes) {
+export default function ContributionFlow({
+  type,
+  setType,
+  draftId,
+}: PropTypes) {
   const [guideContData, setGuideContData] =
     useState<GuideContribution>(createGuideContData);
   const [objectiveContData, setObjectiveContData] =
@@ -77,6 +86,7 @@ export default function ContributionFlow({ type, setType }: PropTypes) {
           stepper={stepper}
           type={type}
           setType={setType}
+          draftId={draftId}
           guideContData={guideContData}
           setGuideContData={setGuideContData}
           objectiveContData={objectiveContData}
@@ -92,6 +102,7 @@ function Inner({
   stepper,
   type,
   setType,
+  draftId,
   guideContData,
   setGuideContData,
   objectiveContData,
@@ -101,6 +112,7 @@ function Inner({
   stepper: any;
   type: ContributionType | null;
   setType: (value: ContributionType) => void;
+  draftId?: string;
 
   guideContData: GuideContribution;
   setGuideContData: Dispatch<SetStateAction<GuideContribution>>;
@@ -133,6 +145,33 @@ function Inner({
 
   const [revisionId, setRevisionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Resume a guide draft opened from the profile.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (!draftId || resumedRef.current) return;
+    resumedRef.current = true;
+
+    getRevision(draftId)
+      .then((data) => {
+        setGuideContData({
+          type: data.knowledge_type ?? "theoretical",
+          title: data.revision.title ?? "",
+          summary: data.revision.summary ?? "",
+          body: data.revision.body ?? "",
+          subjects: data.subjects.map((s) => s.slug),
+          newSubjects: [],
+          prereqs: data.prerequisites,
+          todoPrereqs: data.todos,
+        });
+        setRevisionId(draftId);
+        setType("guide");
+        requestAnimationFrame(() => stepper.goTo("guide-details"));
+      })
+      .catch(() => {
+        toast.error("Could not load draft");
+      });
+  }, [draftId]);
 
   const [subjectOptions, setSubjectOptions] = useState<
     Awaited<ReturnType<typeof listSubjects>>

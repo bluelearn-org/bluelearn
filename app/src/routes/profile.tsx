@@ -60,26 +60,25 @@ function getInitials(value: string | null | undefined) {
 }
 
 type ActivityRow = ProfilePageData["activity"][number];
-
-// An approved guide, a published objective, or a reviewed guide can be opened;
-// anything still in flight has no live page to land on.
 function rowTarget(row: ActivityRow) {
   if (row.content_kind === "review")
     return row.target_slug
-      ? { to: "/guides/$slug", slug: row.target_slug }
+      ? { to: "/guides/$slug", params: { slug: row.target_slug } }
       : null;
   if (
     row.content_kind === "guide" &&
     row.status === "published" &&
     row.target_slug
   )
-    return { to: "/guides/$slug", slug: row.target_slug };
+    return { to: "/guides/$slug", params: { slug: row.target_slug } };
+  if (row.content_kind === "guide" && row.status === "draft" && row.revision_id)
+    return { to: "/contribute", search: { draft: row.revision_id } };
   if (
     row.content_kind === "objective" &&
     row.status === "published" &&
     row.target_slug
   )
-    return { to: "/objectives/$slug", slug: row.target_slug };
+    return { to: "/objectives/$slug", params: { slug: row.target_slug } };
   return null;
 }
 
@@ -164,15 +163,7 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
                     <TableRow
                       key={`${row.content_kind}-${index}`}
                       className={target ? "cursor-pointer" : undefined}
-                      onClick={
-                        target
-                          ? () =>
-                              navigate({
-                                to: target.to,
-                                params: { slug: target.slug },
-                              })
-                          : undefined
-                      }
+                      onClick={target ? () => navigate(target) : undefined}
                     >
                       <TableCell className="px-4 py-3">
                         {activityTypeLabel(row)}
