@@ -28,6 +28,7 @@ import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
 import { Route as ObjectivesSlugRouteImport } from './routes/objectives.$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as EditGuideSlugRouteImport } from './routes/edit.guide.$slug'
 
 const SubjectsRoute = SubjectsRouteImport.update({
   id: '/subjects',
@@ -124,6 +125,11 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => GuidesRoute,
 } as any)
+const EditGuideSlugRoute = EditGuideSlugRouteImport.update({
+  id: '/edit/guide/$slug',
+  path: '/edit/guide/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/objectives/': typeof ObjectivesIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
+  '/edit/guide/$slug': typeof EditGuideSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/objectives': typeof ObjectivesIndexRoute
   '/review': typeof ReviewIndexRoute
   '/subjects': typeof SubjectsIndexRoute
+  '/edit/guide/$slug': typeof EditGuideSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/objectives/': typeof ObjectivesIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
+  '/edit/guide/$slug': typeof EditGuideSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/objectives/'
     | '/review/'
     | '/subjects/'
+    | '/edit/guide/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/objectives'
     | '/review'
     | '/subjects'
+    | '/edit/guide/$slug'
   id:
     | '__root__'
     | '/'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/objectives/'
     | '/review/'
     | '/subjects/'
+    | '/edit/guide/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ReviewRoute: typeof ReviewRouteWithChildren
   SubjectsRoute: typeof SubjectsRouteWithChildren
+  EditGuideSlugRoute: typeof EditGuideSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -399,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof GuidesRoute
     }
+    '/edit/guide/$slug': {
+      id: '/edit/guide/$slug'
+      path: '/edit/guide/$slug'
+      fullPath: '/edit/guide/$slug'
+      preLoaderRoute: typeof EditGuideSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -467,6 +487,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ReviewRoute: ReviewRouteWithChildren,
   SubjectsRoute: SubjectsRouteWithChildren,
+  EditGuideSlugRoute: EditGuideSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
