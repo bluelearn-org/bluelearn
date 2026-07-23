@@ -5,6 +5,7 @@ import {
   codeMirrorPlugin,
   headingsPlugin,
   imagePlugin,
+  jsxPlugin,
   linkDialogPlugin,
   linkPlugin,
   listsPlugin,
@@ -13,11 +14,12 @@ import {
   tablePlugin,
   thematicBreakPlugin,
   toolbarPlugin,
+  useMdastNodeUpdater,
 } from "@mdxeditor/editor";
 import { toast } from "sonner";
 
-import { mathPlugin } from "./math-plugin/index.tsx";
-import EditorToolbar from "./EditorToolbar.tsx";
+import { MathLiveComponent, mathShortcutsPlugin } from "./MathLivePlugin";
+import EditorToolbar from "./EditorToolbar";
 import type { MDXEditorMethods } from "@mdxeditor/editor";
 import "@mdxeditor/editor/style.css";
 import "./Editor.css";
@@ -105,7 +107,80 @@ export default function Editor({
           markdown: "Markdown",
         },
       }),
-      mathPlugin(),
+      mathShortcutsPlugin(),
+      jsxPlugin({
+        jsxComponentDescriptors: [
+          {
+            name: "Math",
+            kind: "text",
+            props: [
+              { name: "latex", type: "string" },
+              { name: "inline", type: "expression" },
+            ],
+            hasChildren: false,
+            Editor: (props) => {
+              const updateMdastNode = useMdastNodeUpdater();
+              const handleChange = (newLatex: string) => {
+                const inlineAttr = props.mdastNode.attributes.find(
+                  (a: any) => a.name === "inline"
+                );
+                const isInline =
+                  inlineAttr &&
+                  typeof inlineAttr === "object" &&
+                  "value" in inlineAttr &&
+                  inlineAttr.value != null
+                    ? inlineAttr.value === "true" ||
+                      (typeof inlineAttr.value === "object" &&
+                        (inlineAttr.value as any).value === "true")
+                    : false;
+
+                updateMdastNode({
+                  attributes: [
+                    { type: "mdxJsxAttribute", name: "latex", value: newLatex },
+                    {
+                      type: "mdxJsxAttribute",
+                      name: "inline",
+                      value: {
+                        type: "mdxJsxAttributeValueExpression",
+                        value: isInline ? "true" : "false",
+                      },
+                    },
+                  ],
+                });
+              };
+              const latexAttr = props.mdastNode.attributes.find(
+                (a: any) => a.name === "latex"
+              );
+              const inlineAttr = props.mdastNode.attributes.find(
+                (a: any) => a.name === "inline"
+              );
+              const isInline =
+                inlineAttr &&
+                typeof inlineAttr === "object" &&
+                "value" in inlineAttr &&
+                inlineAttr.value != null
+                  ? inlineAttr.value === "true" ||
+                    (typeof inlineAttr.value === "object" &&
+                      (inlineAttr.value as any).value === "true")
+                  : false;
+
+              return (
+                <MathLiveComponent
+                  latex={
+                    latexAttr &&
+                    typeof latexAttr === "object" &&
+                    typeof latexAttr.value === "string"
+                      ? latexAttr.value
+                      : ""
+                  }
+                  inline={isInline}
+                  onChange={handleChange}
+                />
+              );
+            },
+          },
+        ],
+      }),
       toolbarPlugin({
         toolbarContents: () => (
           <EditorToolbar
