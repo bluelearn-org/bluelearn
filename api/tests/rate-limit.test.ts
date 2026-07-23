@@ -5,10 +5,8 @@ import { expectToMatchSpec } from "./openapi";
 
 function guideBody() {
   return {
-    tags: ["algebra"],
     knowledge_type: "theoretical" as const,
     title: "Rate Limit Test Guide",
-    slug: `rl-test-${crypto.randomUUID().slice(0, 8)}`,
     body: "Body content.",
   };
 }

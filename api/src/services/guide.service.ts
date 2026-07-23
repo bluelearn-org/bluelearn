@@ -7,6 +7,7 @@ import type {
 } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
+import { syncDraftTagsAndEdges } from "./guide-revision.service";
 import { readingMinutes } from "../lib/reading";
 import { loadUsernames } from "./identity.service";
 
@@ -180,12 +181,24 @@ export async function listPublishedGuides(
   return buildGuideListItems(supabase, data ?? []);
 }
 
-// Create a guide: bundles the guide_base + first guide + draft revision in one
-// transaction via the create_guide RPC (RLS still applies, SECURITY INVOKER).
-// The draft starts empty (title/slug filled in the editor); returns the draft
-// revision id so the client can route to its editor.
-export async function createGuide(supabase: DB, input: CreateGuideInput) {
-  const { title, knowledge_type, summary, body } = input;
+// Create a guide: the create_guide RPC bundles the guide_base + first guide +
+// draft revision, then we attach its tags and edges. Returns the draft revision
+// id so the client can keep editing or submit it.
+export async function createGuide(
+  supabase: DB,
+  userId: string,
+  input: CreateGuideInput
+) {
+  const {
+    title,
+    knowledge_type,
+    summary,
+    body,
+    tags,
+    prerequisites,
+    newSubjects,
+    todoPrereqs,
+  } = input;
 
   const { data: revision_id, error } = await supabase.rpc("create_guide", {
     p_title: title ?? undefined,
@@ -198,6 +211,13 @@ export async function createGuide(supabase: DB, input: CreateGuideInput) {
     console.error(error);
     throw new ServiceError("Failed to create guide", 500);
   }
+
+  await syncDraftTagsAndEdges(supabase, userId, revision_id, {
+    tags,
+    prerequisites,
+    newSubjects,
+    todoPrereqs,
+  });
 
   return { revision_id };
 }
@@ -266,30 +286,21 @@ export async function getWalkthrough(supabase: DB, rawSlug: string) {
   return data as unknown as Walkthrough;
 }
 
-// List the published variants (methods/alternatives) under a guide. Title and
-// summary live on each variant's live revision.
+// List the published variants (methods/alternatives) under a guide, ranked
+// by Wilson score lower bound
 export async function listGuideVariants(supabase: DB, rawSlug: string) {
   const baseId = await resolveBaseId(supabase, rawSlug);
 
-  const { data, error } = await supabase
-    .from("guides")
-    .select(
-      `id, slug, current:guide_revisions!guides_current_revision_id_fkey(title, summary)`
-    )
-    .eq("guide_base_id", baseId)
-    .eq("status", "published")
-    .order("slug");
+  const { data, error } = await supabase.rpc("list_guide_variants_by_score", {
+    p_guide_base_id: baseId,
+  });
 
   if (error) {
     console.error(error);
     throw new ServiceError("Failed to load variants", 500);
   }
 
-  return (data ?? []).map(({ current, ...variant }) => ({
-    ...variant,
-    title: current?.title ?? null,
-    summary: current?.summary ?? null,
-  }));
+  return data ?? [];
 }
 
 // Add a variant under a guide: a draft guide + first revision via the

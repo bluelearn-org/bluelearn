@@ -78,10 +78,7 @@ export const ObjectiveDetails = ({
       <FieldGroup>
         <Field className="space-y-2">
           <div className="space-y-1">
-            <FieldLabel
-              required
-              className="font-mono tracking-[0.08em] uppercase"
-            >
+            <FieldLabel required className="mono-micro">
               Title
             </FieldLabel>
             <FieldDescription className="text-xs">
@@ -113,10 +110,7 @@ export const ObjectiveDetails = ({
 
         <Field className="space-y-2">
           <div className="space-y-1">
-            <FieldLabel
-              required
-              className="font-mono tracking-[0.08em] uppercase"
-            >
+            <FieldLabel required className="mono-micro">
               Summary
             </FieldLabel>
             <FieldDescription className="text-xs">
@@ -147,14 +141,11 @@ export const ObjectiveDetails = ({
 
         <Field className="space-y-2">
           <div className="space-y-1">
-            <FieldLabel
-              required
-              className="font-mono tracking-[0.08em] uppercase"
-            >
+            <FieldLabel required className="mono-micro">
               Subjects
             </FieldLabel>
             <FieldDescription className="text-xs">
-              Select one or more subjects this objective belongs to.
+              Select at least one subject this objective falls under.
             </FieldDescription>
           </div>
 
@@ -182,10 +173,7 @@ export const ObjectiveDetails = ({
 
         <Field className="space-y-2">
           <div className="space-y-1">
-            <FieldLabel
-              required
-              className="font-mono tracking-[0.08em] uppercase"
-            >
+            <FieldLabel required className="mono-micro">
               Target Guides
             </FieldLabel>
             <FieldDescription className="text-xs">
@@ -224,10 +212,7 @@ export const ObjectiveDetails = ({
 
         <Field className="space-y-2">
           <div className="space-y-1">
-            <FieldLabel
-              required
-              className="font-mono tracking-[0.08em] uppercase"
-            >
+            <FieldLabel required className="mono-micro">
               Featured Guide
             </FieldLabel>
             <FieldDescription className="text-xs">

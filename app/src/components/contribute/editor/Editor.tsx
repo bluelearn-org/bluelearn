@@ -22,34 +22,48 @@ import type { MDXEditorMethods } from "@mdxeditor/editor";
 import "@mdxeditor/editor/style.css";
 import "./Editor.css";
 
-export default function Editor() {
-  const [initialMarkdown] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("mdx_studio_content");
-      return saved || "";
-    }
-    return "";
-  });
+type EditorProps = {
+  // Markdown to open with, e.g. when resuming a draft.
+  value?: string;
+  onChange?: (markdown: string) => void;
+  onUploadImage?: (file: File) => Promise<string>;
+};
+
+export default function Editor({
+  value,
+  onChange,
+  onUploadImage,
+}: EditorProps) {
+  const [initialMarkdown] = useState<string>(() => value ?? "");
 
   const editorRef = useRef<MDXEditorMethods>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onUploadImageRef = useRef(onUploadImage);
+  onUploadImageRef.current = onUploadImage;
+  const latestRef = useRef<string | null>(null);
 
-  // Debounced auto-save function to write to localStorage directly from the editor's onChange
-  // without triggering React state updates or parent component re-renders
+  // debounce so we don't re-render the flow on every keystroke
   const handleMarkdownChange = (newMarkdown: string) => {
+    latestRef.current = newMarkdown;
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
-      localStorage.setItem("mdx_studio_content", newMarkdown);
+      onChangeRef.current?.(newMarkdown);
+      saveTimeoutRef.current = null;
     }, 1000);
   };
 
-  // Clean up the save timeout on unmount
+  // Force a save on a pending edit if user leaves before the debounce fires
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+        if (latestRef.current !== null) {
+          onChangeRef.current?.(latestRef.current);
+        }
       }
     };
   }, []);
@@ -67,7 +81,13 @@ export default function Editor() {
       linkPlugin(),
       linkDialogPlugin(),
       tablePlugin(),
-      imagePlugin(),
+      imagePlugin({
+        EditImageToolbar: () => null,
+        imageUploadHandler: (file) =>
+          onUploadImageRef.current
+            ? onUploadImageRef.current(file)
+            : Promise.reject(new Error("Image upload is not available")),
+      }),
       codeBlockPlugin({
         defaultCodeBlockLanguage: "javascript",
       }),

@@ -6,19 +6,19 @@ export const flows = {
   guide: [
     { id: "guide-details", title: "Guide Details" },
     { id: "content", title: "Content" },
-    { id: "submit", title: "Submit" },
+    { id: "preview-guide", title: "Preview" },
   ],
 
   variant: [
     { id: "variant-details", title: "Variant Details" },
     { id: "content", title: "Content" },
-    { id: "submit", title: "Submit" },
+    { id: "preview-guide", title: "Preview" },
   ],
 
   objective: [
     { id: "objective-details", title: "Objective Details" },
     { id: "target-ordering", title: "Order Target Guides" },
     { id: "objective-ordering", title: "Order Guides" },
-    { id: "submit", title: "Submit" },
+    { id: "preview-objective", title: "Preview" },
   ],
 } as const;

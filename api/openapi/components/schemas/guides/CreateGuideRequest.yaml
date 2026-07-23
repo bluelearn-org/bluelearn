@@ -1,9 +1,9 @@
 type: object
 additionalProperties: false
 description: >
-  A guide starts as an empty draft and is fleshed out in the editor, so every
-  field is optional. knowledge_type defaults to theory and stays editable while
-  the guide is a draft.
+  A guide starts as a draft, so every field is optional here. Completeness is
+  checked when the draft is submitted. slug is derived from the title at publish,
+  so it is never sent.
 properties:
   title:
     type: [string, "null"]
@@ -19,3 +19,26 @@ properties:
     type: [string, "null"]
     example: |
       # Calculus
+  tags:
+    type: array
+    description: Existing subject slugs to tag the guide with.
+    items:
+      type: string
+    example: [calculus, algebra]
+  prerequisites:
+    type: array
+    description: Slugs of existing guides that must be read first.
+    items:
+      type: string
+    example: [limits]
+  newSubjects:
+    type: array
+    description: Subjects the author is proposing inline. Created as drafts.
+    items:
+      $ref: "./NewSubject.yaml"
+  todoPrereqs:
+    type: array
+    description: Free-text notes for prerequisite guides that don't exist yet.
+    items:
+      type: string
+    example: [Introduction to functions]

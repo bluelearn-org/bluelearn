@@ -1,10 +1,6 @@
 import { Hono } from "hono";
-import { requireUser } from "../middleware/auth.middleware";
 import type { HonoEnv } from "../types";
-import { createSubjectSchema } from "@bluelearn/schemas";
-import { zValidator } from "@hono/zod-validator";
 import {
-  createSubject,
   getSubjectBySlug,
   listSubjectGuides,
   listSubjectObjectives,
@@ -17,22 +13,6 @@ export const subjectsRouter = new Hono<HonoEnv>()
     const subjects = await listSubjects(c.get("supabase"));
     return c.json({ subjects }, 200);
   })
-
-  // Create a subject
-  .post(
-    "/",
-    requireUser,
-    zValidator("json", createSubjectSchema),
-    async (c) => {
-      const { name } = c.req.valid("json");
-      const subject = await createSubject(
-        c.get("supabase"),
-        c.get("user").id,
-        name
-      );
-      return c.json({ subject }, 201);
-    }
-  )
 
   // Subject metadata only
   .get("/:slug", async (c) => {
