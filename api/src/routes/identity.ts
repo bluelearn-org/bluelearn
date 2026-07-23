@@ -4,8 +4,10 @@ import { updateProfileSchema } from "@bluelearn/schemas";
 import { getServiceSupabase, requireUser } from "../middleware/auth.middleware";
 import type { HonoEnv } from "../types";
 import {
+  getMyActivity,
   getMyDrafts,
   getMyIdentity,
+  getMyProfileStats,
   getPublicProfile,
   updateMyProfile,
 } from "../services/identity.service";
@@ -26,6 +28,19 @@ export const meRouter = new Hono<HonoEnv>()
   .get("/drafts", requireUser, async (c) => {
     const drafts = await getMyDrafts(c.get("supabase"), c.get("user").id);
     return c.json(drafts);
+  })
+
+  // Returns the number of caller's votes received, contributions, and reviews.
+  .get("/stats", requireUser, async (c) => {
+    const stats = await getMyProfileStats(c.get("supabase"), c.get("user").id);
+    return c.json(stats);
+  })
+
+  // The caller's activity feed, which includes authored guide and objective
+  // revisions and review cases they voted on, sorted by newest first.
+  .get("/activity", requireUser, async (c) => {
+    const activity = await getMyActivity(c.get("supabase"), c.get("user").id);
+    return c.json(activity);
   })
 
   // Updates the caller's profile. 409 if the username is taken.
