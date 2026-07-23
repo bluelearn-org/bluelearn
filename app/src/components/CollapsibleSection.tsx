@@ -11,10 +11,12 @@ export const CollapsibleSection = ({
   title,
   defaultOpen,
   children,
+  containerStyles = "border-b py-4",
 }: {
   title: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
+  containerStyles: string;
 }) => {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
@@ -23,7 +25,7 @@ export const CollapsibleSection = ({
       defaultOpen={defaultOpen}
       open={open}
       onOpenChange={setOpen}
-      className="group border-b py-4"
+      className={`group ${containerStyles}`}
     >
       <CollapsibleTrigger asChild>
         <div className="data-label flex w-full cursor-pointer list-none items-center">
