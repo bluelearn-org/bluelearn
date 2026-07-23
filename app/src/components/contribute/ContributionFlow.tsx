@@ -23,11 +23,12 @@ import { GuideDetails } from "@/components/contribute/steps/GuideDetails";
 import { VariantDetails } from "@/components/contribute/steps/VariantDetails";
 import { Content } from "@/components/contribute/steps/Content";
 import { ObjectiveDetails } from "@/components/contribute/steps/ObjectiveDetails";
-import { Submit } from "@/components/contribute/steps/Submit";
+import { PreviewGuide } from "@/components/contribute/steps/PreviewGuide";
 import { OrderObjectiveGuides } from "@/components/contribute/steps/OrderObjectiveGuides";
 import { OrderTargetGuides } from "@/components/contribute/steps/OrderTargetGuides";
 
 import { flows, typeStep } from "@/lib/contributionFlow";
+import { PreviewObjective } from "@/components/contribute/steps/PreviewObjective";
 
 type PropTypes = {
   type: ContributionType | null;
@@ -48,13 +49,7 @@ const createGuideContData = (): GuideContribution => ({
 const createObjectiveContData = (): ObjectiveContribution => ({
   title: "",
   summary: "",
-  targets: [
-    "arithmetic-introduction",
-    "algebra-how-to-express-equations",
-    "calculus-introduction",
-    "vectors-introduction",
-    "mechanics-how-to-apply-newtons-laws",
-  ],
+  targets: [],
   featured: "",
   subObjectives: [],
 });
@@ -294,8 +289,11 @@ function Inner({
               )}
 
               <Stepper.Item step={step.id}>
-                <Stepper.Trigger className="rounded-md p-2 font-mono text-[12px] text-muted-foreground uppercase transition-colors hover:bg-muted data-[status=active]:font-bold data-[status=active]:text-brand-blue data-[status=previous]:text-foreground">
-                  <Stepper.Title />
+                <Stepper.Trigger className="mono-micro flex items-center gap-2 rounded-full border border-border bg-background px-2 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted data-[status=active]:border-primary data-[status=active]:bg-primary/10 data-[status=active]:text-primary data-[status=active]:ring-1 data-[status=active]:ring-primary/20">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                    {index + 1}
+                  </span>
+                  <Stepper.Title className="max-w-[20ch] truncate font-bold" />
                 </Stepper.Trigger>
               </Stepper.Item>
             </Fragment>
@@ -351,11 +349,16 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
         />
 
-        <Submit
+        <PreviewGuide
           Stepper={Stepper}
           guide={previewGuide}
           guideType={guideType}
           onSaveDraft={saveDraft}
+          onPublish={publish}
+          submitting={submitting}
+        />
+        <PreviewObjective
+          Stepper={Stepper}
           onPublish={publish}
           submitting={submitting}
         />

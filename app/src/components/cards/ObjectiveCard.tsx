@@ -157,7 +157,7 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
           </p>
 
           <div className="flex items-center justify-between">
-            <p className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+            <p className="mono-micro text-muted-foreground">
               @{objective.curator} | {objective.created_at}
             </p>
           </div>

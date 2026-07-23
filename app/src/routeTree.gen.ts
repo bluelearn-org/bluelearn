@@ -16,7 +16,6 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ObjectivesRouteImport } from './routes/objectives'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ContributeRouteImport } from './routes/contribute'
 import { Route as BrowseRouteImport } from './routes/browse'
@@ -24,10 +23,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
 import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as ObjectivesIndexRouteImport } from './routes/objectives.index'
+import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
 import { Route as ObjectivesSlugRouteImport } from './routes/objectives.$slug'
-import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as GuidesSlugRouteImport } from './routes/guides/$slug'
+import { Route as GuidesSlugIndexRouteImport } from './routes/guides/$slug/index'
+import { Route as GuidesSlugWalkthroughRouteImport } from './routes/guides/$slug/walkthrough'
 
 const SubjectsRoute = SubjectsRouteImport.update({
   id: '/subjects',
@@ -62,11 +64,6 @@ const ObjectivesRoute = ObjectivesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuidesRoute = GuidesRouteImport.update({
-  id: '/guides',
-  path: '/guides',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -104,6 +101,11 @@ const ObjectivesIndexRoute = ObjectivesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ObjectivesRoute,
 } as any)
+const GuidesIndexRoute = GuidesIndexRouteImport.update({
+  id: '/guides/',
+  path: '/guides/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubjectsSlugRoute = SubjectsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -120,9 +122,19 @@ const ObjectivesSlugRoute = ObjectivesSlugRouteImport.update({
   getParentRoute: () => ObjectivesRoute,
 } as any)
 const GuidesSlugRoute = GuidesSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => GuidesRoute,
+  id: '/guides/$slug',
+  path: '/guides/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesSlugIndexRoute = GuidesSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GuidesSlugRoute,
+} as any)
+const GuidesSlugWalkthroughRoute = GuidesSlugWalkthroughRouteImport.update({
+  id: '/walkthrough',
+  path: '/walkthrough',
+  getParentRoute: () => GuidesSlugRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -130,7 +142,6 @@ export interface FileRoutesByFullPath {
   '/browse': typeof BrowseRoute
   '/contribute': typeof ContributeRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/guides': typeof GuidesRouteWithChildren
   '/login': typeof LoginRoute
   '/objectives': typeof ObjectivesRouteWithChildren
   '/profile': typeof ProfileRoute
@@ -138,31 +149,35 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/review': typeof ReviewRouteWithChildren
   '/subjects': typeof SubjectsRouteWithChildren
-  '/guides/$slug': typeof GuidesSlugRoute
+  '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
+  '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
+  '/guides/$slug/walkthrough': typeof GuidesSlugWalkthroughRoute
+  '/guides/$slug/': typeof GuidesSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/contribute': typeof ContributeRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/guides': typeof GuidesRouteWithChildren
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/guides/$slug': typeof GuidesSlugRoute
   '/objectives/$slug': typeof ObjectivesSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
+  '/guides': typeof GuidesIndexRoute
   '/objectives': typeof ObjectivesIndexRoute
   '/review': typeof ReviewIndexRoute
   '/subjects': typeof SubjectsIndexRoute
+  '/guides/$slug/walkthrough': typeof GuidesSlugWalkthroughRoute
+  '/guides/$slug': typeof GuidesSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,7 +185,6 @@ export interface FileRoutesById {
   '/browse': typeof BrowseRoute
   '/contribute': typeof ContributeRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/guides': typeof GuidesRouteWithChildren
   '/login': typeof LoginRoute
   '/objectives': typeof ObjectivesRouteWithChildren
   '/profile': typeof ProfileRoute
@@ -178,13 +192,16 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/review': typeof ReviewRouteWithChildren
   '/subjects': typeof SubjectsRouteWithChildren
-  '/guides/$slug': typeof GuidesSlugRoute
+  '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
+  '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
+  '/guides/$slug/walkthrough': typeof GuidesSlugWalkthroughRoute
+  '/guides/$slug/': typeof GuidesSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -193,7 +210,6 @@ export interface FileRouteTypes {
     | '/browse'
     | '/contribute'
     | '/forgot-password'
-    | '/guides'
     | '/login'
     | '/objectives'
     | '/profile'
@@ -205,34 +221,37 @@ export interface FileRouteTypes {
     | '/objectives/$slug'
     | '/review/$slug'
     | '/subjects/$slug'
+    | '/guides/'
     | '/objectives/'
     | '/review/'
     | '/subjects/'
+    | '/guides/$slug/walkthrough'
+    | '/guides/$slug/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/browse'
     | '/contribute'
     | '/forgot-password'
-    | '/guides'
     | '/login'
     | '/profile'
     | '/register'
     | '/reset-password'
-    | '/guides/$slug'
     | '/objectives/$slug'
     | '/review/$slug'
     | '/subjects/$slug'
+    | '/guides'
     | '/objectives'
     | '/review'
     | '/subjects'
+    | '/guides/$slug/walkthrough'
+    | '/guides/$slug'
   id:
     | '__root__'
     | '/'
     | '/browse'
     | '/contribute'
     | '/forgot-password'
-    | '/guides'
     | '/login'
     | '/objectives'
     | '/profile'
@@ -244,9 +263,12 @@ export interface FileRouteTypes {
     | '/objectives/$slug'
     | '/review/$slug'
     | '/subjects/$slug'
+    | '/guides/'
     | '/objectives/'
     | '/review/'
     | '/subjects/'
+    | '/guides/$slug/walkthrough'
+    | '/guides/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -254,7 +276,6 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   ContributeRoute: typeof ContributeRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
-  GuidesRoute: typeof GuidesRouteWithChildren
   LoginRoute: typeof LoginRoute
   ObjectivesRoute: typeof ObjectivesRouteWithChildren
   ProfileRoute: typeof ProfileRoute
@@ -262,6 +283,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ReviewRoute: typeof ReviewRouteWithChildren
   SubjectsRoute: typeof SubjectsRouteWithChildren
+  GuidesSlugRoute: typeof GuidesSlugRouteWithChildren
+  GuidesIndexRoute: typeof GuidesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -315,13 +338,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/guides': {
-      id: '/guides'
-      path: '/guides'
-      fullPath: '/guides'
-      preLoaderRoute: typeof GuidesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -371,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ObjectivesIndexRouteImport
       parentRoute: typeof ObjectivesRoute
     }
+    '/guides/': {
+      id: '/guides/'
+      path: '/guides'
+      fullPath: '/guides/'
+      preLoaderRoute: typeof GuidesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subjects/$slug': {
       id: '/subjects/$slug'
       path: '/$slug'
@@ -394,24 +417,27 @@ declare module '@tanstack/react-router' {
     }
     '/guides/$slug': {
       id: '/guides/$slug'
-      path: '/$slug'
+      path: '/guides/$slug'
       fullPath: '/guides/$slug'
       preLoaderRoute: typeof GuidesSlugRouteImport
-      parentRoute: typeof GuidesRoute
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/$slug/': {
+      id: '/guides/$slug/'
+      path: '/'
+      fullPath: '/guides/$slug/'
+      preLoaderRoute: typeof GuidesSlugIndexRouteImport
+      parentRoute: typeof GuidesSlugRoute
+    }
+    '/guides/$slug/walkthrough': {
+      id: '/guides/$slug/walkthrough'
+      path: '/walkthrough'
+      fullPath: '/guides/$slug/walkthrough'
+      preLoaderRoute: typeof GuidesSlugWalkthroughRouteImport
+      parentRoute: typeof GuidesSlugRoute
     }
   }
 }
-
-interface GuidesRouteChildren {
-  GuidesSlugRoute: typeof GuidesSlugRoute
-}
-
-const GuidesRouteChildren: GuidesRouteChildren = {
-  GuidesSlugRoute: GuidesSlugRoute,
-}
-
-const GuidesRouteWithChildren =
-  GuidesRoute._addFileChildren(GuidesRouteChildren)
 
 interface ObjectivesRouteChildren {
   ObjectivesSlugRoute: typeof ObjectivesSlugRoute
@@ -454,12 +480,25 @@ const SubjectsRouteWithChildren = SubjectsRoute._addFileChildren(
   SubjectsRouteChildren,
 )
 
+interface GuidesSlugRouteChildren {
+  GuidesSlugWalkthroughRoute: typeof GuidesSlugWalkthroughRoute
+  GuidesSlugIndexRoute: typeof GuidesSlugIndexRoute
+}
+
+const GuidesSlugRouteChildren: GuidesSlugRouteChildren = {
+  GuidesSlugWalkthroughRoute: GuidesSlugWalkthroughRoute,
+  GuidesSlugIndexRoute: GuidesSlugIndexRoute,
+}
+
+const GuidesSlugRouteWithChildren = GuidesSlugRoute._addFileChildren(
+  GuidesSlugRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrowseRoute: BrowseRoute,
   ContributeRoute: ContributeRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
-  GuidesRoute: GuidesRouteWithChildren,
   LoginRoute: LoginRoute,
   ObjectivesRoute: ObjectivesRouteWithChildren,
   ProfileRoute: ProfileRoute,
@@ -467,6 +506,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ReviewRoute: ReviewRouteWithChildren,
   SubjectsRoute: SubjectsRouteWithChildren,
+  GuidesSlugRoute: GuidesSlugRouteWithChildren,
+  GuidesIndexRoute: GuidesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
