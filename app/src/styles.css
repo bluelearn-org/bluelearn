@@ -88,7 +88,7 @@
 
   --ring: var(--primary);
 
-  --badge-bg: #1a2f38;
+  --badge-bg: #1a2635;
   --badge-border: var(--border);
   --badge-text: var(--muted-foreground);
 }

@@ -31,7 +31,7 @@ export const SubjectCard = ({ subject, to }: PropTypes) => {
             </p>
             {subject.status && (
               <Badge
-                variant="outline"
+                variant="default"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
                 {subject.status}

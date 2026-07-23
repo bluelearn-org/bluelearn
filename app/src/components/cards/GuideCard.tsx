@@ -43,7 +43,7 @@ export const GuideCard = ({ guide, origin, to }: PropTypes) => {
             </p>
             {guide.status && (
               <Badge
-                variant="outline"
+                variant="default"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
                 {guide.status}
@@ -77,7 +77,7 @@ export const GuideCard = ({ guide, origin, to }: PropTypes) => {
               return (
                 <Badge
                   key={slug}
-                  variant="outline"
+                  variant="default"
                   className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
                 >
                   {name}
