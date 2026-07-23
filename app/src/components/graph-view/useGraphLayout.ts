@@ -43,7 +43,7 @@ export function useGraphLayout({
     levels.forEach((level, levelIdx) => {
       const nodesInLevel = grouped[level];
       if (!nodesInLevel) return;
-      const levelY = -(levelIdx * 250);
+      const levelY = -((levels.length - 1 - levelIdx) * 250);
 
       const totalWidth = nodesInLevel.length * 250;
       const startX = -totalWidth / 2;
