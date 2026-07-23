@@ -1,3 +1,4 @@
+import { Clock, GraduationCap } from "lucide-react";
 import type { ObjectiveContribution } from "@/types/contributions";
 import { Separator } from "@/components/ui/separator";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
@@ -37,6 +38,29 @@ export const PreviewObjective = ({
     return subject ? subject.name : slug;
   };
 
+  const getGuideDuration = (slug: string) => {
+    const guide = guidesData.find((g) => g.slug === slug);
+    return guide?.duration || 0;
+  };
+
+  const getTargetDuration = (targetSlug: string) => {
+    const sub = objectiveContData.subObjectives.find(
+      (s) => s.targetSlug === targetSlug
+    );
+    if (sub?.curatedSequence && sub.curatedSequence.length > 0) {
+      return sub.curatedSequence.reduce(
+        (acc, slug) => acc + getGuideDuration(slug),
+        0
+      );
+    }
+    return getGuideDuration(targetSlug);
+  };
+
+  const totalDuration = objectiveContData.targets.reduce(
+    (acc, targetSlug) => acc + getTargetDuration(targetSlug),
+    0
+  );
+
   return (
     <Stepper.Content step="preview-objective">
       <StepperActionHeader
@@ -49,9 +73,9 @@ export const PreviewObjective = ({
 
       <Separator className="mb-8 bg-border" />
 
-      <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col gap-6">
-        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
-          <CardHeader className="space-y-4">
+      <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col gap-12">
+        <Card className="rounded-md bg-background shadow-none">
+          <CardHeader className="space-y-4 p-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1.5">
                 <CardTitle className="text-2xl font-bold tracking-tight">
@@ -60,32 +84,49 @@ export const PreviewObjective = ({
                 <CardDescription className="text-base">
                   {objectiveContData.summary || "No summary provided."}
                 </CardDescription>
+                {objectiveContData.featured && (
+                  <p className="pt-1 text-sm text-muted-foreground">
+                    <span className="font-semibold">Featured Guide:</span>{" "}
+                    {getGuideTitle(objectiveContData.featured)}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap items-center gap-2 pt-2">
               <Badge
                 variant="secondary"
-                className="px-3 py-1 font-mono text-xs"
+                className="flex items-center gap-1.5 px-3 py-1 font-mono text-xs"
               >
-                {objectiveContData.targets.length} Targets
+                <GraduationCap className="h-7 w-7" />
+                {objectiveContData.targets.length == 1 ? (
+                  <span>1 Target Guide</span>
+                ) : (
+                  <span>{objectiveContData.targets.length} Target Guides</span>
+                )}
               </Badge>
-              {objectiveContData.subjects.map((slug) => (
+              {totalDuration > 0 && (
                 <Badge
-                  key={slug}
                   variant="secondary"
-                  className="border border-muted-foreground/20 bg-muted/60 px-3 py-1 font-mono text-xs text-muted-foreground"
+                  className="flex items-center gap-1.5 px-3 py-1 font-mono text-xs"
                 >
-                  {getSubjectName(slug)}
+                  <Clock className="h-7 w-7" />
+                  {totalDuration} mins
                 </Badge>
-              ))}
-              {objectiveContData.featured && (
-                <Badge
-                  variant="outline"
-                  className="border-foreground/30 px-3 py-1"
-                >
-                  Featured: {getGuideTitle(objectiveContData.featured)}
-                </Badge>
+              )}
+              {objectiveContData.subjects.length > 0 && (
+                <>
+                  <span className="mx-1 h-1 w-1 rounded-full bg-muted-foreground/30" />
+                  {objectiveContData.subjects.map((slug) => (
+                    <Badge
+                      key={slug}
+                      variant="outline"
+                      className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                    >
+                      {getSubjectName(slug)}
+                    </Badge>
+                  ))}
+                </>
               )}
             </div>
           </CardHeader>
@@ -100,47 +141,70 @@ export const PreviewObjective = ({
               No target sequences configured.
             </p>
           ) : (
-            objectiveContData.targets.map((targetSlug, idx) => {
-              const sub = objectiveContData.subObjectives.find(
-                (s) => s.targetSlug === targetSlug
-              );
+            <ol className="m-0 flex w-full list-none flex-col gap-10 p-0">
+              {objectiveContData.targets.map((targetSlug, idx) => {
+                const sub = objectiveContData.subObjectives.find(
+                  (s) => s.targetSlug === targetSlug
+                );
 
-              return (
-                <Card key={idx} className="border-border/40 shadow-sm">
-                  <CardHeader className="border-b border-border/40 bg-muted/20 pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base font-medium">
-                      <span className="font-mono text-xs font-normal text-muted-foreground">
-                        {idx + 1}. Target:
-                      </span>
-                      {getGuideTitle(targetSlug)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    {sub?.curatedSequence && sub.curatedSequence.length > 0 ? (
-                      <ol className="relative ml-3 space-y-6 border-l border-muted-foreground/20">
-                        {sub.curatedSequence.map((stepSlug, stepIdx) => (
-                          <li
-                            key={stepIdx}
-                            className="ml-6 flex flex-col gap-1"
-                          >
-                            <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full border border-muted-foreground/30 bg-background font-mono text-xs text-muted-foreground ring-4 ring-background">
-                              {stepIdx + 1}
+                return (
+                  <li
+                    key={idx}
+                    className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-badge-border bg-badge font-mono text-xs font-semibold text-badge-foreground">
+                      {idx + 1}
+                    </div>
+
+                    <Card className="flex-1 rounded-md bg-background shadow-none transition-colors hover:bg-muted">
+                      <CardHeader className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <CardTitle className="text-base font-medium">
+                            {getGuideTitle(targetSlug)}
+                          </CardTitle>
+                          {getTargetDuration(targetSlug) > 0 && (
+                            <span className="shrink-0 font-mono text-[10px] text-muted-foreground uppercase">
+                              {getTargetDuration(targetSlug)} mins
                             </span>
-                            <span className="mt-1 text-sm leading-none font-medium">
-                              {getGuideTitle(stepSlug)}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Default sequence will be used.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="border-t p-4">
+                        {sub?.curatedSequence &&
+                        sub.curatedSequence.length > 0 ? (
+                          <ol className="relative ml-3 space-y-6 border-l border-muted-foreground/20">
+                            {sub.curatedSequence.map((stepSlug, stepIdx) => (
+                              <li
+                                key={stepIdx}
+                                className="ml-6 flex flex-col gap-1"
+                              >
+                                <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full border border-muted-foreground/30 bg-background font-mono text-xs text-muted-foreground ring-4 ring-background">
+                                  {stepIdx + 1}
+                                </span>
+                                <div className="mt-1 flex items-center justify-between gap-4">
+                                  <span className="text-sm leading-none font-medium">
+                                    {getGuideTitle(stepSlug)}
+                                  </span>
+                                  {getGuideDuration(stepSlug) > 0 && (
+                                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground uppercase">
+                                      {getGuideDuration(stepSlug)} mins
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Default sequence will be used.
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </div>
       </div>
