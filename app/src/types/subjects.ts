@@ -2,7 +2,7 @@ export type Subject = {
   slug: string;
   name: string;
   summary: string;
-  paths_total: number;
+  objectives_total: number;
   guides_total: number;
   status?: string;
 };

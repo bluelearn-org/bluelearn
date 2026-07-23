@@ -4,7 +4,7 @@ description: Overwrite a draft revision (pre-submit only). Partial.
 minProperties: 1
 properties:
   title:
-    type: string
+    type: [string, "null"]
     example: Calculus
   summary:
     type: [string, "null"]
@@ -13,3 +13,25 @@ properties:
   change_summary:
     type: [string, "null"]
     example: Clarified the chain rule section.
+  tags:
+    type: array
+    description: Full replacement set of subject slugs.
+    items:
+      type: string
+    example: [calculus]
+  prerequisites:
+    type: array
+    description: Full replacement set of prerequisite guide slugs.
+    items:
+      type: string
+    example: [limits]
+  newSubjects:
+    type: array
+    description: Subjects proposed inline. Created as drafts, then tagged.
+    items:
+      $ref: "../guides/NewSubject.yaml"
+  todoPrereqs:
+    type: array
+    description: Full replacement set of free-text missing-prerequisite notes.
+    items:
+      type: string

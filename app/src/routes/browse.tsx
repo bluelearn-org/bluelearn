@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
 import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
-import { Route as GuideRoute } from "@/routes/guides.$slug";
+import { Route as GuideRoute } from "@/routes/guides/$slug/index";
 
 import { hydrateObjectives } from "@/lib/getData";
 
@@ -39,8 +39,8 @@ function RouteComponent() {
   return (
     <div className="mx-auto max-w-[1280px] border-x bg-background">
       <section className="border-b px-8 py-10 lg:px-16">
-        <div className="mb-6">
-          <h1 className="data-label text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="font-mono text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
             Browse
           </h1>
         </div>

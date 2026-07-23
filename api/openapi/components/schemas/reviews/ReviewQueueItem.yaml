@@ -1,0 +1,22 @@
+type: object
+additionalProperties: false
+description: A case on the caller's review queue, plus their own current vote.
+properties:
+  id:
+    $ref: "../common/Uuid.yaml"
+  case_type:
+    $ref: "./CaseType.yaml"
+  status:
+    $ref: "./CaseStatus.yaml"
+  title:
+    type: [string, "null"]
+    description: Title of the content under review.
+    example: Calculus
+  created_at:
+    $ref: "../common/Timestamp.yaml"
+  decision:
+    type: [string, "null"]
+    enum: [approved, rejected, null]
+    description: The caller's own vote on this case, or null if not yet cast.
+    example: approved
+required: [id, case_type, status, title, created_at, decision]

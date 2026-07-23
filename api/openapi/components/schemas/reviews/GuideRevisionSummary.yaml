@@ -1,0 +1,21 @@
+type: object
+additionalProperties: false
+description: The guide revision the case is judging.
+properties:
+  id:
+    $ref: "../common/Uuid.yaml"
+  title:
+    type: [string, "null"]
+    example: Calculus
+  summary:
+    type: [string, "null"]
+    example: A short overview of the guide.
+  body:
+    type: [string, "null"]
+    example: "# Calculus\n\nThe body of the guide in markdown."
+  status:
+    type: string
+    example: submitted
+  created_at:
+    $ref: "../common/Timestamp.yaml"
+required: [id, status, created_at]

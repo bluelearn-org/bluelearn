@@ -1,26 +1,46 @@
+import { X } from "lucide-react";
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { GuideContribution } from "@/types/contributions";
 
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import subjectsData from "@/data/subjects.json";
-import guidesData from "@/data/guides.json";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+
+type SubjectOption = { slug: string; name: string };
+type GuideOption = {
+  slug: string | null;
+  title: string | null;
+  summary: string | null;
+};
 
 type PropTypes = {
   Stepper: any;
   guideContData: GuideContribution;
   setGuideContData: Dispatch<SetStateAction<GuideContribution>>;
+  subjects: Array<SubjectOption>;
+  guides: Array<GuideOption>;
+  onSaveDraft: () => void;
+  submitting?: boolean;
 };
 
 export const GuideDetails = ({
   Stepper,
   guideContData,
   setGuideContData,
+  subjects,
+  guides,
+  onSaveDraft,
+  submitting,
 }: PropTypes) => {
   const [todoPrereq, setTodoPrereq] = useState<string>("");
   const [newSubject, setNewSubject] = useState<{
@@ -33,12 +53,26 @@ export const GuideDetails = ({
 
   return (
     <Stepper.Content step="guide-details">
-      <StepperActionHeader title={"Guide Details"} Stepper={Stepper} />
+      <StepperActionHeader
+        title={"Guide Details"}
+        Stepper={Stepper}
+        onSaveDraft={onSaveDraft}
+        submitting={submitting}
+      />
 
       <FieldGroup>
-        <FieldLabel className="font-mono tracking-[0.08em] uppercase">
-          Type
-        </FieldLabel>
+        <div className="space-y-1">
+          <FieldLabel
+            required
+            className="font-mono tracking-[0.08em] uppercase"
+          >
+            Type
+          </FieldLabel>
+          <FieldDescription className="text-xs">
+            Choose whether this guide explains a concept or teaches a process
+            for accomplishing a goal.
+          </FieldDescription>
+        </div>
         <Field className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
           <button
             className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
@@ -77,12 +111,17 @@ export const GuideDetails = ({
           </button>
         </Field>
         <Field className="space-y-2">
-          <FieldLabel
-            required
-            className="font-mono tracking-[0.08em] uppercase"
-          >
-            Title
-          </FieldLabel>
+          <div className="space-y-1">
+            <FieldLabel
+              required
+              className="font-mono tracking-[0.08em] uppercase"
+            >
+              Title
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              A clear, concise name for your guide.
+            </FieldDescription>
+          </div>
 
           <Input
             id="title"
@@ -103,12 +142,17 @@ export const GuideDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel
-            required
-            className="font-mono tracking-[0.08em] uppercase"
-          >
-            Summary
-          </FieldLabel>
+          <div className="space-y-1">
+            <FieldLabel
+              required
+              className="font-mono tracking-[0.08em] uppercase"
+            >
+              Summary
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              Briefly describe what the reader will learn from this guide.
+            </FieldDescription>
+          </div>
 
           <textarea
             className="h-32 w-full min-w-0 resize-none rounded-md border border-input bg-input/20 p-2 text-sm transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-xs/relaxed file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 md:text-xs/relaxed dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
@@ -126,35 +170,45 @@ export const GuideDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel
-            required
-            className="font-mono tracking-[0.08em] uppercase"
-          >
-            Subjects
-          </FieldLabel>
+          <div className="space-y-1">
+            <FieldLabel
+              required
+              className="font-mono tracking-[0.08em] uppercase"
+            >
+              Subjects
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              Select existing subjects or add a new subject below. At least one
+              is required.
+            </FieldDescription>
+          </div>
 
           <Combobox
             multiple
-            items={subjectsData.map((s) => {
+            items={subjects.map((s) => {
               return {
                 value: s.slug,
                 label: s.name,
-                description: s.summary,
               };
             })}
             value={guideContData.subjects}
-            onValueChange={(subjects) =>
+            onValueChange={(slugs) =>
               setGuideContData((prev) => ({
                 ...prev,
-                subjects,
+                subjects: slugs,
               }))
             }
           />
         </Field>
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
-            New Subjects
-          </FieldLabel>
+          <div className="space-y-1">
+            <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+              New Subjects
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              Create a subject if it doesn't exist yet.
+            </FieldDescription>
+          </div>
           <div className="flex items-center justify-between gap-4">
             <Input
               id="new-subject-name"
@@ -206,30 +260,52 @@ export const GuideDetails = ({
           </div>
         </Field>
 
-        <ul className="list-disc px-8 text-[11px] text-muted-foreground">
-          {guideContData.newSubjects.map((sub, index) => {
-            return (
-              <li key={index}>
+        {guideContData.newSubjects.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1">
+            {guideContData.newSubjects.map((sub, index) => (
+              <Badge key={index} variant="outline" className="gap-1.5">
                 {sub.name} - {sub.summary}
-              </li>
-            );
-          })}
-        </ul>
+                <button
+                  type="button"
+                  aria-label={`Remove ${sub.name}`}
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setGuideContData((prev) => ({
+                      ...prev,
+                      newSubjects: prev.newSubjects.filter(
+                        (_, i) => i !== index
+                      ),
+                    }))
+                  }
+                >
+                  <X className="size-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
 
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
-            Prerequsite Guides
-          </FieldLabel>
+          <div className="space-y-1">
+            <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+              Prerequsite Guides
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              Existing guides a reader should understand first.
+            </FieldDescription>
+          </div>
 
           <Combobox
             multiple
-            items={guidesData.map((g) => {
-              return {
-                value: g.slug,
-                label: g.title,
-                description: g.summary,
-              };
-            })}
+            items={guides
+              .filter((g): g is GuideOption & { slug: string } => !!g.slug)
+              .map((g) => {
+                return {
+                  value: g.slug,
+                  label: g.title ?? g.slug,
+                  description: g.summary ?? undefined,
+                };
+              })}
             value={guideContData.prereqs}
             onValueChange={(prereqs) =>
               setGuideContData((prev) => ({
@@ -241,9 +317,14 @@ export const GuideDetails = ({
         </Field>
 
         <Field className="space-y-2">
-          <FieldLabel className="font-mono tracking-[0.08em] uppercase">
-            Todo Prerequsite Guides
-          </FieldLabel>
+          <div className="space-y-1">
+            <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+              Todo Prerequsite Guides
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              Note missing prerequisite guides that don't exist yet.
+            </FieldDescription>
+          </div>
 
           <div className="flex items-center justify-between gap-4">
             <Input
@@ -275,11 +356,30 @@ export const GuideDetails = ({
             </Button>
           </div>
         </Field>
-        <ul className="list-disc px-8 text-[11px] text-muted-foreground">
-          {guideContData.todoPrereqs.map((todo, index) => {
-            return <li key={index}>{todo}</li>;
-          })}
-        </ul>
+        {guideContData.todoPrereqs.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1">
+            {guideContData.todoPrereqs.map((todo, index) => (
+              <Badge key={index} variant="outline" className="gap-1.5">
+                {todo}
+                <button
+                  type="button"
+                  aria-label={`Remove ${todo}`}
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setGuideContData((prev) => ({
+                      ...prev,
+                      todoPrereqs: prev.todoPrereqs.filter(
+                        (_, i) => i !== index
+                      ),
+                    }))
+                  }
+                >
+                  <X className="size-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
       </FieldGroup>
     </Stepper.Content>
   );

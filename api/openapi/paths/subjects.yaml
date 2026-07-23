@@ -18,42 +18,6 @@
                   items:
                     $ref: "../components/schemas/subjects/SubjectListItem.yaml"
               required: [subjects]
-  post:
-    tags: [subjects]
-    summary: Create a subject
-    operationId: createSubject
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/subjects/CreateSubjectRequest.yaml"
-    responses:
-      "201":
-        description: The created subject
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              properties:
-                subject:
-                  $ref: "../components/schemas/subjects/Subject.yaml"
-              required: [subject]
-      "400":
-        $ref: "../components/responses/_shared.yaml#/BadRequest"
-      "401":
-        $ref: "../components/responses/_shared.yaml#/Unauthorized"
-      "409":
-        description: A subject with this name already exists
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/common/Error.yaml"
-            example:
-              error: A subject with this name already exists
 
 /subjects/{slug}:
   parameters:
