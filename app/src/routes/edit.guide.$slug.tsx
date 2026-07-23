@@ -59,14 +59,13 @@ function RouteComponent() {
   const [subjectOptions, setSubjectOptions] =
     useState<Array<{ slug: string; name: string }>>(subjectsData);
 
-  const [guideOptions, setGuideOptions] =
-    useState<
-      Array<{
-        slug: string | null;
-        title: string | null;
-        summary: string | null;
-      }>
-    >(guidesData);
+  const [guideOptions, setGuideOptions] = useState<
+    Array<{
+      slug: string | null;
+      title: string | null;
+      summary: string | null;
+    }>
+  >(guidesData);
 
   const [username, setUsername] = useState<string | null>(null);
 
