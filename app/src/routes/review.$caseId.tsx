@@ -1,11 +1,8 @@
 import { useRef, useState } from "react";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import type { HydratedGuide } from "@/types/guides";
 import { Separator } from "@/components/ui/separator";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
-import { Sidebar } from "@/components/Sidebar";
-import { GuideReader } from "@/components/GuideReader";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
@@ -29,18 +26,6 @@ export const Route = createFileRoute("/review/$caseId")({
   },
   component: RouteComponent,
 });
-
-const REASONS = [
-  { value: "hierarchy_issue", label: "Hierarchy Issues" },
-  { value: "factual_error", label: "Factual Error" },
-  { value: "duplicate_content", label: "Duplicate Content" },
-  { value: "scope_violation", label: "Scope Violation" },
-  { value: "clarity_issue", label: "Clarity Issues" },
-  {
-    value: "missing_required_information",
-    label: "Missing Required Information",
-  },
-];
 
 function RouteComponent() {
   const { caseId } = Route.useParams();
@@ -83,7 +68,7 @@ function RouteComponent() {
       await castDecision(caseId, review, { signal: controller.signal });
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
-        setSubmitError((e as Error).message);
+        setSubmitError("There was an unexpected error with your submission.");
       }
     } finally {
       if (abortControllerRef.current === controller) {
@@ -195,6 +180,15 @@ function RouteComponent() {
               >
                 Submit
               </Button>
+            </FieldGroup>
+
+            <FieldGroup>
+              <p className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+                {submitError === null ? submitting : ""}
+              </p>
+              <p className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground text-red-500 uppercase">
+                {submitError ?? ""}
+              </p>
             </FieldGroup>
           </CollapsibleSection>
         </aside>

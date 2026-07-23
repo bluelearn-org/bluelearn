@@ -1,6 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { Separator } from "@/components/ui/separator";
-import { CaseCard } from "@/components/cards/CaseCard";
 import { Badge } from "@/components/ui/badge";
 
 import { Route as ReviewCaseIdRoute } from "@/routes/review.$caseId";

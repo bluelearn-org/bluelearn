@@ -1,6 +1,5 @@
 import type { Review } from "@/types/reveiws";
 import type { CreateDecisionInput } from "../../../../packages/schemas/src/review";
-import type { FeaturedNode } from "../../../../packages/schemas/src/objectives";
 import { client } from "@/lib/api/apiClient";
 
 const reviews = client.reviews;
@@ -82,6 +81,4 @@ export async function castDecision(
     { init: { signal } }
   );
   await assertOk(res);
-
-  const data = await res.json(); // fetch result data, not sure if we will use it
 }
