@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import "katex/dist/katex.min.css";
 import katex from "katex";
 import "mathlive";
@@ -23,6 +24,8 @@ const {
   $getNodeByKey,
   $createRangeSelection,
   $setSelection,
+  createCommand,
+  COMMAND_PRIORITY_NORMAL,
 } = lexical;
 
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -48,68 +51,231 @@ export interface MathLiveComponentProps {
   nodeKey?: string;
 }
 
+type MathEditorPayload = {
+  latex: string;
+  inline: boolean;
+  onChange: (latex: string) => void;
+  onRemove: () => void;
+  anchorElement: HTMLElement;
+  nodeKey?: string;
+};
+
+export const OPEN_MATH_EDITOR_COMMAND = createCommand<MathEditorPayload | null>(
+  "OPEN_MATH_EDITOR_COMMAND"
+);
+
+export function SingletonMathEditor() {
+  const [editor] = useLexicalComposerContext();
+  const [payload, setPayload] = useState<MathEditorPayload | null>(null);
+  const [position, setPosition] = useState({
+    top: -9999,
+    left: -9999,
+    width: 0,
+  });
+  const mfRef = useRef<any>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const internalLatexRef = useRef("");
+
+  // Position updater
+  const updatePosition = useCallback(() => {
+    if (!payload?.anchorElement) return;
+    const rect = payload.anchorElement.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + window.scrollY + 8,
+      left: Math.max(
+        16,
+        rect.left + window.scrollX - (payload.inline ? 0 : 64)
+      ), // Adjust for center alignment
+      width: rect.width,
+    });
+  }, [payload]);
+
+  // Handle command
+  useEffect(() => {
+    return editor.registerCommand(
+      OPEN_MATH_EDITOR_COMMAND,
+      (newPayload) => {
+        if (newPayload) {
+          internalLatexRef.current = newPayload.latex;
+          setPayload(newPayload);
+
+          if (mfRef.current) {
+            mfRef.current.value = newPayload.latex;
+            setTimeout(() => {
+              if (mfRef.current) mfRef.current.focus();
+            }, 50);
+          }
+        } else {
+          setPayload(null);
+        }
+        return true;
+      },
+      COMMAND_PRIORITY_NORMAL
+    );
+  }, [editor]);
+
+  // Update position on scroll/resize when active
+  useEffect(() => {
+    if (!payload) return;
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [payload, updatePosition]);
+
+  // Input listener
+  useEffect(() => {
+    const mf = mfRef.current;
+    if (!mf) return;
+
+    const handleInput = (e: Event) => {
+      const newVal = (e.target as any).value;
+      internalLatexRef.current = newVal;
+      if (payload) {
+        payload.onChange(newVal);
+      }
+    };
+
+    mf.addEventListener("input", handleInput);
+    return () => mf.removeEventListener("input", handleInput);
+  }, [payload]);
+
+  // Outside click to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!payload) return;
+      const target = e.target as HTMLElement;
+
+      // Ignore clicks on math-field internals, menus, or scrims
+      if (
+        target.tagName === "MATH-FIELD" ||
+        target.closest("math-field") ||
+        target.closest("menu") ||
+        target.getAttribute("role") === "presentation" ||
+        payload.anchorElement.contains(target)
+      ) {
+        return;
+      }
+
+      if (popoverRef.current && !popoverRef.current.contains(target)) {
+        setPayload(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", handleClickOutside, {
+      capture: true,
+    });
+    return () =>
+      document.removeEventListener("pointerdown", handleClickOutside, {
+        capture: true,
+      });
+  }, [payload]);
+
+  const isVisible = !!payload;
+  const portalNode = typeof document !== "undefined" ? document.body : null;
+  if (!portalNode) return null;
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      style={{
+        position: "absolute",
+        top: isVisible ? position.top : -9999,
+        left: isVisible ? position.left : -9999,
+        opacity: isVisible ? 1 : 0,
+        pointerEvents: isVisible ? "auto" : "none",
+        transition: "opacity 0.15s ease",
+      }}
+      className={cn(
+        "z-[9999] flex flex-col gap-2 rounded-xl bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-border",
+        payload?.inline ? "w-[22rem] max-w-[90vw]" : "w-[30rem] max-w-[90vw]"
+      )}
+    >
+      <div className="flex w-full items-center rounded-md border border-input bg-background px-2 py-2 text-sm shadow-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
+        <math-field
+          ref={mfRef}
+          math-virtual-keyboard-policy="manual"
+          className="w-full text-lg outline-none"
+          style={{ backgroundColor: "transparent" }}
+          onKeyDown={(e: any) => {
+            if (e.key === "Enter" || e.key === "Escape") {
+              e.preventDefault();
+              setPayload(null);
+              editor.focus();
+            }
+          }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between px-0.5">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => {
+              if (payload) {
+                payload.onRemove();
+                setPayload(null);
+              }
+            }}
+            title="Delete Equation"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground/70">
+            <kbd className="pointer-events-none inline-flex h-4 items-center gap-1 rounded border border-border bg-muted/50 px-1 font-mono text-[9px] font-medium text-muted-foreground">
+              <span className="text-[10px]">↵</span> Enter
+            </kbd>
+            to save
+          </span>
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            className="h-7 rounded-md px-3 text-xs"
+            onClick={() => {
+              setPayload(null);
+            }}
+          >
+            Done
+          </Button>
+        </div>
+      </div>
+    </div>,
+    portalNode
+  );
+}
+
 export function MathLiveComponent({
-  latex: initialLatex = "",
+  latex = "",
   inline = false,
   onChange,
   nodeKey,
 }: MathLiveComponentProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [localLatex, setLocalLatex] = useState(initialLatex);
   const containerRef = useRef<HTMLSpanElement>(null);
-  const mfRef = useRef<any>(null);
-
+  const [editor] = useLexicalComposerContext();
+  const removeNode = useLexicalNodeRemove();
   const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(
     nodeKey || "unknown"
   );
-  const removeNode = useLexicalNodeRemove();
 
   useEffect(() => {
-    if (!isEditing && containerRef.current && localLatex !== "") {
-      katex.render(localLatex, containerRef.current, {
+    if (containerRef.current && latex !== "") {
+      katex.render(latex, containerRef.current, {
         displayMode: !inline,
         throwOnError: false,
       });
     }
-  }, [localLatex, inline, isEditing]);
+  }, [latex, inline]);
 
-  useEffect(() => {
-    if (isEditing && mfRef.current) {
-      const mf = mfRef.current;
-      mf.value = localLatex;
-
-      const handleInput = (e: Event) => {
-        const newVal = (e.target as any).value;
-        setLocalLatex(newVal);
-        onChange(newVal);
-      };
-
-      const handleFocusOut = () => {
-        // Use a small timeout to allow focus to shift to the virtual keyboard if clicked
-        setTimeout(() => {
-          if (document.activeElement !== mf && !mf.hasFocus?.()) {
-            setIsEditing(false);
-            if (nodeKey) {
-              setSelected(true);
-            }
-          }
-        }, 150);
-      };
-
-      mf.addEventListener("input", handleInput);
-      mf.addEventListener("focusout", handleFocusOut);
-
-      // Auto-focus when entering edit mode
-      setTimeout(() => mf.focus(), 50);
-
-      return () => {
-        mf.removeEventListener("input", handleInput);
-        mf.removeEventListener("focusout", handleFocusOut);
-      };
-    }
-  }, [isEditing, onChange]);
-
-  const equation = localLatex;
+  const equation = latex;
 
   const triggerClasses = inline
     ? cn(
@@ -128,87 +294,24 @@ export function MathLiveComponent({
           "scale-[1.02] !border-transparent bg-primary/5 ring-2 ring-primary/40"
       );
 
-  if (isEditing) {
-    return (
-      <div
-        className={cn(
-          "z-10 flex flex-col gap-2 rounded-xl bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-border",
-          inline
-            ? "mx-1 inline-flex w-[22rem] max-w-full align-middle"
-            : "mx-auto my-4 w-[22rem] max-w-full"
-        )}
-      >
-        <div className="flex w-full items-center rounded-md border border-input bg-background px-2 py-2 text-sm shadow-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
-          <math-field
-            ref={mfRef}
-            math-virtual-keyboard-policy="manual"
-            className="w-full text-lg outline-none"
-            style={{ backgroundColor: "transparent" }}
-            onKeyDown={(e: any) => {
-              if (e.key === "Enter" || e.key === "Escape") {
-                e.preventDefault();
-                setIsEditing(false);
-                if (nodeKey) {
-                  setSelected(true);
-                }
-              }
-            }}
-          />
-        </div>
-
-        <div className="flex items-center justify-between px-0.5">
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => {
-                removeNode();
-                setIsEditing(false);
-              }}
-              title="Delete Equation"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground/70">
-              <kbd className="pointer-events-none inline-flex h-4 items-center gap-1 rounded border border-border bg-muted/50 px-1 font-mono text-[9px] font-medium text-muted-foreground">
-                <span className="text-[10px]">↵</span> Enter
-              </kbd>
-              to save
-            </span>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              className="h-7 rounded-md px-3 text-xs"
-              onClick={() => {
-                setIsEditing(false);
-                if (nodeKey) {
-                  setSelected(true);
-                }
-              }}
-            >
-              Done
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <span
       contentEditable={false}
       onDragStart={(e) => e.preventDefault()}
       onClick={(e) => {
         e.stopPropagation();
-        setIsEditing(true);
         if (nodeKey) {
           clearSelection();
+          setSelected(true);
         }
+        editor.dispatchCommand(OPEN_MATH_EDITOR_COMMAND, {
+          latex,
+          inline,
+          onChange,
+          onRemove: removeNode,
+          anchorElement: e.currentTarget,
+          nodeKey,
+        });
       }}
       className={triggerClasses}
     >
@@ -414,7 +517,12 @@ export function MathShortcutTypeListener() {
 export const mathShortcutsPlugin = realmPlugin({
   init: (realm) => {
     realm.pubIn({
-      [addComposerChild$]: () => <MathShortcutTypeListener />,
+      [addComposerChild$]: () => (
+        <>
+          <MathShortcutTypeListener />
+          <SingletonMathEditor />
+        </>
+      ),
     });
   },
 });
