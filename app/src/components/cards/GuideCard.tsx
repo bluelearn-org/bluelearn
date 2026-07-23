@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 
 import type { BreadcrumbOrigin } from "@/lib/breadcrumbs";
 import type { Route as GuideRoute } from "@/routes/guides/$slug/index";
-import type { Route as ReviewSlugRoute } from "@/routes/review.$slug";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,7 @@ type GuideProp = {
 
 type PropTypes = {
   guide: GuideProp;
-  to?: typeof GuideRoute.to | typeof ReviewSlugRoute.to;
+  to?: typeof GuideRoute.to;
   origin?: BreadcrumbOrigin;
 };
 
