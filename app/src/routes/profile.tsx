@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import type {
-  ProfileAPI,
-  ProfileActivityRow,
-  ProfileRole,
-  ProfileStats,
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { ProfilePageData } from "@/lib/profile";
+import {
+  activityStatusLabel,
+  activityTypeLabel,
+  loadProfilePage,
 } from "@/lib/profile";
+import { formatDate } from "@/lib/guideUtils";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -17,21 +17,40 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-
-import { fetchMyProfile } from "@/lib/profile";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/profile")({
+  loader: ({ abortController }) => loadProfilePage(abortController.signal),
   component: RouteComponent,
+  pendingComponent: () => <ProfileMessage>Loading profile...</ProfileMessage>,
+  errorComponent: ({ error }) => (
+    <ProfileMessage tone="error">{error.message}</ProfileMessage>
+  ),
 });
 
-const DEFAULT_STATS: ProfileStats = {
-  upvotes: undefined,
-  downvotes: undefined,
-  contributions: undefined,
-  reviews: undefined,
-};
-// fucntion for getting the first two letters for the user's initials
+function ProfileMessage({
+  children,
+  tone = "muted",
+}: {
+  children: React.ReactNode;
+  tone?: "muted" | "error";
+}) {
+  return (
+    <div className="mx-auto max-w-7xl border-x bg-background px-8 py-10 lg:px-16">
+      <p
+        className={
+          tone === "error"
+            ? "text-sm text-red-600"
+            : "text-sm text-muted-foreground"
+        }
+      >
+        {children}
+      </p>
+    </div>
+  );
+}
+
+// first two letters for the user's initials
 function getInitials(value: string | null | undefined) {
   const text = value?.trim() ?? "";
   if (!text) return "?";
@@ -40,30 +59,40 @@ function getInitials(value: string | null | undefined) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-interface ProfilePageProps {
-  profile: ProfileAPI;
-  roles: Array<ProfileRole>;
-  stats?: ProfileStats;
-  activityRows?: Array<ProfileActivityRow>;
+type ActivityRow = ProfilePageData["activity"][number];
+
+// An approved guide, a published objective, or a reviewed guide can be opened;
+// anything still in flight has no live page to land on.
+function rowTarget(row: ActivityRow) {
+  if (row.content_kind === "review")
+    return row.target_slug
+      ? { to: "/guides/$slug", slug: row.target_slug }
+      : null;
+  if (
+    row.content_kind === "guide" &&
+    row.status === "published" &&
+    row.target_slug
+  )
+    return { to: "/guides/$slug", slug: row.target_slug };
+  if (
+    row.content_kind === "objective" &&
+    row.status === "published" &&
+    row.target_slug
+  )
+    return { to: "/objectives/$slug", slug: row.target_slug };
+  return null;
 }
 
-function ProfilePage({
-  profile,
-  roles,
-  stats = DEFAULT_STATS,
-  activityRows = [],
-}: ProfilePageProps) {
+function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
+  const navigate = useNavigate();
   const roleLabel = roles.length > 0 ? roles.join(", ") : "Member";
 
-  const statsRows = useMemo(
-    () => [
-      { label: "Upvote", value: stats.upvotes ?? "—" },
-      { label: "Downvote", value: stats.downvotes ?? "—" },
-      { label: "Contributions", value: stats.contributions ?? "—" },
-      { label: "Reviews", value: stats.reviews ?? "—" },
-    ],
-    [stats]
-  );
+  const statsRows = [
+    { label: "Upvote", value: stats.upvotes },
+    { label: "Downvote", value: stats.downvotes },
+    { label: "Contributions", value: stats.contributions },
+    { label: "Reviews", value: stats.reviews },
+  ];
 
   const initials = getInitials(profile.display_name || profile.username);
 
@@ -101,28 +130,25 @@ function ProfilePage({
           <Table className="mx-auto w-full max-w-5xl">
             <TableHeader>
               <TableRow>
-                <TableHead className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase">
-                  Type
-                </TableHead>
-                <TableHead className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase">
-                  Title
-                </TableHead>
-                <TableHead className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase">
-                  Change Summary
-                </TableHead>
-                <TableHead className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase">
-                  Date
-                </TableHead>
-                <TableHead className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase">
-                  Status
-                </TableHead>
-                <TableHead className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase">
-                  Review Case
-                </TableHead>
+                {[
+                  "Type",
+                  "Title",
+                  "Change Summary",
+                  "Date",
+                  "Status",
+                  "Review Case",
+                ].map((heading) => (
+                  <TableHead
+                    key={heading}
+                    className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase"
+                  >
+                    {heading}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activityRows.length === 0 ? (
+              {activity.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -132,44 +158,65 @@ function ProfilePage({
                   </TableCell>
                 </TableRow>
               ) : (
-                activityRows.map((data, index) => (
-                  <TableRow
-                    key={`${data.type}-${index}`}
-                    className="cursor-pointer"
-                    onClick={() => {}} // TODO: opens to draft/published guide/variant/objective
-                  >
-                    <TableCell className="px-4 py-3">{data.type}</TableCell>
+                activity.map((row, index) => {
+                  const target = rowTarget(row);
+                  return (
+                    <TableRow
+                      key={`${row.content_kind}-${index}`}
+                      className={target ? "cursor-pointer" : undefined}
+                      onClick={
+                        target
+                          ? () =>
+                              navigate({
+                                to: target.to,
+                                params: { slug: target.slug },
+                              })
+                          : undefined
+                      }
+                    >
+                      <TableCell className="px-4 py-3">
+                        {activityTypeLabel(row)}
+                      </TableCell>
 
-                    <TableCell className="px-4 py-3">{data.title}</TableCell>
+                      <TableCell className="px-4 py-3">{row.title}</TableCell>
 
-                    <TableCell className="px-4 py-3">
-                      {data.change_summary}
-                    </TableCell>
+                      <TableCell className="px-4 py-3">
+                        {row.change_summary}
+                      </TableCell>
 
-                    <TableCell className="mono-micro px-4 py-3">
-                      {data.date}
-                    </TableCell>
+                      <TableCell className="mono-micro px-4 py-3">
+                        {formatDate(new Date(row.created_at))}
+                      </TableCell>
 
-                    <TableCell className="px-4 py-3">
-                      <Badge
-                        variant="outline"
-                        className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
-                      >
-                        {data.status}
-                      </Badge>
-                    </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <Badge
+                          variant="outline"
+                          className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                        >
+                          {activityStatusLabel(row.status)}
+                        </Badge>
+                      </TableCell>
 
-                    <TableCell className="px-4 py-3">
-                      <Button
-                        className="btn-pri"
-                        size="lg"
-                        onClick={() => {}} // TODO: opens review page - guide/variant/objective - with review notes
-                      >
-                        {data.review_case}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      <TableCell className="px-4 py-3">
+                        {row.review_case_id ? (
+                          <Button
+                            className="btn-pri"
+                            size="lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate({
+                                to: "/review/$slug",
+                                params: { slug: row.review_case_id! },
+                              });
+                            }}
+                          >
+                            View case
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -180,59 +227,6 @@ function ProfilePage({
 }
 
 function RouteComponent() {
-  const [profile, setProfile] = useState<ProfileAPI | null>(null);
-  const [roles, setRoles] = useState<Array<ProfileRole>>([]);
-  const [stats, setStats] = useState<ProfileStats>(DEFAULT_STATS);
-  const [activityRows, setActivityRows] = useState<Array<ProfileActivityRow>>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchMyProfile()
-      .then((result) => {
-        setProfile(result.profile);
-        setRoles(result.roles);
-        setStats(result.stats ?? DEFAULT_STATS);
-        setActivityRows(result.activity ?? []);
-      })
-      .catch((err) => setError(err.message ?? "Unable to load profile."))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl border-x bg-background px-8 py-10 lg:px-16">
-        <p className="text-sm text-muted-foreground">Loading profile...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="mx-auto max-w-7xl border-x bg-background px-8 py-10 lg:px-16">
-        <p className="text-sm text-red-600">{error}</p>
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-7xl border-x bg-background px-8 py-10 lg:px-16">
-        <p className="text-sm text-muted-foreground">
-          Profile data is unavailable.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <ProfilePage
-      profile={profile}
-      roles={roles}
-      stats={stats}
-      activityRows={activityRows}
-    />
-  );
+  const data = Route.useLoaderData();
+  return <ProfilePage {...data} />;
 }

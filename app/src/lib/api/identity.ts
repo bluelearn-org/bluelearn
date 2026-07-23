@@ -11,3 +11,17 @@ export async function getMyIdentity({ signal }: FetchOptions = {}) {
 
   return await res.json();
 }
+
+export async function getMyStats({ signal }: FetchOptions = {}) {
+  const res = await me.stats.$get(undefined, { init: { signal } });
+  await assertOk(res);
+
+  return await res.json();
+}
+
+export async function getMyActivity({ signal }: FetchOptions = {}) {
+  const res = await me.activity.$get(undefined, { init: { signal } });
+  await assertOk(res);
+
+  return await res.json();
+}
