@@ -376,12 +376,13 @@ export async function getMyActivity(
     for (const rev of myGuideRevs) {
       const guide = guideById.get(rev.guide_id);
       const caseId = caseByRev.get(rev.id) ?? null;
-      const status =
+      const caseStatus =
         rev.status === "draft"
           ? "draft"
           : caseId
             ? (statusByCase.get(caseId) ?? "submitted")
             : "submitted";
+      const status = caseStatus === "approved" ? "published" : caseStatus;
       rows.push({
         content_kind: "guide",
         is_variant: guide
