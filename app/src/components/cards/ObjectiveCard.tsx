@@ -141,7 +141,7 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
             {objective.status && (
               <Badge
                 variant="outline"
-                className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                className="mono-micro badge-bg rounded-full border border-badge-border tracking-[0.08em] text-badge-foreground"
               >
                 {objective.status}
               </Badge>
