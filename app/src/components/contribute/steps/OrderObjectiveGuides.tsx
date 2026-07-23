@@ -13,7 +13,7 @@ import {
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
 import type { WalkthroughNode } from "@/lib/walkthroughUtils";
-import { GuideGraph } from "@/components/graph-view/GuideGraph";
+import { CurationGraph } from "@/components/graph-view/CurationGraph";
 import { fetchWalkthrough, guidesMap } from "@/lib/walkthroughUtils";
 import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
 import { Badge } from "@/components/ui/badge";
@@ -510,7 +510,7 @@ export const OrderObjectiveGuides = ({
               </CardDescription>
             </CardHeader>
             <CardContent className="relative min-h-0 flex-1 overflow-hidden p-0">
-              <GuideGraph
+              <CurationGraph
                 walkthroughNodes={walkthroughNodes}
                 curatedSequence={curatedSequence}
                 targetSlug={targetSlug}

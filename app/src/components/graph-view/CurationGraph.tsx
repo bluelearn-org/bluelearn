@@ -1,16 +1,16 @@
 import { useCallback, useRef } from "react";
 import { Background, Controls, ReactFlow } from "@xyflow/react";
-import { GuideNode } from "./GuideNode";
+import { CurationNode } from "./CurationNode";
 import { useGraphLayout } from "./useGraphLayout";
 import type { Node } from "@xyflow/react";
 import type { WalkthroughNode } from "@/lib/walkthroughUtils";
 import "@xyflow/react/dist/style.css";
 
 const nodeTypes = {
-  guideNode: GuideNode,
+  curationNode: CurationNode,
 };
 
-type GuideGraphProps = {
+type CurationGraphProps = {
   walkthroughNodes: Array<WalkthroughNode>;
   curatedSequence: Array<string>;
   targetSlug: string;
@@ -20,7 +20,7 @@ type GuideGraphProps = {
   onHoverGuide: (slug: string | null) => void;
 };
 
-export function GuideGraph({
+export function CurationGraph({
   walkthroughNodes,
   curatedSequence,
   targetSlug,
@@ -28,7 +28,7 @@ export function GuideGraph({
   guidesMap,
   hoveredGuide,
   onHoverGuide,
-}: GuideGraphProps) {
+}: CurationGraphProps) {
   const getNodeData = useCallback(
     (node: WalkthroughNode, isTarget: boolean) => {
       const isChecked = isTarget || curatedSequence.includes(node.slug);
@@ -46,7 +46,7 @@ export function GuideGraph({
     targetSlug,
     guidesMap,
     hoveredGuide,
-    nodeType: "guideNode",
+    nodeType: "curationNode",
     getNodeData,
   });
 

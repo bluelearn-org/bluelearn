@@ -1,7 +1,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export function GuideNode({ data }: { data: any }) {
+export function CurationNode({ data }: { data: any }) {
   const { isTarget, isChecked, title, selectedOrder, isHovered, isDimmed } =
     data;
 
