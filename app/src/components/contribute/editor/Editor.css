@@ -340,13 +340,13 @@
 
 /* == CODE & SYNTAX HIGHLIGHTING == */
 .mdxeditor-content pre {
-  background-color: #282c34 !important;
-  border: 1px solid #181a1f !important;
+  background-color: var(--secondary) !important;
+  border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
   padding: 1rem !important;
   overflow-x: auto !important;
   margin: 1.25rem 0 !important;
-  color: #abb2bf !important;
+  color: var(--foreground) !important;
 }
 
 .mdxeditor-content code {
@@ -455,150 +455,17 @@
   padding: 0 !important;
 }
 
-/* == MATH & LATEX EDITOR INTEGRATION == */
-.mdxeditor-content .math-node {
-  color: var(--foreground) !important;
-  border-radius: var(--radius) !important;
-  transition: all 0.2s ease !important;
-  user-select: none !important; /* Prevent text selection to ensure clicks correctly open the editor */
-}
-
-.mdxeditor-content .math-node .select-all {
-  user-select: none !important; /* Override Tailwind's select-all class inside preview elements */
-}
-
-/* Inline Math Editor Input */
-.mdxeditor-content .math-node input {
-  background-color: var(--background) !important;
-  color: var(--foreground) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  padding: 0.25rem 0.5rem !important;
-  font-size: 0.875rem !important;
-  font-family: var(--font-mono) !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.mdxeditor-content .math-node input:focus {
-  border-color: var(--primary) !important;
-}
-
-/* Block Math Editor Popover Container */
-.mdxeditor-content div.flex.flex-col.max-w-2xl {
-  background-color: var(--card) !important;
-  color: var(--foreground) !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
-  border-radius: var(--radius) !important;
-}
-
-/* Block Math Textarea */
-.mdxeditor-content textarea {
-  background-color: var(--background) !important;
-  color: var(--foreground) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  padding: 0.75rem !important;
-  font-size: 0.875rem !important;
-  font-family: var(--font-mono) !important;
-  outline: none !important;
-}
-
-.mdxeditor-content textarea:focus {
-  border-color: var(--primary) !important;
-}
-
-/* Math Save button */
-.mdxeditor-content button.bg-sky-500,
-.mdxeditor-content [className*="bg-sky-500"] {
-  background-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  border-radius: var(--radius) !important;
-  transition: opacity 0.2s ease !important;
-}
-
-.mdxeditor-content button.bg-sky-500:hover,
-.mdxeditor-content [className*="bg-sky-500"]:hover {
-  background-color: var(--primary) !important;
-  opacity: 0.9 !important;
-}
-
-.mdxeditor-content [className*="text-slate-500"] {
-  color: var(--muted-foreground) !important;
-}
-
-.katex {
-  font-size: 1.05em;
-  color: inherit;
+/* Hide native text selection over atomic blocks so our custom React state ring shines */
+.math-node *::selection {
+  background: transparent !important;
+  color: inherit !important;
 }
 
 /* == MATHLIVE MATH-FIELD STYLING == */
 math-field {
-  background: transparent !important;
-  border: none !important;
-  color: inherit !important;
-  outline: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  min-height: 0 !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  height: auto !important;
-  vertical-align: middle !important;
-
   --contains-highlight-background-color: transparent;
-}
-
-math-field::part(container) {
-  min-height: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-math-field::part(content) {
-  min-height: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-math-field:focus-within {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-math-field::part(virtual-keyboard-toggle) {
-  display: none !important;
-}
-
-/* Hide the sandwich menu icon by default when displaying equations */
-math-field::part(menu-toggle) {
-  display: none !important;
-}
-
-/* Show the sandwich menu icon when editing (focused) */
-math-field:focus::part(menu-toggle),
-math-field:focus-within::part(menu-toggle) {
-  display: flex !important;
-  transform: scale(0.75) !important;
-  transform-origin: center right !important;
-  opacity: 0.6 !important;
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease !important;
-}
-
-math-field:focus::part(menu-toggle):hover,
-math-field:focus-within::part(menu-toggle):hover {
-  opacity: 1 !important;
-  transform: scale(0.85) !important;
+  --highlight-text: transparent;
+  --text-highlight-background-color: transparent;
 }
 
 /* == CUSTOM TOOLBAR DROPDOWNS & POPOVERS == */

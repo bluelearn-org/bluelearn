@@ -21,7 +21,7 @@ import {
   Table,
   Upload,
 } from "lucide-react";
-import { InsertBlockMath, InsertInlineMath } from "./math-plugin/index.tsx";
+import { InsertBlockMath, InsertInlineMath } from "./MathLivePlugin";
 import MarkdownLinkImageShortcutListener from "./MarkdownLinkImageShortcutListener";
 import H1RestrictionListener from "./H1RestrictionListener.tsx";
 import CodeBlockShortcutListener from "./CodeBlockShortcutListener";

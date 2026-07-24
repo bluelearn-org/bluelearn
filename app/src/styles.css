@@ -430,3 +430,8 @@
   font-style: normal;
   font-weight: normal;
 }
+
+/* Hide MathLive virtual keyboard toggle */
+math-field::part(virtual-keyboard-toggle) {
+  display: none !important;
+}
