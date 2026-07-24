@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
-import type { WalkthroughData } from "@/lib/walkthroughUtils";
+import type { GraphData } from "@/lib/graphUtils";
 import { CurationGraph } from "@/components/graph-view/CurationGraph";
-import { fetchWalkthrough } from "@/lib/walkthroughUtils";
+import { fetchWalkthrough } from "@/lib/graphUtils";
 import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
 import { Badge } from "@/components/ui/badge";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
@@ -78,16 +78,16 @@ export const OrderObjectiveGuides = ({
     return `${m}m`;
   }, [totalDuration]);
 
-  const [walkthroughData, setWalkthroughData] =
-    useState<WalkthroughData | null>(null);
+  const [walkthroughData, setGraphData] =
+    useState<GraphData | null>(null);
 
   useEffect(() => {
     if (targetSlug) {
       fetchWalkthrough(targetSlug)
-        .then(setWalkthroughData)
+        .then(setGraphData)
         .catch(console.error);
     } else {
-      setWalkthroughData(null);
+      setGraphData(null);
     }
   }, [targetSlug]);
 

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 
-import type { WalkthroughData } from "@/lib/walkthroughUtils";
+import type { GraphData } from "@/lib/graphUtils";
 import { Separator } from "@/components/ui/separator";
 
 import { Route as GuideRoute } from "@/routes/guides/$slug/index";
 
 import { getGuideBySlug } from "@/lib/getData";
 import { WalkthroughGraph } from "@/components/graph-view/WalkthroughGraph";
-import { fetchWalkthrough } from "@/lib/walkthroughUtils";
+import { fetchWalkthrough } from "@/lib/graphUtils";
 
 import guides from "@/data/guides.json";
 
@@ -21,12 +21,13 @@ function RouteComponent() {
 
   const guide = getGuideBySlug(guides, slug);
   const [hoveredGuide, setHoveredGuide] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const [walkthroughData, setWalkthroughData] =
-    useState<WalkthroughData | null>(null);
+  const [walkthroughData, setGraphData] =
+    useState<GraphData | null>(null);
 
   useEffect(() => {
-    fetchWalkthrough(slug).then(setWalkthroughData).catch(console.error);
+    fetchWalkthrough(slug).then(setGraphData).catch(console.error);
   }, [slug]);
 
   if (!guide) {
@@ -56,13 +57,21 @@ function RouteComponent() {
         <Separator className="mb-8" />
 
         {/* Graph */}
-        <div className="min-h-[600px] w-full flex-1 overflow-hidden rounded-xl border border-border bg-muted/10">
+        <div
+          className={
+            isFullscreen
+              ? "fixed inset-0 z-50 bg-background"
+              : "min-h-[600px] w-full flex-1 overflow-hidden rounded-xl border border-border bg-muted/10"
+          }
+        >
           {walkthroughData && (
             <WalkthroughGraph
               walkthroughData={walkthroughData}
               targetSlug={slug}
               hoveredGuide={hoveredGuide}
               onHoverGuide={setHoveredGuide}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
             />
           )}
         </div>

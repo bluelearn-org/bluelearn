@@ -3,7 +3,7 @@ import { Background, Controls, ReactFlow } from "@xyflow/react";
 import { CurationNode } from "./CurationNode";
 import { useGraphLayout } from "./useGraphLayout";
 import type { Node } from "@xyflow/react";
-import type { WalkthroughData, WalkthroughNode } from "@/lib/walkthroughUtils";
+import type { GraphData, GraphNode } from "@/lib/graphUtils";
 import "@xyflow/react/dist/style.css";
 
 const nodeTypes = {
@@ -11,7 +11,7 @@ const nodeTypes = {
 };
 
 type CurationGraphProps = {
-  walkthroughData: WalkthroughData;
+  walkthroughData: GraphData;
   curatedSequence: Array<string>;
   targetSlug: string;
   onToggleGuide: (slug: string, isChecked: boolean) => void;
@@ -28,7 +28,7 @@ export function CurationGraph({
   onHoverGuide,
 }: CurationGraphProps) {
   const getNodeData = useCallback(
-    (node: WalkthroughNode, isTarget: boolean) => {
+    (node: GraphNode, isTarget: boolean) => {
       const isChecked = isTarget || curatedSequence.includes(node.slug);
       const selectedOrder = curatedSequence.indexOf(node.slug);
       return {

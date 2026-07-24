@@ -3,7 +3,7 @@ import { Clock, Network } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export function WalkthroughNode({ data }: { data: any }) {
+export function ObjectiveNode({ data }: { data: any }) {
   const {
     isTarget,
     title,
@@ -11,6 +11,7 @@ export function WalkthroughNode({ data }: { data: any }) {
     duration,
     tags,
     level,
+    curatedPosition,
     isHovered,
     isDimmed,
   } = data;
@@ -27,10 +28,20 @@ export function WalkthroughNode({ data }: { data: any }) {
         className="-top-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
       />
 
+      {curatedPosition !== undefined && (
+        <div className="absolute -top-3 -left-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white shadow-md ring-4 ring-background">
+          {curatedPosition}
+        </div>
+      )}
+
       <Card
         className={`group relative rounded-md bg-background shadow-none transition-colors hover:bg-muted ${
           isHovered ? "border-primary ring-2 ring-primary/20" : "border-border"
-        } ${isTarget ? "border-primary/50 shadow-sm" : ""}`}
+        } ${isTarget ? "border-primary/50 shadow-sm" : ""} ${
+          curatedPosition
+            ? "border-blue-500/50 shadow-sm shadow-blue-500/10"
+            : ""
+        }`}
       >
         {/* Header */}
         <CardHeader className="relative p-3">

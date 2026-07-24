@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { MarkerType, useEdgesState, useNodesState } from "@xyflow/react";
 import type { Edge, Node } from "@xyflow/react";
-import type { WalkthroughData, WalkthroughNode } from "@/lib/walkthroughUtils";
+import type { GraphData, GraphNode } from "@/lib/graphUtils";
 
 type UseGraphLayoutProps = {
-  walkthroughData: WalkthroughData;
-  targetSlug: string;
+  walkthroughData: GraphData;
+  targetSlug?: string;
   hoveredGuide: string | null;
   nodeType: string;
-  getNodeData: (node: WalkthroughNode, isTarget: boolean) => any;
+  getNodeData: (node: GraphNode, isTarget: boolean) => any;
 };
 
 export function useGraphLayout({
@@ -29,14 +29,48 @@ export function useGraphLayout({
     const idToSlug = new Map<string, string>();
     walkthroughNodes.forEach((n) => idToSlug.set(n.id, n.slug));
 
+    const visualDistances = new Map<string, number>();
+    const targetSlugs = walkthroughNodes
+      .filter(
+        (n) =>
+          n.is_target || (targetSlug !== undefined && n.slug === targetSlug)
+      )
+      .map((n) => n.slug);
+
+    targetSlugs.forEach((t) => visualDistances.set(t, 0));
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      backendEdges.forEach((edge) => {
+        const from = idToSlug.get(edge.from_id);
+        const to = idToSlug.get(edge.to_id);
+        if (from && to && visualDistances.has(to)) {
+          const currentDist = visualDistances.get(from) ?? -1;
+          const newDist = visualDistances.get(to)! + 1;
+          if (newDist > currentDist) {
+            visualDistances.set(from, newDist);
+            changed = true;
+          }
+        }
+      });
+    }
+
+    let maxDist = 0;
+    visualDistances.forEach((dist) => {
+      if (dist > maxDist) maxDist = dist;
+    });
+
     const grouped = walkthroughNodes.reduce(
       (acc, node) => {
-        const list = acc[node.level] ?? [];
+        const dist = visualDistances.get(node.slug) || 0;
+        const vLevel = maxDist - dist;
+        const list = acc[vLevel] ?? [];
         list.push(node);
-        acc[node.level] = list;
+        acc[vLevel] = list;
         return acc;
       },
-      {} as Record<number, Array<WalkthroughNode> | undefined>
+      {} as Record<number, Array<GraphNode>>
     );
 
     const levels = Object.keys(grouped)
@@ -47,10 +81,10 @@ export function useGraphLayout({
 
     const newNodes: Array<Node> = [];
     levels.forEach((level, levelIdx) => {
-      const nodesInLevel = grouped[level];
-      if (!nodesInLevel) return;
+      const nodesInLevel = grouped[level]!;
 
-      const isWalkthrough = nodeType === "walkthroughNode";
+      const isWalkthrough =
+        nodeType === "walkthroughNode" || nodeType === "objectiveNode";
       const nodeWidth = isWalkthrough ? 420 : 350;
       const nodeSpacing = isWalkthrough ? 480 : 380;
 
@@ -61,7 +95,9 @@ export function useGraphLayout({
       const startX = -totalWidth / 2;
 
       nodesInLevel.forEach((node, nodeIdx) => {
-        const isTarget = node.slug === targetSlug;
+        const isTarget =
+          node.is_target ||
+          (targetSlug !== undefined && node.slug === targetSlug);
 
         const cellCenterX = startX + nodeIdx * nodeSpacing + nodeSpacing / 2;
         const nodeX = cellCenterX - nodeWidth / 2;
@@ -147,7 +183,7 @@ export function useGraphLayout({
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [walkthroughData, targetSlug, setNodes, setEdges, nodeType]);
+  }, [walkthroughData, targetSlug, setNodes, setEdges, nodeType, getNodeData]);
 
   // 2. Hover Update: update isDimmed and isHovered without re-layout
   useEffect(() => {
