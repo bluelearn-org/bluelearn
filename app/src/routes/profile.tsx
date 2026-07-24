@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import type { ProfilePageData } from "@/lib/profile";
 import {
   activityStatusLabel,
@@ -7,6 +6,7 @@ import {
   loadProfilePage,
 } from "@/lib/profile";
 import { formatDate } from "@/lib/guideUtils";
+import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/components/Pagination";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -89,12 +89,17 @@ function rowTarget(row: ActivityRow) {
 function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
   const navigate = useNavigate();
 
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(activity.length / PAGE_SIZE));
-  const start = (page - 1) * PAGE_SIZE;
-  const pageRows = activity.slice(start, start + PAGE_SIZE);
-  const goToPage = (pageNo: number) =>
-    setPage(Math.min(Math.max(pageNo, 1), totalPages));
+  const {
+    page,
+    totalPages,
+    pageRows,
+    start,
+    goToPage,
+    toFirst,
+    onPrevious,
+    onNext,
+    toLast,
+  } = usePagination(activity, PAGE_SIZE);
 
   const statsRows = [
     { label: "Upvotes", value: stats.upvotes },
@@ -249,10 +254,10 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
             <Pagination
               activePageNo={page}
               onPageSelect={goToPage}
-              toFirst={() => goToPage(1)}
-              onPrevious={() => goToPage(page - 1)}
-              onNext={() => goToPage(page + 1)}
-              toLast={() => goToPage(totalPages)}
+              toFirst={toFirst}
+              onPrevious={onPrevious}
+              onNext={onNext}
+              toLast={toLast}
               totalPages={totalPages}
             />
           </div>
