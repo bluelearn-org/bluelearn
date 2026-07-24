@@ -14,6 +14,7 @@ import {
   loadProfilePage,
 } from "@/lib/profile";
 import { formatDate } from "@/lib/guideUtils";
+import { cn } from "@/lib/utils";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/components/Pagination";
 import { Separator } from "@/components/ui/separator";
@@ -161,11 +162,13 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
       }),
   });
 
+  // Hide review stat for non-verifiers.
+  const isVerifier = roles.includes("verifier");
   const statsRows = [
     { label: "Upvotes", value: stats.upvotes },
     { label: "Downvotes", value: stats.downvotes },
     { label: "Contributions", value: stats.contributions },
-    { label: "Reviews", value: stats.reviews },
+    ...(isVerifier ? [{ label: "Reviews", value: stats.reviews }] : []),
   ];
 
   const initials = getInitials(profile.display_name || profile.username);
@@ -205,7 +208,12 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
             </div>
           </div>
 
-          <ul className="grid grid-cols-4 items-start gap-x-6">
+          <ul
+            className={cn(
+              "grid items-start gap-x-6",
+              isVerifier ? "grid-cols-4" : "grid-cols-3"
+            )}
+          >
             {statsRows.map((stat) => (
               <li
                 key={stat.label}
@@ -277,7 +285,7 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
             <Button
               variant="ghost"
               size="sm"
-              className="ml-auto h-8"
+              className="h-8 px-0 text-brand-blue hover:text-[#3166b1]"
               onClick={() =>
                 setFilters({ q: undefined, type: undefined, status: undefined })
               }
