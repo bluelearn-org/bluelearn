@@ -10,6 +10,7 @@ import {
   User,
   Workflow,
 } from "lucide-react";
+import { toast } from "sonner";
 import { GuideGraph } from "../graph-view/GuideGraph";
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
@@ -106,6 +107,7 @@ export const OrderObjectiveGuides = ({
   objectiveContData,
   setObjectiveContData,
 }: PropTypes) => {
+  const [showErrors, setShowErrors] = useState(false);
   const [targetSlug, setTargetSlug] = useState<string>(
     objectiveContData.targets[0] || ""
   );
@@ -262,12 +264,29 @@ export const OrderObjectiveGuides = ({
     updateSubObjective(targetSlug, newSeq);
   };
 
+  const isNextDisabled =
+    objectiveContData.subObjectives.length < objectiveContData.targets.length;
+
+  const handleNextClick = (e: React.MouseEvent) => {
+    if (isNextDisabled) {
+      e.preventDefault();
+      setShowErrors(true);
+      toast.error(
+        "Please visit and order every target guide before proceeding."
+      );
+    }
+  };
+
   return (
     <Stepper.Content
       step="objective-ordering"
       className="flex min-h-0 w-full flex-1 flex-col"
     >
-      <StepperActionHeader title={"Order Guides"} Stepper={Stepper} />
+      <StepperActionHeader
+        title={"Order Guides"}
+        Stepper={Stepper}
+        onNextClick={handleNextClick}
+      />
 
       <FieldGroup className="mt-0 flex min-h-0 flex-1 flex-col">
         {/* Target Guide Sequence */}
@@ -287,6 +306,9 @@ export const OrderObjectiveGuides = ({
               if (!guide) return null;
 
               const isActive = slug === targetSlug;
+              const hasVisited = objectiveContData.subObjectives.some(
+                (s) => s.targetSlug === slug
+              );
 
               return (
                 <div key={slug} className="flex shrink-0 items-center gap-2">
@@ -297,14 +319,18 @@ export const OrderObjectiveGuides = ({
                     className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                       isActive
                         ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:bg-muted"
+                        : showErrors && !hasVisited
+                          ? "border-destructive bg-destructive/5 text-destructive hover:bg-destructive/10"
+                          : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:bg-muted"
                     }`}
                   >
                     <span
                       className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
                         isActive
                           ? "bg-primary text-primary-foreground"
-                          : "bg-muted-foreground/20 text-muted-foreground"
+                          : showErrors && !hasVisited
+                            ? "bg-destructive/20 text-destructive"
+                            : "bg-muted-foreground/20 text-muted-foreground"
                       }`}
                     >
                       {index + 1}

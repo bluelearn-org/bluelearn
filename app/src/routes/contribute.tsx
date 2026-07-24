@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ContributionType } from "@/types/contributions";
 import ContributionFlow from "@/components/contribute/ContributionFlow";
 
@@ -10,6 +10,16 @@ export const Route = createFileRoute("/contribute")({
 
 function RouteComponent() {
   const [type, setType] = useState<ContributionType | null>(null);
+
+  useEffect(() => {
+    const savedType = sessionStorage.getItem("cont_type");
+    if (savedType) setType(savedType as ContributionType);
+  }, []);
+
+  useEffect(() => {
+    if (type) sessionStorage.setItem("cont_type", type);
+    else sessionStorage.removeItem("cont_type");
+  }, [type]);
 
   return (
     <div className="mx-auto flex min-h-[max(calc(100vh-65px),750px)] w-full max-w-[1280px] flex-col border-x bg-background">

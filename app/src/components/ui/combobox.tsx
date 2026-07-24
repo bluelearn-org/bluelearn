@@ -27,6 +27,7 @@ export type ComboboxItem = {
 type ComboboxBaseProps = {
   items: Array<ComboboxItem>;
   placeholder?: string;
+  className?: string;
   disabled?: boolean;
 };
 
@@ -34,12 +35,14 @@ type SingleProps = ComboboxBaseProps & {
   multiple?: false;
   value: string;
   onValueChange: (value: string) => void;
+  disabled?: boolean;
 };
 
 type MultiProps = ComboboxBaseProps & {
   multiple: true;
   value: Array<string>;
   onValueChange: (value: Array<string>) => void;
+  disabled?: boolean;
 };
 
 type ComboboxProps = SingleProps | MultiProps;
@@ -49,6 +52,7 @@ export function Combobox({
   items,
   value,
   onValueChange,
+  className,
   disabled,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
@@ -78,7 +82,7 @@ export function Combobox({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-[300px] justify-between"
+          className={cn("w-75 justify-between", className)}
           disabled={disabled}
         >
           <div className="flex flex-wrap gap-1">
@@ -104,7 +108,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[500px] p-0">
+      <PopoverContent className="w-125 p-0">
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
