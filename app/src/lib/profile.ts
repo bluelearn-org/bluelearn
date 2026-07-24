@@ -43,3 +43,59 @@ const STATUS_LABELS: Record<ActivityRow["status"], string> = {
 export function activityStatusLabel(status: ActivityRow["status"]): string {
   return STATUS_LABELS[status];
 }
+
+// Group raw statuses into easily accessible and understandable buckets.
+const STATUS_BUCKETS = {
+  draft: ["draft"],
+  in_review: ["submitted", "pending", "in_review"],
+  published: ["approved", "published"],
+  rejected: ["rejected"],
+} as const satisfies Record<string, ReadonlyArray<ActivityRow["status"]>>;
+
+export type ActivityStatusFilter = keyof typeof STATUS_BUCKETS;
+export type ActivityTypeFilter = ActivityRow["content_kind"];
+
+export const ACTIVITY_STATUS_FILTERS: Array<{
+  value: ActivityStatusFilter;
+  label: string;
+}> = [
+  { value: "draft", label: "Draft" },
+  { value: "in_review", label: "In review" },
+  { value: "published", label: "Published" },
+  { value: "rejected", label: "Rejected" },
+];
+
+export const ACTIVITY_TYPE_FILTERS: Array<{
+  value: ActivityTypeFilter;
+  label: string;
+}> = [
+  { value: "guide", label: "Guides" },
+  { value: "objective", label: "Objectives" },
+  { value: "review", label: "Reviews" },
+];
+
+export type ActivityFilters = {
+  q?: string;
+  type?: ActivityTypeFilter;
+  status?: ActivityStatusFilter;
+  sort?: "oldest";
+};
+
+export function filterActivity(
+  rows: Array<ActivityRow>,
+  { q, type, status, sort }: ActivityFilters
+): Array<ActivityRow> {
+  const needle = q?.trim().toLowerCase();
+  const statuses: ReadonlyArray<string> | null = status
+    ? STATUS_BUCKETS[status]
+    : null;
+
+  const matched = rows.filter((row) => {
+    if (type && row.content_kind !== type) return false;
+    if (statuses && !statuses.includes(row.status)) return false;
+    if (needle && !row.title.toLowerCase().includes(needle)) return false;
+    return true;
+  });
+
+  return sort === "oldest" ? matched.reverse() : matched;
+}

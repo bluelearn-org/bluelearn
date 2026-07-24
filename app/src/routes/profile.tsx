@@ -1,14 +1,30 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { ProfilePageData } from "@/lib/profile";
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import type {
+  ActivityStatusFilter,
+  ActivityTypeFilter,
+  ProfilePageData,
+} from "@/lib/profile";
 import {
+  ACTIVITY_STATUS_FILTERS,
+  ACTIVITY_TYPE_FILTERS,
   activityStatusLabel,
   activityTypeLabel,
+  filterActivity,
   loadProfilePage,
 } from "@/lib/profile";
 import { formatDate } from "@/lib/guideUtils";
 import { usePagination } from "@/lib/usePagination";
 import { Pagination } from "@/components/Pagination";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,7 +37,29 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+type ProfileSearch = {
+  q?: string;
+  type?: ActivityTypeFilter;
+  status?: ActivityStatusFilter;
+  sort?: "oldest";
+  page?: number;
+};
+
 export const Route = createFileRoute("/profile")({
+  validateSearch: (search: Record<string, unknown>): ProfileSearch => {
+    const page = Number(search.page);
+    return {
+      q: typeof search.q === "string" && search.q ? search.q : undefined,
+      type: ACTIVITY_TYPE_FILTERS.some((f) => f.value === search.type)
+        ? (search.type as ActivityTypeFilter)
+        : undefined,
+      status: ACTIVITY_STATUS_FILTERS.some((f) => f.value === search.status)
+        ? (search.status as ActivityStatusFilter)
+        : undefined,
+      sort: search.sort === "oldest" ? "oldest" : undefined,
+      page: Number.isInteger(page) && page > 1 ? page : undefined,
+    };
+  },
   loader: ({ abortController }) => loadProfilePage(abortController.signal),
   component: RouteComponent,
   pendingComponent: () => <ProfileMessage>Loading profile...</ProfileMessage>,
@@ -63,6 +101,10 @@ function getInitials(value: string | null | undefined) {
 
 const PAGE_SIZE = 10;
 
+// Need a non-empty value to express "no filter" because Radix
+// already reserves the empty string "".
+const ALL = "all";
+
 type ActivityRow = ProfilePageData["activity"][number];
 function rowTarget(row: ActivityRow) {
   if (row.content_kind === "review")
@@ -88,6 +130,16 @@ function rowTarget(row: ActivityRow) {
 
 function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const setFilters = (next: Partial<ProfileSearch>) =>
+    navigate({
+      to: "/profile",
+      search: (prev) => ({ ...prev, ...next, page: undefined }),
+      replace: true,
+    });
+
+  const filtered = filterActivity(activity, search);
+  const hasFilters = Boolean(search.q || search.type || search.status);
 
   const {
     page,
@@ -99,7 +151,15 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
     onPrevious,
     onNext,
     toLast,
-  } = usePagination(activity, PAGE_SIZE);
+  } = usePagination(filtered, PAGE_SIZE, {
+    page: search.page ?? 1,
+    onPageChange: (next) =>
+      navigate({
+        to: "/profile",
+        search: (prev) => ({ ...prev, page: next === 1 ? undefined : next }),
+        replace: true,
+      }),
+  });
 
   const statsRows = [
     { label: "Upvotes", value: stats.upvotes },
@@ -161,6 +221,72 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
         </div>
 
         <Separator className="mb-8 bg-border" />
+
+        <div className="mx-auto mb-4 flex w-full max-w-5xl flex-wrap items-center gap-3 px-4">
+          <Input
+            value={search.q ?? ""}
+            onChange={(e) => setFilters({ q: e.target.value || undefined })}
+            placeholder="Search titles..."
+            className="h-8 w-full max-w-64"
+          />
+
+          <Select
+            value={search.type ?? ALL}
+            onValueChange={(value) =>
+              setFilters({
+                type: value === ALL ? undefined : (value as ActivityTypeFilter),
+              })
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All types</SelectItem>
+              {ACTIVITY_TYPE_FILTERS.map((filter) => (
+                <SelectItem key={filter.value} value={filter.value}>
+                  {filter.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={search.status ?? ALL}
+            onValueChange={(value) =>
+              setFilters({
+                status:
+                  value === ALL ? undefined : (value as ActivityStatusFilter),
+              })
+            }
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All statuses</SelectItem>
+              {ACTIVITY_STATUS_FILTERS.map((filter) => (
+                <SelectItem key={filter.value} value={filter.value}>
+                  {filter.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-8"
+              onClick={() =>
+                setFilters({ q: undefined, type: undefined, status: undefined })
+              }
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+
         <div className="overflow-x-auto">
           <Table className="mx-auto w-full max-w-5xl">
             <TableHeader>
@@ -177,7 +303,27 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
                     key={heading}
                     className="px-4 py-3 font-mono text-[14px] tracking-[0.08em] uppercase"
                   >
-                    {heading}
+                    {heading === "Date" ? (
+                      <button
+                        type="button"
+                        className="flex cursor-pointer items-center gap-1 uppercase"
+                        onClick={() =>
+                          setFilters({
+                            sort:
+                              search.sort === "oldest" ? undefined : "oldest",
+                          })
+                        }
+                      >
+                        {heading}
+                        {search.sort === "oldest" ? (
+                          <ArrowUpIcon className="size-3.5" />
+                        ) : (
+                          <ArrowDownIcon className="size-3.5" />
+                        )}
+                      </button>
+                    ) : (
+                      heading
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -189,7 +335,9 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
                     colSpan={6}
                     className="px-4 py-6 text-center text-sm text-muted-foreground"
                   >
-                    No activity available yet.
+                    {hasFilters
+                      ? "No activity matches these filters."
+                      : "No activity available yet."}
                   </TableCell>
                 </TableRow>
               ) : (

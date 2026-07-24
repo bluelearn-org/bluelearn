@@ -1,8 +1,20 @@
 import { useState } from "react";
 
-export function usePagination<T>(items: Array<T>, pageSize: number) {
-  const [page, setPage] = useState(1);
+type Controlled = {
+  page: number;
+  onPageChange: (page: number) => void;
+};
 
+// Pass a controlled pair when the page lives outside the hook (e.g. URL
+// search params). Leave it out and the hook keeps the page itself.
+export function usePagination<T>(
+  items: Array<T>,
+  pageSize: number,
+  controlled?: Controlled
+) {
+  const [localPage, setLocalPage] = useState(1);
+  const page = controlled?.page ?? localPage;
+  const setPage = controlled?.onPageChange ?? setLocalPage;
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const current = Math.min(page, totalPages);
   const start = (current - 1) * pageSize;
