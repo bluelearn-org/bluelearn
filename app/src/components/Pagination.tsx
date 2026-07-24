@@ -115,7 +115,7 @@ const Page = ({
   "activePageNo" | "onPageSelect"
 >) => {
   return (
-    <PaginationItem>
+    <PaginationItem key={pageNo}>
       <PaginationLink
         onClick={() => onPageSelect(pageNo)}
         isActive={pageNo === activePageNo}
