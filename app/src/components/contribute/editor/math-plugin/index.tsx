@@ -19,30 +19,17 @@ import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { MathExportVisitor, MathImportVisitor } from "./MathVisitors";
 import { $createMathNode, MathNode } from "./MathNode";
-import type { LexicalNode, TextNode } from "lexical";
 
 const {
   $createNodeSelection,
   $createRangeSelection,
   $getNodeByKey,
-  $getRoot,
   $getSelection,
   $insertNodes,
-  $isElementNode,
-  $isLineBreakNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
 } = lexical;
-
-// --- Helper Types ---
-
-type TextSegment = { type: "text"; text: string; node: TextNode };
-type LinebreakSegment = { type: "linebreak" };
-type ParagraphSegment = { type: "paragraph" };
-type Segment = TextSegment | LinebreakSegment | ParagraphSegment;
-
-type CharacterPosition = { node: TextNode; offset: number } | null;
 
 // --- Helper Functions ---
 
@@ -64,76 +51,6 @@ function isValidInlineMathEquation(equation: string): boolean {
     return false;
   }
   return true;
-}
-
-/**
- * Traverses the entire Lexical editor tree from root and returns all segments.
- */
-function getAllSegments(root: LexicalNode): Array<Segment> {
-  const segments: Array<Segment> = [];
-
-  function traverse(node: LexicalNode): void {
-    if ($isTextNode(node)) {
-      segments.push({
-        type: "text",
-        text: node.getTextContent(),
-        node,
-      });
-    } else if ($isLineBreakNode(node)) {
-      segments.push({ type: "linebreak" });
-    } else if ($isElementNode(node)) {
-      const children = node.getChildren();
-      const isBlock = !node.isInline();
-      if (
-        isBlock &&
-        segments.length > 0 &&
-        segments[segments.length - 1].type !== "paragraph"
-      ) {
-        segments.push({ type: "paragraph" });
-      }
-      for (const child of children) {
-        traverse(child);
-      }
-      if (
-        isBlock &&
-        segments.length > 0 &&
-        segments[segments.length - 1].type !== "paragraph"
-      ) {
-        segments.push({ type: "paragraph" });
-      }
-    }
-  }
-
-  traverse(root);
-  return segments;
-}
-
-/**
- * Maps raw segments into a single continuous string and constructs a character map
- * that maps each character's index to its corresponding TextNode and offset.
- */
-function mapSegmentsToText(segments: Array<Segment>): {
-  fullText: string;
-  charMap: Array<CharacterPosition>;
-} {
-  let fullText = "";
-  const charMap: Array<CharacterPosition> = [];
-
-  for (const segment of segments) {
-    if (segment.type === "text") {
-      const text = segment.text;
-      const node = segment.node;
-      for (let i = 0; i < text.length; i++) {
-        charMap.push({ node, offset: i });
-      }
-      fullText += text;
-    } else {
-      charMap.push(null);
-      fullText += "\n";
-    }
-  }
-
-  return { fullText, charMap };
 }
 
 /**
@@ -196,23 +113,6 @@ function findMathInText(text: string): {
     i++;
   }
   return null;
-}
-
-/**
- * Finds the starting index in the charMap for the given TextNode.
- */
-function findNodeStartIdx(
-  charMap: Array<CharacterPosition>,
-  node: TextNode
-): number {
-  const key = node.getKey();
-  for (let i = 0; i < charMap.length; i++) {
-    const pos = charMap[i];
-    if (pos && pos.node.getKey() === key) {
-      return i;
-    }
-  }
-  return -1;
 }
 
 // --- Plugins & Components ---
@@ -288,52 +188,34 @@ export function MathShortcutTypeListener() {
             }
           }
 
-          const root = $getRoot();
-          const allSegments = getAllSegments(root);
-          const { charMap } = mapSegmentsToText(allSegments);
-          const nodeStartIdx = findNodeStartIdx(charMap, anchorNode);
+          editor.update(() => {
+            const latestAnchorNode = $getNodeByKey(anchorKey);
 
-          if (nodeStartIdx !== -1) {
-            const startPos = charMap[nodeStartIdx + startIdx];
-            const endPos = charMap[nodeStartIdx + endIdx];
-            if (startPos && endPos) {
-              const startNodeKey = startPos.node.getKey();
-              const startOffset = startPos.offset;
-              const endNodeKey = endPos.node.getKey();
-              const endOffset = endPos.offset;
-
-              editor.update(() => {
-                const latestStartNode = $getNodeByKey(startNodeKey);
-                const latestEndNode = $getNodeByKey(endNodeKey);
-
-                if (
-                  !$isTextNode(latestStartNode) ||
-                  !$isTextNode(latestEndNode)
-                ) {
-                  return;
-                }
-
-                const mathNode = $createMathNode(equation, isInline);
-                const rangeSelection = $createRangeSelection();
-                rangeSelection.anchor.set(
-                  latestStartNode.getKey(),
-                  startOffset,
-                  "text"
-                );
-                rangeSelection.focus.set(
-                  latestEndNode.getKey(),
-                  endOffset + 1,
-                  "text"
-                );
-                $setSelection(rangeSelection);
-                $insertNodes([mathNode]);
-
-                const nodeSelection = $createNodeSelection();
-                nodeSelection.add(mathNode.getKey());
-                $setSelection(nodeSelection);
-              });
+            if (!$isTextNode(latestAnchorNode)) {
+              return;
             }
-          }
+
+            const mathNode = $createMathNode(equation, isInline);
+            const rangeSelection = $createRangeSelection();
+
+            rangeSelection.anchor.set(
+              latestAnchorNode.getKey(),
+              startIdx,
+              "text"
+            );
+            rangeSelection.focus.set(
+              latestAnchorNode.getKey(),
+              endIdx + 1,
+              "text"
+            );
+
+            $setSelection(rangeSelection);
+            $insertNodes([mathNode]);
+
+            const nodeSelection = $createNodeSelection();
+            nodeSelection.add(mathNode.getKey());
+            $setSelection(nodeSelection);
+          });
         });
       }
     );

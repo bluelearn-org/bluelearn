@@ -549,6 +549,8 @@ math-field {
   vertical-align: middle !important;
 
   --contains-highlight-background-color: transparent;
+  --highlight-text: transparent;
+  --text-highlight-background-color: transparent;
 }
 
 math-field::part(container) {
@@ -583,9 +585,10 @@ math-field::part(menu-toggle) {
   display: none !important;
 }
 
-/* Show the sandwich menu icon when editing (focused) */
+/* Show the sandwich menu icon when editing (focused) or when the menu is open (tracking) */
 math-field:focus::part(menu-toggle),
-math-field:focus-within::part(menu-toggle) {
+math-field:focus-within::part(menu-toggle),
+math-field.tracking::part(menu-toggle) {
   display: flex !important;
   transform: scale(0.75) !important;
   transform-origin: center right !important;
