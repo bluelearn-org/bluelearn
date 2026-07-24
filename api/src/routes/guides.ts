@@ -210,13 +210,18 @@ export const variantsRouter = new Hono<HonoEnv>()
   );
 
 export const guideRevisionsRouter = new Hono<HonoEnv>()
-  // Returns one revision snapshot and its subject tags as { revision, subjects }.
+  // Returns a revision snapshot, its subject tags, knowledge type, prerequisites,
+  // and todos for resuming the contribute flow.
   .get("/:id", async (c) => {
-    const { revision, subjects } = await getRevision(
-      c.get("supabase"),
-      c.req.param("id")
-    );
-    return c.json({ revision, subjects });
+    const { revision, subjects, knowledge_type, prerequisites, todos } =
+      await getRevision(c.get("supabase"), c.req.param("id"));
+    return c.json({
+      revision,
+      subjects,
+      knowledge_type,
+      prerequisites,
+      todos,
+    });
   })
 
   // Overwrites a draft revision in place; returns { revision, subjects }. 404 once submitted.

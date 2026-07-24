@@ -202,7 +202,55 @@ export async function syncDraftTagsAndEdges(
   }
 }
 
-// Resolve a revision by id to its snapshot and subject tags. 404 when RLS hides it.
+// Gets knowledge type, prerequisites, and todos.
+async function loadDraftContext(supabase: DB, guideId: string) {
+  const empty = { knowledge_type: null, prerequisites: [], todos: [] };
+  const { data: guide, error: guideError } = await supabase
+    .from("guides")
+    .select("guide_base_id")
+    .eq("id", guideId)
+    .maybeSingle();
+  if (guideError) {
+    console.error(guideError);
+    throw new ServiceError("Failed to load revision", 500);
+  }
+  if (!guide) return empty;
+  const baseId = guide.guide_base_id;
+
+  const [baseRes, edgeRes, todoRes] = await Promise.all([
+    supabase
+      .from("guide_bases")
+      .select("knowledge_type")
+      .eq("id", baseId)
+      .maybeSingle(),
+    supabase
+      .from("guide_edges")
+      .select("from:guide_bases!from_guide_base_id(slug)")
+      .eq("to_guide_base_id", baseId)
+      .eq("edge_type", "prerequisite"),
+    supabase
+      .from("todo_prerequisites")
+      .select("title")
+      .eq("dependent_guide_base_id", baseId)
+      .eq("status", "open"),
+  ]);
+
+  if (baseRes.error || edgeRes.error || todoRes.error) {
+    console.error(baseRes.error ?? edgeRes.error ?? todoRes.error);
+    throw new ServiceError("Failed to load revision", 500);
+  }
+
+  return {
+    knowledge_type: baseRes.data?.knowledge_type ?? null,
+    prerequisites: (edgeRes.data ?? [])
+      .map((e) => e.from?.slug)
+      .filter((s): s is string => s != null),
+    todos: (todoRes.data ?? []).map((t) => t.title),
+  };
+}
+
+// Includes revision with subject tags, and draft context (knowledge type,
+// prerequisites, todos).
 export async function getRevision(supabase: DB, id: string) {
   const { data: revision, error } = await supabase
     .from("guide_revisions")
@@ -217,7 +265,11 @@ export async function getRevision(supabase: DB, id: string) {
   if (!revision) throw new ServiceError("Revision not found", 404);
 
   const subjects = await loadRevisionTags(supabase, id);
-  return { revision, subjects };
+  const { knowledge_type, prerequisites, todos } = await loadDraftContext(
+    supabase,
+    revision.guide_id
+  );
+  return { revision, subjects, knowledge_type, prerequisites, todos };
 }
 
 // Overwrite a draft revision in place. RLS permits this only on the author's own
