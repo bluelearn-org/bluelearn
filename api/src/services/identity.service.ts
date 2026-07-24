@@ -225,15 +225,19 @@ export async function getMyProfileStats(
     }
   }
 
+  // Only revisions that went live count: approved for guides, published for
+  // objectives. Drafts and anything still awaiting review are left out.
   const [guideRevs, objectiveRevs] = await Promise.all([
     supabase
       .from("guide_revisions")
       .select("id", { count: "exact", head: true })
-      .eq("author_id", userId),
+      .eq("author_id", userId)
+      .not("approved_at", "is", null),
     supabase
       .from("objective_revisions")
       .select("id", { count: "exact", head: true })
-      .eq("author_id", userId),
+      .eq("author_id", userId)
+      .eq("status", "published"),
   ]);
   if (guideRevs.error) fail(guideRevs.error);
   if (objectiveRevs.error) fail(objectiveRevs.error);
