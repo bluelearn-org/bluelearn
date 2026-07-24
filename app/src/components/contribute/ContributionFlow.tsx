@@ -61,6 +61,32 @@ export default function ContributionFlow({ type, setType }: PropTypes) {
   const [objectiveContData, setObjectiveContData] =
     useState<ObjectiveContribution>(createObjectiveContData);
 
+  useEffect(() => {
+    const savedGuide = sessionStorage.getItem("guide_cont_data");
+    if (savedGuide) {
+      try {
+        setGuideContData(JSON.parse(savedGuide));
+      } catch (e) {}
+    }
+    const savedObj = sessionStorage.getItem("objective_cont_data");
+    if (savedObj) {
+      try {
+        setObjectiveContData(JSON.parse(savedObj));
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem("guide_cont_data", JSON.stringify(guideContData));
+  }, [guideContData]);
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      "objective_cont_data",
+      JSON.stringify(objectiveContData)
+    );
+  }, [objectiveContData]);
+
   const StepperInstance = useMemo(() => {
     if (!type) {
       return defineStepper(typeStep);
@@ -110,6 +136,28 @@ function Inner({
   objectiveContData: ObjectiveContribution;
   setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
 }) {
+  const hasHydratedStep = useRef(false);
+
+  useEffect(() => {
+    if (stepper.current?.id) {
+      sessionStorage.setItem("cont_step", stepper.current.id);
+    }
+  }, [stepper.current?.id]);
+
+  useEffect(() => {
+    if (hasHydratedStep.current) return;
+    if (type !== null) {
+      const savedStep = sessionStorage.getItem("cont_step");
+      if (savedStep) {
+        requestAnimationFrame(() => {
+          try {
+            stepper.goTo(savedStep);
+          } catch (e) {}
+        });
+      }
+      hasHydratedStep.current = true;
+    }
+  }, [type, stepper]);
   const pickType = (value: ContributionType) => {
     if (type !== value) {
       setGuideContData(createGuideContData());
