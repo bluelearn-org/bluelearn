@@ -436,13 +436,6 @@ export async function getObjectiveGraphData(supabase: DB, rawSlug: string) {
     }
   }
 
-  // Force nodes with NO dependents to max level
-  for (const id of baseIds) {
-    if (outDegree.get(id) === 0) {
-      levels.set(id, maxLevel);
-    }
-  }
-
   const nodes = includedNodes.map((n) => {
     const details = guideDetailsMap.get(n.guide_id);
     const tags = details ? tagsMap.get(details.id) || [] : [];

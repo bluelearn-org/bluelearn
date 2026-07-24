@@ -50,13 +50,55 @@ export const hydrateObjectives = (
 ): Array<HydratedObjective> => {
   const guideMap = createGuideMap(guides);
 
-  const hydratedObjectives = paths.map((path) => ({
-    ...path,
-    levels: path.levels.map((l) => ({
-      level: l.level,
-      guide: guideMap[l.guide],
-    })),
-  }));
+  const hydratedObjectives = paths.map((path) => {
+    // Traverse targets to find all unique prerequisites
+    const includedGuides = new Set<string>();
+    const queue = path.targets.map((t) => t.guide);
+
+    while (queue.length > 0) {
+      const currentSlug = queue.shift()!;
+      if (includedGuides.has(currentSlug)) continue;
+      includedGuides.add(currentSlug);
+
+      const guide = guideMap[currentSlug];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (guide && guide.prerequisites) {
+        queue.push(...guide.prerequisites);
+      }
+    }
+
+    let totalDuration = 0;
+    for (const slug of includedGuides) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (guideMap[slug]) {
+        totalDuration += guideMap[slug].duration || 0;
+      }
+    }
+
+    let featuredSubObjective;
+    if (path.targets.length > 0) {
+      const primaryTarget = path.targets[0];
+      featuredSubObjective = primaryTarget.curatedPreqs.map((sub) => {
+        const subGuide = guideMap[sub.guide];
+        return {
+          position: sub.level,
+          slug: sub.guide,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          title: subGuide ? subGuide.title : null,
+        };
+      });
+    }
+
+    return {
+      ...path,
+      duration: totalDuration,
+      targets: path.targets.map((target) => ({
+        ...guideMap[target.guide],
+        curatedPreqs: target.curatedPreqs,
+      })),
+      featuredSubObjective,
+    };
+  });
 
   return hydratedObjectives;
 };

@@ -11,11 +11,11 @@
     "targets": [
       {
         "guide": "blender-character-creation",
-        "subobjectives": [{ "level": 1, "guide": "blender-character-creation" }]
+        "curatedPreqs": [{ "level": 1, "guide": "blender-character-creation" }]
       },
       {
         "guide": "unity-character-movement",
-        "subobjectives": [
+        "curatedPreqs": [
           { "level": 1, "guide": "programming-fundamentals" },
           { "level": 2, "guide": "game-development-introduction" },
           { "level": 3, "guide": "unity-import-character" },
@@ -24,7 +24,7 @@
       },
       {
         "guide": "game-ai-systems-how-to-build-ai-behaviours",
-        "subobjectives": [
+        "curatedPreqs": [
           { "level": 1, "guide": "programming-fundamentals" },
           { "level": 2, "guide": "data-structures-how-to-choose-structures" },
           { "level": 3, "guide": "game-ai-systems-how-to-build-ai-behaviours" }
@@ -32,7 +32,7 @@
       },
       {
         "guide": "physics-simulations-how-to-build-basic-simulations",
-        "subobjectives": [
+        "curatedPreqs": [
           { "level": 1, "guide": "mechanics-how-to-apply-newtons-laws" },
           {
             "level": 2,
@@ -53,7 +53,7 @@
     "targets": [
       {
         "guide": "machine-learning-fundamentals",
-        "subobjectives": [
+        "curatedPreqs": [
           { "level": 1, "guide": "arithmetic-introduction" },
           { "level": 2, "guide": "algebra-how-to-express-equations" },
           { "level": 3, "guide": "probabilities-how-to-calculate-probability" },
@@ -74,7 +74,7 @@
     "targets": [
       {
         "guide": "mechanics-how-to-apply-newtons-laws",
-        "subobjectives": [
+        "curatedPreqs": [
           { "level": 1, "guide": "arithmetic-introduction" },
           { "level": 2, "guide": "algebra-how-to-express-equations" },
           { "level": 3, "guide": "calculus-introduction" },

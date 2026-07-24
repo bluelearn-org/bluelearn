@@ -42,7 +42,7 @@ function RouteComponent() {
         if (!guide) return null;
         return {
           ...guide,
-          subobjectives: target.subobjectives,
+          curatedPreqs: target.curatedPreqs,
         };
       })
       .filter((g): g is NonNullable<typeof g> => Boolean(g));

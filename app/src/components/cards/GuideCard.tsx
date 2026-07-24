@@ -99,6 +99,7 @@ export const GuideCard = ({ guide, to, origin }: PropTypes) => {
       to={to}
       params={{ slug: guide.slug }}
       state={{ breadcrumbOrigin: origin }}
+      className="block h-full"
     >
       {card}
     </Link>

@@ -30,7 +30,7 @@ type ObjectiveGraphProps = {
   targetGuides?: Array<{
     slug: string;
     title: string;
-    subobjectives?: Array<{ level: number; guide: string }>;
+    curatedPreqs?: Array<{ level: number; guide: string }>;
   }>;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
@@ -55,8 +55,8 @@ export function ObjectiveGraph({
 
       if (focusedTarget && targetGuides) {
         const activeTarget = targetGuides.find((t) => t.slug === focusedTarget);
-        if (activeTarget && activeTarget.subobjectives) {
-          const match = activeTarget.subobjectives.find(
+        if (activeTarget && activeTarget.curatedPreqs) {
+          const match = activeTarget.curatedPreqs.find(
             (sub) => sub.guide === node.slug
           );
           if (match) {

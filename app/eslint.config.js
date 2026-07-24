@@ -13,6 +13,7 @@ export default [
       "dist/",
       "dist-ssr/",
       "src/routeTree.gen.ts",
+      "src/math-live-test/",
     ],
   },
   ...tanstackConfig,

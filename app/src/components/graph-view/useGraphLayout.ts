@@ -81,7 +81,7 @@ export function useGraphLayout({
 
     const newNodes: Array<Node> = [];
     levels.forEach((level, levelIdx) => {
-      const nodesInLevel = grouped[level]!;
+      const nodesInLevel = grouped[level];
 
       const isWalkthrough =
         nodeType === "walkthroughNode" || nodeType === "objectiveNode";

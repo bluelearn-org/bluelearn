@@ -78,14 +78,11 @@ export const OrderObjectiveGuides = ({
     return `${m}m`;
   }, [totalDuration]);
 
-  const [walkthroughData, setGraphData] =
-    useState<GraphData | null>(null);
+  const [walkthroughData, setGraphData] = useState<GraphData | null>(null);
 
   useEffect(() => {
     if (targetSlug) {
-      fetchWalkthrough(targetSlug)
-        .then(setGraphData)
-        .catch(console.error);
+      fetchWalkthrough(targetSlug).then(setGraphData).catch(console.error);
     } else {
       setGraphData(null);
     }

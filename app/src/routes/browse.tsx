@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
-import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
+import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 import { Route as GuideRoute } from "@/routes/guides/$slug/index";
 
 import { hydrateObjectives } from "@/lib/getData";
@@ -29,9 +29,7 @@ function RouteComponent() {
     objectives
   );
 
-  const allGuides = hydratedObjectives
-    .flatMap((o) => o.levels.map((l) => l.guide))
-    .slice(0, 6);
+  const allGuides = hydratedObjectives.flatMap((o) => o.targets).slice(0, 6);
 
   const sectionHeadingCommonClassNames =
     "font-mono text-[12px] uppercase tracking-[0.08em] text-muted-foreground ml-1";

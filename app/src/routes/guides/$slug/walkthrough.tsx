@@ -23,8 +23,7 @@ function RouteComponent() {
   const [hoveredGuide, setHoveredGuide] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const [walkthroughData, setGraphData] =
-    useState<GraphData | null>(null);
+  const [walkthroughData, setGraphData] = useState<GraphData | null>(null);
 
   useEffect(() => {
     fetchWalkthrough(slug).then(setGraphData).catch(console.error);

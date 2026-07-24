@@ -14,13 +14,13 @@ export function SubObjectiveStep({ Stepper, target, objective }: Props) {
       <div className="flex min-h-0 flex-1 flex-col gap-6">
         {/* ordered guides */}
         <ol className="m-0 flex w-full list-none flex-col gap-3 p-0">
-          {target.guides.map((subobjective: any, index: number) => {
+          {target.guides.map((guideObj: any, index: number) => {
             const guide = {
-              ...subobjective.guide,
+              ...guideObj,
               stats: [
                 {
                   label: "Duration",
-                  data: subobjective.guide.duration,
+                  data: guideObj.duration,
                 },
               ],
             };

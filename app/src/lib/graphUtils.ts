@@ -34,12 +34,16 @@ export const fetchWalkthrough = async (
   }
 
   const data = await res.json();
-  return data;
+  return {
+    ...data,
+    nodes: data.nodes.map((node) => ({
+      ...node,
+      is_target: node.slug === targetSlug,
+    })),
+  };
 };
 
-export const fetchObjectiveGraph = async (
-  slug: string
-): Promise<GraphData> => {
+export const fetchObjectiveGraph = async (slug: string): Promise<GraphData> => {
   const objectivesData = (await import("@/data/objectives.json")).default;
   const guides = (await import("@/data/guides.json")).default;
 

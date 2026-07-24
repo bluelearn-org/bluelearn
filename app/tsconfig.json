@@ -6,6 +6,7 @@
     "prettier.config.js",
     "vite.config.js"
   ],
+  "exclude": ["src/math-live-test"],
 
   "compilerOptions": {
     "target": "ES2022",

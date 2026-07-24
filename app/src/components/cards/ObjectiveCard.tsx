@@ -20,7 +20,7 @@ type ObjectiveProp = {
   created_at?: string;
   status?: string;
   featuredSubObjective?: Array<FeaturedNode>;
-  levels?: Array<{ level: number; guide: { title: string } }>;
+  targets?: Array<{ title: string }>;
   stats?: Array<{ label: string; data: string | number }>;
   actionBtns?: React.ReactNode;
 };
@@ -77,14 +77,10 @@ function FeaturedSubObjective({ nodes }: { nodes: Array<FeaturedNode> }) {
   );
 }
 
-// Legacy graph for routes still feeding static level data.
-function LevelsGraph({
-  levels,
-}: {
-  levels: Array<{ level: number; guide: { title: string } }>;
-}) {
-  const previewLevels = levels.slice(0, 3);
-  const remaining = levels.length - previewLevels.length;
+// Legacy graph for routes still feeding static target data.
+function TargetsGraph({ targets }: { targets: Array<{ title: string }> }) {
+  const previewTargets = targets.slice(0, 3);
+  const remaining = targets.length - previewTargets.length;
 
   return (
     <CardContent className="border-t p-4">
@@ -105,18 +101,18 @@ function LevelsGraph({
           </div>
         )}
 
-        {previewLevels.map((level, index) => (
+        {previewTargets.map((target, index) => (
           <div key={index} className="flex items-center justify-between">
             <div className="flex w-full flex-col items-center justify-center text-center sm:w-24 md:w-28">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-badge text-sm font-medium">
-                {level.level}
+                {index + 1}
               </span>
               <span className="line-clamp-3 text-sm leading-snug text-muted-foreground">
-                {level.guide.title}
+                {target.title}
               </span>
             </div>
 
-            {index < previewLevels.length - 1 && (
+            {index < previewTargets.length - 1 && (
               <div className="flex items-center justify-center">
                 <ArrowRight className="h-5 w-5 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
               </div>
@@ -130,8 +126,8 @@ function LevelsGraph({
 
 export const ObjectiveCard = ({ objective, to }: PropTypes) => {
   return (
-    <Link to={to} params={{ slug: objective.slug }}>
-      <Card className="group flex flex-col justify-between rounded-md bg-background shadow-none transition-colors hover:bg-muted">
+    <Link to={to} params={{ slug: objective.slug }} className="block h-full">
+      <Card className="group flex h-full flex-col justify-between rounded-md bg-background shadow-none transition-colors hover:bg-muted">
         {/* Header */}
         <CardHeader className="relative p-4">
           <div className="flex items-center justify-between">
@@ -168,7 +164,7 @@ export const ObjectiveCard = ({ objective, to }: PropTypes) => {
           ? objective.featuredSubObjective.length > 0 && (
               <FeaturedSubObjective nodes={objective.featuredSubObjective} />
             )
-          : objective.levels && <LevelsGraph levels={objective.levels} />}
+          : objective.targets && <TargetsGraph targets={objective.targets} />}
 
         {/* Footer */}
         {(objective.stats || objective.actionBtns) && (

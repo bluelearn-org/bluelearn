@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 import { GuideCard } from "@/components/cards/GuideCard";
 
-import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
+import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 import { Route as GuideRoute } from "@/routes/guides/$slug/index";
 
 import {
