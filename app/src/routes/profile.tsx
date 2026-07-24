@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import type { ProfilePageData } from "@/lib/profile";
 import {
   activityStatusLabel,
@@ -6,6 +7,7 @@ import {
   loadProfilePage,
 } from "@/lib/profile";
 import { formatDate } from "@/lib/guideUtils";
+import { Pagination } from "@/components/Pagination";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -59,6 +61,8 @@ function getInitials(value: string | null | undefined) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+const PAGE_SIZE = 10;
+
 type ActivityRow = ProfilePageData["activity"][number];
 function rowTarget(row: ActivityRow) {
   if (row.content_kind === "review")
@@ -84,6 +88,13 @@ function rowTarget(row: ActivityRow) {
 
 function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
   const navigate = useNavigate();
+
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(activity.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const pageRows = activity.slice(start, start + PAGE_SIZE);
+  const goToPage = (pageNo: number) =>
+    setPage(Math.min(Math.max(pageNo, 1), totalPages));
 
   const statsRows = [
     { label: "Upvotes", value: stats.upvotes },
@@ -167,7 +178,7 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activity.length === 0 ? (
+              {pageRows.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -177,11 +188,11 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
                   </TableCell>
                 </TableRow>
               ) : (
-                activity.map((row, index) => {
+                pageRows.map((row, index) => {
                   const target = rowTarget(row);
                   return (
                     <TableRow
-                      key={`${row.content_kind}-${index}`}
+                      key={`${row.content_kind}-${start + index}`}
                       className={target ? "cursor-pointer" : undefined}
                       onClick={target ? () => navigate(target) : undefined}
                     >
@@ -232,6 +243,20 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
             </TableBody>
           </Table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="mt-8">
+            <Pagination
+              activePageNo={page}
+              onPageSelect={goToPage}
+              toFirst={() => goToPage(1)}
+              onPrevious={() => goToPage(page - 1)}
+              onNext={() => goToPage(page + 1)}
+              toLast={() => goToPage(totalPages)}
+              totalPages={totalPages}
+            />
+          </div>
+        )}
       </section>
     </div>
   );
