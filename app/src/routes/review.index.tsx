@@ -3,8 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-import { Route as ReviewSlugRoute } from "@/routes/review.$slug";
-
+import { Route as ReviewCaseIdRoute } from "@/routes/review.$caseId";
 import { getReviewQueue } from "@/lib/api/reviews";
 
 export const Route = createFileRoute("/review/")({
@@ -73,8 +72,8 @@ function CaseGrid({ cases }: { cases: Array<QueueCase> }) {
       {cases.map((c) => (
         <Link
           key={c.id}
-          to={ReviewSlugRoute.to}
-          params={{ slug: c.id }}
+          to={ReviewCaseIdRoute.to}
+          params={{ caseId: c.id }}
           className="block"
         >
           <div className="rounded-md border bg-background p-4 shadow-none transition-colors hover:bg-muted">

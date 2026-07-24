@@ -25,7 +25,7 @@ import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as ObjectivesIndexRouteImport } from './routes/objectives.index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
-import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
+import { Route as ReviewCaseIdRouteImport } from './routes/review.$caseId'
 import { Route as ObjectivesSlugRouteImport } from './routes/objectives.$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides/$slug'
 import { Route as GuidesSlugIndexRouteImport } from './routes/guides/$slug/index'
@@ -111,9 +111,9 @@ const SubjectsSlugRoute = SubjectsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => SubjectsRoute,
 } as any)
-const ReviewSlugRoute = ReviewSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
+const ReviewCaseIdRoute = ReviewCaseIdRouteImport.update({
+  id: '/$caseId',
+  path: '/$caseId',
   getParentRoute: () => ReviewRoute,
 } as any)
 const ObjectivesSlugRoute = ObjectivesSlugRouteImport.update({
@@ -151,7 +151,7 @@ export interface FileRoutesByFullPath {
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRoute
-  '/review/$slug': typeof ReviewSlugRoute
+  '/review/$caseId': typeof ReviewCaseIdRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
@@ -170,7 +170,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/objectives/$slug': typeof ObjectivesSlugRoute
-  '/review/$slug': typeof ReviewSlugRoute
+  '/review/$caseId': typeof ReviewCaseIdRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/guides': typeof GuidesIndexRoute
   '/objectives': typeof ObjectivesIndexRoute
@@ -194,7 +194,7 @@ export interface FileRoutesById {
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRoute
-  '/review/$slug': typeof ReviewSlugRoute
+  '/review/$caseId': typeof ReviewCaseIdRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
@@ -219,7 +219,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/guides/$slug'
     | '/objectives/$slug'
-    | '/review/$slug'
+    | '/review/$caseId'
     | '/subjects/$slug'
     | '/guides/'
     | '/objectives/'
@@ -238,7 +238,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/objectives/$slug'
-    | '/review/$slug'
+    | '/review/$caseId'
     | '/subjects/$slug'
     | '/guides'
     | '/objectives'
@@ -261,7 +261,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/guides/$slug'
     | '/objectives/$slug'
-    | '/review/$slug'
+    | '/review/$caseId'
     | '/subjects/$slug'
     | '/guides/'
     | '/objectives/'
@@ -401,11 +401,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubjectsSlugRouteImport
       parentRoute: typeof SubjectsRoute
     }
-    '/review/$slug': {
-      id: '/review/$slug'
-      path: '/$slug'
-      fullPath: '/review/$slug'
-      preLoaderRoute: typeof ReviewSlugRouteImport
+    '/review/$caseId': {
+      id: '/review/$caseId'
+      path: '/$caseId'
+      fullPath: '/review/$caseId'
+      preLoaderRoute: typeof ReviewCaseIdRouteImport
       parentRoute: typeof ReviewRoute
     }
     '/objectives/$slug': {
@@ -454,12 +454,12 @@ const ObjectivesRouteWithChildren = ObjectivesRoute._addFileChildren(
 )
 
 interface ReviewRouteChildren {
-  ReviewSlugRoute: typeof ReviewSlugRoute
+  ReviewCaseIdRoute: typeof ReviewCaseIdRoute
   ReviewIndexRoute: typeof ReviewIndexRoute
 }
 
 const ReviewRouteChildren: ReviewRouteChildren = {
-  ReviewSlugRoute: ReviewSlugRoute,
+  ReviewCaseIdRoute: ReviewCaseIdRoute,
   ReviewIndexRoute: ReviewIndexRoute,
 }
 
