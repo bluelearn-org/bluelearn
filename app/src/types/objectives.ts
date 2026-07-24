@@ -1,8 +1,8 @@
 import type { Guide } from "@/types/guides";
 
-export type ObjectiveLevel = {
-  level: number;
+export type TargetSequence = {
   guide: string;
+  curatedPreqs: Array<{ level: number; guide: string }>;
 };
 
 export type Objective = {
@@ -14,14 +14,16 @@ export type Objective = {
   created_at: string;
   duration: number;
 
-  levels: Array<ObjectiveLevel>;
+  targets: Array<TargetSequence>;
 };
 
-export type Level = {
-  level: number;
-  guide: Guide;
-};
-
-export type HydratedObjective = Omit<Objective, "levels"> & {
-  levels: Array<Level>;
+export type HydratedObjective = Omit<Objective, "targets"> & {
+  targets: Array<
+    Guide & { curatedPreqs: Array<{ level: number; guide: string }> }
+  >;
+  featuredSubObjective?: Array<{
+    position: number;
+    slug: string | null;
+    title: string | null;
+  }>;
 };

@@ -26,9 +26,11 @@ import { Route as ObjectivesIndexRouteImport } from './routes/objectives.index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
-import { Route as ObjectivesSlugRouteImport } from './routes/objectives.$slug'
+import { Route as ObjectivesSlugRouteImport } from './routes/objectives/$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides/$slug'
+import { Route as ObjectivesSlugIndexRouteImport } from './routes/objectives/$slug/index'
 import { Route as GuidesSlugIndexRouteImport } from './routes/guides/$slug/index'
+import { Route as ObjectivesSlugGraphRouteImport } from './routes/objectives/$slug/graph'
 import { Route as GuidesSlugWalkthroughRouteImport } from './routes/guides/$slug/walkthrough'
 
 const SubjectsRoute = SubjectsRouteImport.update({
@@ -126,10 +128,20 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ObjectivesSlugIndexRoute = ObjectivesSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ObjectivesSlugRoute,
+} as any)
 const GuidesSlugIndexRoute = GuidesSlugIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => GuidesSlugRoute,
+} as any)
+const ObjectivesSlugGraphRoute = ObjectivesSlugGraphRouteImport.update({
+  id: '/graph',
+  path: '/graph',
+  getParentRoute: () => ObjectivesSlugRoute,
 } as any)
 const GuidesSlugWalkthroughRoute = GuidesSlugWalkthroughRouteImport.update({
   id: '/walkthrough',
@@ -150,7 +162,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRouteWithChildren
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
-  '/objectives/$slug': typeof ObjectivesSlugRoute
+  '/objectives/$slug': typeof ObjectivesSlugRouteWithChildren
   '/review/$slug': typeof ReviewSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/guides/': typeof GuidesIndexRoute
@@ -158,7 +170,9 @@ export interface FileRoutesByFullPath {
   '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/guides/$slug/walkthrough': typeof GuidesSlugWalkthroughRoute
+  '/objectives/$slug/graph': typeof ObjectivesSlugGraphRoute
   '/guides/$slug/': typeof GuidesSlugIndexRoute
+  '/objectives/$slug/': typeof ObjectivesSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -169,7 +183,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/objectives/$slug': typeof ObjectivesSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/guides': typeof GuidesIndexRoute
@@ -177,7 +190,9 @@ export interface FileRoutesByTo {
   '/review': typeof ReviewIndexRoute
   '/subjects': typeof SubjectsIndexRoute
   '/guides/$slug/walkthrough': typeof GuidesSlugWalkthroughRoute
+  '/objectives/$slug/graph': typeof ObjectivesSlugGraphRoute
   '/guides/$slug': typeof GuidesSlugIndexRoute
+  '/objectives/$slug': typeof ObjectivesSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -193,7 +208,7 @@ export interface FileRoutesById {
   '/review': typeof ReviewRouteWithChildren
   '/subjects': typeof SubjectsRouteWithChildren
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
-  '/objectives/$slug': typeof ObjectivesSlugRoute
+  '/objectives/$slug': typeof ObjectivesSlugRouteWithChildren
   '/review/$slug': typeof ReviewSlugRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/guides/': typeof GuidesIndexRoute
@@ -201,7 +216,9 @@ export interface FileRoutesById {
   '/review/': typeof ReviewIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
   '/guides/$slug/walkthrough': typeof GuidesSlugWalkthroughRoute
+  '/objectives/$slug/graph': typeof ObjectivesSlugGraphRoute
   '/guides/$slug/': typeof GuidesSlugIndexRoute
+  '/objectives/$slug/': typeof ObjectivesSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -226,7 +243,9 @@ export interface FileRouteTypes {
     | '/review/'
     | '/subjects/'
     | '/guides/$slug/walkthrough'
+    | '/objectives/$slug/graph'
     | '/guides/$slug/'
+    | '/objectives/$slug/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -237,7 +256,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/reset-password'
-    | '/objectives/$slug'
     | '/review/$slug'
     | '/subjects/$slug'
     | '/guides'
@@ -245,7 +263,9 @@ export interface FileRouteTypes {
     | '/review'
     | '/subjects'
     | '/guides/$slug/walkthrough'
+    | '/objectives/$slug/graph'
     | '/guides/$slug'
+    | '/objectives/$slug'
   id:
     | '__root__'
     | '/'
@@ -268,7 +288,9 @@ export interface FileRouteTypes {
     | '/review/'
     | '/subjects/'
     | '/guides/$slug/walkthrough'
+    | '/objectives/$slug/graph'
     | '/guides/$slug/'
+    | '/objectives/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -422,12 +444,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/objectives/$slug/': {
+      id: '/objectives/$slug/'
+      path: '/'
+      fullPath: '/objectives/$slug/'
+      preLoaderRoute: typeof ObjectivesSlugIndexRouteImport
+      parentRoute: typeof ObjectivesSlugRoute
+    }
     '/guides/$slug/': {
       id: '/guides/$slug/'
       path: '/'
       fullPath: '/guides/$slug/'
       preLoaderRoute: typeof GuidesSlugIndexRouteImport
       parentRoute: typeof GuidesSlugRoute
+    }
+    '/objectives/$slug/graph': {
+      id: '/objectives/$slug/graph'
+      path: '/graph'
+      fullPath: '/objectives/$slug/graph'
+      preLoaderRoute: typeof ObjectivesSlugGraphRouteImport
+      parentRoute: typeof ObjectivesSlugRoute
     }
     '/guides/$slug/walkthrough': {
       id: '/guides/$slug/walkthrough'
@@ -439,13 +475,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ObjectivesSlugRouteChildren {
+  ObjectivesSlugGraphRoute: typeof ObjectivesSlugGraphRoute
+  ObjectivesSlugIndexRoute: typeof ObjectivesSlugIndexRoute
+}
+
+const ObjectivesSlugRouteChildren: ObjectivesSlugRouteChildren = {
+  ObjectivesSlugGraphRoute: ObjectivesSlugGraphRoute,
+  ObjectivesSlugIndexRoute: ObjectivesSlugIndexRoute,
+}
+
+const ObjectivesSlugRouteWithChildren = ObjectivesSlugRoute._addFileChildren(
+  ObjectivesSlugRouteChildren,
+)
+
 interface ObjectivesRouteChildren {
-  ObjectivesSlugRoute: typeof ObjectivesSlugRoute
+  ObjectivesSlugRoute: typeof ObjectivesSlugRouteWithChildren
   ObjectivesIndexRoute: typeof ObjectivesIndexRoute
 }
 
 const ObjectivesRouteChildren: ObjectivesRouteChildren = {
-  ObjectivesSlugRoute: ObjectivesSlugRoute,
+  ObjectivesSlugRoute: ObjectivesSlugRouteWithChildren,
   ObjectivesIndexRoute: ObjectivesIndexRoute,
 }
 

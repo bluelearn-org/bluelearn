@@ -3,7 +3,7 @@ import type { HydratedObjective } from "@/types/objectives";
 import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
-import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
+import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 
 type PropTypes = {
   objectives: Array<HydratedObjective>;
@@ -31,7 +31,7 @@ export const FeaturedRow = ({ objectives, type }: PropTypes) => {
             ...objective,
             stats: [
               { label: "Duration", data: objective.duration },
-              { label: "Guides", data: objective.levels.length },
+              { label: "Targets", data: objective.targets.length },
             ],
           };
           return (

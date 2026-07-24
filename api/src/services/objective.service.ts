@@ -332,3 +332,124 @@ export async function listObjectiveRevisions(supabase: DB, rawSlug: string) {
   }
   return data ?? [];
 }
+
+// Compute the graph data for a specific objective, including node levels, word_count, and tags.
+// Formats the data to match the WalkthroughData interface for the frontend graph view.
+export async function getObjectiveGraphData(supabase: DB, rawSlug: string) {
+  const { snapshot } = await getObjectiveBySlug(supabase, rawSlug);
+
+  const includedNodes = snapshot.nodes.filter((n) => n.is_included);
+  const guideIds = includedNodes.map((n) => n.guide_id);
+  const baseIds = includedNodes.map((n) => n.guide_base_id);
+
+  // Fetch word_count and summary for the specific guides
+  const { data: guideData, error: guideError } = await supabase
+    .from("guides")
+    .select(
+      "id, current:guide_revisions!guides_current_revision_id_fkey(summary, word_count, id)"
+    )
+    .in("id", guideIds);
+
+  if (guideError) {
+    console.error(guideError);
+    throw new ServiceError("Failed to load guide details", 500);
+  }
+
+  const guideDetailsMap = new Map();
+  const revisionIds = [];
+  for (const row of guideData ?? []) {
+    if (row.current) {
+      guideDetailsMap.set(row.id, row.current);
+      revisionIds.push(row.current.id);
+    }
+  }
+
+  // Fetch tags
+  const tagsMap = new Map();
+  if (revisionIds.length > 0) {
+    const { data: tagData, error: tagError } = await supabase
+      .from("guide_revision_subjects")
+      .select("guide_revision_id, subject:subjects(slug, name)")
+      .in("guide_revision_id", revisionIds);
+
+    if (tagError) {
+      console.error(tagError);
+      throw new ServiceError("Failed to load guide tags", 500);
+    }
+
+    for (const row of tagData ?? []) {
+      if (row.subject) {
+        if (!tagsMap.has(row.guide_revision_id))
+          tagsMap.set(row.guide_revision_id, []);
+        tagsMap.get(row.guide_revision_id).push(row.subject);
+      }
+    }
+  }
+
+  // Build adj list for level computation
+  const adj = new Map<string, string[]>(); // from -> to[]
+  const inDegree = new Map<string, number>();
+  const outDegree = new Map<string, number>();
+
+  for (const id of baseIds) {
+    adj.set(id, []);
+    inDegree.set(id, 0);
+    outDegree.set(id, 0);
+  }
+
+  const edges = snapshot.projected_edges.filter(
+    (e) => adj.has(e.from_id) && adj.has(e.to_id)
+  );
+
+  for (const e of edges) {
+    adj.get(e.from_id)!.push(e.to_id);
+    inDegree.set(e.to_id, inDegree.get(e.to_id)! + 1);
+    outDegree.set(e.from_id, outDegree.get(e.from_id)! + 1);
+  }
+
+  const levels = new Map<string, number>();
+  // Kahn's or simple forward walk
+  // Initialize roots
+  const queue: string[] = [];
+  for (const id of baseIds) {
+    if (inDegree.get(id) === 0) {
+      levels.set(id, 1);
+      queue.push(id);
+    }
+  }
+
+  let maxLevel = 1;
+  while (queue.length > 0) {
+    const u = queue.shift()!;
+    const uLevel = levels.get(u)!;
+    for (const v of adj.get(u)!) {
+      const vLevel = levels.get(v) || 1;
+      if (uLevel + 1 > vLevel) {
+        levels.set(v, uLevel + 1);
+        if (uLevel + 1 > maxLevel) maxLevel = uLevel + 1;
+      }
+      const deg = inDegree.get(v)! - 1;
+      inDegree.set(v, deg);
+      if (deg === 0) {
+        queue.push(v);
+      }
+    }
+  }
+
+  const nodes = includedNodes.map((n) => {
+    const details = guideDetailsMap.get(n.guide_id);
+    const tags = details ? tagsMap.get(details.id) || [] : [];
+    return {
+      id: n.guide_base_id,
+      slug: n.slug,
+      title: n.title,
+      summary: details?.summary ?? null,
+      level: levels.get(n.guide_base_id) || 1,
+      word_count: details?.word_count ?? 0,
+      tags: tags,
+      is_target: n.is_target,
+    };
+  });
+
+  return { nodes, edges };
+}

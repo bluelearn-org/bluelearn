@@ -14,6 +14,7 @@ import {
   getObjectiveBySlug,
   listObjectiveRevisions,
   listPublishedObjectives,
+  getObjectiveGraphData,
 } from "../services/objective.service";
 import {
   diffObjectiveRevisions,
@@ -57,6 +58,15 @@ export const objectivesRouter = new Hono<HonoEnv>()
       c.req.param("slug")
     );
     return c.json({ objective, snapshot });
+  })
+
+  // Returns the objective's graph data for graph visualization.
+  .get("/:slug/graph", async (c) => {
+    const { nodes, edges } = await getObjectiveGraphData(
+      c.get("supabase"),
+      c.req.param("slug")
+    );
+    return c.json({ nodes, edges });
   })
 
   // Archives the objective. 404 if missing or not permitted.

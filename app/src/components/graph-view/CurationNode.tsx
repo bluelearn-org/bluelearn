@@ -1,13 +1,13 @@
 import { Handle, Position } from "@xyflow/react";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export function GuideNode({ data }: { data: any }) {
+export function CurationNode({ data }: { data: any }) {
   const { isTarget, isChecked, title, selectedOrder, isHovered, isDimmed } =
     data;
 
   return (
     <div
-      className={`relative flex min-w-[200px] flex-col gap-2 rounded-xl border-2 bg-card p-3 transition-all duration-150 select-none ${
+      className={`relative flex max-w-[350px] min-w-[300px] flex-col gap-2 rounded-xl border-2 bg-card p-3 transition-all duration-150 select-none ${
         isHovered
           ? "z-10 scale-105 border-primary shadow-md ring-4 ring-primary/40"
           : ""

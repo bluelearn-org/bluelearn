@@ -35,7 +35,9 @@ type Walkthrough = {
     slug: string;
     title: string;
     summary: string | null;
-    depth: number;
+    level: number;
+    word_count: number;
+    tags: { slug: string; name: string }[];
   }[];
   edges: { from_id: string; to_id: string }[];
 };

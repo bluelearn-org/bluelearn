@@ -5,7 +5,7 @@ import type { HydratedObjective } from "@/types/objectives";
 import { Separator } from "@/components/ui/separator";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 
-import { Route as ObjectiveRoute } from "@/routes/objectives.$slug";
+import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 
 import { hydrateObjectives } from "@/lib/getData";
 
@@ -40,7 +40,7 @@ function RouteComponent() {
               ...objective,
               stats: [
                 { label: "Duration", data: objective.duration },
-                { label: "Guides", data: objective.levels.length },
+                { label: "Targets", data: objective.targets.length },
               ],
             };
             return (
