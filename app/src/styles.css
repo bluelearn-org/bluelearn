@@ -100,7 +100,7 @@
   }
 
   body {
-    @apply scrollbar-thumb-[var(--border)] scrollbar-track-[var(--muted)] bg-background text-foreground;
+    @apply bg-background text-foreground;
   }
 
   button:not(:disabled),
@@ -337,6 +337,26 @@
   .markdown img {
     @apply my-4 h-auto max-w-full rounded-lg;
   }
+}
+
+/* Global Scrollbar Styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Force network loading of KaTeX Math Italic */
