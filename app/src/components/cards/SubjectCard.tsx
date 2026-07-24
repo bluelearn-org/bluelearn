@@ -22,7 +22,7 @@ type PropTypes = {
 export const SubjectCard = ({ subject, to }: PropTypes) => {
   return (
     <Link to={to} params={{ slug: subject.slug }}>
-      <Card className="group rounded-md bg-background shadow-none transition-colors hover:bg-muted">
+      <Card className="group h-full rounded-md bg-background shadow-none transition-colors hover:bg-muted">
         {/* Header */}
         <CardHeader className="p-6">
           <div className="flex items-center justify-between">
@@ -31,7 +31,7 @@ export const SubjectCard = ({ subject, to }: PropTypes) => {
             </p>
             {subject.status && (
               <Badge
-                variant="outline"
+                variant="default"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
                 {subject.status}

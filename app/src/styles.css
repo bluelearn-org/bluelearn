@@ -48,7 +48,7 @@
 
   --badge-bg: var(--brand-lt-blue);
   --badge-border: var(--brand-chip-border);
-  --badge-text: var(--brand-body);
+  --badge-text: var(--foreground);
 
   --ring: var(--brand-blue);
 
@@ -69,14 +69,16 @@
   --popover: #171b1f;
   --popover-foreground: var(--foreground);
 
-  --primary: #042f6a;
+  --primary: var(--brand-blue);
   --primary-foreground: #ffffff;
 
   --secondary: #202429;
   --secondary-foreground: var(--foreground);
 
   --muted: #1c2024;
-  --muted-foreground: #a9afb4;
+  --muted-foreground: #c3cad1;
+
+  --brand-cta: var(--brand-surface);
 
   --accent: #1f2b31;
   --accent-foreground: var(--foreground);
@@ -85,6 +87,10 @@
   --input: #2f3338;
 
   --ring: var(--primary);
+
+  --badge-bg: #1a2635;
+  --badge-border: var(--border);
+  --badge-text: var(--muted-foreground);
 }
 
 /* == BASE STYLES == */
@@ -131,19 +137,15 @@
 
   /* -- CTA BUTTON -- */
   .btn-cta {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-white uppercase transition-all duration-200;
-    background: var(--brand-cta);
+    @apply inline-flex items-center justify-center rounded-md bg-brand-cta px-4 py-2 font-mono text-xs font-bold text-white uppercase transition-all duration-200 dark:text-black;
   }
 
   .btn-cta:hover {
-    background: var(--brand-cta);
-    color: var(--muted);
     transform: scale(1.05);
   }
 
   .btn-pri {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
-    background: var(--brand-blue);
+    @apply inline-flex items-center justify-center rounded-md bg-brand-blue px-4 py-2 font-mono text-xs font-bold text-foreground uppercase transition-all duration-200 hover:bg-brand-blue dark:text-white;
   }
 
   .btn-pri:hover {
@@ -151,7 +153,7 @@
   }
 
   .btn-sec {
-    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border px-4 py-2 font-mono text-xs font-bold text-foreground uppercase transition-all duration-200 dark:text-white;
     background: var(--muted);
   }
 
@@ -160,7 +162,7 @@
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center rounded-md border-1 border-border bg-muted px-4 py-2 font-mono text-xs text-black uppercase transition-all transition-colors duration-200 hover:bg-input/50 hover:text-foreground;
+    @apply inline-flex items-center justify-center rounded-md border-1 border-border bg-muted px-4 py-2 font-mono text-xs text-foreground uppercase transition-all transition-colors duration-200 hover:bg-input/50 hover:text-foreground;
   }
 
   .btn-outline:hover {
@@ -177,7 +179,7 @@
     transform: scale(1.05);
   }
   .btn-approve {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-black uppercase transition-all duration-200;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-mono text-xs font-bold text-foreground uppercase transition-all duration-200;
     background: #00e408;
   }
 
@@ -335,6 +337,26 @@
   .markdown img {
     @apply my-4 h-auto max-w-full rounded-lg;
   }
+}
+
+/* Global Scrollbar Styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Force network loading of KaTeX Math Italic */

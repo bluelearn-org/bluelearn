@@ -30,7 +30,7 @@ type PropTypes = {
 
 export const GuideCard = ({ guide, to, origin }: PropTypes) => {
   const card = (
-    <Card className="group rounded-md bg-background shadow-none transition-colors hover:bg-muted">
+    <Card className="group h-full rounded-md bg-background shadow-none transition-colors hover:bg-muted">
       {/* Header */}
       <CardHeader className="relative p-4">
         <div className="flex items-center justify-between">
@@ -39,7 +39,7 @@ export const GuideCard = ({ guide, to, origin }: PropTypes) => {
           </p>
           {guide.status && (
             <Badge
-              variant="outline"
+              variant="default"
               className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
             >
               {guide.status}
@@ -73,7 +73,7 @@ export const GuideCard = ({ guide, to, origin }: PropTypes) => {
             return (
               <Badge
                 key={slug}
-                variant="outline"
+                variant="default"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
                 {name}

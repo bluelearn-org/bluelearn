@@ -45,7 +45,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="relative mx-auto max-w-[1280px] border-x border-b border-border/60 bg-white/20 backdrop-blur-xl">
+      <div className="relative mx-auto max-w-[1280px] border-x border-b border-border/60 bg-background/20 backdrop-blur-xl">
         <div className="flex h-16 items-center justify-between px-6">
           {/* LEFT */}
           <div className="flex items-center gap-10">
@@ -61,7 +61,7 @@ export function Navbar() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-foreground"
+                  className="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:scale-110"
                 >
                   {item.label}
                 </Link>
