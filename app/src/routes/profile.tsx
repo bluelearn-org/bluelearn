@@ -84,11 +84,10 @@ function rowTarget(row: ActivityRow) {
 
 function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
   const navigate = useNavigate();
-  const roleLabel = roles.length > 0 ? roles.join(", ") : "Member";
 
   const statsRows = [
-    { label: "Upvote", value: stats.upvotes },
-    { label: "Downvote", value: stats.downvotes },
+    { label: "Upvotes", value: stats.upvotes },
+    { label: "Downvotes", value: stats.downvotes },
     { label: "Contributions", value: stats.contributions },
     { label: "Reviews", value: stats.reviews },
   ];
@@ -98,30 +97,51 @@ function ProfilePage({ profile, roles, stats, activity }: ProfilePageData) {
   return (
     <div className="mx-auto max-w-7xl border-x bg-background">
       <section className="border-b px-8 py-10 lg:px-16">
-        <div className="mb-6 flex flex-col items-center justify-center gap-8 sm:flex-row sm:items-center">
-          <div className="flex flex-col items-center sm:w-1/4">
-            <Avatar className="size-30 bg-gray-500">
+        <div className="mx-auto mb-6 flex w-full max-w-5xl flex-col items-center gap-8 px-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-5">
+            <Avatar className="size-28 shrink-0 bg-gray-500">
               <AvatarImage className="grayscale" />
               <AvatarFallback className="bg-gray-300 text-2xl font-bold text-black">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <h2 className="mt-3 mb-1 text-xl font-bold">
-              {profile.display_name ?? profile.username}
-            </h2>
-            <h3 className="text-sm text-gray-600">{roleLabel}</h3>
+
+            <div className="flex flex-col">
+              <h2 className="text-3xl font-bold">
+                {profile.display_name ?? profile.username}
+              </h2>
+              <h3 className="text-sm text-gray-600">@{profile.username}</h3>
+
+              {roles.length > 0 && (
+                <ul className="mt-2.5 flex flex-wrap items-center gap-2">
+                  {roles.map((role) => (
+                    <li key={role}>
+                      <Badge
+                        variant="outline"
+                        className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                      >
+                        {role}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
-          <div className="w-full sm:w-1/4">
-            <ul className="grid grid-cols-2 grid-rows-2 gap-y-8">
-              {statsRows.map((stat) => (
-                <li key={stat.label} className="flex flex-col items-center">
-                  <h3 className="data-label">{stat.label}</h3>
-                  <p className="data-value">{stat.value}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="grid grid-cols-4 items-start gap-x-6">
+            {statsRows.map((stat) => (
+              <li
+                key={stat.label}
+                className="flex min-w-24 flex-col items-center gap-1"
+              >
+                <p className="text-2xl leading-none font-bold">{stat.value}</p>
+                <h3 className="text-sm leading-none text-muted-foreground">
+                  {stat.label}
+                </h3>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <Separator className="mb-8 bg-border" />
