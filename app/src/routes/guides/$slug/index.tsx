@@ -18,11 +18,14 @@ import {
   Users,
 } from "lucide-react";
 
+import type { Action } from "@/components/sidebar/GuideSidebar";
+import type { ComboboxItem } from "@/components/ui/combobox";
+
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
-import { getGuide } from "@/lib/api/guides";
+import { getGuide, getVariantId } from "@/lib/api/guides";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
@@ -40,6 +43,19 @@ import {
 } from "@/components/ui/tooltip";
 
 import { Route as GuideWalkthroughRoute } from "@/routes/guides/$slug/walkthrough";
+import { getAuthToken } from "@/lib/auth";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+import { Combobox } from "@/components/ui/combobox";
+import { Textarea } from "@/components/ui/textarea";
+
 import { VariantsModal } from "@/components/guides/modals/VariantsModal";
 import { ObjectivesModal } from "@/components/guides/modals/ObjectivesModal";
 import { ContributorsModal } from "@/components/guides/modals/ContributorsModal";
@@ -65,18 +81,177 @@ const SIDEBAR_ACTIONS: Array<SidebarActionItem> = [
   { icon: History, label: "View Revisions", type: "revisions" },
 ];
 
-function useVote() {
+function useVote(slug: string) {
   const [vote, setVote] = useState<"up" | "down" | null>(null);
+  const thisSlug = slug;
 
   const toggleVote = (type: "up" | "down") => {
-    setVote((current) => (current === type ? null : type));
+    const next = vote === type ? null : type;
+    setVote(next);
+    return next;
+  };
+
+  const submitVote = async (
+    type: "up" | "down" | null,
+    reason: string | null = null,
+    note: string | null = null
+  ) => {
+    const prev = vote;
+
+    const token = await getAuthToken();
+    if (!token) {
+      console.error("Unauthorized");
+      setVote(prev); // revert on auth failure
+      return;
+    }
+
+    const variantId = await getVariantId(thisSlug);
+    const api = import.meta.env.VITE_API_BASE;
+    const votingApi = `${api}/variants/${variantId}/vote`;
+
+    const method = type === null ? "DELETE" : "PUT";
+    const direction = type === null ? undefined : type;
+
+    const response = await fetch(votingApi, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        direction,
+        reason,
+        note,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Vote request failed:", response.status);
+      setVote(prev); // revert on submission failure
+    }
   };
 
   return {
     vote,
-    upvote: () => toggleVote("up"),
+    upvote: async () => {
+      const next = toggleVote("up");
+      await submitVote(next);
+    },
     downvote: () => toggleVote("down"),
+    submitDownvote: async (reason: string, note: string) => {
+      await submitVote("down", reason, note);
+    },
+    nullVote: async () => {
+      setVote(null);
+      await submitVote(null);
+    },
+    setVote,
   };
+}
+
+function DownvoteDialog({ isOpen, setIsOpen, setVote }) {
+  const reasons: Array<ComboboxItem> = [
+    {
+      value: "unclear",
+      label: "Unclear",
+      description: "Explanation is confusing or hard to follow",
+    },
+    {
+      value: "factually_wrong",
+      label: "Factually Wrong",
+      description: "Information contradicts verified information",
+    },
+    {
+      value: "missing_step",
+      label: "Missing Step",
+      description: "A necessary action or concept is skipped",
+    },
+    {
+      value: "outdated",
+      label: "Outdated",
+      description: "Information is no longer accurate or current",
+    },
+    {
+      value: "broken_link",
+      label: "Broken Link",
+      description: "Referenced links are inaccessible",
+    },
+    {
+      value: "prereq_gap",
+      label: "Prerequisite Gap",
+      description: "Assumes knowledge not covered in listed prerequisites",
+    },
+    {
+      value: "wrong_level",
+      label: "Wrong Level",
+      description: "Difficulty does not match the stated proficiency level",
+    },
+    {
+      value: "scope_creep",
+      label: "Scope Creep",
+      description: "Includes unnecessary details beyond the main topic",
+    },
+  ];
+
+  const [selectedReason, setSelectedReason] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+
+  const { slug } = Route.useParams();
+  const { vote, submitDownvote } = useVote(slug);
+
+  const handleVoteSubmit = async (reason: string, note: string) => {
+    await submitDownvote(reason, note);
+  };
+
+  const handleDialogClose = () => {
+    setIsOpen(false);
+
+    // Do not erase downvote if user has already downvoted
+    setVote(null);
+  };
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleDialogClose();
+        } else setIsOpen(open);
+      }}
+    >
+      <DialogContent>
+        <DialogTitle>Downvote</DialogTitle>
+        <DialogDescription className="sr-only">
+          Dialog to submit reasoning for downvote
+        </DialogDescription>
+
+        <DialogHeader>Reason</DialogHeader>
+        <Combobox
+          items={reasons}
+          value={selectedReason}
+          onValueChange={(selectedReason) => setSelectedReason(selectedReason)}
+        />
+
+        <DialogHeader>Note</DialogHeader>
+        <Textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="State your reason here."
+        />
+
+        <Button
+          variant="default"
+          size="lg"
+          onClick={async () => {
+            await handleVoteSubmit(selectedReason, note);
+            setIsOpen(false);
+          }}
+        >
+          Submit
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export const Route = createFileRoute("/guides/$slug/")({
@@ -104,8 +279,9 @@ function RouteComponent() {
   const { slug } = Route.useParams();
   const guide = Route.useLoaderData();
 
+  const { vote, setVote, upvote, downvote } = useVote(slug);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const { vote, upvote, downvote } = useVote();
+
 
   const breadcrumbOrigin = useLocation({
     select: (location) => location.state.breadcrumbOrigin,
@@ -126,6 +302,9 @@ function RouteComponent() {
   ];
 
   const breadcrumbs = buildBreadcrumbs(guide.title, breadcrumbOrigin);
+
+  // Downvote dialog
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   return (
     <div className="mx-auto h-[calc(100vh-70px)] max-w-7xl border-x bg-background">
@@ -210,13 +389,25 @@ function RouteComponent() {
                 />
               </Button>
 
-              <Button variant="outline" size="lg" onClick={() => downvote()}>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  downvote();
+                  setIsOpen(true);
+                }}
+              >
                 <ArrowBigDown
                   className="h-4 w-4"
                   color={vote == "down" ? "#3D80DD" : "#000000"}
                   fill={vote == "down" ? "#3D80DD" : "#FFFFFF"}
                 />
               </Button>
+              <DownvoteDialog
+                isOpen={isOpen}
+                setIsOpen={setIsOpen}
+                setVote={setVote}
+              />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

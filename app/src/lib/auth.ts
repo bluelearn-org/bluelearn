@@ -74,3 +74,8 @@ export function onAuthStateChange(
 ) {
   return supabase.auth.onAuthStateChange(callback);
 }
+
+export async function getAuthToken(): Promise<string | undefined> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token;
+}

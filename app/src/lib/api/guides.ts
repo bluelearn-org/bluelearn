@@ -47,6 +47,23 @@ export async function getGuide(
   return res.json();
 }
 
+export async function getVariantId(slug: string) {
+  // Return the id for the variant, given a slug
+
+  const guide = await getGuide(slug);
+  const mainSlug = guide.slug;
+  const variantSlug = guide.variant_slug;
+
+  // Get variant id through its slug
+  const api = import.meta.env.VITE_API_BASE;
+
+  const variantsRes = await fetch(`${api}/guides/${mainSlug}/${variantSlug}`);
+  const variants = await variantsRes.json();
+  const variant = variants.variant;
+
+  return variant.id;
+}
+
 export async function getGuideWalkthrough(
   slug: string,
   { signal }: FetchOptions = {}
