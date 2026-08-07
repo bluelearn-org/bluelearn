@@ -9,7 +9,7 @@ import { FieldLabel } from "@/components/ui/field";
 import { client } from "@/lib/api/apiClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { getInitials } from "@/lib/profile";
+import { getAvatarUrl, getInitials } from "@/lib/profile";
 import {
   MAX_BIO_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
@@ -101,9 +101,12 @@ function RouteComponent() {
             </FieldLabel>
           </div>
 
-          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-            <Avatar className="size-24 shrink-0 bg-secondary">
-              <AvatarImage />
+          <div className="flex items-center gap-5">
+            <Avatar className="size-24 bg-secondary">
+              <AvatarImage
+                src={getAvatarUrl(initialProfile.id)}
+                alt={profile.displayName || profile.username}
+              />
               <AvatarFallback className="bg-secondary text-2xl font-bold">
                 {getInitials(profile.displayName || profile.username)}
               </AvatarFallback>

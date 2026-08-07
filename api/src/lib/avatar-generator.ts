@@ -1,4 +1,3 @@
-import wasmModule from "@resvg/resvg-wasm/index_bg.wasm";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 
 // Turns an id into a little SVG constellation avatar.
@@ -153,9 +152,18 @@ export const generateAvatarSVG = (seed: string): string => {
 
 let wasmPromise: Promise<void> | null = null;
 
-const initWasmOnce = async () => {
+export const initAvatarWasm = async (
+  moduleOrBuffer?: Parameters<typeof initWasm>[0]
+): Promise<void> => {
   if (!wasmPromise) {
-    wasmPromise = initWasm(wasmModule).catch((err) => {
+    wasmPromise = (async () => {
+      if (moduleOrBuffer) {
+        await initWasm(moduleOrBuffer);
+      } else {
+        const mod = await import("@resvg/resvg-wasm/index_bg.wasm");
+        await initWasm(mod.default ?? mod);
+      }
+    })().catch((err) => {
       wasmPromise = null;
       throw err;
     });
@@ -164,7 +172,7 @@ const initWasmOnce = async () => {
 };
 
 export const generateAvatarPNG = async (seed: string): Promise<Uint8Array> => {
-  await initWasmOnce();
+  await initAvatarWasm();
 
   const svg = generateAvatarSVG(seed);
   const resvg = new Resvg(svg, {

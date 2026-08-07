@@ -142,3 +142,10 @@ export const getInitials = (value: string | null | undefined) => {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
+
+// Generates backend avatar URL for a given user id or seed
+export const getAvatarUrl = (idOrSeed: string | null | undefined): string => {
+  if (!idOrSeed) return "";
+  const base = import.meta.env.VITE_API_BASE ?? "";
+  return `${base}/avatar/${encodeURIComponent(idOrSeed)}`;
+};
