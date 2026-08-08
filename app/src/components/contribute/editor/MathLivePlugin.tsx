@@ -30,7 +30,9 @@ import { cn } from "@/lib/utils";
 
 if (typeof window !== "undefined") {
   // @ts-ignore: MathfieldElement is added to window by mathlive, but not typed natively
-  window.MathfieldElement.fontsDirectory = "/mathlive/fonts";
+  if ((window as any).MathfieldElement) {
+    (window as any).MathfieldElement.fontsDirectory = "/mathlive/fonts";
+  }
 }
 
 const {
@@ -84,11 +86,7 @@ export const OPEN_MATH_EDITOR_COMMAND = createCommand<MathEditorPayload | null>(
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(max-width: 768px), (pointer: coarse)").matches ||
-    navigator.maxTouchPoints > 0 ||
-    window.innerWidth < 768
-  );
+  return window.innerWidth < 768;
 }
 
 export function SingletonMathEditor() {
@@ -203,8 +201,12 @@ export function SingletonMathEditor() {
     const frame = requestAnimationFrame(() => {
       mfRef.current?.focus();
       const mvk = (window as any).mathVirtualKeyboard;
-      if (isMobile && mvk && typeof mvk.show === "function") {
-        mvk.show();
+      if (mvk) {
+        if (isMobile && typeof mvk.show === "function") {
+          mvk.show();
+        } else if (!isMobile && typeof mvk.hide === "function") {
+          mvk.hide();
+        }
       }
     });
     return () => cancelAnimationFrame(frame);
