@@ -30,7 +30,7 @@ const SOCIALS: Array<{ name: string; href: string; Icon: IconType }> = [
     href: "https://www.youtube.com/@blue-learn",
     Icon: FaYoutube,
   },
-  { name: "Discord", href: "https://discord.gg/bluesystem", Icon: FaDiscord },
+  { name: "Discord", href: "https://discord.gg/sZYWpepppF", Icon: FaDiscord },
   { name: "X", href: "https://twitter.com/bluelearnorg", Icon: FaXTwitter },
   {
     name: "Instagram",
