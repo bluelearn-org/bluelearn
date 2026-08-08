@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  BlockTypeSelect,
   BoldItalicUnderlineToggles,
   CodeToggle,
   CreateLink,
@@ -10,9 +9,15 @@ import {
   ListsToggle,
   StrikeThroughSupSubToggles,
   UndoRedo,
+  activePlugins$,
+  allowedHeadingLevels$,
+  convertSelectionToNode$,
+  currentBlockType$,
   insertDirective$,
-  usePublisher,
 } from "@mdxeditor/editor";
+import { useCellValue, usePublisher } from "@mdxeditor/gurx";
+import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
+import { $createParagraphNode } from "lexical";
 import {
   AlertCircle,
   AlertTriangle,
@@ -28,7 +33,9 @@ import {
   Minimize,
   Minus,
   Plus,
+  Quote,
   Table,
+  Type,
   Upload,
 } from "lucide-react";
 import { InsertBlockMath, InsertInlineMath } from "./MathLivePlugin";
@@ -37,12 +44,124 @@ import H1RestrictionListener from "./H1RestrictionListener.tsx";
 import CodeBlockShortcutListener from "./CodeBlockShortcutListener";
 import CalloutShortcutListener from "./CalloutShortcutListener";
 import TabShortcutListener from "./TabShortcutListener";
+import type { HeadingTagType } from "@lexical/rich-text";
 import type { MDXEditorMethods } from "@mdxeditor/editor";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
+function CustomBlockTypeSelect() {
+  const [open, setOpen] = useState(false);
+  const convertSelectionToNode = usePublisher(convertSelectionToNode$);
+  const currentBlockType = useCellValue(currentBlockType$);
+  const activePlugins = useCellValue(activePlugins$);
+  const allowedHeadingLevels = useCellValue(allowedHeadingLevels$);
+
+  const hasQuote = activePlugins.includes("quote");
+  const hasHeadings = activePlugins.includes("headings");
+
+  const getLabel = (type: string) => {
+    switch (type) {
+      case "h1":
+        return "Heading 1";
+      case "h2":
+        return "Heading 2";
+      case "h3":
+        return "Heading 3";
+      case "h4":
+        return "Heading 4";
+      case "h5":
+        return "Heading 5";
+      case "h6":
+        return "Heading 6";
+      case "quote":
+        return "Quote";
+      case "paragraph":
+      default:
+        return "Paragraph";
+    }
+  };
+
+  const handleSelect = (type: string) => {
+    setOpen(false);
+    switch (type) {
+      case "quote":
+        convertSelectionToNode(() => $createQuoteNode());
+        break;
+      case "paragraph":
+        convertSelectionToNode(() => $createParagraphNode());
+        break;
+      default:
+        if (type.startsWith("h")) {
+          convertSelectionToNode(() =>
+            $createHeadingNode(type as HeadingTagType)
+          );
+        }
+        break;
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="toolbar-dropdown-trigger min-w-[110px] justify-between"
+          title="Select Block Type"
+        >
+          <span className="truncate text-xs font-medium">
+            {getLabel(currentBlockType)}
+          </span>
+          <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-60" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="toolbar-popover-content w-40"
+        align="start"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="toolbar-popover-header">Block Type</div>
+        <button
+          type="button"
+          className={`toolbar-popover-item ${currentBlockType === "paragraph" || !currentBlockType ? "bg-accent font-semibold text-accent-foreground" : ""}`}
+          onClick={() => handleSelect("paragraph")}
+        >
+          <Type className="h-3.5 w-3.5 opacity-70" />
+          <span>Paragraph</span>
+        </button>
+        {hasHeadings &&
+          allowedHeadingLevels.map((lvl) => {
+            const hTag = `h${lvl}`;
+            return (
+              <button
+                key={hTag}
+                type="button"
+                className={`toolbar-popover-item ${currentBlockType === hTag ? "bg-accent font-semibold text-accent-foreground" : ""}`}
+                onClick={() => handleSelect(hTag)}
+              >
+                <span className="w-3.5 text-center font-mono text-xs font-bold">
+                  H{lvl}
+                </span>
+                <span>Heading {lvl}</span>
+              </button>
+            );
+          })}
+        {hasQuote && (
+          <button
+            type="button"
+            className={`toolbar-popover-item ${currentBlockType === "quote" ? "bg-accent font-semibold text-accent-foreground" : ""}`}
+            onClick={() => handleSelect("quote")}
+          >
+            <Quote className="h-3.5 w-3.5 opacity-70" />
+            <span>Quote</span>
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface EditorToolbarProps {
   editorRef: React.RefObject<MDXEditorMethods | null>;
@@ -145,7 +264,7 @@ export default function EditorToolbar({
       <StrikeThroughSupSubToggles options={["Strikethrough"]} />
       <CodeToggle />
       <div className="mdx-toolbar-divider"></div>
-      <BlockTypeSelect />
+      <CustomBlockTypeSelect />
       <div className="mdx-toolbar-divider"></div>
       <ListsToggle />
 

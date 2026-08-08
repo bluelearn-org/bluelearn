@@ -220,18 +220,26 @@
   background-color: var(--toolbar-hover-bg) !important;
 }
 
+[data-radix-popper-content-wrapper],
+[data-radix-portal] {
+  z-index: 99999 !important;
+}
+
 [class*="_toolbarNodeKindSelectContainer"],
 [class*="_toolbarButtonDropdownContainer"],
 [class*="_toolbarCodeBlockLanguageSelectContent"],
-[class*="_selectContainer"] {
+[class*="_selectContainer"],
+.mdxeditor-select-content {
   background-color: var(--card) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
   box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.08),
-    0 4px 6px -4px rgba(0, 0, 0, 0.08) !important;
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
   filter: none !important;
   padding: 0.25rem !important;
+  z-index: 99999 !important;
+  min-width: 140px !important;
 }
 
 [class*="_selectItem"],
@@ -254,6 +262,9 @@
 }
 
 /* == DIALOGS & POPUPS == */
+[class*="_dialogOverlay"] {
+  z-index: 99998 !important;
+}
 
 [class*="_dialogContent"],
 [class*="_largeDialogContent"] {
@@ -261,10 +272,11 @@
   background-color: var(--card) !important;
   border-radius: var(--radius) !important;
   box-shadow:
-    0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+    0 10px 25px -5px rgb(0 0 0 / 0.15),
+    0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
   padding: 1.25rem !important;
   font-family: var(--font-sans) !important;
+  z-index: 99999 !important;
 }
 
 [class*="_dialogForm"] {
@@ -533,14 +545,15 @@ math-field {
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
   box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.08),
-    0 4px 6px -4px rgba(0, 0, 0, 0.08) !important;
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
   padding: 0.25rem !important;
   width: 11.5rem !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 0.125rem !important;
   outline: none !important;
+  z-index: 99999 !important;
 }
 
 .toolbar-popover-item {
