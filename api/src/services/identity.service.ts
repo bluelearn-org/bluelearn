@@ -184,7 +184,6 @@ export async function deleteMyAccount(service: DB, userId: string) {
 const PUBLIC_ACTIVITY_STATUSES = new Set<ProfileActivityRow["status"]>([
   "published",
   "approved",
-  "rejected",
 ]);
 
 export async function getProfilePage(
