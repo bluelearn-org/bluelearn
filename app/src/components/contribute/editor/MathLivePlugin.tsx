@@ -82,9 +82,19 @@ export const OPEN_MATH_EDITOR_COMMAND = createCommand<MathEditorPayload | null>(
   "OPEN_MATH_EDITOR_COMMAND"
 );
 
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(max-width: 768px), (pointer: coarse)").matches ||
+    navigator.maxTouchPoints > 0 ||
+    window.innerWidth < 768
+  );
+}
+
 export function SingletonMathEditor() {
   const [editor] = useLexicalComposerContext();
   const [payload, setPayload] = useState<MathEditorPayload | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [position, setPosition] = useState({
     top: -9999,
     left: -9999,
@@ -96,6 +106,13 @@ export function SingletonMathEditor() {
   const commitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const payloadRef = useRef<MathEditorPayload | null>(null);
   payloadRef.current = payload;
+
+  useEffect(() => {
+    const check = () => setIsMobile(isMobileDevice());
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const cancelPending = useCallback(() => {
     if (commitTimeoutRef.current) {
@@ -123,6 +140,10 @@ export function SingletonMathEditor() {
     if (current && pendingLatexRef.current !== null) {
       current.onChange(pendingLatexRef.current);
     }
+    const mvk = (window as any).mathVirtualKeyboard;
+    if (mvk && typeof mvk.hide === "function") {
+      mvk.hide();
+    }
     cancelPending();
     setPayload(null);
   }, [cancelPending]);
@@ -131,26 +152,42 @@ export function SingletonMathEditor() {
     const current = payloadRef.current;
     if (!current?.anchorElement) return;
     const rect = current.anchorElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const popoverWidth = Math.min(
+      current.inline ? 352 : 480,
+      viewportWidth - 32
+    );
+
+    let left = rect.left + window.scrollX - (current.inline ? 0 : 64);
+    if (left + popoverWidth > window.scrollX + viewportWidth - 16) {
+      left = window.scrollX + viewportWidth - popoverWidth - 16;
+    }
+    left = Math.max(window.scrollX + 16, left);
+
+    let top = rect.bottom + window.scrollY + 8;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow < 200 && rect.top > 160) {
+      top = rect.top + window.scrollY - 130;
+    }
+
     setPosition({
-      top: rect.bottom + window.scrollY + 8,
-      left: Math.max(
-        16,
-        rect.left + window.scrollX - (current.inline ? 0 : 64)
-      ), // Adjust for center alignment
+      top,
+      left,
       width: rect.width,
     });
   }, []);
 
-  // Handle command
+  // Listen for open commands
   useEffect(() => {
     return editor.registerCommand(
       OPEN_MATH_EDITOR_COMMAND,
       (newPayload) => {
-        if (newPayload) {
-          setPayload(newPayload);
-        } else {
+        if (!newPayload) {
           closeEditor();
+          return true;
         }
+        pendingLatexRef.current = null;
+        setPayload(newPayload);
         return true;
       },
       COMMAND_PRIORITY_NORMAL
@@ -162,9 +199,16 @@ export function SingletonMathEditor() {
     const mf = mfRef.current;
     if (!mf) return;
     mf.value = payload.latex;
-    const frame = requestAnimationFrame(() => mfRef.current?.focus());
+    mf.mathVirtualKeyboardPolicy = isMobile ? "auto" : "manual";
+    const frame = requestAnimationFrame(() => {
+      mfRef.current?.focus();
+      const mvk = (window as any).mathVirtualKeyboard;
+      if (isMobile && mvk && typeof mvk.show === "function") {
+        mvk.show();
+      }
+    });
     return () => cancelAnimationFrame(frame);
-  }, [payload]);
+  }, [payload, isMobile]);
 
   useEffect(() => {
     return () => {
@@ -173,6 +217,10 @@ export function SingletonMathEditor() {
         current.onChange(pendingLatexRef.current);
       }
       if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
+      const mvk = (window as any).mathVirtualKeyboard;
+      if (mvk && typeof mvk.hide === "function") {
+        mvk.hide();
+      }
     };
   }, []);
 
@@ -231,17 +279,30 @@ export function SingletonMathEditor() {
   useEffect(() => {
     if (!payload) return;
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
 
-      // Ignore clicks on math-field internals, menus, or scrims
-      if (
-        target.tagName === "MATH-FIELD" ||
-        target.closest("math-field") ||
-        target.closest("menu") ||
-        target.getAttribute("role") === "presentation" ||
-        payload.anchorElement.contains(target)
-      ) {
+      // Handle composed path for shadow DOM and virtual keyboard clicks
+      const rawPath = "composedPath" in e ? e.composedPath() : [target];
+      const isInternalOrKeyboard = rawPath.some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const tag = node.tagName.toLowerCase();
+        const className =
+          typeof node.className === "string" ? node.className : "";
+        return (
+          tag === "math-field" ||
+          tag === "math-virtual-keyboard" ||
+          tag === "menu" ||
+          className.includes("ML__") ||
+          className.includes("MLK") ||
+          className.includes("virtual-keyboard") ||
+          node.hasAttribute("data-ml-virtual-keyboard") ||
+          node.getAttribute("role") === "presentation" ||
+          payload.anchorElement.contains(node)
+        );
+      });
+
+      if (isInternalOrKeyboard) {
         return;
       }
 
@@ -282,9 +343,9 @@ export function SingletonMathEditor() {
       <div className="flex w-full items-center rounded-md border border-input bg-background px-2 py-2 text-sm shadow-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
         <math-field
           ref={mfRef}
-          math-virtual-keyboard-policy="manual"
-          className="w-full text-lg outline-none"
-          style={{ backgroundColor: "transparent" }}
+          math-virtual-keyboard-policy={isMobile ? "auto" : "manual"}
+          className="w-full text-lg text-foreground outline-none"
+          style={{ backgroundColor: "transparent", color: "var(--foreground)" }}
           onKeyDown={(e: any) => {
             if (e.key === "Enter" || e.key === "Escape") {
               e.preventDefault();

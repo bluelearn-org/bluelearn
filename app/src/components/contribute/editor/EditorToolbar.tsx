@@ -32,6 +32,7 @@ import {
   Maximize,
   Minimize,
   Minus,
+  MoreHorizontal,
   Plus,
   Quote,
   Table,
@@ -44,6 +45,7 @@ import H1RestrictionListener from "./H1RestrictionListener.tsx";
 import CodeBlockShortcutListener from "./CodeBlockShortcutListener";
 import CalloutShortcutListener from "./CalloutShortcutListener";
 import TabShortcutListener from "./TabShortcutListener";
+import IndentButtons from "./IndentButtons";
 import type { HeadingTagType } from "@lexical/rich-text";
 import type { MDXEditorMethods } from "@mdxeditor/editor";
 import {
@@ -108,7 +110,7 @@ function CustomBlockTypeSelect() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="toolbar-dropdown-trigger min-w-[110px] justify-between"
+          className="toolbar-dropdown-trigger min-w-[100px] shrink-0 justify-between"
           title="Select Block Type"
         >
           <span className="truncate text-xs font-medium">
@@ -267,6 +269,7 @@ export default function EditorToolbar({
       <CustomBlockTypeSelect />
       <div className="mdx-toolbar-divider"></div>
       <ListsToggle />
+      <IndentButtons />
 
       <div className="mdx-toolbar-divider"></div>
 
@@ -275,7 +278,7 @@ export default function EditorToolbar({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="toolbar-dropdown-trigger"
+            className="toolbar-dropdown-trigger shrink-0"
             title="Insert LaTeX Math Equation"
           >
             <span className="font-serif font-bold italic">f(x)</span>
@@ -323,7 +326,7 @@ export default function EditorToolbar({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="toolbar-dropdown-trigger"
+            className="toolbar-dropdown-trigger shrink-0"
             title="Insert Element"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -441,8 +444,8 @@ export default function EditorToolbar({
 
       <div className="mdx-toolbar-divider"></div>
 
-      {/* Actions & Sharing Button Group */}
-      <div className="ml-auto flex items-center gap-1 p-0.5">
+      {/* Desktop Actions & Sharing Button Group */}
+      <div className="ml-auto hidden shrink-0 items-center gap-1 p-0.5 sm:flex">
         <button
           type="button"
           onClick={handleCopy}
@@ -476,6 +479,70 @@ export default function EditorToolbar({
         >
           {isFullScreen ? <Minimize /> : <Maximize />}
         </button>
+      </div>
+
+      {/* Mobile More Actions Menu */}
+      <div className="ml-auto flex shrink-0 items-center sm:hidden">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="toolbar-dropdown-trigger shrink-0"
+              title="More Actions"
+              aria-label="More Actions"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="toolbar-popover-content w-48"
+            align="end"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <div className="toolbar-popover-header">Actions</div>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span>{copied ? "Copied!" : "Copy Markdown"}</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={handleDownload}
+            >
+              <Download className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Download .md</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={handleImportClick}
+            >
+              <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Import .md</span>
+            </button>
+            <div className="my-1 h-px bg-border" />
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={toggleFullScreen}
+            >
+              {isFullScreen ? (
+                <Minimize className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <Maximize className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span>{isFullScreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Hidden native MDXEditor buttons so they still receive their reactive contexts */}

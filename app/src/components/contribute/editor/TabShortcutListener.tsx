@@ -23,13 +23,54 @@ export default function TabShortcutListener() {
 
           const anchorNode = selection.anchor.getNode();
 
-          // Let Lexical handle Tab if we are in a list item (indenting lists)
+          // Let Lexical handle Tab / Shift+Tab if we are in a list item (indenting/outdenting lists)
           const isInsideList =
             anchorNode.getType() === "listitem" ||
             anchorNode.getType() === "list" ||
             anchorNode.getParents().some((n) => n.getType() === "listitem");
 
           if (isInsideList) {
+            return;
+          }
+
+          if (event.shiftKey) {
+            // Shift+Tab: Outdent non-list text
+            if ($isTextNode(anchorNode)) {
+              const text = anchorNode.getTextContent();
+              const offset = selection.anchor.offset;
+              const beforeCursor = text.slice(0, offset);
+              const spaceMatch = beforeCursor.match(/ {1,4}$/);
+              if (spaceMatch) {
+                const count = spaceMatch[0].length;
+                const newText =
+                  text.slice(0, offset - count) + text.slice(offset);
+                anchorNode.setTextContent(newText);
+                selection.setTextNodeRange(
+                  anchorNode,
+                  offset - count,
+                  anchorNode,
+                  offset - count
+                );
+                event.preventDefault();
+                handled = true;
+                return;
+              }
+              const leadingMatch = text.match(/^ {1,4}/);
+              if (leadingMatch) {
+                const count = leadingMatch[0].length;
+                const newText = text.slice(count);
+                anchorNode.setTextContent(newText);
+                const newOffset = Math.max(0, offset - count);
+                selection.setTextNodeRange(
+                  anchorNode,
+                  newOffset,
+                  anchorNode,
+                  newOffset
+                );
+                event.preventDefault();
+                handled = true;
+              }
+            }
             return;
           }
 
