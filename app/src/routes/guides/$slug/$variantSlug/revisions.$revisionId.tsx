@@ -150,7 +150,7 @@ function RouteComponent() {
   }, [slug, variantSlug, detail, entry, variant, publishedAt]);
 
   return (
-    <div className="mx-auto min-h-[calc(100vh-70px)] max-w-7xl bg-background">
+    <div className="mx-auto max-w-7xl bg-background">
       <main className="min-w-0 px-4 py-8 md:px-10 lg:px-16">
         <Link
           to="/guides/$slug/$variantSlug"

@@ -85,7 +85,7 @@ function RouteComponent() {
   const breadcrumbs = buildBreadcrumbs(guide.title, breadcrumbOrigin);
 
   return (
-    <div className="mx-auto max-w-7xl bg-background md:h-[calc(100vh-70px)]">
+    <div className="mx-auto max-w-7xl bg-background">
       <section className="flex flex-col border-b md:grid md:grid-cols-[320px_1fr]">
         <GuideSidebar
           sidebarActions={
@@ -100,7 +100,7 @@ function RouteComponent() {
         />
 
         {/* MAIN */}
-        <main className="min-w-0 px-4 py-4 md:h-[calc(100vh-70px)] md:overflow-y-auto md:px-10 lg:px-16">
+        <main className="min-w-0 px-4 py-4 md:px-10 lg:px-16">
           {/* Breadcrumbs */}
           <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <ul className="flex min-w-0 flex-nowrap items-center gap-2 text-xs tracking-[0.08em] text-muted-foreground uppercase">
