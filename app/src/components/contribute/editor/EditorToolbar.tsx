@@ -72,7 +72,21 @@ export default function EditorToolbar({
   };
 
   useEffect(() => {
-    return () => document.body.classList.remove("editor-fullscreen");
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "Escape" &&
+        document.body.classList.contains("editor-fullscreen")
+      ) {
+        document.body.classList.remove("editor-fullscreen");
+        setIsFullScreen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.classList.remove("editor-fullscreen");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const handleDownload = () => {
@@ -309,7 +323,7 @@ export default function EditorToolbar({
       <div className="mdx-toolbar-divider"></div>
 
       {/* Actions & Sharing Button Group */}
-      <div className="ml-1 flex items-center gap-1 p-0.5">
+      <div className="ml-auto flex items-center gap-1 p-0.5">
         <button
           type="button"
           onClick={handleCopy}
