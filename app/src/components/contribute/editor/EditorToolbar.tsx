@@ -297,7 +297,9 @@ export default function EditorToolbar({
             className="toolbar-popover-item"
             onClick={() => {
               editorRef.current?.focus();
-              inlineMathRef.current?.querySelector("button")?.click();
+              setTimeout(() => {
+                inlineMathRef.current?.querySelector("button")?.click();
+              }, 10);
             }}
           >
             <span className="w-4 text-center font-serif font-bold text-muted-foreground">
@@ -310,7 +312,9 @@ export default function EditorToolbar({
             className="toolbar-popover-item"
             onClick={() => {
               editorRef.current?.focus();
-              blockMathRef.current?.querySelector("button")?.click();
+              setTimeout(() => {
+                blockMathRef.current?.querySelector("button")?.click();
+              }, 10);
             }}
           >
             <span className="w-4 text-center font-serif font-bold text-muted-foreground italic">
@@ -343,7 +347,12 @@ export default function EditorToolbar({
           <button
             type="button"
             className="toolbar-popover-item"
-            onClick={() => tableRef.current?.querySelector("button")?.click()}
+            onClick={() => {
+              editorRef.current?.focus();
+              setTimeout(() => {
+                tableRef.current?.querySelector("button")?.click();
+              }, 10);
+            }}
           >
             <Table className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Table</span>
@@ -351,9 +360,12 @@ export default function EditorToolbar({
           <button
             type="button"
             className="toolbar-popover-item"
-            onClick={() =>
-              codeBlockRef.current?.querySelector("button")?.click()
-            }
+            onClick={() => {
+              editorRef.current?.focus();
+              setTimeout(() => {
+                codeBlockRef.current?.querySelector("button")?.click();
+              }, 10);
+            }}
           >
             <Code className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Code Block</span>
@@ -361,7 +373,12 @@ export default function EditorToolbar({
           <button
             type="button"
             className="toolbar-popover-item"
-            onClick={() => linkRef.current?.querySelector("button")?.click()}
+            onClick={() => {
+              editorRef.current?.focus();
+              setTimeout(() => {
+                linkRef.current?.querySelector("button")?.click();
+              }, 10);
+            }}
           >
             <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Link</span>
@@ -370,9 +387,12 @@ export default function EditorToolbar({
           <button
             type="button"
             className="toolbar-popover-item"
-            onClick={() =>
-              thematicBreakRef.current?.querySelector("button")?.click()
-            }
+            onClick={() => {
+              editorRef.current?.focus();
+              setTimeout(() => {
+                thematicBreakRef.current?.querySelector("button")?.click();
+              }, 10);
+            }}
           >
             <Minus className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Horizontal Line</span>

@@ -38,6 +38,9 @@ export default function Editor({
   onUploadImage,
 }: EditorProps) {
   const [initialMarkdown] = useState<string>(() => value ?? "");
+  const [overlayContainer, setOverlayContainer] = useState<HTMLElement | null>(
+    null
+  );
 
   const editorRef = useRef<MDXEditorMethods>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -175,16 +178,20 @@ export default function Editor({
       className="editor-only-container transition-all"
     >
       <div className="editor-only-paper flex flex-col">
-        <MDXEditor
-          ref={editorRef}
-          markdown={initialMarkdown}
-          onChange={handleMarkdownChange}
-          onBlur={handleBlur}
-          contentEditableClassName="mdxeditor-content"
-          placeholder="What will you teach the world today? Start typing here..."
-          plugins={plugins}
-        />
+        {overlayContainer && (
+          <MDXEditor
+            ref={editorRef}
+            markdown={initialMarkdown}
+            onChange={handleMarkdownChange}
+            onBlur={handleBlur}
+            contentEditableClassName="mdxeditor-content"
+            placeholder="What will you teach the world today? Start typing here..."
+            plugins={plugins}
+            overlayContainer={overlayContainer}
+          />
+        )}
       </div>
+      <div id="editor-portal-root" ref={setOverlayContainer} />
     </div>
   );
 }
