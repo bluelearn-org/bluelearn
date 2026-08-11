@@ -110,15 +110,15 @@
   margin: 1rem auto 0 auto !important;
   padding: 0 !important;
   border-radius: 9999px !important; /* Pill shape */
-  background-color: hsl(var(--card) / 0.75) !important;
+  background-color: var(--card) !important;
   border: 1px solid hsl(var(--border) / 0.6) !important;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 hsl(var(--background) / 0.5) !important;
   position: sticky !important;
-  top: 1rem !important;
-  z-index: 50 !important;
+  top: 65px !important;
+  z-index: 40 !important;
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease !important;
@@ -646,6 +646,10 @@ body.editor-fullscreen #bluelearn-editor-container {
   padding: 0 !important;
   margin: 0 !important;
   border: none !important;
+}
+
+body.editor-fullscreen [class*="_toolbarRoot"] {
+  top: 1rem !important;
 }
 
 body.editor-fullscreen .editor-only-paper {
