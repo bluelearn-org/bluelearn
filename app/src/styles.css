@@ -144,6 +144,18 @@
     @apply mt-4 mb-2 text-lg font-medium;
   }
 
+  .markdown h4 {
+    @apply mt-4 mb-2 text-base font-medium;
+  }
+
+  .markdown h5 {
+    @apply mt-4 mb-2 text-sm font-medium;
+  }
+
+  .markdown h6 {
+    @apply mt-4 mb-2 text-sm font-medium text-muted-foreground;
+  }
+
   .markdown p {
     @apply mb-4 text-sm leading-relaxed break-words whitespace-pre-wrap text-muted-foreground;
   }
