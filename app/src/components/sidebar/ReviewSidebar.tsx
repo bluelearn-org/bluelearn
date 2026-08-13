@@ -61,7 +61,6 @@ export const ReviewSidebar = ({
 
   const isEdit = revisionData.case.case_type === "guide_edit";
 
-  // Reviewers can revote while the case is open, so start from their last vote.
   const priorDecision = revisionData.viewer_decision;
   const hasVoted = priorDecision !== null;
 
@@ -163,7 +162,6 @@ export const ReviewSidebar = ({
       const draft = await getRevision(draftId);
       toast.dismiss(toastId);
 
-      // Only a published guide has a variant slug, and only it has an editor route.
       if (draft.base_slug && draft.variant_slug) {
         navigate({
           to: "/guides/$slug/$variantSlug/edit",
@@ -307,7 +305,10 @@ export const ReviewSidebar = ({
                       variant="outline"
                       className={cn(
                         "h-9 border-red-500/40 font-mono text-xs font-bold text-red-600 uppercase transition-colors hover:bg-red-500/10 hover:text-red-600 dark:text-red-400 dark:hover:text-red-400",
-                        review.decision == "reject" && "bg-red-500/10"
+                        review.decision === "reject" &&
+                          "border-red-600 bg-red-600 text-white hover:bg-red-600 hover:text-white dark:border-red-600 dark:bg-red-600 dark:text-white dark:hover:text-white",
+                        review.decision === "approve" &&
+                          "opacity-40 hover:opacity-100"
                       )}
                       onClick={() => {
                         if (review.decision == "reject") {
@@ -330,7 +331,10 @@ export const ReviewSidebar = ({
                       variant="outline"
                       className={cn(
                         "h-9 border-green-600/40 font-mono text-xs font-bold text-green-700 uppercase transition-colors hover:bg-green-600/10 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400",
-                        review.decision == "approve" && "bg-green-600/10"
+                        review.decision === "approve" &&
+                          "border-green-600 bg-green-600 text-white hover:bg-green-600 hover:text-white dark:border-green-600 dark:bg-green-600 dark:text-white dark:hover:text-white",
+                        review.decision === "reject" &&
+                          "opacity-40 hover:opacity-100"
                       )}
                       onClick={() => {
                         if (review.decision == "approve") {
