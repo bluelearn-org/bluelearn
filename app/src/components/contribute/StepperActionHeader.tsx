@@ -129,6 +129,7 @@ export const StepperActionHeader = ({
             )}
           </div>
 
+<<<<<<< HEAD
           {/* Secondary actions: the only group allowed to give up space.
               min-w-0 lets it shrink below its content size (flex items
               default to min-width:auto, which is what let this overflow
@@ -149,12 +150,27 @@ export const StepperActionHeader = ({
                 <span className="hidden min-[400px]:inline">
                   View Guidelines
                 </span>
+=======
+          <div className="flex items-center justify-between gap-4 justify-self-center">
+            {type != "objective" && !hideGuidelines && (
+              <button
+                type="button"
+                className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
+                onClick={toggleGuidelineModal}
+              >
+                <Scroll className="size-4" />
+                View Guidelines
+>>>>>>> c161be2 (fix: add view guidelines button to mobile view)
               </button>
             )}
             {onSaveDraft && (
               <button
                 type="button"
+<<<<<<< HEAD
                 className="btn-sec inline-flex shrink-0 items-center gap-1.5 px-2.5 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
+=======
+                className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
+>>>>>>> c161be2 (fix: add view guidelines button to mobile view)
                 disabled={submitting || saveDisabled}
                 onClick={saveDraft}
               >
