@@ -7,9 +7,10 @@ import remarkMath from "remark-math";
 import remarkDirective from "remark-directive";
 
 import { Calendar, Clock, User } from "lucide-react";
+import { createElement } from "react";
+import type { ReactElement } from "react";
 import type { Guide } from "@bluelearn/schemas";
 import type { GuideType } from "@/types/guides";
-import type { ReactElement } from "react";
 import { remarkCallout } from "@/lib/remarkCallout";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components//ui/badge";
@@ -17,7 +18,7 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { Callout } from "@/components/Callout";
 import { GuideToc } from "@/components/GuideToc";
 
-import { formatDate, formatDuration } from "@/lib/guideUtils";
+import { formatDate, formatDuration, getHeadingId } from "@/lib/guideUtils";
 
 const sanitizeSchema = {
   ...defaultSchema,
@@ -52,6 +53,27 @@ export const GuideReader = ({
   const createdLabel = Number.isNaN(created.getTime())
     ? guide.created_at
     : formatDate(created);
+  const headingIds = new Map<string, number>();
+
+  const renderHeading =
+    (level: number) =>
+    ({ children }: any) => {
+      const text = Array.isArray(children)
+        ? children
+            .map((child) =>
+              typeof child === "string" || typeof child === "number"
+                ? String(child)
+                : (child?.props?.children ?? "")
+            )
+            .join("")
+        : String(children ?? "");
+
+      return createElement(
+        `h${level}`,
+        { id: getHeadingId(text.trim(), headingIds) },
+        children
+      );
+    };
 
   return (
     <>
@@ -126,6 +148,12 @@ export const GuideReader = ({
             rehypeKatex,
           ]}
           components={{
+            h1: renderHeading(1),
+            h2: renderHeading(2),
+            h3: renderHeading(3),
+            h4: renderHeading(4),
+            h5: renderHeading(5),
+            h6: renderHeading(6),
             pre({ children }) {
               const child = children as ReactElement<{
                 className?: string;
