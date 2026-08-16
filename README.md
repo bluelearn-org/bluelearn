@@ -60,7 +60,7 @@ the prerequisite graph changes how you read a concept page.
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=qcRKmm3B25c">
-    <img src="https://img.youtube.com/vi/qcRKmm3B25c/maxresdefault.jpg" alt="Bluelearn — 23-minute overview" width="640" />
+    <img src="https://img.youtube.com/vi/qcRKmm3B25c/maxresdefault.jpg" alt="Bluelearn: 23-minute overview" width="640" />
   </a>
 </p>
 
@@ -107,11 +107,11 @@ and the API uses `APP_URL` from `api/.dev.vars` for CORS (default `http://localh
 
 ```
 bluelearn/
-├── app/             React 19 · TanStack Start · TanStack Router/Query
+├── app/             React 19 · TanStack Start · TanStack Router
 │                    shadcn/ui · Tailwind 4 · Vite
 ├── api/             Hono on Cloudflare Workers
-│                    Routes: /subjects · /walkthroughs · /guides
-├── supabase/        Postgres · Auth · Storage — migrations + RLS policies
+│                    Routes: guides · objectives · review · search · media
+├── supabase/        Postgres · Auth · Storage: migrations + RLS policies
 ├── docs/
 │   ├── architecture.md      System overview + diagram
 │   ├── monorepo.md          Why one repo instead of three
@@ -126,7 +126,7 @@ bluelearn/
     └── FUNDING.yml
 ```
 
-**Why a monorepo?** See [`docs/monorepo.md`](docs/monorepo.md) — short
+**Why a monorepo?** See [`docs/monorepo.md`](docs/monorepo.md). Short
 version: atomic cross-stack changes, one CI, one onboarding flow,
 type-safety end-to-end via Hono's `hc<AppType>`.
 
@@ -136,7 +136,7 @@ type-safety end-to-end via Hono's `hc<AppType>`.
 
 | Layer            | Tech                                                              | Why                                                                |
 | ---------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **Frontend**     | React 19 · TanStack Start · TanStack Router/Query · shadcn/ui     | Type-safe routing, cache-aware data, accessible primitives         |
+| **Frontend**     | React 19 · TanStack Start · TanStack Router · shadcn/ui           | Type-safe routing, loader-based data fetching, accessible primitives |
 | **API**          | Hono on Cloudflare Workers · `@hono/zod-validator`                | Edge-fast, tiny, type-safe end-to-end with the frontend            |
 | **Database**     | Supabase (Postgres 15 · GoTrue Auth · Storage)                    | Managed Postgres + RLS, JWT auth, file storage in one              |
 | **Tooling**      | pnpm workspaces · TypeScript · ESLint · Prettier · Vitest         | One install, one CI, one style                                     |
@@ -148,7 +148,7 @@ type-safety end-to-end via Hono's `hc<AppType>`.
 Decentralized editorial verification: signing the canonical concept
 history into a verifiable log. Tools under exploration:
 **SUI** · **Move** · **Walrus**. Skills welcome from contributors
-interested — these are not on the Phase 1 critical path.
+interested, though these are not on the Phase 1 critical path.
 
 ---
 
@@ -156,9 +156,9 @@ interested — these are not on the Phase 1 critical path.
 
 | Phase | Status     | Focus                                                              |
 | ----- | ---------- | ------------------------------------------------------------------ |
-| **1** | 🟢 Active  | The Core — data model, graph traversal, basic UI, community seed   |
-| **2** | ⚪ Next    | Universal Access — i18n, expert verification tooling, API formalize |
-| **3** | ⚪ Future  | Decentralization — protocol extraction, self-host, independent mirrors |
+| **1** | 🟢 Active  | The Core: prerequisite graph, verifier and moderator systems, open contribution workflow |
+| **2** | ⚪ Next    | Universal Access: i18n, expert verification tooling, API formalization |
+| **3** | ⚪ Future  | Decentralization: protocol extraction, self-hosting, independent mirrors |
 
 Full roadmap: [bluelearn.org/roadmap](https://bluelearn.org/roadmap)
 
@@ -179,10 +179,10 @@ The shortest path:
 
 ### What we're hiring for (the contribution profile)
 
-**Frontend** — TypeScript proficiency, React, TanStack ecosystem (router + query), UI/UX sense.
-**Backend** — TypeScript on Workers (Hono), Supabase / Postgres, RLS familiarity.
-**Generalist bonus skills** — accessibility, i18n, performance budgets.
-**Phase 3 R&D bonus** — web3 smart contracts (SUI, Move), Walrus storage.
+**Frontend**: TypeScript proficiency, React, TanStack ecosystem (Start, Router), UI/UX sense.
+**Backend**: TypeScript on Workers (Hono), Supabase / Postgres, RLS familiarity.
+**Generalist bonus skills**: accessibility, i18n, performance budgets.
+**Phase 3 R&D bonus**: web3 smart contracts (SUI, Move), Walrus storage.
 
 ---
 
@@ -210,12 +210,14 @@ Thanks to everyone who has helped shape Bluelearn.
 
 ## 💛 Support the project
 
-Bluelearn is fiscally sponsored — 501(c)(3) pending. Every dollar funds
-infrastructure (Supabase, Cloudflare, Discord), editorial review, and
-making content available offline in low-bandwidth regions.
+Bluelearn is incorporated as a California nonprofit, with an EIN and an
+org bank account open. Federal 501(c)(3) recognition is the one step
+still pending. Every dollar funds infrastructure (Supabase, Cloudflare,
+Discord), editorial review, and making content available offline in
+low-bandwidth regions.
 
 - **One-time / recurring donation** → [bluelearn.org/donate](https://bluelearn.org/donate)
-- **GitHub Sponsors** → coming once the org is live
+- **GitHub Sponsors** → coming once 501(c)(3) recognition comes through
 - **Help in other ways** → star the repo, share the project, open an issue,
   send a PR
 
@@ -235,8 +237,8 @@ making content available offline in low-bandwidth regions.
 
 ## 📜 License
 
-- **Code** — [AGPL-3.0-or-later](LICENSE). Any service that exposes this code over a network must publish its source.
-- **Content** — [CC BY-SA 4.0](LICENSE-CONTENT). Concept pages and editorial material remix freely with attribution and share-alike.
+- **Code**: [AGPL-3.0-or-later](LICENSE). Any service that exposes this code over a network must publish its source.
+- **Content**: [CC BY-SA 4.0](LICENSE-CONTENT). Concept pages and editorial material remix freely with attribution and share-alike.
 
 By contributing you agree your work is licensed under the applicable
 license above. See [CONTRIBUTING.md](CONTRIBUTING.md#licensing-and-sign-off)
