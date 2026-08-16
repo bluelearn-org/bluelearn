@@ -119,29 +119,53 @@ export const StepperActionHeader = ({
       <Separator className="mb-8 hidden bg-border sm:block" />
 
       {(onSaveDraft || !hideBackBtn || onPublish) && (
-        <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
-          <div className="justify-self-start">
+        <div className="fixed inset-x-0 bottom-0 z-40 flex w-full items-center gap-1.5 overflow-hidden border-t bg-background/95 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
+          {/* Back: fixed on the left, never shrinks, never wraps. */}
+          <div className="shrink-0">
             {!hideBackBtn && (
-              <Stepper.Prev className="btn-sec min-w-20">Back</Stepper.Prev>
+              <Stepper.Prev className="btn-sec inline-flex items-center px-3 whitespace-nowrap">
+                Back
+              </Stepper.Prev>
             )}
           </div>
 
-          <div className="justify-self-center">
+          {/* Secondary actions: the only group allowed to give up space.
+              min-w-0 lets it shrink below its content size (flex items
+              default to min-width:auto, which is what let this overflow
+              before); overflow-x-auto means if it still can't fit, it
+              scrolls internally instead of pushing Next off-screen. */}
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 overflow-x-auto">
+            {type != "objective" && !hideGuidelines && (
+              <button
+                type="button"
+                aria-label="View guidelines"
+                className="btn-sec inline-flex shrink-0 items-center gap-1.5 px-2.5 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
+                onClick={toggleGuidelineModal}
+              >
+                <Scroll className="size-4 shrink-0" />
+                {/* Least essential label in this bar — icon-only until
+                    there's room to spare, so it can't be the thing that
+                    tips the row into overflow. */}
+                <span className="hidden min-[400px]:inline">
+                  View Guidelines
+                </span>
+              </button>
+            )}
             {onSaveDraft && (
               <button
                 type="button"
-                className="inline-flex min-w-24 items-center justify-center gap-1.5 px-2 py-2 text-xs font-semibold text-muted-foreground disabled:pointer-events-none disabled:opacity-50"
+                className="btn-sec inline-flex shrink-0 items-center gap-1.5 px-2.5 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 disabled={submitting || saveDisabled}
                 onClick={saveDraft}
               >
                 {saved ? (
                   <>
-                    <Check className="size-3.5" />
-                    Draft saved
+                    <Check className="size-3.5 shrink-0" />
+                    Saved
                   </>
                 ) : (
                   <>
-                    <Save className="size-3.5" />
+                    <Save className="size-3.5 shrink-0" />
                     Save draft
                   </>
                 )}
@@ -149,11 +173,14 @@ export const StepperActionHeader = ({
             )}
           </div>
 
-          <div className="justify-self-end">
+          {/* Next/Submit: fixed on the right, never shrinks, never wraps —
+              this is the button the bug report is about, so it gets the
+              strongest guarantee in the layout. */}
+          <div className="shrink-0">
             {onPublish ? (
               <button
                 type="button"
-                className="btn-pri disabled:pointer-events-none disabled:opacity-50"
+                className="btn-pri inline-flex items-center px-3 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 disabled={submitting}
                 onClick={handleSubmit}
               >
@@ -162,7 +189,10 @@ export const StepperActionHeader = ({
                   : publishLabel}
               </button>
             ) : (
-              <Stepper.Next className="btn-pri" disabled={nextDisabled}>
+              <Stepper.Next
+                className="btn-pri inline-flex items-center px-3 whitespace-nowrap"
+                disabled={nextDisabled}
+              >
                 Next
               </Stepper.Next>
             )}
