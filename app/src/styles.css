@@ -141,19 +141,19 @@
   }
 
   .markdown h3 {
-    @apply mt-4 mb-2 text-lg font-medium;
+    @apply mt-4 mb-2 text-lg font-semibold;
   }
 
   .markdown h4 {
-    @apply mt-4 mb-2 text-base font-medium;
+    @apply mt-4 mb-2 text-base font-semibold;
   }
 
   .markdown h5 {
-    @apply mt-4 mb-2 text-sm font-medium;
+    @apply mt-4 mb-2 text-sm font-semibold;
   }
 
   .markdown h6 {
-    @apply mt-4 mb-2 text-sm font-medium text-muted-foreground;
+    @apply mt-4 mb-2 text-sm font-semibold text-muted-foreground;
   }
 
   .markdown p {
