@@ -50,9 +50,9 @@ export const GuideSidebar = ({
                             : 60,
               }}
             >
-              <a href={`#${h.id}`} className="block w-full py-1">
+              <Link to="." hash={h.id} className="block w-full py-1">
                 {h.text}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
