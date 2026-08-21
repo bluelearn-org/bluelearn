@@ -1,4 +1,4 @@
-import { Menu, Search, User, X } from "lucide-react";
+import { Menu, Search, Shield, User, X } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -16,17 +16,29 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/Logo";
 
-// `roles`, when set, hides the item from anyone holding none of them.
-const navItems: Array<{ label: string; to: string; roles?: Array<string> }> = [
+const navItems: Array<{ label: string; to: string }> = [
   { label: "Browse", to: "/browse" },
   { label: "Subjects", to: "/subjects" },
   { label: "Objectives", to: "/objectives" },
   { label: "Todo", to: "/todos" },
-  { label: "Review", to: "/review", roles: ["verifier", "admin"] },
 ];
 
 // Profile isn't here because its link needs the signed-in username.
 const profileItems = [{ label: "Settings", to: "/settings" }];
+
+// `roles`, when set, hides the item from anyone holding none of them.
+const sepcialRoleItems: Array<{
+  label: string;
+  to: string;
+  roles?: Array<string>;
+}> = [
+  {
+    label: "Review Queue",
+    to: "/review",
+    roles: ["verifier", "lead-verifier", "admin"],
+  },
+  { label: "Dashboard", to: "/dashboard", roles: ["lead-verifier", "admin"] },
+];
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,7 +46,7 @@ export function Navbar() {
   const { session, roles, currentProfile } = useAuth();
   const navigate = useNavigate();
 
-  const visibleNavItems = navItems.filter(
+  const visibleRoleItems = sepcialRoleItems.filter(
     (item) => !item.roles || item.roles.some((r) => roles.includes(r))
   );
 
@@ -62,7 +74,7 @@ export function Navbar() {
           <div className="flex items-center gap-10">
             <Logo />
             <nav className="hidden items-center gap-6 md:flex">
-              {visibleNavItems.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
@@ -97,6 +109,32 @@ export function Navbar() {
                 Contribute
               </Link>
             </div>
+
+            {roles.length > 0 && (
+              <div className="hidden md:block">
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-md"
+                    >
+                      <Shield className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" className="w-48 font-mono">
+                    {visibleRoleItems.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to} className="text-xs">
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
 
             {session ? (
               /* Desktop Profile Dropdown */
@@ -189,7 +227,7 @@ export function Navbar() {
 
               {/* Nav */}
               <div className="flex flex-col gap-3 py-3">
-                {visibleNavItems.map((item) => (
+                {navItems.map((item) => (
                   <Link
                     key={item.to}
                     to={item.to}
@@ -210,6 +248,23 @@ export function Navbar() {
                 >
                   Contribute
                 </Link>
+
+                <Separator />
+
+                {roles.length > 0 && (
+                  <>
+                    {visibleRoleItems.map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setMobileOpen(false)}
+                        className="py-2 font-mono text-sm text-muted-foreground uppercase hover:text-foreground"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </>
+                )}
 
                 <Separator />
 
