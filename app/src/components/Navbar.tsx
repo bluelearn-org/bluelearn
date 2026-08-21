@@ -1,4 +1,4 @@
-import { Menu, Search, Shield, User, X } from "lucide-react";
+import { Menu, Search, ShieldCogCorner, User, X } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -119,7 +119,7 @@ export function Navbar() {
                       size="icon"
                       className="h-9 w-9 rounded-md"
                     >
-                      <Shield className="h-4 w-4" />
+                      <ShieldCogCorner className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
 
