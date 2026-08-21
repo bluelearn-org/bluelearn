@@ -6,7 +6,7 @@ export const Route = createFileRoute("/dashboard/roles")({
 
 function RouteComponent() {
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className="space-y-5">
       <header className="space-y-1.5 border-b border-border pb-5">
         <h1 className="font-mono text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
           Manage Roles
