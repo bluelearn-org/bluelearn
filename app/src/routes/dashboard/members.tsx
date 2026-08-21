@@ -1,13 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Ban, Ellipsis, SquareArrowRightExit } from "lucide-react";
+import { Ban } from "lucide-react";
 import { MembersTable } from "@/components/tables/MembersTable";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/dashboard/members")({
   component: RouteComponent,
@@ -24,11 +18,6 @@ function RouteComponent() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center justify-start">
-            <SquareArrowRightExit />
-            Mark AFK
-          </Button>
-
           <Button
             variant="destructive"
             className="flex items-center justify-start"
