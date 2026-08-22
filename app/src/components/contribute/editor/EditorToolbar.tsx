@@ -26,6 +26,8 @@ import {
   Code,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   Info,
   Lightbulb,
   Link as LinkIcon,
@@ -39,6 +41,7 @@ import {
   Type,
   Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 import { InsertBlockMath, InsertInlineMath } from "./MathLivePlugin";
 import MarkdownLinkImageShortcutListener from "./MarkdownLinkImageShortcutListener";
 import H1RestrictionListener from "./H1RestrictionListener.tsx";
@@ -167,15 +170,52 @@ function CustomBlockTypeSelect() {
 
 interface EditorToolbarProps {
   editorRef: React.RefObject<MDXEditorMethods | null>;
+  markdown: string;
   onH1Attempted: () => void;
 }
 
 export default function EditorToolbar({
   editorRef,
+  markdown,
   onH1Attempted,
 }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
+  const [showWordCount, setShowWordCount] = useState(true);
+  const cleanText = markdown
+    // Remove HTML images completely
+    .replace(/<img\b[^>]*>/gi, "")
+    // Remove Markdown images completely
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    // Decode the spaces/tabs your editor produces
+    .replace(/&#x20;/g, " ")
+    .replace(/&#x9;/g, "\t");
+  // Treat Windows newlines as one character
+  const wordCountText = cleanText
+    // Newlines separate words, but are not themselves words
+    .replace(/\r\n/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\r/g, " ");
+
+  const wordCount = wordCountText.trim()
+    ? wordCountText.trim().split(/\s+/).length
+    : 0;
+  const MAX_WORD_COUNT = 2500;
+  const previousWordCountRef = useRef(wordCount);
+
+  useEffect(() => {
+    if (
+      previousWordCountRef.current <= MAX_WORD_COUNT &&
+      wordCount > MAX_WORD_COUNT
+    ) {
+      toast.warning("Word count limit exceeded", {
+        description: `Your guide has ${wordCount.toLocaleString()} words. The maximum allowed is ${MAX_WORD_COUNT.toLocaleString()}.`,
+      });
+    }
+
+    previousWordCountRef.current = wordCount;
+  }, [wordCount]);
+  const characterCount = cleanText.length;
 
   // Refs for hidden native buttons to trigger programmatically from our custom Popovers
   const linkRef = useRef<HTMLSpanElement>(null);
@@ -254,346 +294,383 @@ export default function EditorToolbar({
   };
 
   return (
-    <div className="mdxeditor-toolbar-custom">
-      <MarkdownLinkImageShortcutListener />
-      <H1RestrictionListener onH1Attempted={onH1Attempted} />
-      <CodeBlockShortcutListener />
-      <CalloutShortcutListener />
-      <TabShortcutListener />
-      <UndoRedo />
-      <div className="mdx-toolbar-divider"></div>
-      <BoldItalicUnderlineToggles />
-      <StrikeThroughSupSubToggles options={["Strikethrough"]} />
-      <CodeToggle />
-      <div className="mdx-toolbar-divider"></div>
-      <CustomBlockTypeSelect />
-      <div className="mdx-toolbar-divider"></div>
-      <ListsToggle />
-      <IndentButtons />
+    <div className="editor-toolbar-wrapper">
+      <div className="mdxeditor-toolbar-custom">
+        <MarkdownLinkImageShortcutListener />
+        <H1RestrictionListener onH1Attempted={onH1Attempted} />
+        <CodeBlockShortcutListener />
+        <CalloutShortcutListener />
+        <TabShortcutListener />
+        <UndoRedo />
+        <div className="mdx-toolbar-divider"></div>
+        <BoldItalicUnderlineToggles />
+        <StrikeThroughSupSubToggles options={["Strikethrough"]} />
+        <CodeToggle />
+        <div className="mdx-toolbar-divider"></div>
+        <CustomBlockTypeSelect />
+        <div className="mdx-toolbar-divider"></div>
+        <ListsToggle />
+        <IndentButtons />
 
-      <div className="mdx-toolbar-divider"></div>
+        <div className="mdx-toolbar-divider"></div>
 
-      {/* Math Dropdown using Popover */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="toolbar-dropdown-trigger shrink-0"
-            title="Insert LaTeX Math Equation"
-          >
-            <span className="font-serif font-bold italic">f(x)</span>
-            <span>Math</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="toolbar-popover-content"
-          align="start"
-          onCloseAutoFocus={(e) => e.preventDefault()}
-        >
-          <div className="toolbar-popover-header">LaTeX Equations</div>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                inlineMathRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <span className="w-4 text-center font-serif font-bold text-muted-foreground">
-              x
-            </span>
-            <span>Inline Equation</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                blockMathRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <span className="w-4 text-center font-serif font-bold text-muted-foreground italic">
-              $$
-            </span>
-            <span>Block Equation</span>
-          </button>
-        </PopoverContent>
-      </Popover>
-
-      {/* Insert Dropdown using Popover */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="toolbar-dropdown-trigger shrink-0"
-            title="Insert Element"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Insert</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="toolbar-popover-content"
-          align="start"
-          onCloseAutoFocus={(e) => e.preventDefault()}
-        >
-          <div className="toolbar-popover-header">Elements</div>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                tableRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <Table className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Table</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                codeBlockRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <Code className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Code Block</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                linkRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Link</span>
-          </button>
-          <div className="my-1 h-px bg-border" />
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                thematicBreakRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <Minus className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Horizontal Line</span>
-          </button>
-          <div className="my-1 h-px bg-border" />
-          <div className="toolbar-popover-header">Callouts</div>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "info" })
-            }
-          >
-            <Info className="h-3.5 w-3.5 text-blue-500" />
-            <span>Info Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "note" })
-            }
-          >
-            <Info className="h-3.5 w-3.5 text-blue-500" />
-            <span>Note Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "tip" })
-            }
-          >
-            <Lightbulb className="h-3.5 w-3.5 text-green-500" />
-            <span>Tip Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "caution" })
-            }
-          >
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-            <span>Caution Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "warning" })
-            }
-          >
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-            <span>Warning Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "danger" })
-            }
-          >
-            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-            <span>Danger Callout</span>
-          </button>
-        </PopoverContent>
-      </Popover>
-
-      <div className="mdx-toolbar-divider"></div>
-
-      {/* Desktop Actions & Sharing Button Group */}
-      <div className="ml-auto hidden shrink-0 items-center gap-1 p-0.5 sm:flex">
-        <button
-          type="button"
-          onClick={handleCopy}
-          title="Copy Markdown to Clipboard"
-          aria-label="Copy Markdown to Clipboard"
-        >
-          {copied ? <Check className="text-green-500" /> : <Copy />}
-        </button>
-        <button
-          type="button"
-          onClick={handleDownload}
-          title="Download as .md file"
-          aria-label="Download as .md file"
-        >
-          <Download />
-        </button>
-        <button
-          type="button"
-          onClick={handleImportClick}
-          title="Import .md file"
-          aria-label="Import .md file"
-        >
-          <Upload />
-        </button>
-        <div className="mx-1 h-4 w-px bg-border"></div>
-        <button
-          type="button"
-          onClick={toggleFullScreen}
-          title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
-          aria-label="Toggle Full Screen"
-        >
-          {isFullScreen ? <Minimize /> : <Maximize />}
-        </button>
-      </div>
-
-      {/* Mobile More Actions Menu */}
-      <div className="ml-auto flex shrink-0 items-center sm:hidden">
+        {/* Math Dropdown using Popover */}
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
               className="toolbar-dropdown-trigger shrink-0"
-              title="More Actions"
-              aria-label="More Actions"
+              title="Insert LaTeX Math Equation"
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <span className="font-serif font-bold italic">f(x)</span>
+              <span>Math</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
             </button>
           </PopoverTrigger>
           <PopoverContent
-            className="toolbar-popover-content w-48"
-            align="end"
+            className="toolbar-popover-content"
+            align="start"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
-            <div className="toolbar-popover-header">Actions</div>
+            <div className="toolbar-popover-header">LaTeX Equations</div>
             <button
               type="button"
               className="toolbar-popover-item"
-              onClick={handleCopy}
+              onClick={() => {
+                editorRef.current?.focus();
+                setTimeout(() => {
+                  inlineMathRef.current?.querySelector("button")?.click();
+                }, 10);
+              }}
             >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-green-500" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              <span>{copied ? "Copied!" : "Copy Markdown"}</span>
+              <span className="w-4 text-center font-serif font-bold text-muted-foreground">
+                x
+              </span>
+              <span>Inline Equation</span>
             </button>
             <button
               type="button"
               className="toolbar-popover-item"
-              onClick={handleDownload}
+              onClick={() => {
+                editorRef.current?.focus();
+                setTimeout(() => {
+                  blockMathRef.current?.querySelector("button")?.click();
+                }, 10);
+              }}
             >
-              <Download className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Download .md</span>
+              <span className="w-4 text-center font-serif font-bold text-muted-foreground italic">
+                $$
+              </span>
+              <span>Block Equation</span>
+            </button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Insert Dropdown using Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="toolbar-dropdown-trigger shrink-0"
+              title="Insert Element"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Insert</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="toolbar-popover-content"
+            align="start"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <div className="toolbar-popover-header">Elements</div>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() => {
+                editorRef.current?.focus();
+                setTimeout(() => {
+                  tableRef.current?.querySelector("button")?.click();
+                }, 10);
+              }}
+            >
+              <Table className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Table</span>
             </button>
             <button
               type="button"
               className="toolbar-popover-item"
-              onClick={handleImportClick}
+              onClick={() => {
+                editorRef.current?.focus();
+                setTimeout(() => {
+                  codeBlockRef.current?.querySelector("button")?.click();
+                }, 10);
+              }}
             >
-              <Upload className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Import .md</span>
+              <Code className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Code Block</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() => {
+                editorRef.current?.focus();
+                setTimeout(() => {
+                  linkRef.current?.querySelector("button")?.click();
+                }, 10);
+              }}
+            >
+              <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Link</span>
             </button>
             <div className="my-1 h-px bg-border" />
             <button
               type="button"
               className="toolbar-popover-item"
-              onClick={toggleFullScreen}
+              onClick={() => {
+                editorRef.current?.focus();
+                setTimeout(() => {
+                  thematicBreakRef.current?.querySelector("button")?.click();
+                }, 10);
+              }}
             >
-              {isFullScreen ? (
-                <Minimize className="h-3.5 w-3.5 text-muted-foreground" />
-              ) : (
-                <Maximize className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              <span>{isFullScreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+              <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Horizontal Line</span>
+            </button>
+            <div className="my-1 h-px bg-border" />
+            <div className="toolbar-popover-header">Callouts</div>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() =>
+                insertDirective({ type: "containerDirective", name: "info" })
+              }
+            >
+              <Info className="h-3.5 w-3.5 text-blue-500" />
+              <span>Info Callout</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() =>
+                insertDirective({ type: "containerDirective", name: "note" })
+              }
+            >
+              <Info className="h-3.5 w-3.5 text-blue-500" />
+              <span>Note Callout</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() =>
+                insertDirective({ type: "containerDirective", name: "tip" })
+              }
+            >
+              <Lightbulb className="h-3.5 w-3.5 text-green-500" />
+              <span>Tip Callout</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() =>
+                insertDirective({ type: "containerDirective", name: "caution" })
+              }
+            >
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              <span>Caution Callout</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() =>
+                insertDirective({ type: "containerDirective", name: "warning" })
+              }
+            >
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              <span>Warning Callout</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-popover-item"
+              onClick={() =>
+                insertDirective({ type: "containerDirective", name: "danger" })
+              }
+            >
+              <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+              <span>Danger Callout</span>
             </button>
           </PopoverContent>
         </Popover>
-      </div>
 
-      {/* Hidden native MDXEditor buttons so they still receive their reactive contexts */}
-      <div style={{ display: "none" }}>
-        <span ref={tableRef}>
-          <InsertTable />
-        </span>
-        <span ref={codeBlockRef}>
-          <InsertCodeBlock />
-        </span>
-        <span ref={thematicBreakRef}>
-          <InsertThematicBreak />
-        </span>
-        <span ref={linkRef}>
-          <CreateLink />
-        </span>
-        <span ref={inlineMathRef}>
-          <InsertInlineMath />
-        </span>
-        <span ref={blockMathRef}>
-          <InsertBlockMath />
-        </span>
-      </div>
+        <div className="mdx-toolbar-divider"></div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".md"
-        style={{ display: "none" }}
-      />
+        {/* Desktop Actions & Sharing Button Group */}
+        <div className="ml-auto hidden shrink-0 items-center gap-1 p-0.5 sm:flex">
+          <button
+            type="button"
+            onClick={handleCopy}
+            title="Copy Markdown to Clipboard"
+            aria-label="Copy Markdown to Clipboard"
+          >
+            {copied ? <Check className="text-green-500" /> : <Copy />}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            title="Download as .md file"
+            aria-label="Download as .md file"
+          >
+            <Download />
+          </button>
+          <button
+            type="button"
+            onClick={handleImportClick}
+            title="Import .md file"
+            aria-label="Import .md file"
+          >
+            <Upload />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowWordCount((visible) => !visible)}
+            title={showWordCount ? "Hide Word Count" : "Show Word Count"}
+            aria-label={showWordCount ? "Hide Word Count" : "Show Word Count"}
+          >
+            {showWordCount ? <Eye /> : <EyeOff />}
+          </button>
+          <div className="mx-1 h-4 w-px bg-border"></div>
+          <button
+            type="button"
+            onClick={toggleFullScreen}
+            title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+            aria-label="Toggle Full Screen"
+          >
+            {isFullScreen ? <Minimize /> : <Maximize />}
+          </button>
+        </div>
+
+        {/* Mobile More Actions Menu */}
+        <div className="ml-auto flex shrink-0 items-center sm:hidden">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="toolbar-dropdown-trigger shrink-0"
+                title="More Actions"
+                aria-label="More Actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="toolbar-popover-content w-48"
+              align="end"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <div className="toolbar-popover-header">Actions</div>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => setShowWordCount((visible) => !visible)}
+              >
+                {showWordCount ? (
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+
+                <span>
+                  {showWordCount ? "Hide word count" : "Show word count"}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={handleCopy}
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                <span>{copied ? "Copied!" : "Copy Markdown"}</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={handleDownload}
+              >
+                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Download .md</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={handleImportClick}
+              >
+                <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Import .md</span>
+              </button>
+
+              <div className="my-1 h-px bg-border" />
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={toggleFullScreen}
+              >
+                {isFullScreen ? (
+                  <Minimize className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <Maximize className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                <span>{isFullScreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+              </button>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Hidden native MDXEditor buttons so they still receive their reactive contexts */}
+        <div style={{ display: "none" }}>
+          <span ref={tableRef}>
+            <InsertTable />
+          </span>
+          <span ref={codeBlockRef}>
+            <InsertCodeBlock />
+          </span>
+          <span ref={thematicBreakRef}>
+            <InsertThematicBreak />
+          </span>
+          <span ref={linkRef}>
+            <CreateLink />
+          </span>
+          <span ref={inlineMathRef}>
+            <InsertInlineMath />
+          </span>
+          <span ref={blockMathRef}>
+            <InsertBlockMath />
+          </span>
+        </div>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".md"
+          style={{ display: "none" }}
+        />
+      </div>
+      {showWordCount && (
+        <div
+          className={`editor-word-count ${
+            wordCount > MAX_WORD_COUNT ? "text-red-500" : ""
+          }`}
+        >
+          {wordCount.toLocaleString()} words
+          <span className="mx-2">·</span>
+          {characterCount.toLocaleString()} characters
+        </div>
+      )}
     </div>
   );
 }

@@ -38,6 +38,7 @@ export default function Editor({
   onUploadImage,
 }: EditorProps) {
   const [initialMarkdown] = useState<string>(() => value ?? "");
+  const [markdown, setMarkdown] = useState<string>(() => value ?? "");
   const [overlayContainer, setOverlayContainer] = useState<HTMLElement | null>(
     null
   );
@@ -52,6 +53,7 @@ export default function Editor({
 
   // debounce so we don't re-render the flow on every keystroke
   const handleMarkdownChange = useCallback((newMarkdown: string) => {
+    setMarkdown(newMarkdown);
     latestRef.current = newMarkdown;
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -158,6 +160,7 @@ export default function Editor({
         toolbarContents: () => (
           <EditorToolbar
             editorRef={editorRef}
+            markdown={markdown}
             onH1Attempted={() => {
               toast.warning("Heading 1 is Reserved for the Guide's Title", {
                 description:
@@ -169,7 +172,7 @@ export default function Editor({
         ),
       }),
     ],
-    []
+    [markdown]
   );
 
   return (
