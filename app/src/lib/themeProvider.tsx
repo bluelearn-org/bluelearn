@@ -11,28 +11,37 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof document === "undefined") return "light";
+const STORAGE_KEY = "theme";
 
-    return document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light";
-  });
+/**
+ * The theme the document is *actually* rendering with. The inline script in
+ * `__root.tsx` resolves this same value and applies the `dark` class before
+ * first paint, so this only re-derives it for React's benefit. Client-only —
+ * it touches `localStorage` and `matchMedia`.
+ */
+function resolveTheme(): Theme {
+  const saved = localStorage.getItem(STORAGE_KEY);
+
+  if (saved === "dark" || saved === "light") {
+    return saved;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  // The server has no way to know the visitor's theme, so it always renders
+  // the "light" markup. The first client render has to agree with that markup:
+  // React does not repair mismatched attributes while hydrating, so seeding
+  // this from the DOM left theme-dependent controls stuck on their
+  // server-rendered state (#327). The real theme is applied in the effect
+  // below, after hydration, where a genuine state change can re-render them.
+  const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme") as Theme | null;
-
-    if (saved) {
-      setTheme(saved);
-      return;
-    }
-
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-
-    setTheme(prefersDark ? "dark" : "light");
+    setTheme(resolveTheme());
   }, []);
 
   function setTheme(newTheme: Theme) {
@@ -40,7 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     document.documentElement.classList.toggle("dark", newTheme === "dark");
 
-    localStorage.setItem("theme", newTheme);
+    localStorage.setItem(STORAGE_KEY, newTheme);
   }
 
   return (
