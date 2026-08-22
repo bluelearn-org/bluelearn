@@ -16,7 +16,7 @@ import {
   ChoiceColumnFilter,
   DateColumnFilter,
   TextColumnFilter,
-} from "@/components/ActivityColumnFilters";
+} from "@/components/tables/ActivityColumnFilters";
 import {
   Table,
   TableBody,
