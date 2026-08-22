@@ -21,8 +21,7 @@ export const MembersTable = () => {
       bio: "Software Engineer",
       date_created: "08-14-2026",
       date_updated: "08-21-2026",
-      is_afk: false,
-      is_suspended: false,
+      status: "active",
     },
     {
       id: "002",
@@ -31,8 +30,7 @@ export const MembersTable = () => {
       bio: "Writer",
       date_created: "08-14-2026",
       date_updated: "08-21-2026",
-      is_afk: true,
-      is_suspended: false,
+      status: "suspended",
     },
   ];
 
@@ -99,11 +97,7 @@ export const MembersTable = () => {
           </TableHead>
 
           <TableHead className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-            AFK
-          </TableHead>
-
-          <TableHead className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-            Suspended
+            Status
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -144,16 +138,7 @@ export const MembersTable = () => {
                 variant="outline"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
-                {profile.is_afk ? "true" : "false"}
-              </Badge>
-            </TableCell>
-
-            <TableCell className="px-4 py-3">
-              <Badge
-                variant="outline"
-                className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
-              >
-                {profile.is_suspended ? "true" : "false"}
+                {profile.status}
               </Badge>
             </TableCell>
           </TableRow>

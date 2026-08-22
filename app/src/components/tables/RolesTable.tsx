@@ -20,7 +20,7 @@ export const RolesTable = () => {
       roles: ["admin", "curator"],
       date_created: "08-14-2026",
       date_updated: "08-21-2026",
-      is_afk: false,
+      status: "active",
     },
     {
       id: "002",
@@ -28,7 +28,7 @@ export const RolesTable = () => {
       roles: ["verifier"],
       date_created: "08-14-2026",
       date_updated: "08-21-2026",
-      is_afk: true,
+      status: "suspended",
     },
   ];
 
@@ -91,7 +91,7 @@ export const RolesTable = () => {
           </TableHead>
 
           <TableHead className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-            AFK
+            Status
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -111,7 +111,7 @@ export const RolesTable = () => {
               {user.username}
             </TableCell>
 
-            <TableCell className="flex max-w-sm gap-2 px-4 py-3">
+            <TableCell className="flex max-w-xs flex-wrap gap-2 px-4 py-3">
               {user.roles.map((role) => (
                 <Badge
                   variant="outline"
@@ -135,7 +135,7 @@ export const RolesTable = () => {
                 variant="outline"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
-                {user.is_afk ? "true" : "false"}
+                {user.status}
               </Badge>
             </TableCell>
           </TableRow>
