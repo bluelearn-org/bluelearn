@@ -1,6 +1,7 @@
 import { defineStepper } from "@stepperize/react";
 import { ChevronRight } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import type { Dispatch, SetStateAction } from "react";
@@ -849,6 +850,24 @@ function Inner({
       setSubmitting(false);
     }
   };
+
+  // Remove draft from localStorage if user leaves /contribute page
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  // Handle when user leaves page
+  useEffect(() => {
+    if (pathname === "/contribute") {
+      sessionStorage.setItem("wasOnContributePage", "true");
+    } else {
+      const wasOnContribute =
+        sessionStorage.getItem("wasOnContributePage") === "true";
+      if (wasOnContribute) {
+        if (type) clearStoredDraft(type);
+        sessionStorage.removeItem("wasOnContributePage");
+      }
+    }
+  }, [pathname]);
 
   if (skipTypeStep && !type) return null;
 
