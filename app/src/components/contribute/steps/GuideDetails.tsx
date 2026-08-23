@@ -38,6 +38,7 @@ type PropTypes = {
   onSaveDraft: () => void;
   submitting?: boolean;
   showBaseFields?: boolean;
+  showPrerequisiteFields?: boolean;
   hideBackBtn?: boolean;
   title?: string;
   changeSummary?: string;
@@ -56,6 +57,7 @@ export const GuideDetails = ({
   // Prerequisites and todos live on the guide base, so they're only
   // authorable while the base is still a draft.
   showBaseFields = true,
+  showPrerequisiteFields = showBaseFields,
   hideBackBtn,
   title = "Guide Details",
   changeSummary,
@@ -347,7 +349,7 @@ export const GuideDetails = ({
           </div>
         )}
 
-        {showBaseFields && (
+        {showPrerequisiteFields && (
           <>
             <Field className="space-y-2">
               <div className="space-y-1">
@@ -377,6 +379,7 @@ export const GuideDetails = ({
                     prereqs,
                   }))
                 }
+                disabled={!showBaseFields}
               />
             </Field>
 
@@ -409,6 +412,7 @@ export const GuideDetails = ({
                   aria-describedby={
                     todoPrereqError ? "todo-prereq-error" : undefined
                   }
+                  disabled={!showBaseFields}
                 />
 
                 <Input
@@ -429,6 +433,7 @@ export const GuideDetails = ({
                   aria-describedby={
                     todoPrereqError ? "todo-prereq-error" : undefined
                   }
+                  disabled={!showBaseFields}
                 />
                 <Button
                   type="button"
@@ -472,6 +477,7 @@ export const GuideDetails = ({
                     setTodoPrereq({ title: "", summary: "" });
                     setTodoPrereqError(null);
                   }}
+                  disabled={!showBaseFields}
                 >
                   Add Todo
                 </Button>
@@ -512,6 +518,7 @@ export const GuideDetails = ({
                           ),
                         }))
                       }
+                      disabled={!showBaseFields}
                     >
                       <X className="size-3" />
                     </button>
