@@ -49,6 +49,8 @@ import {
   useDebouncedContributionSave,
 } from "@/lib/contributionStorage";
 
+const MAX_WORD_COUNT = 2500;
+
 type PropTypes = {
   type: ContributionType | null;
   setType: (value: ContributionType) => void;
@@ -800,6 +802,18 @@ function Inner({
   const publish = async () => {
     setSubmitting(true);
     try {
+      if (type === "guide") {
+        const text = guideContData.body.trim();
+        const wordCount = text ? text.split(/\s+/).length : 0;
+
+        if (wordCount > MAX_WORD_COUNT) {
+          toast.error("Word count limit exceeded", {
+            description: `Your guide currently has ${wordCount.toLocaleString()} words. Please reduce it to ${MAX_WORD_COUNT.toLocaleString()} words or fewer.`,
+          });
+          return;
+        }
+      }
+
       if (type === "objective") {
         const missing = missingObjectiveFields();
         if (missing.length > 0) {

@@ -702,6 +702,24 @@ math-field::part(menu-toggle):hover {
   top: 0 !important;
   left: 0 !important;
 }
+.editor-toolbar-wrapper {
+  width: 100%;
+}
+
+.editor-word-count {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 22px;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground) / 0.7);
+  user-select: none;
+}
+.editor-word-count.text-red-500 {
+  color: rgb(239 68 68);
+}
 
 @media (max-width: 639px) {
   .editor-only-container,

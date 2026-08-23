@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { normalizeTodoTitle, todoPrereqSchema } from "@bluelearn/schemas";
 import type { Dispatch, SetStateAction } from "react";
 import type {
   ContributionType,
@@ -10,6 +11,7 @@ import { StepperActionHeader } from "@/components/contribute/StepperActionHeader
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -66,6 +68,10 @@ export const GuideDetails = ({
     title: "",
     summary: "",
   });
+  const [todoPrereqError, setTodoPrereqError] = useState<{
+    field: "title" | "summary";
+    message: string;
+  } | null>(null);
   const [newSubject, setNewSubject] = useState<{
     name: string;
     summary: string;
@@ -390,13 +396,18 @@ export const GuideDetails = ({
                   type="text"
                   maxLength={50}
                   placeholder="Enter title of missing prerequisite guide."
-                  className="h-10 rounded-md"
+                  className={`h-10 rounded-md ${todoPrereqError ? "outline-2 outline-offset-2 outline-destructive" : ""}`}
                   value={todoPrereq.title}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setTodoPrereqError(null);
                     setTodoPrereq((prev) => ({
                       ...prev,
                       title: e.target.value,
-                    }))
+                    }));
+                  }}
+                  aria-invalid={!!todoPrereqError}
+                  aria-describedby={
+                    todoPrereqError ? "todo-prereq-error" : undefined
                   }
                 />
 
@@ -405,34 +416,69 @@ export const GuideDetails = ({
                   type="text"
                   maxLength={500}
                   placeholder="Enter summary of missing prerequisite guide."
-                  className="h-10 rounded-md"
+                  className={`h-10 rounded-md ${todoPrereqError ? "outline-2 outline-offset-2 outline-destructive" : ""}`}
                   value={todoPrereq.summary}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setTodoPrereqError(null);
                     setTodoPrereq((prev) => ({
                       ...prev,
                       summary: e.target.value,
-                    }))
+                    }));
+                  }}
+                  aria-invalid={!!todoPrereqError}
+                  aria-describedby={
+                    todoPrereqError ? "todo-prereq-error" : undefined
                   }
                 />
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="btn-sec h-10 w-full rounded-md sm:w-24"
                   onClick={() => {
-                    if (todoPrereq.title !== "" && todoPrereq.summary !== "") {
-                      const todos = [...guideContData.todoPrereqs, todoPrereq];
-                      setGuideContData((prev) => ({
-                        ...prev,
-                        todoPrereqs: todos,
-                      }));
-
-                      setTodoPrereq({ title: "", summary: "" });
+                    const result = todoPrereqSchema.safeParse(todoPrereq);
+                    if (!result.success) {
+                      const issue = result.error.issues[0];
+                      const field =
+                        issue.path[0] === "summary" ? "summary" : "title";
+                      setTodoPrereqError({
+                        field,
+                        message: issue.message,
+                      });
+                      return;
                     }
+
+                    const normalizedTitle = normalizeTodoTitle(
+                      result.data.title
+                    );
+                    if (
+                      guideContData.todoPrereqs.some(
+                        (todo) =>
+                          normalizeTodoTitle(todo.title) === normalizedTitle
+                      )
+                    ) {
+                      setTodoPrereqError({
+                        field: "title",
+                        message:
+                          "A TODO prerequisite with this title already exists.",
+                      });
+                      return;
+                    }
+
+                    setGuideContData((prev) => ({
+                      ...prev,
+                      todoPrereqs: [...prev.todoPrereqs, result.data],
+                    }));
+                    setTodoPrereq({ title: "", summary: "" });
+                    setTodoPrereqError(null);
                   }}
                 >
                   Add Todo
                 </Button>
               </div>
+              <FieldError id="todo-prereq-error">
+                {todoPrereqError ? todoPrereqError.message : null}
+              </FieldError>
             </Field>
             {guideContData.todoPrereqs.length > 0 && (
               <div className="flex flex-col gap-2 px-1">
