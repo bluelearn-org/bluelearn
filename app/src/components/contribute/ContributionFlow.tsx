@@ -851,7 +851,7 @@ function Inner({
     }
   };
 
-  // Remove draft from localStorage if user leaves /contribute page
+  // Remove draft from sessionStorage if user leaves /contribute page
   const location = useLocation();
   const pathname = location.pathname;
 
