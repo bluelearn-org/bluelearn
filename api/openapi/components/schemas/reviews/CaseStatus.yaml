@@ -1,3 +1,0 @@
-type: string
-enum: [pending, in_review, approved, rejected]
-example: in_review

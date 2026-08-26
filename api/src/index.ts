@@ -1,5 +1,9 @@
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
+import { openAPIRouteHandler } from "hono-openapi";
+import { Scalar } from "@scalar/hono-api-reference";
+import { openApiDocumentation } from "./lib/openapi";
 import { avatarRouter } from "./routes/avatar";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseMiddleware } from "./middleware/auth.middleware";
@@ -29,10 +33,20 @@ import { reviewsRouter } from "./routes/reviews";
 import { mediaRouter } from "./routes/media";
 import { searchRouter } from "./routes/search";
 
+let specHandler: MiddlewareHandler<HonoEnv> | undefined;
+const openApiHandler: MiddlewareHandler<HonoEnv> = (c, next) => {
+  specHandler ??= openAPIRouteHandler(app, {
+    documentation: openApiDocumentation,
+  });
+  return specHandler(c, next);
+};
+
 const app = new Hono<HonoEnv>()
   .use((c, next) => cors({ origin: c.env.APP_URL })(c, next))
   .use(rateLimitMiddleware({ ...READ, bucket: "global-read" }))
   .get("/", (c) => c.json({ ok: true }))
+  .get("/openapi", openApiHandler)
+  .get("/docs", Scalar({ url: "/openapi" }))
   .route("/avatar", avatarRouter)
   .use(supabaseMiddleware())
   .route("/me", meRouter)
