@@ -56,7 +56,8 @@ export function useVote(
   // leaves the buttons showing something that was not stored.
   const mutate = async (
     run: (id: string) => Promise<MyVote>,
-    failure: string
+    failure: string,
+    onSuccess?: () => void
   ) => {
     if (!variantId) return false;
     if (!userId) {
@@ -66,7 +67,10 @@ export function useVote(
 
     setSubmitting(true);
     try {
-      setVote(await run(variantId));
+      const submission = await run(variantId);
+      setVote(submission);
+      onSuccess?.();
+
       await loadTally(variantId);
       return true;
     } catch {
@@ -86,10 +90,15 @@ export function useVote(
       return castVote(id, { direction: "up" });
     }, "Could not save your vote.");
 
-  const downvote = (reason: DownvoteReason, note: string) =>
+  const downvote = (
+    reason: DownvoteReason,
+    note: string,
+    onSuccess?: () => void
+  ) =>
     mutate(
       (id) => castVote(id, { direction: "down", reason, note: note || null }),
-      "Could not save your downvote."
+      "Could not save your downvote.",
+      onSuccess
     );
 
   const removeVote = () =>
