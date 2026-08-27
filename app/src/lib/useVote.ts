@@ -101,11 +101,15 @@ export function useVote(
       onSuccess
     );
 
-  const removeVote = () =>
-    mutate(async (id) => {
-      await retractVote(id);
-      return null;
-    }, "Could not remove your vote.");
+  const removeVote = (onSuccess: () => void) =>
+    mutate(
+      async (id) => {
+        await retractVote(id);
+        return null;
+      },
+      "Could not remove your vote.",
+      onSuccess
+    );
 
   return { vote, tally, submitting, upvote, downvote, removeVote };
 }

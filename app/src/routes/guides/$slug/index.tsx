@@ -184,10 +184,12 @@ function RouteComponent() {
                     : null
                 }
                 onSubmit={async (reason, note) => {
-                  await downvote(reason, note, () => setDownvoteOpen(false));
+                  await downvote(reason, note, async () =>
+                    setDownvoteOpen(false)
+                  );
                 }}
                 onRemove={async () => {
-                  if (await removeVote()) setDownvoteOpen(false);
+                  await removeVote(() => setDownvoteOpen(false));
                 }}
               />
 
