@@ -1,6 +1,0 @@
-type: string
-description: >
-  theoretical => a grand explanation; its guides display as "alternatives".
-  practical => a route to a goal; its guides display as "methods".
-enum: [theoretical, practical]
-example: theoretical

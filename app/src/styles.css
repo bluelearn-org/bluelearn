@@ -136,6 +136,7 @@
   .markdown h5,
   .markdown h6 {
     scroll-margin-top: 5rem;
+    @apply whitespace-pre-wrap;
   }
 
   .markdown h1 {
@@ -246,6 +247,10 @@
 
   .markdown img {
     @apply my-4 h-auto max-w-full rounded-lg;
+  }
+
+  .markdown a {
+    @apply text-primary underline;
   }
 }
 

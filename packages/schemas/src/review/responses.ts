@@ -30,7 +30,15 @@ export const reviewCaseDetailSchema = z.object({
   updated_at: z.string(),
 });
 
-export const reviewCaseDetailResponseSchema = z.object({
+export const reviewDecisionSchema = z.object({
+  id: z.string(),
+  decision: reviewOutcomeSchema,
+  notes: z.string().nullable(),
+  reasons: z.array(z.string()),
+  created_at: z.string(),
+});
+
+export const reviewCaseDetailResponseSchema = z.strictObject({
   case: reviewCaseDetailSchema,
   panel: z.array(
     z.object({
@@ -97,6 +105,20 @@ export const reviewCaseDetailResponseSchema = z.object({
   ),
 });
 
+export const reviewQueueResponseSchema = z.strictObject({
+  cases: z.array(reviewQueueItemSchema),
+  total: z.number().int().min(0),
+});
+
+export const reviewCaseListResponseSchema = z.strictObject({
+  cases: z.array(reviewCaseListItemSchema),
+});
+
+export const reviewDecisionResponseSchema = z.strictObject({
+  decision: reviewDecisionSchema,
+});
+
+export type ReviewDecision = z.infer<typeof reviewDecisionSchema>;
 export type ReviewCaseListItem = z.infer<typeof reviewCaseListItemSchema>;
 export type ReviewQueueItem = z.infer<typeof reviewQueueItemSchema>;
 export type ReviewCaseDetail = z.infer<typeof reviewCaseDetailSchema>;
