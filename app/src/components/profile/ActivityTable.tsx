@@ -286,7 +286,7 @@ export function ActivityTable({
 
                     <TableCell className="px-4 py-3">{row.title}</TableCell>
 
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="max-w-xs px-4 py-3 break-words whitespace-pre-line">
                       {row.change_summary}
                     </TableCell>
 

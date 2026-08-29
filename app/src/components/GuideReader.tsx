@@ -63,12 +63,25 @@ export const GuideReader = ({
     (level: number) =>
     ({ children }: any) => {
       const getText = (value: any): string => {
+        if (value == null) {
+          return "";
+        }
+
         if (typeof value === "string" || typeof value === "number") {
           return String(value);
         }
-        if (Array.isArray(value)) return value.map(getText).join("");
-        return getText(value?.props?.children);
+
+        if (Array.isArray(value)) {
+          return value.map(getText).join("");
+        }
+
+        if (value?.props?.children != null) {
+          return getText(value.props.children);
+        }
+
+        return "";
       };
+
       const text = getText(children);
 
       return createElement(
