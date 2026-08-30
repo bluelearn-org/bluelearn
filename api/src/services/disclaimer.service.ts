@@ -55,14 +55,12 @@ export async function replaceDisclaimers(
     throw new ServiceError("Unknown disclaimer slug", 400);
   }
 
-  const { error: insError } = await supabase
-    .from("guide_disclaimers")
-    .insert(
-      disclaimerRows!.map((d) => ({
-        guide_base_id: baseId,
-        disclaimer_id: d.id,
-      }))
-    );
+  const { error: insError } = await supabase.from("guide_disclaimers").insert(
+    disclaimerRows!.map((d) => ({
+      guide_base_id: baseId,
+      disclaimer_id: d.id,
+    }))
+  );
   if (insError) {
     console.error(insError);
     throw new ServiceError("Unable to update disclaimers", 400);

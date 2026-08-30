@@ -280,8 +280,6 @@ async function loadPrerequisites(
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
-
-
 export async function getGuideBySlug(supabase: DB, rawSlug: string) {
   const slug = rawSlug.toLowerCase();
 

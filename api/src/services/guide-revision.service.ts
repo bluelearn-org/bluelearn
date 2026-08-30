@@ -393,7 +393,14 @@ export async function updateRevision(
   id: string,
   input: UpdateRevisionInput
 ) {
-  const { tags, prerequisites, newSubjects, todoPrereqs, disclaimers, ...fields } = input;
+  const {
+    tags,
+    prerequisites,
+    newSubjects,
+    todoPrereqs,
+    disclaimers,
+    ...fields
+  } = input;
 
   const patch = {
     ...fields,
