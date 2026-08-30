@@ -400,6 +400,22 @@ insert into public.votes (voter_id, guide_id, direction) values
   ('00000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000080', 'up')
 on conflict do nothing;
 
+-- ---------------------------------------------------------------------------
+-- Disclaimer associations for seed data.
+-- Disclaimers live on guide_bases so they apply to all variants.
+-- ---------------------------------------------------------------------------
+insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
+select '20000000-0000-4000-8000-000000000003', id from public.disclaimers where slug = 'financial'
+on conflict do nothing; -- Deploy to Cloudflare Workers: financial
+
+insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
+select '20000000-0000-4000-8000-000000000004', id from public.disclaimers where slug = 'medical'
+on conflict do nothing; -- SQL Joins: medical
+
+insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
+select '20000000-0000-4000-8000-000000000005', id from public.disclaimers where slug = 'legal'
+on conflict do nothing; -- Debounce a Search Input: legal
+
 -- Publish guides 1-5 and their variants: point each guide at its live revision,
 -- each base at its canonical guide, and flip both to published. Guide/base 6 stays draft.
 update public.guides g

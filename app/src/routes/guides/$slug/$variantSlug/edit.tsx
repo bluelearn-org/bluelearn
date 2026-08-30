@@ -84,6 +84,7 @@ function RouteComponent() {
     })),
     prereqs: snapshot.prerequisites,
     todoPrereqs: snapshot.todos,
+    disclaimers: snapshot.disclaimers,
   }));
 
   const [changeSummary, setChangeSummary] = useState(
@@ -160,6 +161,7 @@ function RouteComponent() {
         slug,
         title: titleBySlug.get(slug) ?? slug,
       })),
+      disclaimers: guideContData.disclaimers,
     };
   }, [
     guideContData,

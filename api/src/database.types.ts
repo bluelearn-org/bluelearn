@@ -7,13 +7,54 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      disclaimers: {
+        Row: {
+          description: string | null
+          id: string
+          label: string
+          slug: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          label: string
+          slug: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          label?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       guide_bases: {
         Row: {
           canonical_guide_id: string | null
@@ -66,6 +107,43 @@ export type Database = {
           {
             foreignKeyName: "guide_bases_forked_from_guide_base_id_fkey"
             columns: ["forked_from_guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_disclaimers: {
+        Row: {
+          disclaimer_id: string
+          guide_base_id: string
+        }
+        Insert: {
+          disclaimer_id: string
+          guide_base_id: string
+        }
+        Update: {
+          disclaimer_id?: string
+          guide_base_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_disclaimers_disclaimer_id_fkey"
+            columns: ["disclaimer_id"]
+            isOneToOne: false
+            referencedRelation: "disclaimers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_disclaimers_guide_base_id_fkey"
+            columns: ["guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_disclaimers_guide_base_id_fkey"
+            columns: ["guide_base_id"]
             isOneToOne: false
             referencedRelation: "published_guides"
             referencedColumns: ["id"]
@@ -1410,6 +1488,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["verifier", "moderator", "curator", "admin", "official"],
@@ -1451,3 +1532,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UpdateRevisionInput } from "@bluelearn/schemas";
+import type { DisclaimerSlug } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 import { diffField } from "../lib/diff";
 import { createSubject } from "./subject.service";
 import { createPrerequisite } from "./prerequisite.service";
 import { createTodo } from "./todo.service";
+import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -232,7 +234,7 @@ export async function syncDraftTagsAndEdges(
   }
 }
 
-// Gets knowledge type, prerequisites, todos, and whether the guide is a variant.
+// Gets knowledge type, prerequisites, todos, disclaimers, and whether the guide is a variant.
 async function loadDraftContext(supabase: DB, guideId: string) {
   const empty = {
     knowledge_type: null,
@@ -241,6 +243,7 @@ async function loadDraftContext(supabase: DB, guideId: string) {
     variant_slug: null,
     prerequisites: [],
     todos: [],
+    disclaimers: [] as DisclaimerSlug[],
   };
   const { data: guide, error: guideError } = await supabase
     .from("guides")
@@ -254,7 +257,7 @@ async function loadDraftContext(supabase: DB, guideId: string) {
   if (!guide) return empty;
   const baseId = guide.guide_base_id;
 
-  const [baseRes, edgeRes, todoRes] = await Promise.all([
+  const [baseRes, edgeRes, todoRes, disclaimers] = await Promise.all([
     supabase
       .from("guide_bases")
       .select("knowledge_type, slug, canonical_guide_id")
@@ -270,6 +273,7 @@ async function loadDraftContext(supabase: DB, guideId: string) {
       .select("title, summary")
       .eq("dependent_guide_base_id", baseId)
       .eq("status", "open"),
+    loadDisclaimers(supabase, baseId),
   ]);
 
   if (baseRes.error || edgeRes.error || todoRes.error) {
@@ -283,8 +287,6 @@ async function loadDraftContext(supabase: DB, guideId: string) {
     knowledge_type: baseRes.data?.knowledge_type ?? null,
     is_variant: canonical != null && canonical !== guideId,
     base_slug: baseRes.data?.slug ?? null,
-    // Only set once the guide is published, so it tells whether the editor
-    // route or the contribute flow owns this draft.
     variant_slug: guide.slug,
     prerequisites: (edgeRes.data ?? [])
       .map((e) => e.from?.slug)
@@ -293,6 +295,7 @@ async function loadDraftContext(supabase: DB, guideId: string) {
       title: t.title,
       summary: t.summary,
     })),
+    disclaimers,
   };
 }
 
@@ -344,6 +347,7 @@ export async function getRevision(supabase: DB, id: string) {
     variant_slug,
     prerequisites,
     todos,
+    disclaimers,
   } = context;
   return {
     revision,
@@ -355,6 +359,7 @@ export async function getRevision(supabase: DB, id: string) {
     prerequisites,
     todos,
     revised_from_case_id,
+    disclaimers,
   };
 }
 
@@ -388,7 +393,7 @@ export async function updateRevision(
   id: string,
   input: UpdateRevisionInput
 ) {
-  const { tags, prerequisites, newSubjects, todoPrereqs, ...fields } = input;
+  const { tags, prerequisites, newSubjects, todoPrereqs, disclaimers, ...fields } = input;
 
   const patch = {
     ...fields,
@@ -443,6 +448,17 @@ export async function updateRevision(
     newSubjects,
     todoPrereqs,
   });
+
+  if (disclaimers !== undefined) {
+    const base = await resolveRevisionBase(supabase, id);
+    if (base.status !== "draft") {
+      throw new ServiceError(
+        "Disclaimers can't be changed from a revision once the guide is published",
+        422
+      );
+    }
+    await replaceDisclaimers(supabase, base.id, disclaimers);
+  }
 
   const subjects = await loadRevisionTags(supabase, id);
   return { revision, subjects };

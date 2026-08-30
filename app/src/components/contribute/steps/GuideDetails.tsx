@@ -6,7 +6,6 @@ import type {
   ContributionType,
   GuideContribution,
 } from "@/types/contributions";
-
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 import {
   Field,
@@ -16,10 +15,17 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+
+const DISCLAIMER_OPTIONS = [
+  { value: "medical", label: "Medical" },
+  { value: "financial", label: "Financial" },
+  { value: "legal", label: "Legal" },
+  { value: "mature", label: "Mature age-restricted 18+ content" },
+  { value: "profanity", label: "Profanity" },
+];
 
 type SubjectOption = { id: string; name: string };
 type GuideOption = {
@@ -346,6 +352,29 @@ export const GuideDetails = ({
             ))}
           </div>
         )}
+
+        <Field className="space-y-2">
+          <div className="space-y-1">
+            <FieldLabel className="font-mono tracking-[0.08em] uppercase">
+              Disclaimers
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              Select content-category disclaimers that apply to this guide.
+            </FieldDescription>
+          </div>
+
+          <Combobox
+            multiple
+            items={DISCLAIMER_OPTIONS}
+            value={guideContData.disclaimers}
+            onValueChange={(disclaimers) =>
+              setGuideContData((prev) => ({
+                ...prev,
+                disclaimers: disclaimers as GuideContribution["disclaimers"],
+              }))
+            }
+          />
+        </Field>
 
         {showBaseFields && (
           <>

@@ -75,6 +75,7 @@ const createGuideContData = (): GuideContribution => ({
   newSubjects: [],
   prereqs: [],
   todoPrereqs: [],
+  disclaimers: [],
 });
 
 const createVariantContData = (): VariantContribution => ({
@@ -444,6 +445,7 @@ function Inner({
             newSubjects: pending,
             prereqs: data.prerequisites,
             todoPrereqs: data.todos,
+            disclaimers: data.disclaimers,
           };
           setGuideContData(gData);
           setStoredDraft("guide", {
@@ -551,6 +553,7 @@ function Inner({
         slug,
         title: titleBySlug.get(slug) ?? slug,
       })),
+      disclaimers: guideContData.disclaimers,
     };
   }, [guideContData, subjectOptions, guideOptions, username]);
 
@@ -580,6 +583,7 @@ function Inner({
         })),
       ],
       prerequisites: [],
+      disclaimers: [],
     };
   }, [variantContData, subjectOptions, username]);
 
@@ -599,6 +603,7 @@ function Inner({
     prerequisites: guideContData.prereqs,
     newSubjects: unsavedSubjects(guideContData.newSubjects),
     todoPrereqs: guideContData.todoPrereqs,
+    disclaimers: guideContData.disclaimers,
   });
 
   const variantDraftFields = () => ({
@@ -720,6 +725,7 @@ function Inner({
                   : "theoretical",
               ...draftFields(),
               todoClaims: todoIds,
+              disclaimers: guideContData.disclaimers,
             })
           : addGuideVariant(variantContData.baseGuide, variantDraftFields())
       )

@@ -17,3 +17,13 @@ export const downvoteReasons = [
 ] as const;
 
 export const downvoteReasonSchema = z.enum(downvoteReasons);
+
+export const disclaimerSlugs = [
+  "medical",
+  "financial",
+  "legal",
+  "mature",
+  "profanity",
+] as const;
+export const disclaimerSchema = z.enum(disclaimerSlugs);
+export type DisclaimerSlug = z.infer<typeof disclaimerSchema>;
