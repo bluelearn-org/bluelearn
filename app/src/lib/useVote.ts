@@ -57,7 +57,7 @@ export function useVote(
   const mutate = async (
     run: (id: string) => Promise<MyVote>,
     failure: string,
-    onSuccess?: () => void
+    handleClose?: () => void
   ) => {
     if (!variantId) return false;
     if (!userId) {
@@ -69,7 +69,7 @@ export function useVote(
     try {
       const submission = await run(variantId);
 
-      onSuccess?.();
+      handleClose?.();
 
       const delay = (ms: number) =>
         new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,22 +99,22 @@ export function useVote(
   const downvote = (
     reason: DownvoteReason,
     note: string,
-    onSuccess?: () => void
+    handleClose?: () => void
   ) =>
     mutate(
       (id) => castVote(id, { direction: "down", reason, note: note || null }),
       "Could not save your downvote.",
-      onSuccess
+      handleClose
     );
 
-  const removeVote = (onSuccess: () => void) =>
+  const removeVote = (handleClose: () => void) =>
     mutate(
       async (id) => {
         await retractVote(id);
         return null;
       },
       "Could not remove your vote.",
-      onSuccess
+      handleClose
     );
 
   return { vote, tally, submitting, upvote, downvote, removeVote };
