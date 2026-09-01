@@ -80,8 +80,8 @@ export const VariantDetails = ({
             id="title"
             type="text"
             autoComplete="Title"
-            maxLength={50}
-            placeholder="Choose a title. (Maximum 50 characters)."
+            maxLength={100}
+            placeholder="Choose a title. (Maximum 100 characters)."
             className="h-10 rounded-md"
             required
             value={variantContData.title}
