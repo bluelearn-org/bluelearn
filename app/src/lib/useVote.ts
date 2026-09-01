@@ -68,8 +68,14 @@ export function useVote(
     setSubmitting(true);
     try {
       const submission = await run(variantId);
-      setVote(submission);
+
       onSuccess?.();
+
+      const delay = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+      await delay(200);
+
+      setVote(submission);
 
       await loadTally(variantId);
       return true;
