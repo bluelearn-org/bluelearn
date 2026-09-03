@@ -14,6 +14,7 @@ import { Combobox } from "@/components/ui/combobox";
 
 import { cn } from "@/lib/utils";
 import { deadlineTickMs, formatTimeRemaining } from "@/lib/reviewDeadline";
+import { validateReviewDecision } from "@/lib/reviewValidation";
 import { castDecision } from "@/lib/api/reviews";
 import { getRevision, reviseRevision } from "@/lib/api/guideRevisions";
 import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
@@ -102,19 +103,7 @@ export const ReviewSidebar = ({
     revisionData.case.status !== "approved" &&
     revisionData.case.status !== "rejected";
 
-  const validateReview = () => {
-    if (review.decision === "")
-      return "Choose approve or reject before submitting";
-    if (review.decision === "approve") return "";
-
-    const missing = [];
-    if (review.reasons.length === 0) missing.push("at least one reason");
-    if (review.notes.length === 0) missing.push("a note");
-
-    return missing.length === 0
-      ? ""
-      : `Rejections require ${missing.join(" and ")}`;
-  };
+  const validateReview = () => validateReviewDecision(review);
 
   const submitDecision = async () => {
     abortControllerRef.current?.abort();
