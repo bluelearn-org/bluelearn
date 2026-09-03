@@ -26,7 +26,6 @@ import { OrderTargetGuides } from "@/components/contribute/steps/objective/Order
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
 
 import { addGuideVariant, createGuide, listGuides } from "@/lib/api/guides";
-import { getMyIdentity } from "@/lib/api/identity";
 import { listSubjects } from "@/lib/api/subjects";
 import { flows, typeStep } from "@/lib/contributionFlow";
 import { uploadMedia } from "@/lib/api/media";
