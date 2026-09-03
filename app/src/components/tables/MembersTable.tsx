@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { Checkbox } from "../ui/checkbox";
+import type { MemberRow } from "@/lib/api/dashboard";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -9,59 +9,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/guideUtils";
 
-export const MembersTable = () => {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+type MembersTableProps = {
+  MemberData: Array<MemberRow>;
+  selectedIds: Set<string>;
+  setSelectedIds: (ids: Set<string>) => void;
+};
 
-  const profiles = [
-    {
-      id: "001",
-      username: "andrea",
-      display_name: "Andrea",
-      bio: "Software Engineer",
-      date_created: "08-14-2026",
-      date_updated: "08-21-2026",
-      status: "active",
-    },
-    {
-      id: "002",
-      username: "bob",
-      display_name: "Bob",
-      bio: "Writer",
-      date_created: "08-14-2026",
-      date_updated: "08-21-2026",
-      status: "suspended",
-    },
-  ];
-
+export const MembersTable = ({
+  MemberData: profiles,
+  selectedIds,
+  setSelectedIds,
+}: MembersTableProps) => {
   const allSelected =
     profiles.length > 0 &&
-    profiles.every((profile) => selectedIds.has(profile.id));
+    profiles.every((profile: MemberRow) => selectedIds.has(profile.id));
 
   function toggleProfile(profileId: string) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(profileId)) {
-        next.delete(profileId);
-      } else {
-        next.add(profileId);
-      }
-
-      return next;
-    });
+    const next = new Set(selectedIds);
+    if (next.has(profileId)) {
+      next.delete(profileId);
+    } else {
+      next.add(profileId);
+    }
+    setSelectedIds(next);
   }
 
   function toggleAll() {
-    setSelectedIds((current) => {
-      if (allSelected) {
-        const next = new Set(current);
-        profiles.forEach((profile) => next.delete(profile.id));
-        return next;
-      }
-
-      return new Set(profiles.map((profile) => profile.id));
-    });
+    if (allSelected) {
+      const next = new Set(selectedIds);
+      profiles.forEach((profile: MemberRow) => next.delete(profile.id));
+      setSelectedIds(next);
+    } else {
+      setSelectedIds(new Set(profiles.map((profile: MemberRow) => profile.id)));
+    }
   }
 
   return (
@@ -103,7 +85,7 @@ export const MembersTable = () => {
       </TableHeader>
 
       <TableBody>
-        {profiles.map((profile) => (
+        {profiles.map((profile: MemberRow) => (
           <TableRow key={profile.id}>
             <TableCell className="w-12 px-4 py-3">
               <Checkbox
@@ -118,7 +100,7 @@ export const MembersTable = () => {
             </TableCell>
 
             <TableCell className="px-4 py-3 whitespace-nowrap">
-              {profile.display_name}
+              {profile.display_name ?? profile.username}
             </TableCell>
 
             <TableCell className="max-w-sm px-4 py-3 break-words whitespace-pre-line">
@@ -126,11 +108,11 @@ export const MembersTable = () => {
             </TableCell>
 
             <TableCell className="mono-micro px-4 py-3 whitespace-nowrap">
-              {profile.date_created}
+              {formatDate(new Date(profile.date_created))}
             </TableCell>
 
             <TableCell className="mono-micro px-4 py-3 whitespace-nowrap">
-              {profile.date_updated}
+              {formatDate(new Date(profile.date_updated))}
             </TableCell>
 
             <TableCell className="px-4 py-3">
@@ -138,7 +120,7 @@ export const MembersTable = () => {
                 variant="outline"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
-                {profile.status}
+                {profile.status ?? "No Status"}
               </Badge>
             </TableCell>
           </TableRow>

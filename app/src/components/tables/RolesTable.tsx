@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Checkbox } from "../ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,57 +8,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/guideUtils";
 
-export const RolesTable = () => {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+type RolesTableProps = {
+  roleData: Array<any>;
+  selectedIds: Set<string>;
+  setSelectedIds: (ids: Set<string>) => void;
+};
 
-  const roleData = [
-    {
-      id: "001",
-      username: "andrea",
-      roles: ["admin", "curator"],
-      date_created: "08-14-2026",
-      date_updated: "08-21-2026",
-      status: "active",
-    },
-    {
-      id: "002",
-      username: "bob",
-      roles: ["verifier"],
-      date_created: "08-14-2026",
-      date_updated: "08-21-2026",
-      status: "suspended",
-    },
-  ];
-
+export const RolesTable = ({
+  roleData,
+  selectedIds,
+  setSelectedIds,
+}: RolesTableProps) => {
   const allSelected =
     roleData.length > 0 &&
-    roleData.every((profile) => selectedIds.has(profile.id));
+    roleData.every((profile: any) => selectedIds.has(profile.id));
 
   function toggleUser(userId: string) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
+    const next = new Set(selectedIds);
 
-      if (next.has(userId)) {
-        next.delete(userId);
-      } else {
-        next.add(userId);
-      }
-
-      return next;
-    });
+    if (next.has(userId)) {
+      next.delete(userId);
+    } else {
+      next.add(userId);
+    }
+    setSelectedIds(next);
   }
 
   function toggleAll() {
-    setSelectedIds((current) => {
-      if (allSelected) {
-        const next = new Set(current);
-        roleData.forEach((user) => next.delete(user.id));
-        return next;
-      }
+    if (allSelected) {
+      const next = new Set(selectedIds);
+      roleData.forEach((user: any) => next.delete(user.id));
+      setSelectedIds(next);
+    }
 
-      return new Set(roleData.map((user) => user.id));
-    });
+    setSelectedIds(new Set(roleData.map((user: any) => user.id)));
   }
 
   return (
@@ -97,7 +81,7 @@ export const RolesTable = () => {
       </TableHeader>
 
       <TableBody>
-        {roleData.map((user) => (
+        {roleData.map((user: any) => (
           <TableRow key={user.id}>
             <TableCell className="w-12 px-4 py-3">
               <Checkbox
@@ -112,8 +96,9 @@ export const RolesTable = () => {
             </TableCell>
 
             <TableCell className="flex max-w-xs flex-wrap gap-2 px-4 py-3">
-              {user.roles.map((role) => (
+              {user.roles.map((role: string, i: number) => (
                 <Badge
+                  key={role + i}
                   variant="outline"
                   className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
                 >
@@ -123,11 +108,11 @@ export const RolesTable = () => {
             </TableCell>
 
             <TableCell className="mono-micro px-4 py-3 whitespace-nowrap">
-              {user.date_created}
+              {formatDate(new Date(user.date_created))}
             </TableCell>
 
             <TableCell className="mono-micro px-4 py-3 whitespace-nowrap">
-              {user.date_updated}
+              {formatDate(new Date(user.date_updated))}
             </TableCell>
 
             <TableCell className="px-4 py-3">
@@ -135,7 +120,7 @@ export const RolesTable = () => {
                 variant="outline"
                 className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
               >
-                {user.status}
+                {user.status ?? "No status"}
               </Badge>
             </TableCell>
           </TableRow>
