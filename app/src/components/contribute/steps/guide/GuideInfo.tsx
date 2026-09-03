@@ -102,6 +102,7 @@ export const GuideInfo = ({
       label: "Content",
       content: (
         <Content
+          key={activeGuideId}
           body={body}
           onBodyChange={onBodyChange}
           onUploadImage={onUploadImage}
