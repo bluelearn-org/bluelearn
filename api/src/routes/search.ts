@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { searchQuerySchema } from "@bluelearn/schemas";
+import { describeRoute } from "hono-openapi";
+import { searchQuerySchema, searchResponseSchema } from "@bluelearn/schemas";
 import type { HonoEnv } from "../types";
+import { errorResponses, jsonContent, validate } from "../lib/openapi";
 import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
 import { SEARCH } from "../middleware/rateLimits";
 import { searchCollections } from "../services/search.service";
@@ -12,8 +13,16 @@ export const searchRouter = new Hono<HonoEnv>()
   // Typesense.
   .get(
     "/",
+    describeRoute({
+      tags: ["search"],
+      summary: "Full-text search across collections",
+      responses: {
+        200: jsonContent(searchResponseSchema, "Hits keyed by collection"),
+        ...errorResponses(400, 429),
+      },
+    }),
     rateLimitMiddleware({ ...SEARCH, bucket: "search" }),
-    zValidator("query", searchQuerySchema),
+    validate("query", searchQuerySchema),
     async (c) => {
       const results = await searchCollections(c.env, c.req.valid("query"));
       return c.json({ results }, 200);

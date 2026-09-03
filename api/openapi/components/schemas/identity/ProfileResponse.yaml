@@ -1,8 +1,0 @@
-type: object
-additionalProperties: false
-properties:
-  profile:
-    $ref: "./PublicProfile.yaml"
-  roles:
-    $ref: "./Roles.yaml"
-required: [profile, roles]
