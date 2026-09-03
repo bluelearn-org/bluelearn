@@ -89,25 +89,36 @@ const slugifyHeading = (text: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const getMarkdownText = (node: any): string => {
+  if (typeof node.value === "string") {
+    // strip HTML tags such as <u>, </u>, <strong>, etc.
+    return node.type === "html"
+      ? node.value.replace(/<[^>]*>/g, "")
+      : node.value;
+  }
+  return node.children?.map(getMarkdownText).join("") ?? "";
+};
+
 // extract headings from markdown content
 export const extractHeadings = (markdown: string) => {
   const tree = unified().use(remarkParse).parse(markdown);
 
-  const headings: Array<{ text: string; level: number; id: string }> = [];
-  const seen = new Map<string, number>();
+  const headings: Array<{
+    text: string;
+    level: number;
+    id: string;
+  }> = [];
+
+  const headingIds = new Map<string, number>();
 
   function walk(node: any) {
     if (node.type === "heading") {
-      const text = node.children?.map((c: any) => c.value ?? "").join("") || "";
-      const base = slugifyHeading(text);
-      const count = seen.get(base) ?? 0;
-      const id = count === 0 ? base : `${base}-${count + 1}`;
-      seen.set(base, count + 1);
+      const text = getMarkdownText(node).trim();
 
       headings.push({
         text,
         level: node.depth,
-        id,
+        id: getHeadingId(text, headingIds),
       });
     }
 

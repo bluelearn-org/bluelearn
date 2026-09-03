@@ -5,7 +5,6 @@ import {
   guideSlugSchema,
   guideSummarySchema,
   guideTitleSchema,
-  guideTodoTitleSchema,
 } from "./fields";
 import { subjectNameSchema, subjectSummarySchema } from "../subjects";
 import {
@@ -27,8 +26,16 @@ export const newSubjectSchema = z.object({
 });
 
 export const todoPrereqSchema = z.object({
-  title: guideTodoTitleSchema,
-  summary: guideSummarySchema,
+  title: z
+    .string()
+    .trim()
+    .min(1, "Title is required")
+    .max(50, "Title must be 50 characters or less"),
+  summary: z
+    .string()
+    .trim()
+    .min(1, "Summary is required")
+    .max(500, "Summary must be 500 characters or less"),
 });
 
 export const createGuideSchema = z.object({

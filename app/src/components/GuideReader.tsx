@@ -28,7 +28,7 @@ const sanitizeSchema = {
     img: [...(defaultSchema.attributes?.img ?? []), "width", "height"],
     callout: ["type"],
   },
-  tagNames: [...(defaultSchema.tagNames ?? []), "callout"],
+  tagNames: [...(defaultSchema.tagNames ?? []), "callout", "u"],
 };
 
 type ReaderTag = { id?: string; slug?: string; name: string };
@@ -62,15 +62,27 @@ export const GuideReader = ({
   const renderHeading =
     (level: number) =>
     ({ children }: any) => {
-      const text = Array.isArray(children)
-        ? children
-            .map((child) =>
-              typeof child === "string" || typeof child === "number"
-                ? String(child)
-                : (child?.props?.children ?? "")
-            )
-            .join("")
-        : String(children ?? "");
+      const getText = (value: any): string => {
+        if (value == null) {
+          return "";
+        }
+
+        if (typeof value === "string" || typeof value === "number") {
+          return String(value);
+        }
+
+        if (Array.isArray(value)) {
+          return value.map(getText).join("");
+        }
+
+        if (value?.props?.children != null) {
+          return getText(value.props.children);
+        }
+
+        return "";
+      };
+
+      const text = getText(children);
 
       return createElement(
         `h${level}`,

@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { normalizeTodoTitle, todoPrereqSchema } from "@bluelearn/schemas";
 import type { Dispatch, SetStateAction } from "react";
 import type {
   ContributionType,
@@ -10,6 +11,7 @@ import { StepperActionHeader } from "@/components/contribute/StepperActionHeader
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -66,6 +68,10 @@ export const GuideDetails = ({
     title: "",
     summary: "",
   });
+  const [todoPrereqError, setTodoPrereqError] = useState<{
+    field: "title" | "summary";
+    message: string;
+  } | null>(null);
   const [newSubject, setNewSubject] = useState<{
     name: string;
     summary: string;
@@ -156,8 +162,8 @@ export const GuideDetails = ({
             id="title"
             type="text"
             autoComplete="Title"
-            maxLength={50}
-            placeholder="Choose a title. (Maximum 50 characters)."
+            maxLength={100}
+            placeholder="Choose a title. (Maximum 100 characters)."
             className="h-10 rounded-md"
             required
             value={guideContData.title}
@@ -186,6 +192,7 @@ export const GuideDetails = ({
           <textarea
             className="h-32 w-full min-w-0 resize-none rounded-md border border-input bg-input/20 p-2 text-sm transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-xs/relaxed file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 md:text-xs/relaxed dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
             rows={4}
+            maxLength={500}
             placeholder="Write a summary for your guide."
             required
             value={guideContData.summary}
@@ -390,13 +397,18 @@ export const GuideDetails = ({
                   type="text"
                   maxLength={50}
                   placeholder="Enter title of missing prerequisite guide."
-                  className="h-10 rounded-md"
+                  className={`h-10 rounded-md ${todoPrereqError ? "outline-2 outline-offset-2 outline-destructive" : ""}`}
                   value={todoPrereq.title}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setTodoPrereqError(null);
                     setTodoPrereq((prev) => ({
                       ...prev,
                       title: e.target.value,
-                    }))
+                    }));
+                  }}
+                  aria-invalid={!!todoPrereqError}
+                  aria-describedby={
+                    todoPrereqError ? "todo-prereq-error" : undefined
                   }
                 />
 
@@ -405,34 +417,69 @@ export const GuideDetails = ({
                   type="text"
                   maxLength={500}
                   placeholder="Enter summary of missing prerequisite guide."
-                  className="h-10 rounded-md"
+                  className={`h-10 rounded-md ${todoPrereqError ? "outline-2 outline-offset-2 outline-destructive" : ""}`}
                   value={todoPrereq.summary}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setTodoPrereqError(null);
                     setTodoPrereq((prev) => ({
                       ...prev,
                       summary: e.target.value,
-                    }))
+                    }));
+                  }}
+                  aria-invalid={!!todoPrereqError}
+                  aria-describedby={
+                    todoPrereqError ? "todo-prereq-error" : undefined
                   }
                 />
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="btn-sec h-10 w-full rounded-md sm:w-24"
                   onClick={() => {
-                    if (todoPrereq.title !== "" && todoPrereq.summary !== "") {
-                      const todos = [...guideContData.todoPrereqs, todoPrereq];
-                      setGuideContData((prev) => ({
-                        ...prev,
-                        todoPrereqs: todos,
-                      }));
-
-                      setTodoPrereq({ title: "", summary: "" });
+                    const result = todoPrereqSchema.safeParse(todoPrereq);
+                    if (!result.success) {
+                      const issue = result.error.issues[0];
+                      const field =
+                        issue.path[0] === "summary" ? "summary" : "title";
+                      setTodoPrereqError({
+                        field,
+                        message: issue.message,
+                      });
+                      return;
                     }
+
+                    const normalizedTitle = normalizeTodoTitle(
+                      result.data.title
+                    );
+                    if (
+                      guideContData.todoPrereqs.some(
+                        (todo) =>
+                          normalizeTodoTitle(todo.title) === normalizedTitle
+                      )
+                    ) {
+                      setTodoPrereqError({
+                        field: "title",
+                        message:
+                          "A TODO prerequisite with this title already exists.",
+                      });
+                      return;
+                    }
+
+                    setGuideContData((prev) => ({
+                      ...prev,
+                      todoPrereqs: [...prev.todoPrereqs, result.data],
+                    }));
+                    setTodoPrereq({ title: "", summary: "" });
+                    setTodoPrereqError(null);
                   }}
                 >
                   Add Todo
                 </Button>
               </div>
+              <FieldError id="todo-prereq-error">
+                {todoPrereqError ? todoPrereqError.message : null}
+              </FieldError>
             </Field>
             {guideContData.todoPrereqs.length > 0 && (
               <div className="flex flex-col gap-2 px-1">
