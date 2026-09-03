@@ -10,7 +10,6 @@ import type {
   ObjectiveContribution,
   VariantContribution,
 } from "@/types/contributions";
-import type { GuideType } from "@/types/guides";
 
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
