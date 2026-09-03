@@ -8,16 +8,13 @@ import {
 } from "@/types/contributions";
 
 /**
- * All locally stored contribution drafts live under one localStorage key.
+ * all locally stored contribution drafts exist under one localStorage key
  */
 const STORAGE_KEY = "bluelearn:contrib:drafts";
 
 /**
- * localDraftId:
- *   Identifies the draft inside this browser.
- *
- * revisionId:
- *   Identifies the corresponding database revision, if one exists.
+ * localDraftId - identifies the draft inside this browser
+ * revisionId - identifies the corresponding database revision (if it exists)
  */
 export interface PersistedContributionDraft<T> {
   localDraftId: string;
@@ -29,17 +26,10 @@ export interface PersistedContributionDraft<T> {
 }
 
 /**
- * Raw localStorage structure.
- *
- * Values are unknown until they are validated against the
- * appropriate contribution schema.
+ * localStorage structure - values are unknown until they are validated against the contribution schema
  */
 type StoredDrafts = Record<string, unknown>;
 
-/**
- * Creates the complete validation schema for a particular
- * contribution type.
- */
 const persistedDraftSchema = <T extends z.ZodType>(
   type: ContributionType,
   dataSchema: T
@@ -56,46 +46,34 @@ const persistedDraftSchema = <T extends z.ZodType>(
     updatedAt: z.number(),
   });
 
-/**
- * Schema used to determine which contribution schema should
- * validate an individual draft.
- */
+// schema determine which contribution schema should validate an individual draft
 const draftEnvelopeSchema = z.object({
   localDraftId: z.string().min(1),
   type: z.enum(["guide", "variant", "objective"]),
 });
 
-/**
- * Schemas for each contribution type.
- *
- * The literal `type` on each schema creates the discriminated
- * relationship between `type` and `data`.
- */
+// schemas for each contribution type
 const DRAFT_SCHEMAS = {
   guide: persistedDraftSchema("guide", guideContributionSchema),
   variant: persistedDraftSchema("variant", variantContributionSchema),
   objective: persistedDraftSchema("objective", objectiveContributionSchema),
 };
 
-/**
- * Types generated directly from the Zod schemas.
- */
+// types generated directly from Zod schemas
 type StoredGuideDraft = z.infer<typeof DRAFT_SCHEMAS.guide>;
 
 type StoredVariantDraft = z.infer<typeof DRAFT_SCHEMAS.variant>;
 
 type StoredObjectiveDraft = z.infer<typeof DRAFT_SCHEMAS.objective>;
 
-type AnyStoredDraft =
+export type AnyStoredDraft =
   | StoredGuideDraft
   | StoredVariantDraft
   | StoredObjectiveDraft;
 
 /**
- * Safely reads the complete raw draft store from localStorage.
- *
- * Individual drafts are validated later - each contribution
- * type has a different data schema.
+ * reads the complete raw draft from localStorage
+ * individual drafts are validated later - each contribution type has a different data schema
  */
 function readStoredDrafts(): StoredDrafts {
   if (typeof window === "undefined") {
@@ -132,9 +110,7 @@ function readStoredDrafts(): StoredDrafts {
   }
 }
 
-/**
- * Writes the complete draft store to localStorage.
- */
+// writes the complete draft store to localStorage
 function writeStoredDrafts(drafts: StoredDrafts): void {
   if (typeof window === "undefined") {
     return;
@@ -147,9 +123,7 @@ function writeStoredDrafts(drafts: StoredDrafts): void {
   }
 }
 
-/**
- * Generates a unique ID for a new local draft.
- */
+// generates a unique ID for new local draft
 export function createLocalDraftId(): string {
   if (
     typeof crypto !== "undefined" &&
@@ -161,12 +135,7 @@ export function createLocalDraftId(): string {
   throw new Error("crypto.randomUUID() is not available in this environment.");
 }
 
-/**
- * Validates one raw localStorage entry.
- *
- * The switch preserves the relationship between
- * the contribution type and its corresponding data schema.
- */
+// validates one raw localStorage entry
 function parseStoredDraft(value: unknown): AnyStoredDraft | null {
   const envelopeResult = draftEnvelopeSchema.safeParse(value);
 
@@ -195,33 +164,20 @@ function parseStoredDraft(value: unknown): AnyStoredDraft | null {
   }
 }
 
-/**
- * Gets a single stored guide draft.
- */
+// get a single stored draft
 export function getStoredDraft(
   localDraftId: string,
   type: "guide"
 ): StoredGuideDraft | null;
-
-/**
- * Gets a single stored variant draft.
- */
 export function getStoredDraft(
   localDraftId: string,
   type: "variant"
 ): StoredVariantDraft | null;
-
-/**
- * Gets a single stored objective draft.
- */
 export function getStoredDraft(
   localDraftId: string,
   type: "objective"
 ): StoredObjectiveDraft | null;
 
-/**
- * Implementation for getStoredDraft.
- */
 export function getStoredDraft(
   localDraftId: string,
   type: ContributionType
@@ -232,39 +188,29 @@ export function getStoredDraft(
 
   const drafts = readStoredDrafts();
   const rawDraft = drafts[localDraftId];
-
   if (rawDraft === undefined) {
     return null;
   }
 
   const parsedDraft = parseStoredDraft(rawDraft);
-
   if (!parsedDraft) {
     console.warn(`Discarding malformed stored draft ${localDraftId}.`);
-
     delete drafts[localDraftId];
     writeStoredDrafts(drafts);
-
     return null;
   }
 
   if (parsedDraft.type !== type) {
     console.warn(
-      `Stored draft ${localDraftId} has type "${parsedDraft.type}" ` +
-        `but "${type}" was requested.`
+      `Stored draft ${localDraftId} has type "${parsedDraft.type}" but "${type}" was requested.`
     );
-
     return null;
   }
 
   return parsedDraft;
 }
 
-/**
- * Gets every valid stored draft.
- *
- * Malformed drafts are removed from localStorage.
- */
+// get all valid stored draft - malformed drafts are removed from localStorage
 export function getAllStoredDrafts(): Array<AnyStoredDraft> {
   if (typeof window === "undefined") {
     return [];
@@ -287,9 +233,7 @@ export function getAllStoredDrafts(): Array<AnyStoredDraft> {
       continue;
     }
 
-    /**
-     * The localStorage key and localDraftId should agree.
-     */
+    // localStorage key and localDraftId should be the same
     if (parsedDraft.localDraftId !== localDraftId) {
       console.warn(
         `Discarding stored draft with mismatched localDraftId: ${localDraftId}.`
@@ -310,28 +254,15 @@ export function getAllStoredDrafts(): Array<AnyStoredDraft> {
   return validDrafts.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-/**
- * Gets all stored guide drafts.
- */
+// get all stored drafts
 export function getStoredDraftsByType(type: "guide"): Array<StoredGuideDraft>;
-
-/**
- * Gets all stored variant drafts.
- */
 export function getStoredDraftsByType(
   type: "variant"
 ): Array<StoredVariantDraft>;
-
-/**
- * Gets all stored objective drafts.
- */
 export function getStoredDraftsByType(
   type: "objective"
 ): Array<StoredObjectiveDraft>;
 
-/**
- * Implementation for getStoredDraftsByType.
- */
 export function getStoredDraftsByType(
   type: ContributionType
 ): Array<AnyStoredDraft> {
@@ -353,19 +284,9 @@ export function getStoredDraftsByType(
   }
 }
 
-/**
- * Saves or updates one stored guide draft.
- */
+// save or update one stored draft
 export function setStoredDraft(draft: StoredGuideDraft): void;
-
-/**
- * Saves or updates one stored variant draft.
- */
 export function setStoredDraft(draft: StoredVariantDraft): void;
-
-/**
- * Saves or updates one stored objective draft.
- */
 export function setStoredDraft(draft: StoredObjectiveDraft): void;
 
 export function setStoredDraft(draft: AnyStoredDraft): void {
@@ -377,20 +298,15 @@ export function setStoredDraft(draft: AnyStoredDraft): void {
 
   if (!parsedDraft) {
     console.warn(`Refusing to store malformed ${draft.type} draft.`);
-
     return;
   }
 
   const drafts = readStoredDrafts();
-
   drafts[draft.localDraftId] = parsedDraft;
-
   writeStoredDrafts(drafts);
 }
 
-/**
- * Deletes one local draft.
- */
+// deletes one local draft
 export function clearStoredDraft(localDraftId: string): void {
   if (typeof window === "undefined") {
     return;
@@ -407,23 +323,16 @@ export function clearStoredDraft(localDraftId: string): void {
   writeStoredDrafts(drafts);
 }
 
-/**
- * Checks whether a particular local draft exists.
- * Checks the presence of the ID only.
- */
+// checks whether a particular local draft exists - checks ID presence only
 export function hasStoredDraft(localDraftId: string): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-
   const drafts = readStoredDrafts();
-
   return drafts[localDraftId] !== undefined;
 }
 
-/**
- * Deletes every locally stored contribution draft.
- */
+// deletes every locally stored contribution draft
 export function clearAllStoredDrafts(): void {
   if (typeof window === "undefined") {
     return;
@@ -436,17 +345,13 @@ export function clearAllStoredDrafts(): void {
   }
 }
 
-/**
- * Deletes all drafts belonging to a particular
- * contribution type.
- */
+// deletes all drafts belonging to a particular contribution type
 export function clearStoredDraftsByType(type: ContributionType): void {
   if (typeof window === "undefined") {
     return;
   }
 
   const drafts = readStoredDrafts();
-
   let changed = false;
 
   for (const [localDraftId, rawDraft] of Object.entries(drafts)) {
@@ -474,10 +379,8 @@ export interface ContributionSaveControls {
 }
 
 /**
- * Automatically and debouncingly saves one particular
- * contribution draft to localStorage.
- *
- * localDraftId identifies WHICH draft is being saved.
+ * automatically saves contribution drafts to localStorage
+ * localDraftId identifies WHICH draft is being saved
  */
 export function useDebouncedContributionSave(
   localDraftId: string | null,
@@ -506,9 +409,6 @@ export function useDebouncedContributionSave(
   delay?: number
 ): ContributionSaveControls;
 
-/**
- * Implementation for useDebouncedContributionSave.
- */
 export function useDebouncedContributionSave(
   localDraftId: string | null,
   type: ContributionType | null,
@@ -535,9 +435,7 @@ export function useDebouncedContributionSave(
 
   const isPendingRef = useRef(false);
 
-  /**
-   * Always keep the latest contribution data available.
-   */
+  // keep the latest contribution data available
   if (localDraftId && type) {
     pendingRef.current = {
       localDraftId,
@@ -555,9 +453,7 @@ export function useDebouncedContributionSave(
     }
   };
 
-  /**
-   * Immediately save the latest pending data.
-   */
+  // save the latest pending data
   const flush = () => {
     clearTimer();
 
@@ -609,11 +505,7 @@ export function useDebouncedContributionSave(
     }
   };
 
-  /**
-   * Cancel the pending autosave.
-   *
-   * This does NOT delete an existing localStorage draft.
-   */
+  // cancel pending autosave - this does NOT delete an existing localStorage draft
   const cancel = () => {
     clearTimer();
     isPendingRef.current = false;
@@ -625,9 +517,7 @@ export function useDebouncedContributionSave(
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
 
-  /**
-   * Start/restart debounce timer whenever the contribution changes.
-   */
+  // start debounce timer whenever the contribution changes
   useEffect(() => {
     if (!localDraftId || !type) {
       flushRef.current();
@@ -646,9 +536,7 @@ export function useDebouncedContributionSave(
     return clearTimer;
   }, [localDraftId, type, data, revisionId, step, delay]);
 
-  /**
-   * Flush anything still waiting when the component unmounts.
-   */
+  // flush anything still waiting when the component unmounts.
   useEffect(() => {
     return () => {
       flushRef.current();

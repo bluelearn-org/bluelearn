@@ -4,15 +4,13 @@ export const typeStep = [{ id: "type", title: "Contribution Type" }] as const;
 // flow definitions
 export const flows = {
   guide: [
-    { id: "guide-details", title: "Guide Details" },
-    { id: "content", title: "Content" },
+    { id: "guide-info", title: "Guide Info" },
     { id: "preview-guide", title: "Preview" },
   ],
 
   variant: [
-    { id: "variant-details", title: "Variant Details" },
-    { id: "content", title: "Content" },
-    { id: "preview-guide", title: "Preview" },
+    { id: "variant-info", title: "Variant Info" },
+    { id: "preview-variant", title: "Preview" },
   ],
 
   objective: [
