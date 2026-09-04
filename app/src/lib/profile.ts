@@ -74,6 +74,22 @@ export const ACTIVITY_STATUS_FILTERS: Array<{
   { value: "rejected", label: "Rejected" },
 ];
 
+// Derive unique subjects present in a set of activity rows, sorted by name.
+// Used to populate the Subject filter options with only relevant choices.
+export function getActivitySubjectOptions(
+  rows: Array<ActivityRow>
+): Array<{ value: string; label: string }> {
+  const seen = new Map<string, string>();
+  for (const row of rows) {
+    for (const subject of row.subjects) {
+      if (!seen.has(subject.slug)) seen.set(subject.slug, subject.name);
+    }
+  }
+  return [...seen.entries()]
+    .sort(([, a], [, b]) => a.localeCompare(b))
+    .map(([value, label]) => ({ value, label }));
+}
+
 export const ACTIVITY_SORTS = activitySortSchema.options;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -100,7 +116,7 @@ const SORTERS: Record<
 
 export function filterActivity(
   rows: Array<ActivityRow>,
-  { type, status, title, summary, from, to, sort }: ActivityFilters
+  { type, status, subject, title, summary, from, to, sort }: ActivityFilters
 ): Array<ActivityRow> {
   const titleNeedle = title?.trim().toLowerCase();
   const summaryNeedle = summary?.trim().toLowerCase();
@@ -109,6 +125,7 @@ export function filterActivity(
   const statuses = status?.length
     ? new Set(status.flatMap((s) => STATUS_BUCKETS[s]))
     : null;
+  const subjectSlugs = subject?.length ? new Set(subject) : null;
   const fromMs = from ? localDayMs(from) : null;
   // 'to' is a whole day, so include everything before the next midnight
   const toMs = to ? localDayMs(to) + DAY_MS : null;
@@ -116,6 +133,8 @@ export function filterActivity(
   const matched = rows.filter((row) => {
     if (types && !types.has(activityTypeKey(row))) return false;
     if (statuses && !statuses.has(row.status)) return false;
+    if (subjectSlugs && !row.subjects.some((s) => subjectSlugs.has(s.slug)))
+      return false;
     if (titleNeedle && !row.title.toLowerCase().includes(titleNeedle))
       return false;
     if (

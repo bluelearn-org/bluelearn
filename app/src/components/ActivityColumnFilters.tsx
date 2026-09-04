@@ -191,9 +191,9 @@ export function ChoiceColumnFilter({
   setFilters,
 }: {
   label: string;
-  field: "type" | "status";
+  field: "type" | "status" | "subject";
   options: ReadonlyArray<{
-    value: ActivityTypeFilter | ActivityStatusFilter;
+    value: ActivityTypeFilter | ActivityStatusFilter | string;
     label: string;
   }>;
   search: ActivityFilters;
