@@ -36,6 +36,7 @@ const filterList = <T extends string>(schema: z.ZodType<T>) =>
 export const profileActivitySearchSchema = z.object({
   type: filterList(activityTypeFilterSchema),
   status: filterList(activityStatusFilterSchema),
+  subject: filterList(z.string().min(1)),
   title: z.string().min(1).optional().catch(undefined),
   summary: z.string().min(1).optional().catch(undefined),
   from: z.iso.date().optional().catch(undefined),
