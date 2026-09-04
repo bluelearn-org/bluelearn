@@ -12,6 +12,7 @@ export type QueueCase = {
   case_type: string;
   status: string;
   title: string | null;
+  is_variant: boolean;
   created_at: string;
   decision: "approved" | "rejected" | null;
   expires_at: string | null;

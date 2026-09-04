@@ -12,6 +12,7 @@ export const reviewCaseListItemSchema = z.object({
   case_type: reviewCaseTypeSchema,
   status: reviewCaseStatusSchema,
   title: z.string().nullable(),
+  is_variant: z.boolean(),
   created_at: z.string(),
 });
 
@@ -77,6 +78,7 @@ export const reviewCaseDetailResponseSchema = z.strictObject({
       title: z.string().nullable(),
       summary: z.string().nullable(),
       body: z.string().nullable(),
+      is_variant: z.boolean(),
       status: z.string(),
       created_at: z.string(),
     })
