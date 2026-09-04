@@ -68,6 +68,7 @@ export const profileActivityItemSchema = z.object({
   base_slug: z.string().nullable(),
   review_case_id: z.uuid().nullable(),
   revision_id: z.uuid().nullable(),
+  subjects: z.array(z.object({ slug: z.string(), name: z.string() })),
 });
 
 export const meResponseSchema = z.strictObject({

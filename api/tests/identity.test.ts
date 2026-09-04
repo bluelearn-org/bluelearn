@@ -14,6 +14,7 @@ import {
   createGuideRevision,
   createPublishedGuide,
 } from "./factories/guides";
+import { createSubject, tagGuideRevision } from "./factories/subjects";
 import { expectToMatchSpec } from "./openapi";
 
 describe("GET /me", () => {
@@ -196,5 +197,47 @@ describe("GET /profiles/{username}", () => {
 
     expect(res.status).toBe(404);
     await expectToMatchSpec(res, "GET", "/profiles/{username}");
+  });
+
+  it("includes subject tags on guide revision activity rows", async () => {
+    const { token, userId } = await makeUser();
+    const username = await getUsername(userId);
+    const subject = await createSubject();
+    const { revision } = await createPublishedGuide({ authorId: userId });
+    await tagGuideRevision(revision.id, subject.id);
+
+    const res = await app.request(`/profiles/${username}`, auth(token), env);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      activity: Array<{
+        revision_id: string | null;
+        subjects: Array<{ slug: string; name: string }>;
+      }>;
+    };
+    const row = body.activity.find((r) => r.revision_id === revision.id);
+    expect(row).toBeDefined();
+    expect(row?.subjects).toEqual(
+      expect.arrayContaining([{ slug: subject.slug, name: subject.name }])
+    );
+  });
+
+  it("returns an empty subjects array for untagged guide revisions", async () => {
+    const { token, userId } = await makeUser();
+    const username = await getUsername(userId);
+    const { revision } = await createPublishedGuide({ authorId: userId });
+
+    const res = await app.request(`/profiles/${username}`, auth(token), env);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      activity: Array<{
+        revision_id: string | null;
+        subjects: Array<{ slug: string; name: string }>;
+      }>;
+    };
+    const row = body.activity.find((r) => r.revision_id === revision.id);
+    expect(row).toBeDefined();
+    expect(row?.subjects).toEqual([]);
   });
 });
