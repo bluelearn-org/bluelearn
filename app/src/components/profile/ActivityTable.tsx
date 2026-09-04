@@ -7,6 +7,7 @@ import {
   activityStatusLabel,
   activityTypeLabel,
   filterActivity,
+  getActivitySubjectOptions,
 } from "@/lib/profile";
 import { formatDate } from "@/lib/guideUtils";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,7 @@ export function ActivityTable({
   const hasFilters = Boolean(
     search.type?.length ||
     search.status?.length ||
+    search.subject?.length ||
     search.title ||
     search.summary ||
     search.from ||
@@ -119,6 +121,10 @@ export function ActivityTable({
   const emptyMessage = hasFilters
     ? "No activity matches these filters."
     : "No activity available yet.";
+
+  // Derive subject options from the full activity (before filtering) so all
+  // available subject choices are always visible, even when other filters are active.
+  const subjectOptions = getActivitySubjectOptions(activity);
 
   return (
     <>
@@ -151,6 +157,15 @@ export function ActivityTable({
             search={search}
             setFilters={setFilters}
           />
+          {subjectOptions.length > 0 && (
+            <ChoiceColumnFilter
+              label="Subject"
+              field="subject"
+              options={subjectOptions}
+              search={search}
+              setFilters={setFilters}
+            />
+          )}
         </div>
 
         {pageRows.length === 0 ? (
@@ -186,6 +201,20 @@ export function ActivityTable({
                     <p className="text-sm text-muted-foreground">
                       {row.change_summary}
                     </p>
+                  )}
+
+                  {row.subjects.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {row.subjects.map((s) => (
+                        <Badge
+                          key={s.slug}
+                          variant="outline"
+                          className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                        >
+                          {s.name}
+                        </Badge>
+                      ))}
+                    </div>
                   )}
 
                   <div className="flex items-center justify-between gap-3">
@@ -257,6 +286,19 @@ export function ActivityTable({
                 />
               </TableHead>
               <TableHead className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
+                {subjectOptions.length > 0 ? (
+                  <ChoiceColumnFilter
+                    label="Subject"
+                    field="subject"
+                    options={subjectOptions}
+                    search={search}
+                    setFilters={setFilters}
+                  />
+                ) : (
+                  "Subject"
+                )}
+              </TableHead>
+              <TableHead className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
                 Review Case
               </TableHead>
             </TableRow>
@@ -265,7 +307,7 @@ export function ActivityTable({
             {pageRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-6 text-center text-sm text-muted-foreground"
                 >
                   {emptyMessage}
@@ -301,6 +343,24 @@ export function ActivityTable({
                       >
                         {activityStatusLabel(row.status)}
                       </Badge>
+                    </TableCell>
+
+                    <TableCell className="px-4 py-3">
+                      {row.subjects.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {row.subjects.map((s) => (
+                            <Badge
+                              key={s.slug}
+                              variant="outline"
+                              className="mono-micro rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                            >
+                              {s.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
 
                     <TableCell className="px-4 py-3">
