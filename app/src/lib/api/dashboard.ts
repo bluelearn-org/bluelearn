@@ -11,8 +11,8 @@ export type UserStatus = InferRequestType<
   (typeof dashboard)[":id"]["status"]["$patch"]
 >["json"]["status"];
 export type UserRole = InferRequestType<
-  (typeof dashboard)[":id"]["role"]["$post"]
->["json"]["role"];
+  (typeof dashboard)[":id"]["role"][":roleName"]["$post"]
+>["param"]["roleName"];
 export type DashboardRoleRow = InferResponseType<
   (typeof dashboard)["roles"]["$get"]
 >["data"];
@@ -86,10 +86,9 @@ export async function addRole(
   role: UserRole,
   { signal }: FetchOptions = {}
 ) {
-  const res = await dashboard[":id"].role.$post(
+  const res = await dashboard[":id"].role[":roleName"].$post(
     {
-      json: { role },
-      param: { id },
+      param: { id, roleName: role },
     },
     { init: { signal } }
   );
