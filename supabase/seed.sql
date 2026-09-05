@@ -47,7 +47,7 @@ declare
   v_id uuid;
   i int;
 begin
-  for i in 1..3 loop
+  for i in 1..5 loop
     v_id := ('00000000-0000-4000-8000-00000000001' || i)::uuid;
 
     insert into auth.users

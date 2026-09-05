@@ -23,7 +23,7 @@ type ObjectiveDraft = {
   updated_at: string;
 };
 
-async function fetchRoles(supabase: DB, userId: string) {
+export async function fetchRoles(supabase: DB, userId: string) {
   const { data } = await supabase
     .from("user_roles")
     .select("role")
@@ -319,6 +319,7 @@ export type ProfileActivityRow = {
   base_slug: string | null;
   review_case_id: string | null;
   revision_id: string | null;
+  subjects: Array<{ slug: string; name: string }>;
 };
 
 // Earliest revision id per parent, so a row can be tagged as the "creation"
@@ -463,6 +464,7 @@ export async function getProfileActivity(
         base_slug: guide ? (slugByBase.get(guide.guide_base_id) ?? null) : null,
         review_case_id: caseId,
         revision_id: rev.id,
+        subjects: [],
       });
     }
   }
@@ -509,6 +511,7 @@ export async function getProfileActivity(
         base_slug: null,
         review_case_id: null,
         revision_id: rev.id,
+        subjects: [],
       });
     }
   }
@@ -615,7 +618,43 @@ export async function getProfileActivity(
             ? caseId
             : null,
           revision_id: rev ?? null,
+          subjects: [],
         });
+      }
+    }
+  }
+
+  // Batch-fetch subject tags for all guide revision rows in one query.
+  const guideRevisionIds = rows
+    .filter((r) => r.content_kind === "guide" && r.revision_id !== null)
+    .map((r) => r.revision_id as string);
+
+  if (guideRevisionIds.length > 0) {
+    const { data: tagData, error: tagError } = await supabase
+      .from("guide_revision_subjects")
+      .select("guide_revision_id, subjects(slug, name)")
+      .in("guide_revision_id", guideRevisionIds);
+
+    if (tagError) fail(tagError);
+
+    // Build a map from revision_id -> subject list, then hydrate the rows.
+    const subjectsByRev = new Map<
+      string,
+      Array<{ slug: string; name: string }>
+    >();
+    for (const tag of tagData ?? []) {
+      const subj = tag.subjects;
+      if (!subj || typeof subj !== "object" || Array.isArray(subj)) continue;
+      const { slug, name } = subj as { slug: string | null; name: string };
+      if (slug === null) continue;
+      const list = subjectsByRev.get(tag.guide_revision_id) ?? [];
+      list.push({ slug, name });
+      subjectsByRev.set(tag.guide_revision_id, list);
+    }
+
+    for (const row of rows) {
+      if (row.content_kind === "guide" && row.revision_id !== null) {
+        row.subjects = subjectsByRev.get(row.revision_id) ?? [];
       }
     }
   }

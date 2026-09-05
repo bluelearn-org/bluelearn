@@ -1117,6 +1117,24 @@ export type Database = {
           },
         ]
       }
+      user_statuses: {
+        Row: {
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       votes: {
         Row: {
           created_at: string
@@ -1311,6 +1329,10 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: string
       }
+      reassign_panel_member: {
+        Args: { p_member_id: string; p_panel_id: string }
+        Returns: string
+      }
       revise_guide_revision: {
         Args: { p_revision_id: string }
         Returns: string
@@ -1362,6 +1384,7 @@ export type Database = {
       seat_status: "assigned" | "recused" | "replaced" | "completed"
       subject_status: "draft" | "published"
       todo_status: "open" | "resolved"
+      user_status: "active" | "inactive" | "suspended"
       vote_direction: "up" | "down"
     }
     CompositeTypes: {
@@ -1528,6 +1551,7 @@ export const Constants = {
       seat_status: ["assigned", "recused", "replaced", "completed"],
       subject_status: ["draft", "published"],
       todo_status: ["open", "resolved"],
+      user_status: ["active", "inactive", "suspended"],
       vote_direction: ["up", "down"],
     },
   },
