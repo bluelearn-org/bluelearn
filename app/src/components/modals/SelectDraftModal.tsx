@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import type { LocalRevision, RemoteRevision } from "@/lib/api/guideRevisions";
 import {
   Dialog,
   DialogClose,
@@ -12,7 +13,10 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 
 import { getGuideDrafts } from "@/lib/api/identity";
-import { getStoredDraftsByType } from "@/lib/contributionStorage";
+import {
+  createLocalDraftId,
+  getStoredDraftsByType,
+} from "@/lib/contributionStorage";
 import { Button } from "@/components/ui/button";
 import { getRevision } from "@/lib/api/guideRevisions";
 
@@ -89,17 +93,42 @@ export const SelectDraftModal = ({
   }, [open]);
 
   const fetchSelectedDrafts = async (draftIds: Array<string>) => {
-    // Fetch draft info given draft IDs from the database
-    const drafts = await Promise.all(
+    // Fetch revision info given draft IDs
+    const selected = await Promise.all(
       draftIds.map((draftId) => getRevision(draftId))
     );
 
-    return drafts;
+    return selected;
+  };
+
+  const toLocalDraft = (remote: RemoteRevision): LocalRevision => {
+    const getCurrentUnixTime = () => Math.floor(Date.now() / 1000);
+    return {
+      localDraftId: createLocalDraftId(),
+      type: "guide",
+      data: {
+        type: remote.knowledge_type ?? "",
+        title: remote.revision.title ?? "",
+        summary: remote.revision.summary ?? "",
+        body: remote.revision.body ?? "",
+        baseGuide: remote.revision.guide_id,
+        subjects: remote.subjects,
+        newSubjects: [],
+        prereqs: remote.prerequisites,
+        todoPrereqs: remote.todos,
+      },
+      revisionId: remote.revision.id,
+      step: "",
+      updatedAt: getCurrentUnixTime(),
+    };
   };
 
   const handleAddDrafts = async () => {
     onDraftsChange(selectedDrafts);
-    const drafts = await fetchSelectedDrafts(selectedDrafts);
+    const remoteDrafts: Array<RemoteRevision> =
+      await fetchSelectedDrafts(selectedDrafts);
+
+    const converted: Array<LocalRevision> = remoteDrafts.map(toLocalDraft);
 
     onOpenChange(false);
   };
