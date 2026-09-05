@@ -34,6 +34,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      disclaimers: {
+        Row: {
+          description: string | null
+          id: string
+          label: string
+          slug: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          label: string
+          slug: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          label?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       guide_bases: {
         Row: {
           canonical_guide_id: string | null
@@ -86,6 +107,43 @@ export type Database = {
           {
             foreignKeyName: "guide_bases_forked_from_guide_base_id_fkey"
             columns: ["forked_from_guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_disclaimers: {
+        Row: {
+          disclaimer_id: string
+          guide_base_id: string
+        }
+        Insert: {
+          disclaimer_id: string
+          guide_base_id: string
+        }
+        Update: {
+          disclaimer_id?: string
+          guide_base_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_disclaimers_disclaimer_id_fkey"
+            columns: ["disclaimer_id"]
+            isOneToOne: false
+            referencedRelation: "disclaimers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_disclaimers_guide_base_id_fkey"
+            columns: ["guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_disclaimers_guide_base_id_fkey"
+            columns: ["guide_base_id"]
             isOneToOne: false
             referencedRelation: "published_guides"
             referencedColumns: ["id"]

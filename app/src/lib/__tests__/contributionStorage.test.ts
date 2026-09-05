@@ -55,6 +55,7 @@ describe("contributionStorage", () => {
       newSubjects: [],
       prereqs: [],
       todoPrereqs: [],
+      disclaimers: [],
     };
 
     setStoredDraft("guide", {
@@ -132,6 +133,7 @@ describe("contributionStorage", () => {
       newSubjects: [],
       prereqs: [],
       todoPrereqs: [],
+      disclaimers: [],
     };
 
     const { rerender, unmount } = renderHook(

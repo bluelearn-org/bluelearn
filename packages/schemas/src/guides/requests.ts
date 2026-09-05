@@ -8,6 +8,7 @@ import {
 } from "./fields";
 import { subjectNameSchema, subjectSummarySchema } from "../subjects";
 import {
+  disclaimerSchema,
   downvoteReasonSchema,
   knowledgeTypeSchema,
   voteDirectionSchema,
@@ -48,6 +49,7 @@ export const createGuideSchema = z.object({
   newSubjects: z.array(newSubjectSchema).default([]),
   todoPrereqs: z.array(todoPrereqSchema).default([]),
   todoClaims: z.array(z.uuid()).default([]),
+  disclaimers: z.array(disclaimerSchema).default([]),
 });
 
 // A variant starts as a draft like a guide does, so every field here is optional
@@ -68,6 +70,7 @@ export const updateRevisionSchema = revisionContentSchema
     prerequisites: z.array(guideSlugSchema),
     newSubjects: z.array(newSubjectSchema),
     todoPrereqs: z.array(todoPrereqSchema),
+    disclaimers: z.array(disclaimerSchema),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, {

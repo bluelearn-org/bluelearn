@@ -567,6 +567,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
         prerequisites,
         todos,
         revised_from_case_id,
+        disclaimers,
       } = await getRevision(c.get("supabase"), c.req.valid("param").id);
       return c.json({
         revision,
@@ -578,6 +579,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
         prerequisites,
         todos,
         revised_from_case_id,
+        disclaimers,
       });
     }
   )
