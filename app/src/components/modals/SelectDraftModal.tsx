@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 import type { LocalRevision, RemoteRevision } from "@/lib/api/guideRevisions";
 import {
@@ -33,6 +34,7 @@ type PropTypes = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDrafts: Array<string>;
+  setSelectedDrafts: Dispatch<SetStateAction<Array<string>>>;
   onDraftsChange: (draftIds: Array<string>) => void;
 };
 
@@ -40,6 +42,7 @@ export const SelectDraftModal = ({
   open,
   onOpenChange,
   selectedDrafts,
+  setSelectedDrafts,
   onDraftsChange,
 }: PropTypes) => {
   const [drafts, setDrafts] = useState<Array<GuideDraft>>([]);
@@ -102,6 +105,7 @@ export const SelectDraftModal = ({
   };
 
   const toLocalDraft = (remote: RemoteRevision): LocalRevision => {
+    // Convert remote drafts to local draft format
     const getCurrentUnixTime = () => Math.floor(Date.now() / 1000);
     return {
       localDraftId: createLocalDraftId(),
@@ -125,12 +129,25 @@ export const SelectDraftModal = ({
 
   const handleAddDrafts = async () => {
     onDraftsChange(selectedDrafts);
+
+    // Convert remote drafts to local draft format
     const remoteDrafts: Array<RemoteRevision> =
       await fetchSelectedDrafts(selectedDrafts);
 
     const converted: Array<LocalRevision> = remoteDrafts.map(toLocalDraft);
 
+    // Append to localStorage
+    const draftData = localStorage.getItem("bluelearn:contrib:drafts") ?? "{}";
+    const draftJson = JSON.parse(draftData);
+
+    for (const element of converted) {
+      draftJson[element.localDraftId] = element;
+    }
+
+    localStorage.setItem("bluelearn:contrib:drafts", JSON.stringify(draftJson));
+
     onOpenChange(false);
+    setSelectedDrafts([]);
   };
   const handleCancel = () => {
     onDraftsChange([]);
