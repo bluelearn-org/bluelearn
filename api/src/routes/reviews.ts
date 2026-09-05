@@ -50,6 +50,7 @@ export const reviewsRouter = new Hono<HonoEnv>()
       const { page, limit } = c.req.valid("query");
       const { data, total } = await getReviewQueue(
         c.get("supabase"),
+        getServiceSupabase(c),
         c.get("user").id,
         { page, limit }
       );
