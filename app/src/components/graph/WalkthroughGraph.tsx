@@ -32,6 +32,7 @@ export function WalkthroughGraph({
   return (
     <GuideGraph
       {...rest}
+      showFitView={false}
       nodeType="walkthroughNode"
       nodeTypes={nodeTypes}
       getNodeState={getNodeState}

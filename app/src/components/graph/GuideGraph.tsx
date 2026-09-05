@@ -28,6 +28,7 @@ type GuideGraphProps = {
   onNodeClick?: (slug: string) => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  showFitView?: boolean;
 };
 
 // The provider hoists the xyflow store above the graph, so fitView is callable
@@ -51,6 +52,7 @@ function Graph({
   onNodeClick,
   isFullscreen,
   onToggleFullscreen,
+  showFitView = true,
 }: GuideGraphProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, isLayoutSettled } =
     useGraphLayout({
@@ -151,6 +153,7 @@ function Graph({
         <Controls
           position="bottom-right"
           showInteractive={false}
+          showFitView={showFitView}
           className="overflow-hidden rounded-sm border! border-foreground! bg-background! shadow-none! [&_svg]:max-h-[15px]! [&_svg]:max-w-[15px]! [&>button]:h-8! [&>button]:w-8! [&>button]:border-b-foreground! [&>button]:p-2! [&>button]:text-foreground! [&>button:hover]:bg-muted!"
         />
       </ReactFlow>
