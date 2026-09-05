@@ -71,17 +71,6 @@ export const AssignmentsTable = ({
     setSelectedIds(next);
   }
 
-  function toggleUser(userId: string) {
-    const next = new Set(selectedIds);
-
-    if (next.has(userId)) {
-      next.delete(userId);
-    } else {
-      next.add(userId);
-    }
-    setSelectedIds(next);
-  }
-
   function toggleAll() {
     if (allSelected) {
       const next = new Set(selectedIds);
