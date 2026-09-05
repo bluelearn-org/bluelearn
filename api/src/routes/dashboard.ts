@@ -37,7 +37,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
       summary: "View user status",
       responses: {
         200: jsonContent(userStatusResponseSchema, "User's status"),
-        ...errorResponses(400, 404),
+        ...errorResponses(400, 401, 404),
       },
     }),
     validate("param", idParamSchema),
@@ -56,7 +56,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
       summary: "Change user status",
       responses: {
         200: jsonContent(updateStatusResponseSchema, "User's status"),
-        ...errorResponses(400, 401, 404),
+        ...errorResponses(400, 401),
       },
     }),
     requireUser,

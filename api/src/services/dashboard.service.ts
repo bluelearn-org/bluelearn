@@ -82,16 +82,12 @@ export async function markUserStatus(
 ) {
   const { data, error } = await supabase
     .from("user_statuses")
-    .update({ status: status })
-    .eq("user_id", userId)
+    .upsert({ user_id: userId, status: status })
     .select();
 
   if (error) {
     console.error(error);
     throw new ServiceError("Failed to update user status.", 500);
-  }
-  if (!data || data.length === 0) {
-    throw new ServiceError("Could not update status: User not found", 404);
   }
 
   return data;
