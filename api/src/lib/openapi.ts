@@ -132,6 +132,10 @@ export const openApiDocumentation: GenerateSpecOptions["documentation"] = {
       name: "search",
       description: "Full-text search over guides and objectives",
     },
+    {
+      name: "dashboard",
+      description: "Information and actions prefermed on admin dashboard page.",
+    },
   ],
   components: {
     responses: sharedErrorResponses,

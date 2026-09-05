@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -1039,6 +1059,24 @@ export type Database = {
           },
         ]
       }
+      user_statuses: {
+        Row: {
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       votes: {
         Row: {
           created_at: string
@@ -1233,6 +1271,10 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: string
       }
+      reassign_panel_member: {
+        Args: { p_member_id: string; p_panel_id: string }
+        Returns: string
+      }
       revise_guide_revision: {
         Args: { p_revision_id: string }
         Returns: string
@@ -1284,6 +1326,7 @@ export type Database = {
       seat_status: "assigned" | "recused" | "replaced" | "completed"
       subject_status: "draft" | "published"
       todo_status: "open" | "resolved"
+      user_status: "active" | "inactive" | "suspended"
       vote_direction: "up" | "down"
     }
     CompositeTypes: {
@@ -1410,6 +1453,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["verifier", "moderator", "curator", "admin", "official"],
@@ -1447,7 +1493,9 @@ export const Constants = {
       seat_status: ["assigned", "recused", "replaced", "completed"],
       subject_status: ["draft", "published"],
       todo_status: ["open", "resolved"],
+      user_status: ["active", "inactive", "suspended"],
       vote_direction: ["up", "down"],
     },
   },
 } as const
+
