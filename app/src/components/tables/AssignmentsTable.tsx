@@ -166,11 +166,11 @@ export const AssignmentsTable = ({
               {assignment.type}
             </TableCell>
 
-            <TableCell className="px-4 py-3 whitespace-nowrap">
+            <TableCell className="max-w-xs px-4 py-3 whitespace-nowrap">
               {assignment.title}
             </TableCell>
 
-            <TableCell className="px-4 py-3 whitespace-nowrap">
+            <TableCell className="max-w-xs px-4 py-3 whitespace-nowrap">
               {assignment.change_summary ?? ""}
             </TableCell>
 

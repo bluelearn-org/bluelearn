@@ -84,7 +84,7 @@ function RouteComponent() {
       </header>
 
       <section className="space-y-3">
-        <div className="hidden overflow-x-auto md:block">
+        <div className="overflow-x-auto">
           <MembersTable
             MemberData={members.data}
             selectedIds={selectedIds}
