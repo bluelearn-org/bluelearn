@@ -14,6 +14,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { getGuideDrafts } from "@/lib/api/identity";
 import { getStoredDraftsByType } from "@/lib/contributionStorage";
 import { Button } from "@/components/ui/button";
+import { getRevision } from "@/lib/api/guideRevisions";
 
 type GuideDraft = {
   revision_id: string;
@@ -87,8 +88,19 @@ export const SelectDraftModal = ({
     };
   }, [open]);
 
-  const handleAddDrafts = () => {
+  const fetchSelectedDrafts = async (draftIds: Array<string>) => {
+    // Fetch draft info given draft IDs from the database
+    const drafts = await Promise.all(
+      draftIds.map((draftId) => getRevision(draftId))
+    );
+
+    return drafts;
+  };
+
+  const handleAddDrafts = async () => {
     onDraftsChange(selectedDrafts);
+    const drafts = await fetchSelectedDrafts(selectedDrafts);
+
     onOpenChange(false);
   };
   const handleCancel = () => {
