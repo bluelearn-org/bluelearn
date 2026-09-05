@@ -2,43 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../database.types";
 import type { ProfileActivityRow } from "./identity.service";
 import { ServiceError } from "../lib/service-error";
-import { z } from "zod";
 
 // roles and status types
 export type UserStatus =
   Database["public"]["Tables"]["user_statuses"]["Row"]["status"];
 export type UserRole =
   Database["public"]["Tables"]["user_roles"]["Row"]["role"];
-
-// user status schema, will move to schemas later
-const userStatusValues = [
-  "active",
-  "inactive",
-  "suspended",
-] as const satisfies readonly UserStatus[];
-
-export const userStatusSchema = z.enum(userStatusValues);
-export const updateStatusSchema = z.object({
-  status: userStatusSchema,
-});
-
-// user role schema
-const userRoleValues = [
-  "verifier",
-  "moderator",
-  "curator",
-  "admin",
-  "official",
-] as const satisfies readonly UserRole[];
-
-export const userRoleSchema = z.enum(userRoleValues);
-export const updateRoleSchema = z.object({
-  role: userRoleSchema,
-});
-export const roleParamSchema = z.object({
-  id: z.string(),
-  roleName: userRoleSchema,
-});
 
 type DB = SupabaseClient<Database>;
 
