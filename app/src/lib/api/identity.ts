@@ -41,3 +41,13 @@ export async function getProfilePage(
 
   return await res.json();
 }
+
+export async function getGuideDrafts({ signal }: FetchOptions = {}) {
+  const res = await client.me.drafts.$get({}, { init: { signal } });
+
+  await assertOk(res);
+
+  const data = await res.json();
+
+  return data.guide_drafts;
+}

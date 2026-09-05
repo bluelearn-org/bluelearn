@@ -201,7 +201,7 @@ function RouteComponent() {
                 isOfficial={guide.is_official}
               />
 
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -227,8 +227,6 @@ function RouteComponent() {
           </div>
 
           <Separator className="mb-8" />
-
-          {/* Header */}
 
           <GuideReader
             guide={guide}

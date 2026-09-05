@@ -21,7 +21,7 @@ export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
         hideGuidelines={true}
       />
       <div
-        className={`grid grid-cols-1 gap-2 md:grid-cols-2 ${isCurator ? "lg:grid-cols-3" : ""}`}
+        className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-2 ${isCurator ? "lg:grid-cols-3" : ""}`}
       >
         <button
           className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
