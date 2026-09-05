@@ -27,20 +27,29 @@ function RouteComponent() {
 
   const handleReassign = async () => {
     setIsReassigning(true);
+
     try {
       await Promise.all(
         [...selectedIds]
-          .map((id) => ({
-            id,
-            panelId: assignments.data.find((a) => a.id === id)?.panel_id,
-          }))
-          .filter(
-            (t): t is { id: string; panelId: string } => t.panelId != null
-          )
+          .map((key) => {
+            const assignment = assignments.data.find(
+              (a) => `${a.id}:${a.panel_id}` === key
+            );
+
+            if (!assignment) return null;
+
+            return {
+              id: assignment.id,
+              panelId: assignment.panel_id,
+            };
+          })
+          .filter((t): t is { id: string; panelId: string } => t !== null)
           .map(({ id, panelId }) => reassignPanelMember(id, panelId))
       );
+
       setSelectedIds(new Set());
       await router.invalidate();
+
       toast.info("Successfully reassigned user(s)!");
     } catch (err) {
       toast.error("Could not reassign one or more user(s).");
