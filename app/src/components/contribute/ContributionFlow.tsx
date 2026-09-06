@@ -199,7 +199,6 @@ export default function ContributionFlow({
 
   useEffect(() => {
     function handleUpdate() {
-      console.log("handleUpdate()");
       function toMultiGuide(rev: LocalRevision): MultiGuide {
         return {
           type: rev.data.type === "" ? "theoretical" : rev.data.type,
