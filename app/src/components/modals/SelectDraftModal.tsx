@@ -146,6 +146,8 @@ export const SelectDraftModal = ({
 
     localStorage.setItem("bluelearn:contrib:drafts", JSON.stringify(draftJson));
 
+    window.dispatchEvent(new Event("existingDraftsAdded"));
+
     onOpenChange(false);
     setSelectedDrafts([]);
   };

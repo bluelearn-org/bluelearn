@@ -11,6 +11,7 @@ import type {
   VariantContribution,
 } from "@/types/contributions";
 
+import type { LocalRevision } from "@/lib/api/guideRevisions";
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
 import { SelectType } from "@/components/contribute/steps/SelectType";
@@ -195,6 +196,49 @@ export default function ContributionFlow({
 
     return [createMultiGuide()];
   });
+
+  useEffect(() => {
+    function handleUpdate() {
+      console.log("handleUpdate()");
+      function toMultiGuide(rev: LocalRevision): MultiGuide {
+        return {
+          type: rev.data.type === "" ? "theoretical" : rev.data.type,
+          title: rev.data.title,
+          summary: rev.data.summary,
+          body: rev.data.body,
+          subjects: rev.data.subjects.map((s) => s.id),
+          newSubjects: rev.data.newSubjects.map((name) => ({
+            name,
+            summary: "",
+          })),
+          prereqs: rev.data.prereqs,
+          todoPrereqs: rev.data.todoPrereqs,
+          localDraftId: rev.localDraftId,
+          revisionId: rev.revisionId,
+        };
+      }
+      const updated: Record<string, LocalRevision> = JSON.parse(
+        localStorage.getItem("bluelearn:contrib:drafts") || "{}"
+      );
+
+      if (JSON.stringify(updated) === "{}") {
+        setGuideContData([]);
+      } else {
+        // Convert to Array<MultiGuide>
+        const convertedGuides: Array<MultiGuide> = [];
+        for (const [key, revision] of Object.entries(updated)) {
+          const converted = toMultiGuide(revision);
+          convertedGuides.push(converted);
+        }
+
+        setGuideContData(convertedGuides);
+      }
+    }
+
+    window.addEventListener("existingDraftsAdded", handleUpdate);
+    return () =>
+      window.removeEventListener("existingDraftsAdded", handleUpdate);
+  }, []);
 
   const [activeGuideId, setActiveGuideId] = useState<string>(
     () => guideContData[0]?.localDraftId ?? ""
