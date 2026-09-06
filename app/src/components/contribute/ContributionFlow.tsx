@@ -221,16 +221,18 @@ export default function ContributionFlow({
         localStorage.getItem("bluelearn:contrib:drafts") || "{}"
       );
 
-      if (JSON.stringify(updated) === "{}") {
-        setGuideContData([]);
-      } else {
-        // Convert to Array<MultiGuide>
-        const convertedGuides: Array<MultiGuide> = [];
-        for (const [key, revision] of Object.entries(updated)) {
-          const converted = toMultiGuide(revision);
-          convertedGuides.push(converted);
-        }
+      const isEmpty = JSON.stringify(updated) === "{}";
+      if (isEmpty) {
+        setGuideContData([createMultiGuide()]);
+        return;
+      }
 
+      const convertedGuides: Array<MultiGuide> = [];
+      for (const [key, revision] of Object.entries(updated)) {
+        if (revision.type === "variant") continue;
+
+        const converted = toMultiGuide(revision);
+        convertedGuides.push(converted);
         setGuideContData(convertedGuides);
       }
     }
