@@ -2,7 +2,6 @@ import { defineStepper } from "@stepperize/react";
 import { ChevronRight } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-
 import type { Dispatch, SetStateAction } from "react";
 
 import type {
@@ -11,40 +10,41 @@ import type {
   ObjectiveContribution,
   VariantContribution,
 } from "@/types/contributions";
-import type { GuideType } from "@/types/guides";
-import type { ReaderGuide } from "@/components/GuideReader";
+
+import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
+
+import { SelectType } from "@/components/contribute/steps/SelectType";
+import { GuideInfo } from "@/components/contribute/steps/guide/GuideInfo";
+import { PreviewGuide } from "@/components/contribute/steps/guide/PreviewGuide";
+
+import { VariantInfo } from "@/components/contribute/steps/variant/VariantInfo";
+import { PreviewVariant } from "@/components/contribute/steps/variant/PreviewVariant";
+
+import { ObjectiveDetails } from "@/components/contribute/steps/objective/ObjectiveDetails";
+import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/OrderObjectiveGuides";
+import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
+import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
+
 import { addGuideVariant, createGuide, listGuides } from "@/lib/api/guides";
-import { getMyIdentity } from "@/lib/api/identity";
 import { listSubjects } from "@/lib/api/subjects";
+import { flows, typeStep } from "@/lib/contributionFlow";
+import { uploadMedia } from "@/lib/api/media";
+import {
+  getRevision,
+  submitRevision,
+  updateRevision,
+} from "@/lib/api/guideRevisions";
 import { createObjective, createObjectiveRevision } from "@/lib/api/objectives";
 import {
   getObjectiveRevision,
   submitObjectiveRevision,
   updateObjectiveRevision,
 } from "@/lib/api/objectiveRevisions";
-import {
-  getRevision,
-  submitRevision,
-  updateRevision,
-} from "@/lib/api/guideRevisions";
-import { uploadMedia } from "@/lib/api/media";
-import { estimateReadMinutes, formatDate } from "@/lib/guideUtils";
 
-import { SelectType } from "@/components/contribute/steps/SelectType";
-import { GuideDetails } from "@/components/contribute/steps/GuideDetails";
-import { VariantDetails } from "@/components/contribute/steps/VariantDetails";
-import { Content } from "@/components/contribute/steps/Content";
-import { ObjectiveDetails } from "@/components/contribute/steps/ObjectiveDetails";
-import { PreviewGuide } from "@/components/contribute/steps/PreviewGuide";
-import { OrderObjectiveGuides } from "@/components/contribute/steps/OrderObjectiveGuides";
-import { OrderTargetGuides } from "@/components/contribute/steps/OrderTargetGuides";
-
-import { flows, typeStep } from "@/lib/contributionFlow";
-import { PreviewObjective } from "@/components/contribute/steps/PreviewObjective";
-import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 import {
   clearStoredDraft,
-  getStoredDraft,
+  createLocalDraftId,
+  getStoredDraftsByType,
   setStoredDraft,
   useDebouncedContributionSave,
 } from "@/lib/contributionStorage";
@@ -66,6 +66,11 @@ type PropTypes = {
   todoIds: Array<string>;
 };
 
+type MultiGuide = GuideContribution & {
+  localDraftId: string;
+  revisionId: string | null;
+};
+
 const createGuideContData = (): GuideContribution => ({
   type: "theoretical",
   title: "",
@@ -77,8 +82,14 @@ const createGuideContData = (): GuideContribution => ({
   todoPrereqs: [],
 });
 
+const createMultiGuide = (): MultiGuide => ({
+  localDraftId: createLocalDraftId(),
+  revisionId: null,
+  ...createGuideContData(),
+});
+
 const createVariantContData = (): VariantContribution => ({
-  type: "",
+  type: "theoretical",
   title: "",
   summary: "",
   baseGuide: "",
@@ -103,6 +114,7 @@ const objectiveDataFromRevision = (
   data: ObjectiveRevisionData
 ): ObjectiveContribution => {
   const slugByNodeId = new Map(data.snapshot.nodes.map((n) => [n.id, n.slug]));
+
   const targetNodes = data.snapshot.nodes
     .filter((n): n is typeof n & { slug: string } => n.is_target && !!n.slug)
     .sort((a, b) => (a.target_position ?? 0) - (b.target_position ?? 0));
@@ -118,7 +130,11 @@ const objectiveDataFromRevision = (
         .filter((o) => o.target_node_id === n.id)
         .map((o) => slugByNodeId.get(o.node_id))
         .filter((slug): slug is string => !!slug);
-      if (sequence.length === 0) return [];
+
+      if (sequence.length === 0) {
+        return [];
+      }
+
       return [
         {
           targetSlug: n.slug,
@@ -131,7 +147,11 @@ const objectiveDataFromRevision = (
   };
 };
 
-type NewSubject = { id?: string; name: string; summary: string };
+type NewSubject = {
+  id?: string;
+  name: string;
+  summary: string;
+};
 
 const existingTagIds = (newSubjects: Array<NewSubject>) =>
   newSubjects.map((s) => s.id).filter((id): id is string => !!id);
@@ -139,7 +159,10 @@ const existingTagIds = (newSubjects: Array<NewSubject>) =>
 const unsavedSubjects = (newSubjects: Array<NewSubject>) =>
   newSubjects
     .filter((s) => !s.id)
-    .map((s) => ({ name: s.name, summary: s.summary || null }));
+    .map((s) => ({
+      name: s.name,
+      summary: s.summary || null,
+    }));
 
 export default function ContributionFlow({
   type,
@@ -155,23 +178,53 @@ export default function ContributionFlow({
   todoSummary,
   todoIds,
 }: PropTypes) {
-  const [guideContData, setGuideContData] = useState<GuideContribution>(() => {
-    if (draftId || todoTitle) return createGuideContData();
-    const stored = getStoredDraft<GuideContribution>("guide");
-    return stored?.data ?? createGuideContData();
+  const [guideContData, setGuideContData] = useState<Array<MultiGuide>>(() => {
+    if (draftId || todoTitle) {
+      return [createMultiGuide()];
+    }
+
+    const storedGuides = getStoredDraftsByType("guide");
+
+    if (storedGuides.length > 0) {
+      return storedGuides.map((draft) => ({
+        localDraftId: draft.localDraftId,
+        revisionId: draft.revisionId,
+        ...draft.data,
+      }));
+    }
+
+    return [createMultiGuide()];
   });
+
+  const [activeGuideId, setActiveGuideId] = useState<string>(
+    () => guideContData[0]?.localDraftId ?? ""
+  );
+
+  const [variantLocalDraftId] = useState<string>(() => createLocalDraftId());
+
   const [variantContData, setVariantContData] = useState<VariantContribution>(
     () => {
-      if (draftId) return createVariantContData();
-      const stored = getStoredDraft<VariantContribution>("variant");
-      return stored?.data ?? createVariantContData();
+      if (draftId) {
+        return createVariantContData();
+      }
+
+      const storedVariants = getStoredDraftsByType("variant");
+
+      return storedVariants[0]?.data ?? createVariantContData();
     }
   );
+
+  const [objectiveLocalDraftId] = useState<string>(() => createLocalDraftId());
+
   const [objectiveContData, setObjectiveContData] =
     useState<ObjectiveContribution>(() => {
-      if (draftId || editSlug) return createObjectiveContData();
-      const stored = getStoredDraft<ObjectiveContribution>("objective");
-      return stored?.data ?? createObjectiveContData();
+      if (draftId || editSlug) {
+        return createObjectiveContData();
+      }
+
+      const storedObjectives = getStoredDraftsByType("objective");
+
+      return storedObjectives[0]?.data ?? createObjectiveContData();
     });
 
   const skipTypeStep = !!editSlug || !!draftId;
@@ -190,22 +243,26 @@ export default function ContributionFlow({
 
   const { Stepper } = StepperInstance;
 
-  // Determine current active step from URL/props or fallback to initial step
-  const activeStep = useMemo(() => {
-    if (!type) return "type";
+  const initialStep = useMemo(() => {
+    if (!type) {
+      return "type";
+    }
+
     return StepperInstance.parseStep(step) ?? flows[type][0].id;
   }, [type, step, StepperInstance]);
 
+  const [currentStep, setCurrentStep] = useState<string>(initialStep);
+
   useEffect(() => {
-    if (!type || !step) return;
-    if (!StepperInstance.parseStep(step)) onStepChange?.(activeStep);
-  }, [type, step, StepperInstance, activeStep, onStepChange]);
+    setCurrentStep(initialStep);
+  }, [initialStep]);
 
   return (
     <Stepper.Root
       linear
-      step={activeStep}
+      step={currentStep}
       onStepChange={(newStep: string) => {
+        setCurrentStep(newStep);
         onStepChange?.(newStep);
       }}
       className="flex min-h-0 w-full flex-1 flex-col gap-8"
@@ -217,7 +274,7 @@ export default function ContributionFlow({
           type={type}
           setType={setType}
           skipTypeStep={skipTypeStep}
-          activeStep={activeStep}
+          activeStep={currentStep}
           step={step}
           onPublished={onPublished}
           draftId={draftId}
@@ -229,8 +286,12 @@ export default function ContributionFlow({
           todoIds={todoIds}
           guideContData={guideContData}
           setGuideContData={setGuideContData}
+          activeGuideId={activeGuideId}
+          setActiveGuideId={setActiveGuideId}
+          variantLocalDraftId={variantLocalDraftId}
           variantContData={variantContData}
           setVariantContData={setVariantContData}
+          objectiveLocalDraftId={objectiveLocalDraftId}
           objectiveContData={objectiveContData}
           setObjectiveContData={setObjectiveContData}
         />
@@ -255,10 +316,14 @@ function Inner({
   todoTitle,
   todoSummary,
   todoIds,
+  activeGuideId,
+  setActiveGuideId,
   guideContData,
   setGuideContData,
+  variantLocalDraftId,
   variantContData,
   setVariantContData,
+  objectiveLocalDraftId,
   objectiveContData,
   setObjectiveContData,
 }: {
@@ -278,62 +343,116 @@ function Inner({
   todoSummary?: string;
   todoIds: Array<string>;
 
-  guideContData: GuideContribution;
-  setGuideContData: Dispatch<SetStateAction<GuideContribution>>;
+  activeGuideId: string;
+  setActiveGuideId: Dispatch<SetStateAction<string>>;
+
+  guideContData: Array<MultiGuide>;
+  setGuideContData: Dispatch<SetStateAction<Array<MultiGuide>>>;
+
+  variantLocalDraftId: string;
   variantContData: VariantContribution;
   setVariantContData: Dispatch<SetStateAction<VariantContribution>>;
 
+  objectiveLocalDraftId: string;
   objectiveContData: ObjectiveContribution;
   setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
 }) {
-  const pickType = (value: ContributionType) => {
-    if (type !== value) {
-      setType(value);
+  const activeGuide: MultiGuide = useMemo(() => {
+    const foundGuide = guideContData.find(
+      (guide) => guide.localDraftId === activeGuideId
+    );
+
+    if (foundGuide) {
+      return foundGuide;
     }
 
-    requestAnimationFrame(() => {
-      switch (value) {
-        case "guide":
-          stepper.goTo("guide-details");
-          break;
+    return guideContData[0] ?? createMultiGuide();
+  }, [guideContData, activeGuideId]);
 
-        case "variant":
-          stepper.goTo("variant-details");
-          break;
-
-        default:
-          stepper.goTo("objective-details");
-      }
-    });
+  const updateActiveGuide = (update: Partial<MultiGuide>) => {
+    setGuideContData((prev) =>
+      prev.map((guide) =>
+        guide.localDraftId === activeGuide.localDraftId
+          ? { ...guide, ...update }
+          : guide
+      )
+    );
   };
 
+  const addGuide = () => {
+    const newGuide = createMultiGuide();
+    setGuideContData((prev) => [...prev, newGuide]);
+    setActiveGuideId(newGuide.localDraftId);
+    setType("guide");
+  };
+
+  // remove one local guide from state (workspace) and localstorage - NOT from server
+  const removeGuide = (id: string) => {
+    if (guideContData.length <= 1) {
+      return;
+    }
+
+    clearStoredDraft(id);
+
+    setGuideContData((prev) =>
+      prev.filter((guide) => guide.localDraftId !== id)
+    );
+
+    if (activeGuideId === id) {
+      const remaining = guideContData.filter(
+        (guide) => guide.localDraftId !== id
+      );
+      setActiveGuideId(remaining[0]?.localDraftId ?? "");
+    }
+  };
+
+  const updateActiveVariant = (update: Partial<VariantContribution>) => {
+    setVariantContData((prev) => ({
+      ...prev,
+      ...update,
+    }));
+  };
+
+  const pickType = (value: ContributionType) => {
+    if (type === value) {
+      return;
+    }
+
+    setType(value);
+
+    const firstStep = flows[value][0].id;
+    requestAnimationFrame(() => stepper.goTo(firstStep));
+  };
+
+  // revisionId fetched to the database - stored on EACH guide draft
   const [revisionId, setRevisionId] = useState<string | null>(() => {
-    if (draftId) return draftId;
-    if (!type || editSlug || todoTitle) return null;
-    const stored = getStoredDraft<unknown>(type);
-    return stored?.revisionId ?? null;
+    if (draftId) {
+      return draftId;
+    }
+    return null;
   });
 
   const [autosaveReady, setAutosaveReady] = useState(!draftId && !editSlug);
 
-  useEffect(() => {
-    if (draftId || editSlug || todoTitle) return;
-    if (type) {
-      const stored = getStoredDraft<unknown>(type);
-      setRevisionId(stored?.revisionId ?? null);
-    }
-  }, [type, draftId, editSlug, todoTitle]);
-
-  // Debounced auto-save for guide drafts
   const guideSave = useDebouncedContributionSave(
+    autosaveReady && type === "guide" ? activeGuide.localDraftId : null,
     autosaveReady && type === "guide" ? "guide" : null,
-    guideContData,
-    revisionId,
+    {
+      type: activeGuide.type,
+      title: activeGuide.title,
+      summary: activeGuide.summary,
+      body: activeGuide.body,
+      subjects: activeGuide.subjects,
+      newSubjects: activeGuide.newSubjects,
+      prereqs: activeGuide.prereqs,
+      todoPrereqs: activeGuide.todoPrereqs,
+    },
+    activeGuide.revisionId,
     step
   );
 
-  // Debounced auto-save for variant drafts
   const variantSave = useDebouncedContributionSave(
+    autosaveReady && type === "variant" ? variantLocalDraftId : null,
     autosaveReady && type === "variant" ? "variant" : null,
     variantContData,
     revisionId,
@@ -341,6 +460,7 @@ function Inner({
   );
 
   const objectiveSave = useDebouncedContributionSave(
+    autosaveReady && type === "objective" ? objectiveLocalDraftId : null,
     autosaveReady && type === "objective" ? "objective" : null,
     objectiveContData,
     revisionId,
@@ -348,48 +468,100 @@ function Inner({
   );
 
   const [submitting, setSubmitting] = useState(false);
-  const [publishAttempted, setPublishAttempted] = useState(false);
-  const [showChangeSummary, setShowChangeSummary] = useState(false);
-  const visibleSteps = !type
-    ? typeStep
-    : skipTypeStep
-      ? flows[type]
-      : [...typeStep, ...flows[type]];
 
-  // Start from the todo page with the topic's title and summary already filled in.
+  const [publishAttempted, setPublishAttempted] = useState(false);
+
+  const [showChangeSummary, setShowChangeSummary] = useState(false);
+
+  const storeContributionDraft = (
+    draftType: ContributionType,
+    data: GuideContribution | VariantContribution | ObjectiveContribution,
+    localDraftId: string,
+    serverRevisionId: string | null,
+    draftStep?: string
+  ) => {
+    setStoredDraft({
+      localDraftId,
+      type: draftType,
+      data,
+      revisionId: serverRevisionId,
+      step: draftStep,
+      updatedAt: Date.now(),
+    } as never);
+  };
+
+  const visibleSteps = useMemo(() => {
+    if (!type) {
+      return typeStep;
+    }
+
+    if (skipTypeStep) {
+      return flows[type];
+    }
+
+    return [...typeStep, ...flows[type]];
+  }, [type, skipTypeStep]);
+
+  // seeding
   const seededRef = useRef(false);
+
   useEffect(() => {
-    if (!todoTitle || seededRef.current) return;
+    if (!todoTitle || seededRef.current) {
+      return;
+    }
+
     seededRef.current = true;
 
-    setGuideContData((prev) => ({
-      ...prev,
-      title: todoTitle,
-      summary: todoSummary ?? prev.summary,
-    }));
-    setType("guide");
-    requestAnimationFrame(() => stepper.goTo("guide-details"));
-  }, [todoTitle, todoSummary]);
+    setGuideContData((prev) =>
+      prev.map((guide) =>
+        guide.localDraftId === activeGuideId
+          ? {
+              ...guide,
+              title: todoTitle,
+              summary: todoSummary ?? guide.summary,
+            }
+          : guide
+      )
+    );
 
-  // Resume a draft opened from the profile.
-  const loadedDraftIdRef = useRef<string | null>(null);
+    setType("guide");
+  }, [todoTitle, todoSummary, activeGuideId, setType]);
+
   useEffect(() => {
-    if (!draftId || loadedDraftIdRef.current === draftId) return;
+    if (!todoTitle || !seededRef.current || type !== "guide") {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      stepper.goTo("guide-info");
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [todoTitle, type, stepper]);
+
+  // resume server draft
+  const loadedDraftIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!draftId || loadedDraftIdRef.current === draftId) {
+      return;
+    }
     loadedDraftIdRef.current = draftId;
 
     if (draftKind === "objective") {
       getObjectiveRevision(draftId)
         .then((data) => {
           const objData = objectiveDataFromRevision(data);
-
           setObjectiveContData(objData);
           setShowChangeSummary(!!data.objective.current_revision_id);
-          setStoredDraft("objective", {
-            data: objData,
-            revisionId: draftId,
-            step: step ? step : "objective-details",
-            updatedAt: Date.now(),
-          });
+
+          storeContributionDraft(
+            "objective",
+            objData,
+            objectiveLocalDraftId,
+            draftId,
+            step ?? "objective-details"
+          );
 
           setRevisionId(draftId);
           setType("objective");
@@ -408,18 +580,22 @@ function Inner({
 
     getRevision(draftId)
       .then((data) => {
-        // A tag still awaiting approval is not pickable yet, so it resumes in
-        // the new-subject list rather than the picker.
         const tagged = data.subjects
           .filter((s) => s.status === "published")
           .map((s) => s.id);
+
         const pending = data.subjects
           .filter((s) => s.status !== "published")
           .map((s) => ({ id: s.id, name: s.name, summary: s.summary ?? "" }));
 
         if (data.is_variant) {
+          const knowledgeType =
+            data.knowledge_type === "theoretical" ||
+            data.knowledge_type === "practical"
+              ? data.knowledge_type
+              : "theoretical";
           const vData: VariantContribution = {
-            type: data.knowledge_type ?? "",
+            type: knowledgeType,
             title: data.revision.title ?? "",
             summary: data.revision.summary ?? "",
             body: data.revision.body ?? "",
@@ -427,15 +603,20 @@ function Inner({
             subjects: tagged,
             newSubjects: pending,
           };
+
           setVariantContData(vData);
-          setStoredDraft("variant", {
-            data: vData,
-            revisionId: draftId,
-            step: step ? step : "variant-details",
-            updatedAt: Date.now(),
-          });
+
+          storeContributionDraft(
+            "variant",
+            vData,
+            variantLocalDraftId,
+            draftId,
+            step ?? "variant-info"
+          );
         } else {
-          const gData: GuideContribution = {
+          const gData: MultiGuide = {
+            localDraftId: createLocalDraftId(),
+            revisionId: draftId,
             type: data.knowledge_type ?? "theoretical",
             title: data.revision.title ?? "",
             summary: data.revision.summary ?? "",
@@ -445,20 +626,38 @@ function Inner({
             prereqs: data.prerequisites,
             todoPrereqs: data.todos,
           };
-          setGuideContData(gData);
-          setStoredDraft("guide", {
-            data: gData,
-            revisionId: draftId,
-            step: step ? step : "guide-details",
-            updatedAt: Date.now(),
-          });
+
+          setGuideContData([gData]);
+
+          setActiveGuideId(gData.localDraftId);
+
+          storeContributionDraft(
+            "guide",
+            {
+              type: gData.type,
+              title: gData.title,
+              summary: gData.summary,
+              body: gData.body,
+              subjects: gData.subjects,
+              newSubjects: gData.newSubjects,
+              prereqs: gData.prereqs,
+              todoPrereqs: gData.todoPrereqs,
+            },
+            gData.localDraftId,
+            draftId,
+            step ?? "guide-info"
+          );
         }
+
         setRevisionId(draftId);
+
         setType(data.is_variant ? "variant" : "guide");
+
         setAutosaveReady(true);
+
         requestAnimationFrame(() =>
           stepper.goTo(
-            step ? step : data.is_variant ? "variant-details" : "guide-details"
+            step ?? (data.is_variant ? "variant-details" : "guide-info")
           )
         );
       })
@@ -466,11 +665,24 @@ function Inner({
         setRevisionId(null);
         toast.error("Could not load draft");
       });
-  }, [draftId]);
+  }, [
+    draftId,
+    draftKind,
+    objectiveLocalDraftId,
+    variantLocalDraftId,
+    step,
+    stepper,
+    setType,
+  ]);
 
+  // objective source revision
   const seededSourceRef = useRef(false);
+
   useEffect(() => {
-    if (!sourceRevisionId || !editSlug || seededSourceRef.current) return;
+    if (!sourceRevisionId || !editSlug || seededSourceRef.current) {
+      return;
+    }
+
     seededSourceRef.current = true;
 
     getObjectiveRevision(sourceRevisionId)
@@ -479,6 +691,7 @@ function Inner({
           ...objectiveDataFromRevision(data),
           changeSummary: "",
         });
+
         setShowChangeSummary(!!data.objective.current_revision_id);
         setType("objective");
         requestAnimationFrame(() => stepper.goTo("objective-details"));
@@ -486,7 +699,7 @@ function Inner({
       .catch(() => {
         toast.error("Could not load objective");
       });
-  }, [sourceRevisionId, editSlug]);
+  }, [sourceRevisionId, editSlug, stepper]);
 
   const [subjectOptions, setSubjectOptions] = useState<
     Awaited<ReturnType<typeof listSubjects>>
@@ -494,7 +707,6 @@ function Inner({
   const [guideOptions, setGuideOptions] = useState<
     Awaited<ReturnType<typeof listGuides>>
   >([]);
-  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -508,98 +720,24 @@ function Inner({
       .then(setGuideOptions)
       .catch(() => {});
 
-    getMyIdentity(opts)
-      .then((data) => setUsername(data.profile.username))
-      .catch(() => {});
-
     return () => controller.abort();
   }, []);
 
-  // Shape the in-progress form as a Guide, so the submit step can render it with
-  // the same component the published page uses.
-  const previewGuide: ReaderGuide = useMemo(() => {
-    const nameById = new Map(
-      subjectOptions.map((s) => [s.id, s.name] as const)
-    );
-    const titleBySlug = new Map(
-      guideOptions
-        .filter((g) => g.slug)
-        .map((g) => [g.slug as string, g.title ?? (g.slug as string)] as const)
-    );
-
+  // server draft payload
+  const draftFields = () => {
     return {
-      slug: "",
-      variant_id: null,
-      variant_slug: null,
-      title: guideContData.title || "Untitled guide",
-      author: username ?? "You",
-      summary: guideContData.summary,
-      body: guideContData.body,
-      duration_minutes: estimateReadMinutes(guideContData.body),
-      created_at: formatDate(new Date()),
+      title: activeGuide.title || null,
+      summary: activeGuide.summary || null,
+      body: activeGuide.body || null,
       tags: [
-        ...guideContData.subjects.map((id) => ({
-          slug: id,
-          name: nameById.get(id) ?? id,
-        })),
-        ...guideContData.newSubjects.map((s) => ({
-          slug: s.name,
-          name: s.name,
-        })),
+        ...activeGuide.subjects,
+        ...existingTagIds(activeGuide.newSubjects),
       ],
-      prerequisites: guideContData.prereqs.map((slug) => ({
-        slug,
-        title: titleBySlug.get(slug) ?? slug,
-      })),
+      prerequisites: activeGuide.prereqs,
+      newSubjects: unsavedSubjects(activeGuide.newSubjects),
+      todoPrereqs: activeGuide.todoPrereqs,
     };
-  }, [guideContData, subjectOptions, guideOptions, username]);
-
-  const previewVariant: ReaderGuide = useMemo(() => {
-    const nameById = new Map(
-      subjectOptions.map((s) => [s.id, s.name] as const)
-    );
-
-    return {
-      slug: "",
-      variant_id: null,
-      variant_slug: null,
-      title: variantContData.title || "Untitled guide",
-      author: username ?? "You",
-      summary: variantContData.summary,
-      body: variantContData.body,
-      created_at: formatDate(new Date()),
-      duration_minutes: estimateReadMinutes(variantContData.body),
-      tags: [
-        ...variantContData.subjects.map((id) => ({
-          slug: id,
-          name: nameById.get(id) ?? id,
-        })),
-        ...variantContData.newSubjects.map((s) => ({
-          slug: s.name,
-          name: s.name,
-        })),
-      ],
-      prerequisites: [],
-    };
-  }, [variantContData, subjectOptions, username]);
-
-  const guideType: GuideType | undefined =
-    guideContData.type === "practical" || guideContData.type === "theoretical"
-      ? guideContData.type
-      : undefined;
-
-  const draftFields = () => ({
-    title: guideContData.title || null,
-    summary: guideContData.summary || null,
-    body: guideContData.body || null,
-    tags: [
-      ...guideContData.subjects,
-      ...existingTagIds(guideContData.newSubjects),
-    ],
-    prerequisites: guideContData.prereqs,
-    newSubjects: unsavedSubjects(guideContData.newSubjects),
-    todoPrereqs: guideContData.todoPrereqs,
-  });
+  };
 
   const variantDraftFields = () => ({
     title: variantContData.title || null,
@@ -612,29 +750,37 @@ function Inner({
     newSubjects: unsavedSubjects(variantContData.newSubjects),
   });
 
-  // The wizard tracks guides by slug; the API keys curation on guide base ids.
   const baseIdForSlug = (slug: string) => {
     const guide = guideOptions.find((g) => g.slug === slug);
-    if (!guide) throw new Error(`Target guide not found: ${slug}`);
+
+    if (!guide) {
+      throw new Error(`Target guide not found: ${slug}`);
+    }
+
     return guide.id;
   };
 
-  // Target order comes from the array, so this sends them in wizard order. A
-  // target the curator has not sequenced yet goes without one, which leaves the
-  // curation under it alone rather than emptying it.
   const objectiveTargets = () =>
     objectiveContData.targets.map((slug) => {
       const sub = objectiveContData.subObjectives.find(
         (s) => s.targetSlug === slug
       );
+
       return {
         guide_base_id: baseIdForSlug(slug),
         is_featured: objectiveContData.featuredSubObjective === slug,
-        ...(sub ? { sequence: sub.curatedSequence.map(baseIdForSlug) } : {}),
+        ...(sub
+          ? {
+              sequence: sub.curatedSequence.map(baseIdForSlug),
+            }
+          : {}),
       };
     });
 
+  // prevent two simultaneous create requests
   const creatingRef = useRef<Promise<string> | null>(null);
+
+  // server persistence - guide revisionId lives on the active guide itself
   const persistDraft = async () => {
     if (type === "objective") {
       const target_ids = objectiveContData.targets.map(baseIdForSlug);
@@ -653,6 +799,7 @@ function Inner({
           tags: objectiveContData.subjects,
           targets: objectiveTargets(),
         });
+
         return revisionId;
       }
 
@@ -667,13 +814,16 @@ function Inner({
                 tags: objectiveContData.subjects,
                 targets: objectiveTargets(),
               });
+
               setRevisionId(id);
+
               return id;
             })
             .finally(() => {
               creatingRef.current = null;
             });
         }
+
         return creatingRef.current;
       }
 
@@ -685,8 +835,6 @@ function Inner({
           tags: objectiveContData.subjects,
         })
           .then(async (id) => {
-            // Creation only seeds the closure, so the curation has to update
-            // before publish.
             await updateObjectiveRevision(id, { targets: objectiveTargets() });
             setRevisionId(id);
             return id;
@@ -695,33 +843,52 @@ function Inner({
             creatingRef.current = null;
           });
       }
+
       return creatingRef.current;
     }
 
-    if (revisionId) {
-      await updateRevision(
-        revisionId,
-        type === "guide" ? draftFields() : variantDraftFields()
+    // Guide/Variant
+    if (type === "guide") {
+      // active guide owns its own server revisionId.
+      if (activeGuide.revisionId) {
+        await updateRevision(activeGuide.revisionId, draftFields());
+
+        return activeGuide.revisionId;
+      }
+
+      const newRevisionId = await createGuide({
+        knowledge_type:
+          activeGuide.type === "practical" ? "practical" : "theoretical",
+        ...draftFields(),
+        todoClaims: todoIds,
+      });
+
+      // store the server revision ID on THIS guide only
+      setGuideContData((prev) =>
+        prev.map((guide) =>
+          guide.localDraftId === activeGuide.localDraftId
+            ? { ...guide, revisionId: newRevisionId }
+            : guide
+        )
       );
+
+      return newRevisionId;
+    }
+
+    // variant
+    if (revisionId) {
+      await updateRevision(revisionId, variantDraftFields());
       return revisionId;
     }
 
-    if (type === "variant" && !variantContData.baseGuide) {
+    if (!variantContData.baseGuide) {
       throw new Error("Pick a base guide before saving");
     }
 
     if (!creatingRef.current) {
-      creatingRef.current = (
-        type === "guide"
-          ? createGuide({
-              knowledge_type:
-                guideContData.type === "practical"
-                  ? "practical"
-                  : "theoretical",
-              ...draftFields(),
-              todoClaims: todoIds,
-            })
-          : addGuideVariant(variantContData.baseGuide, variantDraftFields())
+      creatingRef.current = addGuideVariant(
+        variantContData.baseGuide,
+        variantDraftFields()
       )
         .then((id) => {
           setRevisionId(id);
@@ -731,15 +898,24 @@ function Inner({
           creatingRef.current = null;
         });
     }
+
     return creatingRef.current;
   };
 
-  // Creates the draft first if needed, so the image has a revision to attach to.
+  // image upload
   const uploadGuideImage = async (file: File) => {
     try {
-      const id = revisionId ?? (await persistDraft());
-      if (!id) throw new Error("Failed to save draft before uploading image");
+      const id =
+        type === "guide"
+          ? (activeGuide.revisionId ?? (await persistDraft()))
+          : (revisionId ?? (await persistDraft()));
+
+      if (!id) {
+        throw new Error("Failed to save draft before uploading image");
+      }
+
       const { url } = await uploadMedia(file, id);
+
       return url;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not upload image");
@@ -747,51 +923,120 @@ function Inner({
     }
   };
 
+  // manual save
   const saveDraft = async () => {
     setSubmitting(true);
+
     try {
       const id = await persistDraft();
-      if (type && !editSlug) {
-        const currentData =
-          type === "guide"
-            ? guideContData
-            : type === "variant"
-              ? variantContData
-              : objectiveContData;
-        setStoredDraft(type, {
-          data: currentData,
-          revisionId: id,
-          step,
-          updatedAt: Date.now(),
-        });
+
+      // keep localStorage in sync with the server revision ID
+      if (type === "guide") {
+        storeContributionDraft(
+          "guide",
+          {
+            type: activeGuide.type,
+            title: activeGuide.title,
+            summary: activeGuide.summary,
+            body: activeGuide.body,
+            subjects: activeGuide.subjects,
+            newSubjects: activeGuide.newSubjects,
+            prereqs: activeGuide.prereqs,
+            todoPrereqs: activeGuide.todoPrereqs,
+          },
+          activeGuide.localDraftId,
+          id,
+          step
+        );
+
+        // update guide in state so revisionId is available
+        if (id && id !== activeGuide.revisionId) {
+          setGuideContData((prev) =>
+            prev.map((guide) =>
+              guide.localDraftId === activeGuide.localDraftId
+                ? { ...guide, revisionId: id }
+                : guide
+            )
+          );
+        }
       }
+
+      if (type === "variant") {
+        storeContributionDraft(
+          "variant",
+          variantContData,
+          variantLocalDraftId,
+          id,
+          step
+        );
+      }
+
+      if (type === "objective") {
+        storeContributionDraft(
+          "objective",
+          objectiveContData,
+          objectiveLocalDraftId,
+          id,
+          step
+        );
+      }
+
       toast.success("Draft saved");
+
       return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save draft");
+
       return false;
     } finally {
       setSubmitting(false);
     }
   };
 
+  // objective validation
   const missingObjectiveFields = () => {
     const missing: Array<{ field: string; label: string }> = [];
-    if (!objectiveContData.title.trim())
-      missing.push({ field: "title", label: "a title" });
-    if (!objectiveContData.summary.trim())
-      missing.push({ field: "summary", label: "a summary" });
-    if (showChangeSummary && !objectiveContData.changeSummary.trim())
-      missing.push({ field: "changeSummary", label: "a change summary" });
-    if (objectiveContData.subjects.length === 0)
-      missing.push({ field: "subjects", label: "a subject" });
-    if (objectiveContData.targets.length === 0)
-      missing.push({ field: "targets", label: "a target guide" });
-    else if (!objectiveContData.featuredSubObjective)
+
+    if (!objectiveContData.title.trim()) {
+      missing.push({
+        field: "title",
+        label: "a title",
+      });
+    }
+
+    if (!objectiveContData.summary.trim()) {
+      missing.push({
+        field: "summary",
+        label: "a summary",
+      });
+    }
+
+    if (showChangeSummary && !objectiveContData.changeSummary.trim()) {
+      missing.push({
+        field: "changeSummary",
+        label: "a change summary",
+      });
+    }
+
+    if (objectiveContData.subjects.length === 0) {
+      missing.push({
+        field: "subjects",
+        label: "a subject",
+      });
+    }
+
+    if (objectiveContData.targets.length === 0) {
+      missing.push({
+        field: "targets",
+        label: "a target guide",
+      });
+    } else if (!objectiveContData.featuredSubObjective) {
       missing.push({
         field: "featuredSubObjective",
         label: "a featured sub-objective",
       });
+    }
+
     return missing;
   };
 
@@ -799,56 +1044,113 @@ function Inner({
     ? new Set(missingObjectiveFields().map((m) => m.field))
     : undefined;
 
+  // publish
   const publish = async () => {
     setSubmitting(true);
+
     try {
       if (type === "guide") {
-        const text = guideContData.body.trim();
+        const text = activeGuide.body.trim();
+
         const wordCount = text ? text.split(/\s+/).length : 0;
 
         if (wordCount > MAX_WORD_COUNT) {
           toast.error("Word count limit exceeded", {
             description: `Your guide currently has ${wordCount.toLocaleString()} words. Please reduce it to ${MAX_WORD_COUNT.toLocaleString()} words or fewer.`,
           });
+
           return;
         }
       }
 
       if (type === "objective") {
         const missing = missingObjectiveFields();
+
         if (missing.length > 0) {
           setPublishAttempted(true);
+
           stepper.goTo("objective-details");
+
           throw new Error(
             `Your objective is missing ${missing.map((m) => m.label).join(", ")}`
           );
         }
+
         setPublishAttempted(false);
       }
 
       const id = await persistDraft();
-      if (!id) throw new Error("Failed to save draft before publishing");
+
+      if (!id) {
+        throw new Error("Failed to save draft before publishing");
+      }
+
       if (type === "objective") {
         await submitObjectiveRevision(id);
+
         objectiveSave.cancel();
-        if (!editSlug) clearStoredDraft("objective");
+
+        clearStoredDraft(objectiveLocalDraftId);
         setObjectiveContData(createObjectiveContData());
         setRevisionId(null);
         onPublished?.();
+
         toast.success("Objective published");
-      } else if (type) {
+
+        return;
+      }
+
+      if (type === "guide") {
         await submitRevision(id);
-        if (type === "guide") {
-          guideSave.cancel();
-          clearStoredDraft("guide");
-          setGuideContData(createGuideContData());
+
+        guideSave.cancel();
+
+        /**
+         * only delete the ACTIVE guide's local draft
+         * other guides in the multi-guide UI remain untouched
+         * TODO: publish all guides on button click - not just active draft
+         */
+        clearStoredDraft(activeGuide.localDraftId);
+
+        // remove only the published guide from the current multi-guide session
+        setGuideContData((prev) =>
+          prev.filter(
+            (guide) => guide.localDraftId !== activeGuide.localDraftId
+          )
+        );
+
+        // Select another guide if one exists.
+        const remaining = guideContData.filter(
+          (guide) => guide.localDraftId !== activeGuide.localDraftId
+        );
+
+        if (remaining.length > 0) {
+          setActiveGuideId(remaining[0].localDraftId);
         } else {
-          variantSave.cancel();
-          clearStoredDraft("variant");
-          setVariantContData(createVariantContData());
+          const newGuide = createMultiGuide();
+          setGuideContData([newGuide]);
+          setActiveGuideId(newGuide.localDraftId);
         }
+
         setRevisionId(null);
         onPublished?.();
+
+        toast.success("Submitted for review");
+
+        return;
+      }
+
+      if (type === "variant") {
+        await submitRevision(id);
+
+        variantSave.cancel();
+
+        clearStoredDraft(variantLocalDraftId);
+        setVariantContData(createVariantContData());
+        setRevisionId(null);
+
+        onPublished?.();
+
         toast.success("Submitted for review");
       }
     } catch (e) {
@@ -864,13 +1166,14 @@ function Inner({
     }
   };
 
-  if (skipTypeStep && !type) return null;
+  if (skipTypeStep && !type) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-6 pb-20 sm:pb-0">
       <MobileStepProgress steps={visibleSteps} activeStep={activeStep} />
 
-      {/* horizontal breadcrumb stepper */}
       <Stepper.List className="hidden w-full items-center justify-center text-sm sm:flex">
         <Stepper.Items>
           {(item: any, index: number) => (
@@ -884,6 +1187,7 @@ function Inner({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                     {index + 1}
                   </span>
+
                   <Stepper.Title className="max-w-[20ch] truncate font-bold" />
                 </Stepper.Trigger>
               </Stepper.Item>
@@ -892,33 +1196,72 @@ function Inner({
         </Stepper.Items>
       </Stepper.List>
 
-      {/* content */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!skipTypeStep && (
           <SelectType pickType={pickType} type={type} Stepper={Stepper} />
         )}
 
-        <GuideDetails
+        <GuideInfo
           Stepper={Stepper}
           type={type}
-          guideContData={guideContData}
-          setGuideContData={setGuideContData}
+          guideContData={activeGuide}
+          onGuideChange={updateActiveGuide}
+          guides={guideContData}
           subjects={subjectOptions}
-          guides={guideOptions}
+          guideOptions={guideOptions}
+          activeGuideId={activeGuideId}
+          onSelectGuide={setActiveGuideId}
+          onAddGuide={addGuide}
+          onDeleteGuide={removeGuide}
+          body={type === "guide" ? activeGuide.body : variantContData.body}
+          onBodyChange={(body) => {
+            if (type === "guide") {
+              updateActiveGuide({ body });
+            } else {
+              setVariantContData((prev) => ({ ...prev, body }));
+            }
+          }}
+          onUploadImage={uploadGuideImage}
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
         />
 
-        <VariantDetails
+        <PreviewGuide
+          Stepper={Stepper}
+          type={type}
+          guides={guideContData}
+          subjects={subjectOptions}
+          activeGuideId={activeGuideId}
+          onSelectGuide={setActiveGuideId}
+          onAddGuide={addGuide}
+          onDeleteGuide={removeGuide}
+          onSaveDraft={saveDraft}
+          onPublish={publish}
+          submitting={submitting}
+        />
+
+        <VariantInfo
           Stepper={Stepper}
           type={type}
           variantContData={variantContData}
-          setVariantContData={setVariantContData}
+          onVariantChange={updateActiveVariant}
           guides={guideOptions}
           subjects={subjectOptions}
+          body={variantContData.body}
+          onBodyChange={(body) => updateActiveVariant({ body })}
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
+          submitting={submitting}
+        />
+
+        <PreviewVariant
+          Stepper={Stepper}
+          type={type}
+          guide={variantContData}
+          subjects={subjectOptions}
+          onSaveDraft={saveDraft}
+          onPublish={publish}
           submitting={submitting}
         />
 
@@ -944,21 +1287,6 @@ function Inner({
           guides={guideOptions}
         />
 
-        <Content
-          Stepper={Stepper}
-          type={type}
-          body={type == "guide" ? guideContData.body : variantContData.body}
-          onBodyChange={(body) => {
-            if (type == "guide") {
-              setGuideContData((prev) => ({ ...prev, body }));
-            } else {
-              setVariantContData((prev) => ({ ...prev, body }));
-            }
-          }}
-          onUploadImage={uploadGuideImage}
-          onSaveDraft={saveDraft}
-          submitting={submitting}
-        />
         <OrderObjectiveGuides
           Stepper={Stepper}
           objectiveContData={objectiveContData}
@@ -966,16 +1294,6 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           guides={guideOptions}
-        />
-
-        <PreviewGuide
-          Stepper={Stepper}
-          type={type}
-          guide={type === "guide" ? previewGuide : previewVariant}
-          guideType={type === "guide" ? guideType : undefined}
-          onSaveDraft={saveDraft}
-          onPublish={publish}
-          submitting={submitting}
         />
 
         <PreviewObjective
