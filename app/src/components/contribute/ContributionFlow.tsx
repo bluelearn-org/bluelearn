@@ -227,7 +227,7 @@ export default function ContributionFlow({
       }
 
       const convertedGuides: Array<MultiGuide> = [];
-      for (const [key, revision] of Object.entries(updated)) {
+      for (const revision of Object.values(updated)) {
         if (revision.type === "variant") continue;
 
         const converted = toMultiGuide(revision);
