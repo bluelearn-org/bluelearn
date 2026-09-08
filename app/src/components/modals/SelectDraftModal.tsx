@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
 
-import type { LocalRevision, RemoteRevision } from "@/lib/api/guideRevisions";
 import {
   Dialog,
   DialogClose,
@@ -14,12 +12,8 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 
 import { getGuideDrafts } from "@/lib/api/identity";
-import {
-  createLocalDraftId,
-  getStoredDraftsByType,
-} from "@/lib/contributionStorage";
+import { getStoredDraftsByType } from "@/lib/contributionStorage";
 import { Button } from "@/components/ui/button";
-import { getRevision } from "@/lib/api/guideRevisions";
 
 type GuideDraft = {
   revision_id: string;
@@ -34,7 +28,6 @@ type PropTypes = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDrafts: Array<string>;
-  setSelectedDrafts: Dispatch<SetStateAction<Array<string>>>;
   onDraftsChange: (draftIds: Array<string>) => void;
 };
 
@@ -42,7 +35,6 @@ export const SelectDraftModal = ({
   open,
   onOpenChange,
   selectedDrafts,
-  setSelectedDrafts,
   onDraftsChange,
 }: PropTypes) => {
   const [drafts, setDrafts] = useState<Array<GuideDraft>>([]);
@@ -95,61 +87,9 @@ export const SelectDraftModal = ({
     };
   }, [open]);
 
-  const fetchSelectedDrafts = async (draftIds: Array<string>) => {
-    // Fetch revision info given draft IDs
-    const selected = await Promise.all(
-      draftIds.map((draftId) => getRevision(draftId))
-    );
-
-    return selected;
-  };
-
-  const toLocalDraft = (remote: RemoteRevision): LocalRevision => {
-    // Convert remote drafts to local draft format
-    const getCurrentUnixTime = () => Math.floor(Date.now() / 1000);
-    return {
-      localDraftId: createLocalDraftId(),
-      type: "guide",
-      data: {
-        type: remote.knowledge_type ?? "",
-        title: remote.revision.title ?? "",
-        summary: remote.revision.summary ?? "",
-        body: remote.revision.body ?? "",
-        baseGuide: remote.revision.guide_id,
-        subjects: remote.subjects,
-        newSubjects: [],
-        prereqs: remote.prerequisites,
-        todoPrereqs: remote.todos,
-      },
-      revisionId: remote.revision.id,
-      step: "",
-      updatedAt: getCurrentUnixTime(),
-    };
-  };
-
-  const handleAddDrafts = async () => {
+  const handleAddDrafts = () => {
     onDraftsChange(selectedDrafts);
-
-    // Convert remote drafts to local draft format
-    const remoteDrafts: Array<RemoteRevision> =
-      await fetchSelectedDrafts(selectedDrafts);
-
-    const converted: Array<LocalRevision> = remoteDrafts.map(toLocalDraft);
-
-    // Append to localStorage
-    const draftData = localStorage.getItem("bluelearn:contrib:drafts") ?? "{}";
-    const draftJson = JSON.parse(draftData);
-
-    for (const element of converted) {
-      draftJson[element.localDraftId] = element;
-    }
-
-    localStorage.setItem("bluelearn:contrib:drafts", JSON.stringify(draftJson));
-
-    window.dispatchEvent(new Event("existingDraftsAdded"));
-
     onOpenChange(false);
-    setSelectedDrafts([]);
   };
   const handleCancel = () => {
     onDraftsChange([]);

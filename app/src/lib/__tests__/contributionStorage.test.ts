@@ -9,14 +9,11 @@ import type {
 import {
   clearAllStoredDrafts,
   clearStoredDraft,
-  createLocalDraftId,
   getStoredDraft,
   hasStoredDraft,
   setStoredDraft,
   useDebouncedContributionSave,
 } from "@/lib/contributionStorage";
-
-const STORAGE_KEY = "bluelearn:contrib:drafts";
 
 const createLocalStorageMock = () => {
   let store: Record<string, string> = {};
@@ -34,37 +31,6 @@ const createLocalStorageMock = () => {
   };
 };
 
-const sampleGuide: GuideContribution = {
-  type: "theoretical",
-  title: "Understanding Persistent State",
-  summary: "A short summary",
-  body: "# Markdown Content",
-  subjects: ["sub-1"],
-  newSubjects: [],
-  prereqs: [],
-  todoPrereqs: [],
-};
-
-const sampleVariant: VariantContribution = {
-  type: "theoretical",
-  title: "Variant Draft",
-  summary: "A short summary",
-  baseGuide: "base-guide-slug",
-  subjects: ["sub-1"],
-  newSubjects: [],
-  body: "# Markdown Content",
-};
-
-const sampleObjective: ObjectiveContribution = {
-  title: "Objective Draft",
-  summary: "A short summary",
-  changeSummary: "Initial draft",
-  targets: ["target-1"],
-  featuredSubObjective: "sub-obj-1",
-  subObjectives: [],
-  subjects: ["sub-1"],
-};
-
 describe("contributionStorage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -80,20 +46,27 @@ describe("contributionStorage", () => {
   });
 
   it("saves and retrieves a guide draft from localStorage", () => {
-    const localDraftId = createLocalDraftId();
+    const sampleGuide: GuideContribution = {
+      type: "theoretical",
+      title: "Understanding Persistent State",
+      summary: "A short summary",
+      body: "# Markdown Content",
+      subjects: ["sub-1"],
+      newSubjects: [],
+      prereqs: [],
+      todoPrereqs: [],
+    };
 
-    setStoredDraft({
-      localDraftId,
-      type: "guide",
+    setStoredDraft("guide", {
       data: sampleGuide,
       revisionId: "rev-123",
       step: "guide-details",
       updatedAt: Date.now(),
     });
 
-    expect(hasStoredDraft(localDraftId)).toBe(true);
+    expect(hasStoredDraft("guide")).toBe(true);
 
-    const stored = getStoredDraft(localDraftId, "guide");
+    const stored = getStoredDraft<GuideContribution>("guide");
     expect(stored).not.toBeNull();
     expect(stored?.data.title).toBe("Understanding Persistent State");
     expect(stored?.revisionId).toBe("rev-123");
@@ -101,73 +74,55 @@ describe("contributionStorage", () => {
   });
 
   it("clears a stored draft", () => {
-    const localDraftId = createLocalDraftId();
-
-    setStoredDraft({
-      localDraftId,
-      type: "variant",
-      data: sampleVariant,
+    setStoredDraft("variant", {
+      data: {} as VariantContribution,
       revisionId: null,
       updatedAt: Date.now(),
     });
 
-    expect(hasStoredDraft(localDraftId)).toBe(true);
-
-    clearStoredDraft(localDraftId);
-
-    expect(hasStoredDraft(localDraftId)).toBe(false);
-    expect(getStoredDraft(localDraftId, "variant")).toBeNull();
+    expect(hasStoredDraft("variant")).toBe(true);
+    clearStoredDraft("variant");
+    expect(hasStoredDraft("variant")).toBe(false);
+    expect(getStoredDraft("variant")).toBeNull();
   });
 
   it("clears all stored drafts with clearAllStoredDrafts", () => {
-    const guideId = createLocalDraftId();
-    const variantId = createLocalDraftId();
-    const objectiveId = createLocalDraftId();
-
-    setStoredDraft({
-      localDraftId: guideId,
-      type: "guide",
-      data: sampleGuide,
+    setStoredDraft("guide", {
+      data: { title: "Guide Draft" } as GuideContribution,
       revisionId: "rev-g",
       updatedAt: Date.now(),
     });
-    setStoredDraft({
-      localDraftId: variantId,
-      type: "variant",
-      data: sampleVariant,
+    setStoredDraft("variant", {
+      data: { title: "Variant Draft" } as VariantContribution,
       revisionId: "rev-v",
       updatedAt: Date.now(),
     });
-    setStoredDraft({
-      localDraftId: objectiveId,
-      type: "objective",
-      data: sampleObjective,
+    setStoredDraft("objective", {
+      data: { title: "Objective Draft" } as ObjectiveContribution,
       revisionId: "rev-o",
       updatedAt: Date.now(),
     });
 
-    expect(hasStoredDraft(guideId)).toBe(true);
-    expect(hasStoredDraft(variantId)).toBe(true);
-    expect(hasStoredDraft(objectiveId)).toBe(true);
+    expect(hasStoredDraft("guide")).toBe(true);
+    expect(hasStoredDraft("variant")).toBe(true);
+    expect(hasStoredDraft("objective")).toBe(true);
 
     clearAllStoredDrafts();
 
-    expect(hasStoredDraft(guideId)).toBe(false);
-    expect(hasStoredDraft(variantId)).toBe(false);
-    expect(hasStoredDraft(objectiveId)).toBe(false);
-    expect(getStoredDraft(guideId, "guide")).toBeNull();
-    expect(getStoredDraft(variantId, "variant")).toBeNull();
-    expect(getStoredDraft(objectiveId, "objective")).toBeNull();
+    expect(hasStoredDraft("guide")).toBe(false);
+    expect(hasStoredDraft("variant")).toBe(false);
+    expect(hasStoredDraft("objective")).toBe(false);
+    expect(getStoredDraft("guide")).toBeNull();
+    expect(getStoredDraft("variant")).toBeNull();
+    expect(getStoredDraft("objective")).toBeNull();
   });
 
   it("safely handles corrupted JSON in localStorage", () => {
-    window.localStorage.setItem(STORAGE_KEY, "{invalid-json");
-    expect(getStoredDraft(createLocalDraftId(), "guide")).toBeNull();
+    window.localStorage.setItem("bluelearn:contrib:guide", "{invalid-json");
+    expect(getStoredDraft("guide")).toBeNull();
   });
 
   it("debounces saves and flushes pending changes on unmount", () => {
-    const localDraftId = createLocalDraftId();
-
     const initialData: GuideContribution = {
       type: "theoretical",
       title: "Draft Initial",
@@ -181,14 +136,7 @@ describe("contributionStorage", () => {
 
     const { rerender, unmount } = renderHook(
       ({ data, step }: { data: GuideContribution; step?: string }) =>
-        useDebouncedContributionSave(
-          localDraftId,
-          "guide",
-          data,
-          "rev-1",
-          step,
-          300
-        ),
+        useDebouncedContributionSave("guide", data, "rev-1", step, 300),
       {
         initialProps: {
           data: initialData,
@@ -198,15 +146,15 @@ describe("contributionStorage", () => {
     );
 
     // Initial render should not have written immediately before timer
-    expect(hasStoredDraft(localDraftId)).toBe(false);
+    expect(hasStoredDraft("guide")).toBe(false);
 
     // Advance timer past delay
     act(() => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(hasStoredDraft(localDraftId)).toBe(true);
-    expect(getStoredDraft(localDraftId, "guide")?.data.title).toBe(
+    expect(hasStoredDraft("guide")).toBe(true);
+    expect(getStoredDraft<GuideContribution>("guide")?.data.title).toBe(
       "Draft Initial"
     );
 
@@ -224,7 +172,7 @@ describe("contributionStorage", () => {
     act(() => {
       vi.advanceTimersByTime(100);
     });
-    expect(getStoredDraft(localDraftId, "guide")?.data.title).toBe(
+    expect(getStoredDraft<GuideContribution>("guide")?.data.title).toBe(
       "Draft Initial"
     );
 
@@ -240,7 +188,7 @@ describe("contributionStorage", () => {
     // Unmount before timer finishes flushes pending changes
     unmount();
 
-    const stored = getStoredDraft(localDraftId, "guide");
+    const stored = getStoredDraft<GuideContribution>("guide");
     expect(stored?.data.title).toBe("Draft Update 2");
     expect(stored?.step).toBe("content");
   });

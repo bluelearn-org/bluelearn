@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { z } from "zod";
 import type { ContributionType } from "@/types/contributions";
-import type { UUID } from "node:crypto";
 import {
   guideContributionSchema,
   objectiveContributionSchema,
@@ -125,7 +124,7 @@ function writeStoredDrafts(drafts: StoredDrafts): void {
 }
 
 // generates a unique ID for new local draft
-export function createLocalDraftId(): UUID {
+export function createLocalDraftId(): string {
   if (
     typeof crypto !== "undefined" &&
     typeof crypto.randomUUID === "function"

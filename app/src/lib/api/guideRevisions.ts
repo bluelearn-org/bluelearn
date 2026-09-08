@@ -1,5 +1,4 @@
 import type { InferRequestType } from "hono/client";
-import type { UUID } from "node:crypto";
 import { client } from "@/lib/api/apiClient";
 import { assertOk } from "@/lib/api/apiHelpers";
 
@@ -7,68 +6,7 @@ const revisions = client["guide-revisions"];
 
 type FetchOptions = { signal?: AbortSignal };
 
-export type RemoteRevision = {
-  revision: {
-    id: string;
-    guide_id: string;
-    title: string | null;
-    summary: string | null;
-    body: string | null;
-    change_summary: string | null;
-    status: "draft" | "submitted";
-    created_at: string;
-  };
-  subjects: Array<{
-    id: string;
-    slug: string | null;
-    name: string;
-    summary: string | null;
-    status: "draft" | "published";
-  }>;
-  knowledge_type: "theoretical" | "practical" | null;
-  is_variant: boolean;
-  base_slug: string | null;
-  variant_slug: string | null;
-  prerequisites: Array<string>;
-  todos: Array<{
-    title: string;
-    summary: string;
-  }>;
-  revised_from_case_id: string | null;
-};
-
-export type LocalRevision = {
-  localDraftId: UUID;
-  type: "variant" | "guide" | "";
-  data: {
-    type: "theoretical" | "practical" | "";
-    title: string;
-    summary: string;
-    baseGuide: string;
-    body: string;
-    subjects: Array<{
-      id: string;
-      slug: string | null;
-      name: string;
-      summary: string | null;
-      status: "draft" | "published";
-    }>;
-    newSubjects: Array<string>;
-    prereqs: Array<string>;
-    todoPrereqs: Array<{
-      title: string;
-      summary: string;
-    }>;
-  };
-  revisionId: string;
-  step: string;
-  updatedAt: number;
-};
-
-export async function getRevision(
-  id: string,
-  { signal }: FetchOptions = {}
-): Promise<RemoteRevision> {
+export async function getRevision(id: string, { signal }: FetchOptions = {}) {
   const res = await revisions[":id"].$get(
     { param: { id } },
     { init: { signal } }
