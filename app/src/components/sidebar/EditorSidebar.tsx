@@ -219,6 +219,7 @@ export const EditorSidebar = ({
           open={selectDraftModalOpen}
           onOpenChange={setSelectDraftModalOpen}
           selectedDrafts={selectedDrafts}
+          setSelectedDrafts={setSelectedDrafts}
           onDraftsChange={handleSelectExistingDrafts}
         />
       )}
