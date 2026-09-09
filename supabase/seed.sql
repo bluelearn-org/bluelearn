@@ -47,7 +47,7 @@ declare
   v_id uuid;
   i int;
 begin
-  for i in 1..3 loop
+  for i in 1..5 loop
     v_id := ('00000000-0000-4000-8000-00000000001' || i)::uuid;
 
     insert into auth.users
@@ -399,6 +399,22 @@ insert into public.votes (voter_id, guide_id, direction) values
   ('00000000-0000-4000-8000-000000000011', '30000000-0000-4000-8000-000000000080', 'up'),
   ('00000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000080', 'up')
 on conflict do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Disclaimer associations for seed data.
+-- Disclaimers live on guide_bases so they apply to all variants.
+-- ---------------------------------------------------------------------------
+insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
+select '20000000-0000-4000-8000-000000000003', id from public.disclaimers where slug = 'financial'
+on conflict do nothing; -- Deploy to Cloudflare Workers: financial
+
+insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
+select '20000000-0000-4000-8000-000000000004', id from public.disclaimers where slug = 'medical'
+on conflict do nothing; -- SQL Joins: medical
+
+insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
+select '20000000-0000-4000-8000-000000000005', id from public.disclaimers where slug = 'legal'
+on conflict do nothing; -- Debounce a Search Input: legal
 
 -- Publish guides 1-5 and their variants: point each guide at its live revision,
 -- each base at its canonical guide, and flip both to published. Guide/base 6 stays draft.

@@ -97,6 +97,7 @@ function RouteComponent() {
       created_at: revision.created_at,
       tags: revision.tags,
       prerequisites: [],
+      disclaimers: [],
     };
 
     return (

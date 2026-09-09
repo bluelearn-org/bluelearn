@@ -81,6 +81,7 @@ const createGuideContData = (): GuideContribution => ({
   newSubjects: [],
   prereqs: [],
   todoPrereqs: [],
+  disclaimers: [],
 });
 
 const createMultiGuide = (): MultiGuide => ({
@@ -670,6 +671,7 @@ function Inner({
             newSubjects: pending,
             prereqs: data.prerequisites,
             todoPrereqs: data.todos,
+            disclaimers: data.disclaimers,
           };
 
           setGuideContData([gData]);
@@ -781,6 +783,7 @@ function Inner({
       prerequisites: activeGuide.prereqs,
       newSubjects: unsavedSubjects(activeGuide.newSubjects),
       todoPrereqs: activeGuide.todoPrereqs,
+      disclaimers: activeGuide.disclaimers,
     };
   };
 
@@ -931,9 +934,17 @@ function Inner({
     }
 
     if (!creatingRef.current) {
-      creatingRef.current = addGuideVariant(
-        variantContData.baseGuide,
-        variantDraftFields()
+      creatingRef.current = (
+        type === "guide"
+          ? createGuide({
+              knowledge_type:
+                guideContData.type === "practical"
+                  ? "practical"
+                  : "theoretical",
+              ...draftFields(),
+              todoClaims: todoIds,
+            })
+          : addGuideVariant(variantContData.baseGuide, variantDraftFields())
       )
         .then((id) => {
           setRevisionId(id);

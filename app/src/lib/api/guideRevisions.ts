@@ -35,6 +35,9 @@ export type RemoteRevision = {
     summary: string;
   }>;
   revised_from_case_id: string | null;
+  disclaimers: Array<
+    "medical" | "financial" | "legal" | "mature" | "profanity"
+  >;
 };
 
 export type LocalRevision = {

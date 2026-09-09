@@ -20,6 +20,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ObjectivesRouteImport } from './routes/objectives'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContributeRouteImport } from './routes/contribute'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
@@ -28,6 +29,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as ObjectivesIndexRouteImport } from './routes/objectives.index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings.appearance'
@@ -36,6 +38,9 @@ import { Route as ReviewCaseIdRouteImport } from './routes/review.$caseId'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as ObjectivesSlugRouteImport } from './routes/objectives/$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides/$slug'
+import { Route as DashboardRolesRouteImport } from './routes/dashboard/roles'
+import { Route as DashboardMembersRouteImport } from './routes/dashboard/members'
+import { Route as DashboardAssignmentsRouteImport } from './routes/dashboard/assignments'
 import { Route as ObjectivesSlugIndexRouteImport } from './routes/objectives/$slug/index'
 import { Route as GuidesSlugIndexRouteImport } from './routes/guides/$slug/index'
 import { Route as GuidesSlugWalkthroughRouteImport } from './routes/guides/$slug/walkthrough'
@@ -99,6 +104,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContributeRoute = ContributeRouteImport.update({
   id: '/contribute',
   path: '/contribute',
@@ -139,6 +149,11 @@ const GuidesIndexRoute = GuidesIndexRouteImport.update({
   path: '/guides/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const SubjectsSlugRoute = SubjectsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -178,6 +193,21 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   id: '/guides/$slug',
   path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRolesRoute = DashboardRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMembersRoute = DashboardMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAssignmentsRoute = DashboardAssignmentsRouteImport.update({
+  id: '/assignments',
+  path: '/assignments',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const ObjectivesSlugIndexRoute = ObjectivesSlugIndexRouteImport.update({
   id: '/',
@@ -223,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/contribute': typeof ContributeRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/objectives': typeof ObjectivesRouteWithChildren
@@ -234,6 +265,9 @@ export interface FileRoutesByFullPath {
   '/subjects': typeof SubjectsRouteWithChildren
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard/assignments': typeof DashboardAssignmentsRoute
+  '/dashboard/members': typeof DashboardMembersRoute
+  '/dashboard/roles': typeof DashboardRolesRoute
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
@@ -242,6 +276,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
   '/review/': typeof ReviewIndexRoute
@@ -266,12 +301,16 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard/assignments': typeof DashboardAssignmentsRoute
+  '/dashboard/members': typeof DashboardMembersRoute
+  '/dashboard/roles': typeof DashboardRolesRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/guides': typeof GuidesIndexRoute
   '/objectives': typeof ObjectivesIndexRoute
   '/review': typeof ReviewIndexRoute
@@ -290,6 +329,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/contribute': typeof ContributeRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/objectives': typeof ObjectivesRouteWithChildren
@@ -301,6 +341,9 @@ export interface FileRoutesById {
   '/subjects': typeof SubjectsRouteWithChildren
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard/assignments': typeof DashboardAssignmentsRoute
+  '/dashboard/members': typeof DashboardMembersRoute
+  '/dashboard/roles': typeof DashboardRolesRoute
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
@@ -309,6 +352,7 @@ export interface FileRoutesById {
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
   '/review/': typeof ReviewIndexRoute
@@ -328,6 +372,7 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/contribute'
+    | '/dashboard'
     | '/forgot-password'
     | '/login'
     | '/objectives'
@@ -339,6 +384,9 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/todos'
     | '/verify-email'
+    | '/dashboard/assignments'
+    | '/dashboard/members'
+    | '/dashboard/roles'
     | '/guides/$slug'
     | '/objectives/$slug'
     | '/profile/$username'
@@ -347,6 +395,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/profile'
     | '/subjects/$slug'
+    | '/dashboard/'
     | '/guides/'
     | '/objectives/'
     | '/review/'
@@ -371,12 +420,16 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/todos'
     | '/verify-email'
+    | '/dashboard/assignments'
+    | '/dashboard/members'
+    | '/dashboard/roles'
     | '/profile/$username'
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/profile'
     | '/subjects/$slug'
+    | '/dashboard'
     | '/guides'
     | '/objectives'
     | '/review'
@@ -394,6 +447,7 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/contribute'
+    | '/dashboard'
     | '/forgot-password'
     | '/login'
     | '/objectives'
@@ -405,6 +459,9 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/todos'
     | '/verify-email'
+    | '/dashboard/assignments'
+    | '/dashboard/members'
+    | '/dashboard/roles'
     | '/guides/$slug'
     | '/objectives/$slug'
     | '/profile/$username'
@@ -413,6 +470,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/profile'
     | '/subjects/$slug'
+    | '/dashboard/'
     | '/guides/'
     | '/objectives/'
     | '/review/'
@@ -431,6 +489,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrowseRoute: typeof BrowseRoute
   ContributeRoute: typeof ContributeRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ObjectivesRoute: typeof ObjectivesRouteWithChildren
@@ -525,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contribute': {
       id: '/contribute'
       path: '/contribute'
@@ -580,6 +646,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/guides/'
       preLoaderRoute: typeof GuidesIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/subjects/$slug': {
       id: '/subjects/$slug'
@@ -637,6 +710,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/roles': {
+      id: '/dashboard/roles'
+      path: '/roles'
+      fullPath: '/dashboard/roles'
+      preLoaderRoute: typeof DashboardRolesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/members': {
+      id: '/dashboard/members'
+      path: '/members'
+      fullPath: '/dashboard/members'
+      preLoaderRoute: typeof DashboardMembersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/assignments': {
+      id: '/dashboard/assignments'
+      path: '/assignments'
+      fullPath: '/dashboard/assignments'
+      preLoaderRoute: typeof DashboardAssignmentsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/objectives/$slug/': {
       id: '/objectives/$slug/'
       path: '/'
@@ -688,6 +782,24 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface DashboardRouteChildren {
+  DashboardAssignmentsRoute: typeof DashboardAssignmentsRoute
+  DashboardMembersRoute: typeof DashboardMembersRoute
+  DashboardRolesRoute: typeof DashboardRolesRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAssignmentsRoute: DashboardAssignmentsRoute,
+  DashboardMembersRoute: DashboardMembersRoute,
+  DashboardRolesRoute: DashboardRolesRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
 
 interface ObjectivesSlugRouteChildren {
   ObjectivesSlugIndexRoute: typeof ObjectivesSlugIndexRoute
@@ -799,6 +911,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrowseRoute: BrowseRoute,
   ContributeRoute: ContributeRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ObjectivesRoute: ObjectivesRouteWithChildren,

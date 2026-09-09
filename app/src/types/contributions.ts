@@ -5,6 +5,14 @@ import { z } from "zod";
 export const contributionTypeSchema = z.enum(["guide", "variant", "objective"]);
 export const guideTypeSchema = z.enum(["theoretical", "practical"]);
 
+const disclaimerSlugSchema = z.enum([
+  "medical",
+  "financial",
+  "legal",
+  "mature",
+  "profanity",
+]);
+
 const newSubjectSchema = z.object({
   id: z.string().optional(),
   name: z.string(),
@@ -20,6 +28,7 @@ export const guideContributionSchema = z.object({
   newSubjects: z.array(newSubjectSchema),
   prereqs: z.array(z.string()),
   todoPrereqs: z.array(z.object({ title: z.string(), summary: z.string() })),
+  disclaimers: z.array(disclaimerSlugSchema),
 });
 
 export const variantContributionSchema = z.object({

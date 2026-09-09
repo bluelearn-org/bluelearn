@@ -43,6 +43,7 @@ const sampleGuide: GuideContribution = {
   newSubjects: [],
   prereqs: [],
   todoPrereqs: [],
+  disclaimers: [],
 };
 
 const sampleVariant: VariantContribution = {
@@ -177,6 +178,7 @@ describe("contributionStorage", () => {
       newSubjects: [],
       prereqs: [],
       todoPrereqs: [],
+      disclaimers: [],
     };
 
     const { rerender, unmount } = renderHook(

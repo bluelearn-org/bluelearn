@@ -1,4 +1,4 @@
-This guide serves as a convention manual for creating content in the Bluelearn knowledge graph. Adhering to these constraints is critical; publishing non-compliant guides will hurt the presentation and make maintenance more difficult for the DAG.
+This guide serves as a "quick" manual for creating content on Bluelearn. Adhering to these constraints is critical; publishing non-compliant guides will hurt the presentation and make maintenance more difficult for the Knowledge Graph.
 
 ## 1. Core Principles
 
@@ -21,9 +21,9 @@ This guide serves as a convention manual for creating content in the Bluelearn k
 
 ## 3. Writing Style
 
-- **Voice**: Both _Third-Person Voice_ (e.g. "He will then flip the Pancake") and _active, Second-Person Voice_ (e.g., "You will then flip the pancake") are acceptable. **First-Person Voice is not allowed** (e.g. "I will flip the pancake").
+- **Voice**: Both _Third-Person Voice_ (e.g. "He will then flip the Pancake") and _active, Second-Person Voice_ (e.g., "You will then flip the pancake") are acceptable. **First-Person Voice is not allowed** (e.g. "I will flip the pancake"), except in examples and analogies.
 - **Analogies & Metaphors**: Provide culturally neutral, tangible analogies for abstract ideas. Avoid culturally specific idioms or sports metaphors (e.g., "slam dunk", "home run"). Default to universal, physics-based metaphors (e.g., "push", "pull", "jump").
-- **Paragraph Length**: Paragraphs must not be longer than 4 sentences.
+- **Paragraph Length**: Paragraphs must generally not be longer than 5 sentences.
 
 ## 4. Formatting & Assets
 

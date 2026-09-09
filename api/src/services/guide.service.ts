@@ -19,6 +19,7 @@ import {
 import { claimTodos } from "./todo.service";
 import { readingMinutes } from "../lib/reading";
 import { loadUsernames } from "./identity.service";
+import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -210,6 +211,7 @@ export async function createGuide(
     newSubjects,
     todoPrereqs,
     todoClaims,
+    disclaimers,
   } = input;
 
   const { data: revision_id, error } = await supabase.rpc("create_guide", {
@@ -230,6 +232,11 @@ export async function createGuide(
     newSubjects,
     todoPrereqs,
   });
+
+  if (disclaimers.length > 0) {
+    const base = await resolveRevisionBase(supabase, revision_id);
+    await replaceDisclaimers(supabase, base.id, disclaimers);
+  }
 
   if (todoClaims.length > 0) {
     const base = await resolveRevisionBase(supabase, revision_id);
@@ -292,9 +299,10 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
 
   const canonical = guide.canonical;
   const current = canonical?.current ?? null;
-  const [subjects, prerequisites] = await Promise.all([
+  const [subjects, prerequisites, disclaimers] = await Promise.all([
     loadCanonicalTags(supabase, current?.id ?? null),
     loadPrerequisites(supabase, guide.id),
+    loadDisclaimers(supabase, guide.id),
   ]);
   const authorId = canonical?.author_id ?? null;
   const usernames = await loadUsernames(supabase, [authorId]);
@@ -313,6 +321,7 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
     tags: subjects.map((s) => ({ slug: s.slug, name: s.name })),
     prerequisites,
     is_official: guide.is_official,
+    disclaimers,
   };
 
   return detail;
@@ -534,7 +543,7 @@ export async function getVariantBySlug(
     throw new ServiceError("Variant not found", 404);
   }
 
-  const [{ data: tally, error: tallyError }, tags, usernames] =
+  const [{ data: tally, error: tallyError }, tags, usernames, disclaimers] =
     await Promise.all([
       supabase
         .from("guide_vote_tallies")
@@ -543,6 +552,7 @@ export async function getVariantBySlug(
         .maybeSingle(),
       loadCanonicalTags(supabase, variant.current?.id ?? null),
       loadUsernames(supabase, [variant.author_id]),
+      loadDisclaimers(supabase, variant.guide_base_id),
     ]);
 
   if (tallyError) {
@@ -570,6 +580,7 @@ export async function getVariantBySlug(
       votes: { up: tally?.upvotes ?? 0, down: tally?.downvotes ?? 0 },
       is_official: base?.is_official ?? false,
       knowledge_type: base?.knowledge_type ?? "theoretical",
+      disclaimers,
     },
   };
 }

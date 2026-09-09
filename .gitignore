@@ -35,11 +35,3 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
-
-# AI
-CLAUDE.md
-.claude/
-.superpowers/
-.cursorignore
-docs/superpowers
-.nitro/

@@ -23,7 +23,7 @@ type ObjectiveDraft = {
   updated_at: string;
 };
 
-async function fetchRoles(supabase: DB, userId: string) {
+export async function fetchRoles(supabase: DB, userId: string) {
   const { data } = await supabase
     .from("user_roles")
     .select("role")
