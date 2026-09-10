@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { ShieldMinus, ShieldPlus, SquareArrowRightExit } from "lucide-react";
 import { toast } from "sonner";
-import type { UserRole } from "@/lib/api/dashboard";
+import type { UserRole, UserStatus } from "@/lib/api/dashboard";
 import { Button } from "@/components/ui/button";
 import { RolesTable } from "@/components/tables/RolesTable";
 import {
@@ -35,7 +35,10 @@ function RouteComponent() {
     try {
       await Promise.all(
         [...selectedIds].map((id) =>
-          toggleAFK(id, roles.data.find((r) => r.id === id)?.status)
+          toggleAFK(
+            id,
+            roles.data.find((r) => r.id === id)?.status as UserStatus
+          )
         )
       );
       setSelectedIds(new Set());
