@@ -2,10 +2,13 @@ import { Check, Save, Scroll } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { ContributionType } from "@/types/contributions";
+import type { AnyStoredDraft } from "@/lib/contributionStorage";
+
 import { Separator } from "@/components/ui/separator";
 import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
 import { GuideSubmitModal } from "@/components/modals/GuideSubmitModal";
 import { ObjectivePublishModal } from "@/components/modals/ObjectivePublishModal";
+import { getAllStoredDrafts } from "@/lib/contributionStorage";
 
 type PropTypes = {
   title: string;
@@ -38,6 +41,9 @@ export const StepperActionHeader = ({
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [saved, setSaved] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [allStoredDrafts, setAllStoredDrafts] = useState<Array<AnyStoredDraft>>(
+    []
+  );
 
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
@@ -48,6 +54,12 @@ export const StepperActionHeader = ({
       if (resetTimer.current) clearTimeout(resetTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    // get all drafts from localstorage
+    const allDrafts = getAllStoredDrafts();
+    setAllStoredDrafts(allDrafts);
+  }, [saved]); // TODO: should get drafts when a new draft is added to the workspace
 
   const saveDraft = async () => {
     if (!onSaveDraft) return;
@@ -87,7 +99,7 @@ export const StepperActionHeader = ({
               onClick={saveDraft}
             >
               <Save className="size-4" />
-              Save Draft
+              {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
             </button>
           )}
 
@@ -112,7 +124,7 @@ export const StepperActionHeader = ({
         </div>
       </div>
 
-      <Separator className="mb-8 hidden bg-border sm:block" />
+      <Separator className="hidden bg-border sm:block" />
 
       {(onSaveDraft || !hideBackBtn || onPublish) && (
         <div className="fixed inset-x-0 bottom-0 z-40 flex w-full items-center gap-1.5 overflow-hidden border-t bg-background/95 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">

@@ -3,6 +3,7 @@ import { z } from "zod";
 // Schemas are only used to check drafts restored from localStorage. Doesn't use shared
 // schemas because an empty field here is "" not null.
 export const contributionTypeSchema = z.enum(["guide", "variant", "objective"]);
+export const guideTypeSchema = z.enum(["theoretical", "practical"]);
 
 const disclaimerSlugSchema = z.enum([
   "medical",
@@ -19,7 +20,7 @@ const newSubjectSchema = z.object({
 });
 
 export const guideContributionSchema = z.object({
-  type: z.string(),
+  type: guideTypeSchema,
   title: z.string(),
   summary: z.string(),
   body: z.string(),
@@ -31,13 +32,14 @@ export const guideContributionSchema = z.object({
 });
 
 export const variantContributionSchema = z.object({
-  type: z.string(),
+  type: guideTypeSchema,
   title: z.string(),
   summary: z.string(),
   baseGuide: z.string(),
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
   body: z.string(),
+  disclaimers: z.array(disclaimerSlugSchema),
 });
 
 export const subObjectiveSchema = z.object({
@@ -57,6 +59,7 @@ export const objectiveContributionSchema = z.object({
 });
 
 export type ContributionType = z.infer<typeof contributionTypeSchema>;
+export type GuideType = z.infer<typeof guideTypeSchema>;
 export type GuideContribution = z.infer<typeof guideContributionSchema>;
 export type VariantContribution = z.infer<typeof variantContributionSchema>;
 export type SubObjective = z.infer<typeof subObjectiveSchema>;
