@@ -10,6 +10,7 @@ type PropTypes = {
   sidebarActions?: React.ReactNode;
   reviewSection?: React.ReactNode;
   showPrerequisites?: boolean;
+  showFollowUps?: boolean;
 };
 
 export const GuideSidebar = ({
@@ -18,6 +19,7 @@ export const GuideSidebar = ({
   sidebarActions,
   reviewSection,
   showPrerequisites = true,
+  showFollowUps = true,
 }: PropTypes) => {
   const headings = useMemo(
     () => extractHeadings(guide.body ?? ""),
@@ -88,6 +90,44 @@ export const GuideSidebar = ({
                     }}
                   >
                     {prereq.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CollapsibleSection>
+      )}
+
+      {/* Follow Ups */}
+      {showFollowUps && (
+        <CollapsibleSection defaultOpen={true} title="Follow Up Guides">
+          {(guide.follow_ups ?? []).length === 0 ? (
+            <p
+              className="text-xs text-muted-foreground"
+              style={{ paddingLeft: 12 }}
+            >
+              None declared
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {(guide.follow_ups ?? []).map((follow_up: GuideReference) => (
+                <li
+                  key={follow_up.slug}
+                  className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+                  style={{ paddingLeft: 12 }}
+                >
+                  <Link
+                    to="/guides/$slug"
+                    params={{ slug: follow_up.slug }}
+                    state={{
+                      breadcrumbOrigin: {
+                        type: "guide",
+                        title: guide.title,
+                        path: `/guides/${slug}`,
+                      },
+                    }}
+                  >
+                    {follow_up.title}
                   </Link>
                 </li>
               ))}
