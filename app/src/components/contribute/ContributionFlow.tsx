@@ -201,7 +201,7 @@ export default function ContributionFlow({
 
   useEffect(() => {
     function handleUpdate() {
-      function toMultiGuide(rev: LocalRevision): MultiGuide {
+      const toMultiGuide = (rev: LocalRevision): MultiGuide => {
         return {
           type: rev.data.type === "" ? "theoretical" : rev.data.type,
           title: rev.data.title,
@@ -218,7 +218,7 @@ export default function ContributionFlow({
           revisionId: rev.revisionId,
           disclaimers: rev.disclaimers,
         };
-      }
+      };
       const updated: Record<string, LocalRevision> = JSON.parse(
         localStorage.getItem("bluelearn:contrib:drafts") || "{}"
       );
