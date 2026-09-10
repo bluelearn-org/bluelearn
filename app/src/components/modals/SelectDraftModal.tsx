@@ -121,6 +121,7 @@ export const SelectDraftModal = ({
         prereqs: remote.prerequisites,
         todoPrereqs: remote.todos,
       },
+      disclaimers: remote.disclaimers,
       revisionId: remote.revision.id,
       step: "",
       updatedAt: getCurrentUnixTime(),

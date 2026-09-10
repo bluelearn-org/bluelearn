@@ -57,6 +57,7 @@ export const PreviewVariant = ({
     author: username ?? "You",
     summary: guide.summary || null,
     body: guide.body || null,
+    disclaimers: guide.disclaimers,
 
     duration_minutes: 0,
     created_at: new Date().toISOString(),

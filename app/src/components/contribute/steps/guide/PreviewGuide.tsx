@@ -78,6 +78,7 @@ export const PreviewGuide = ({
         author: username ?? "You",
         summary: activeGuide.summary || null,
         body: activeGuide.body || null,
+        disclaimers: activeGuide.disclaimers,
 
         duration_minutes: 0,
         created_at: new Date().toISOString(),

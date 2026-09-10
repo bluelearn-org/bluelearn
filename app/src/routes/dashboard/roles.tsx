@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { ShieldMinus, ShieldPlus, SquareArrowRightExit } from "lucide-react";
 import { toast } from "sonner";
-import type { UserRole, UserStatus } from "@/lib/api/dashboard";
+import type { UserRole } from "@/lib/api/dashboard";
 import { Button } from "@/components/ui/button";
 import { RolesTable } from "@/components/tables/RolesTable";
 import {

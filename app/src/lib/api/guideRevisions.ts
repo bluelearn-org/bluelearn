@@ -66,6 +66,9 @@ export type LocalRevision = {
   revisionId: string;
   step: string;
   updatedAt: number;
+  disclaimers: Array<
+    "medical" | "financial" | "legal" | "mature" | "profanity"
+  >;
 };
 
 export async function getRevision(

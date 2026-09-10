@@ -98,6 +98,7 @@ const createVariantContData = (): VariantContribution => ({
   subjects: [],
   newSubjects: [],
   body: "",
+  disclaimers: [],
 });
 
 const createObjectiveContData = (): ObjectiveContribution => ({
@@ -215,6 +216,7 @@ export default function ContributionFlow({
           todoPrereqs: rev.data.todoPrereqs,
           localDraftId: rev.localDraftId,
           revisionId: rev.revisionId,
+          disclaimers: rev.disclaimers,
         };
       }
       const updated: Record<string, LocalRevision> = JSON.parse(
@@ -492,6 +494,7 @@ function Inner({
       newSubjects: activeGuide.newSubjects,
       prereqs: activeGuide.prereqs,
       todoPrereqs: activeGuide.todoPrereqs,
+      disclaimers: activeGuide.disclaimers,
     },
     activeGuide.revisionId,
     step
@@ -648,6 +651,7 @@ function Inner({
             baseGuide: data.base_slug ?? "",
             subjects: tagged,
             newSubjects: pending,
+            disclaimers: data.disclaimers,
           };
 
           setVariantContData(vData);
@@ -689,6 +693,7 @@ function Inner({
               newSubjects: gData.newSubjects,
               prereqs: gData.prereqs,
               todoPrereqs: gData.todoPrereqs,
+              disclaimers: gData.disclaimers,
             },
             gData.localDraftId,
             draftId,
@@ -934,17 +939,9 @@ function Inner({
     }
 
     if (!creatingRef.current) {
-      creatingRef.current = (
-        type === "guide"
-          ? createGuide({
-              knowledge_type:
-                guideContData.type === "practical"
-                  ? "practical"
-                  : "theoretical",
-              ...draftFields(),
-              todoClaims: todoIds,
-            })
-          : addGuideVariant(variantContData.baseGuide, variantDraftFields())
+      creatingRef.current = addGuideVariant(
+        variantContData.baseGuide,
+        variantDraftFields()
       )
         .then((id) => {
           setRevisionId(id);
@@ -999,6 +996,7 @@ function Inner({
             newSubjects: activeGuide.newSubjects,
             prereqs: activeGuide.prereqs,
             todoPrereqs: activeGuide.todoPrereqs,
+            disclaimers: activeGuide.disclaimers,
           },
           activeGuide.localDraftId,
           id,

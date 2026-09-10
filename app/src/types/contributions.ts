@@ -39,6 +39,7 @@ export const variantContributionSchema = z.object({
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
   body: z.string(),
+  disclaimers: z.array(disclaimerSlugSchema),
 });
 
 export const subObjectiveSchema = z.object({

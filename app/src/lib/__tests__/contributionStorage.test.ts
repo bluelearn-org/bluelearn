@@ -54,6 +54,7 @@ const sampleVariant: VariantContribution = {
   subjects: ["sub-1"],
   newSubjects: [],
   body: "# Markdown Content",
+  disclaimers: [],
 };
 
 const sampleObjective: ObjectiveContribution = {
