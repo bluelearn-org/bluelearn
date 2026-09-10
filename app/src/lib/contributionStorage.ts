@@ -39,7 +39,7 @@ const DRAFT_SCHEMAS: Record<ContributionType, z.ZodType> = {
 };
 
 /**
- * Safely reads a contribution draft from localStorage.
+ * Safely reads a contribution draft from sessionStorage.
  * Handles SSR (returns null when window is not defined) and JSON parse errors.
  * A draft that doesn't match the expected shape is dropped and cleared, since
  * loading one into form state crashes the first render that touches it.
@@ -51,7 +51,7 @@ export function getStoredDraft<T>(
 
   let parsed: unknown;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS[type]);
+    const raw = window.sessionStorage.getItem(STORAGE_KEYS[type]);
     if (!raw) return null;
     parsed = JSON.parse(raw);
   } catch (error) {
@@ -74,7 +74,7 @@ export function getStoredDraft<T>(
 }
 
 /**
- * Safely writes a contribution draft to localStorage.
+ * Safely writes a contribution draft to sessionStorage.
  */
 export function setStoredDraft<T>(
   type: ContributionType,
@@ -83,20 +83,20 @@ export function setStoredDraft<T>(
   if (typeof window === "undefined") return;
 
   try {
-    window.localStorage.setItem(STORAGE_KEYS[type], JSON.stringify(draft));
+    window.sessionStorage.setItem(STORAGE_KEYS[type], JSON.stringify(draft));
   } catch (error) {
-    console.warn(`Failed to save draft to localStorage for ${type}:`, error);
+    console.warn(`Failed to save draft to sessionStorage for ${type}:`, error);
   }
 }
 
 /**
- * Clears the stored draft for a given contribution type from localStorage.
+ * Clears the stored draft for a given contribution type from sessionStorage.
  */
 export function clearStoredDraft(type: ContributionType): void {
   if (typeof window === "undefined") return;
 
   try {
-    window.localStorage.removeItem(STORAGE_KEYS[type]);
+    window.sessionStorage.removeItem(STORAGE_KEYS[type]);
   } catch (error) {
     console.warn(`Failed to clear stored draft for ${type}:`, error);
   }
@@ -109,14 +109,14 @@ export function hasStoredDraft(type: ContributionType): boolean {
   if (typeof window === "undefined") return false;
 
   try {
-    return window.localStorage.getItem(STORAGE_KEYS[type]) !== null;
+    return window.sessionStorage.getItem(STORAGE_KEYS[type]) !== null;
   } catch {
     return false;
   }
 }
 
 /**
- * Clears all stored drafts for all contribution types from localStorage.
+ * Clears all stored drafts for all contribution types from sessionStorage.
  */
 export function clearAllStoredDrafts(): void {
   const types = Object.keys(STORAGE_KEYS) as Array<ContributionType>;
@@ -130,7 +130,7 @@ export interface ContributionSaveControls {
 }
 
 /**
- * Hook to automatically and debouncingly save contribution form data to localStorage.
+ * Hook to automatically and debouncingly save contribution form data to sessionStorage.
  * Passing a null type disables saving, flushing anything already queued.
  * Flushes pending changes immediately on component unmount.
  */
