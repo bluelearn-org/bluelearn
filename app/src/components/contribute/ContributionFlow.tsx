@@ -201,22 +201,22 @@ export default function ContributionFlow({
 
   useEffect(() => {
     function handleUpdate() {
-      const toMultiGuide = (rev: LocalRevision): MultiGuide => {
+      const toMultiGuide = (revision: LocalRevision): MultiGuide => {
         return {
-          type: rev.data.type === "" ? "theoretical" : rev.data.type,
-          title: rev.data.title,
-          summary: rev.data.summary,
-          body: rev.data.body,
-          subjects: rev.data.subjects.map((s) => s.id),
-          newSubjects: rev.data.newSubjects.map((name) => ({
+          type: revision.data.type === "" ? "theoretical" : revision.data.type,
+          title: revision.data.title,
+          summary: revision.data.summary,
+          body: revision.data.body,
+          subjects: revision.data.subjects.map((s) => s.id),
+          newSubjects: revision.data.newSubjects.map((name) => ({
             name,
             summary: "",
           })),
-          prereqs: rev.data.prereqs,
-          todoPrereqs: rev.data.todoPrereqs,
-          localDraftId: rev.localDraftId,
-          revisionId: rev.revisionId,
-          disclaimers: rev.disclaimers,
+          prereqs: revision.data.prereqs,
+          todoPrereqs: revision.data.todoPrereqs,
+          localDraftId: revision.localDraftId,
+          revisionId: revision.revisionId,
+          disclaimers: revision.disclaimers,
         };
       };
       const updated: Record<string, LocalRevision> = JSON.parse(
