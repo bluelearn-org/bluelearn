@@ -68,6 +68,8 @@ export const ReviewSidebar = ({
     revisionData.case.case_type === "official_publish" ||
     revisionData.case.case_type === "official_edit";
 
+  const isVariant = revision?.is_variant ?? false;
+
   const priorDecision = revisionData.viewer_decision;
   const hasVoted = priorDecision !== null;
 
@@ -217,8 +219,12 @@ export const ReviewSidebar = ({
                     />
                     <span className="translate-y-[0.25px]">
                       {isEdit
-                        ? "Official Guide Revision"
-                        : "Official Guide Creation"}
+                        ? isVariant
+                          ? "Official Variant Revision"
+                          : "Official Guide Revision"
+                        : isVariant
+                          ? "Official Variant Creation"
+                          : "Official Guide Creation"}
                     </span>
                   </Badge>
                 ) : (
@@ -226,7 +232,13 @@ export const ReviewSidebar = ({
                     variant="outline"
                     className="border-badge-border bg-badge font-mono tracking-[0.06em] text-badge-foreground uppercase"
                   >
-                    {isEdit ? "Guide Revision" : "Guide Creation"}
+                    {isEdit
+                      ? isVariant
+                        ? "Variant Revision"
+                        : "Guide Revision"
+                      : isVariant
+                        ? "Variant Creation"
+                        : "Guide Creation"}
                   </Badge>
                 )
               }

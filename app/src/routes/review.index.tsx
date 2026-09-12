@@ -119,6 +119,7 @@ function CaseGrid({ cases }: { cases: Array<QueueCase> }) {
           c.case_type === "official_publish" || c.case_type === "official_edit";
         const isEdit =
           c.case_type === "guide_edit" || c.case_type === "official_edit";
+        const isVariant = c.is_variant;
 
         return (
           <Link
@@ -131,7 +132,13 @@ function CaseGrid({ cases }: { cases: Array<QueueCase> }) {
               <div className="flex items-center justify-between">
                 <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
                   {isOfficial ? "Official " : ""}
-                  {isEdit ? "Guide Revision" : "Guide Creation"}
+                  {isEdit
+                    ? isVariant
+                      ? "Variant Revision"
+                      : "Guide Revision"
+                    : isVariant
+                      ? "Variant Creation"
+                      : "Guide Creation"}
                 </p>
                 <Badge
                   variant="outline"
