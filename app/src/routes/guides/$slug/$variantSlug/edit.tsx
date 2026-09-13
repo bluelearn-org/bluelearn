@@ -334,6 +334,7 @@ function RouteComponent() {
                   onSaveDraft={saveDraft}
                   submitting={submitting}
                   showBaseFields={false}
+                  showPrerequisiteFields
                   hideBackBtn
                   title="Edit Details"
                   changeSummary={changeSummary}

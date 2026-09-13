@@ -150,6 +150,7 @@ export function Combobox({
               <button
                 type="button"
                 aria-label={`Remove ${item.label}`}
+                disabled={disabled}
                 className="text-muted-foreground hover:text-foreground"
                 onClick={() => toggle(item.value)}
               >
