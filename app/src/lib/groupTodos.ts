@@ -10,7 +10,7 @@ export type TodoGroup = {
   claimCount: number;
 };
 
-// Todo titles are free text, so the same topic can arrive as several rows spelled
+// titles of todos are free text, so the same topic can arrive as several rows spelled
 // differently. One card per normalized title and shows the first requester's
 // wording.
 export const groupTodosByTitle = (

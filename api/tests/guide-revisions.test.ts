@@ -433,6 +433,104 @@ describe("POST /guide-revisions/{id}/submit", () => {
     expect(res.status).toBe(404);
     await expectToMatchSpec(res, "POST", "/guide-revisions/{id}/submit");
   });
+
+  it("409s when another open review claims the same todo", async () => {
+    const authorA = await makeUser();
+    const { revision: revA, base: baseA } = await createCompleteDraft(
+      authorA.userId
+    );
+    const todo = await createTodo(baseA.id);
+    await admin
+      .from("todo_claims")
+      .insert({ todo_id: todo.id, guide_base_id: baseA.id })
+      .throwOnError();
+    const first = await app.request(
+      `/guide-revisions/${revA.id}/submit`,
+      { method: "POST", ...auth(authorA.token) },
+      env
+    );
+    expect(first.status).toBe(201);
+
+    const authorB = await makeUser();
+    const { revision: revB, base: baseB } = await createCompleteDraft(
+      authorB.userId
+    );
+    await admin
+      .from("todo_claims")
+      .insert({ todo_id: todo.id, guide_base_id: baseB.id })
+      .throwOnError();
+    const res = await app.request(
+      `/guide-revisions/${revB.id}/submit`,
+      { method: "POST", ...auth(authorB.token) },
+      env
+    );
+
+    expect(res.status).toBe(409);
+  });
+
+  it("409s when the claimed todo was already fulfilled", async () => {
+    const author = await makeUser();
+    const { revision, base } = await createCompleteDraft(author.userId);
+    const todo = await createTodo(base.id);
+    await admin
+      .from("todo_claims")
+      .insert({ todo_id: todo.id, guide_base_id: base.id })
+      .throwOnError();
+    await admin
+      .from("todo_prerequisites")
+      .update({ status: "resolved", resolved_guide_base_id: base.id })
+      .eq("id", todo.id)
+      .throwOnError();
+    const res = await app.request(
+      `/guide-revisions/${revision.id}/submit`,
+      { method: "POST", ...auth(author.token) },
+      env
+    );
+
+    expect(res.status).toBe(409);
+  });
+
+  it("allows submit once the competing claim was rejected", async () => {
+    const authorA = await makeUser();
+    const { revision: revA, base: baseA } = await createCompleteDraft(
+      authorA.userId
+    );
+    const todo = await createTodo(baseA.id);
+    await admin
+      .from("todo_claims")
+      .insert({ todo_id: todo.id, guide_base_id: baseA.id })
+      .throwOnError();
+    const first = await app.request(
+      `/guide-revisions/${revA.id}/submit`,
+      { method: "POST", ...auth(authorA.token) },
+      env
+    );
+    expect(first.status).toBe(201);
+    const { review_case_id } = (await first.json()) as {
+      review_case_id: string;
+    };
+    await admin
+      .from("review_cases")
+      .update({ status: "rejected" })
+      .eq("id", review_case_id)
+      .throwOnError();
+
+    const authorB = await makeUser();
+    const { revision: revB, base: baseB } = await createCompleteDraft(
+      authorB.userId
+    );
+    await admin
+      .from("todo_claims")
+      .insert({ todo_id: todo.id, guide_base_id: baseB.id })
+      .throwOnError();
+    const res = await app.request(
+      `/guide-revisions/${revB.id}/submit`,
+      { method: "POST", ...auth(authorB.token) },
+      env
+    );
+
+    expect(res.status).toBe(201);
+  });
 });
 
 describe("POST /guide-revisions/{id}/revise", () => {

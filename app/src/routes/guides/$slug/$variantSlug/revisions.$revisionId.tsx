@@ -138,6 +138,8 @@ function RouteComponent() {
       created_at: publishedAt,
       tags: variant.tags,
       prerequisites: [],
+      disclaimers: detail.disclaimers,
+      todo_prerequisites: [],
     };
 
     return (

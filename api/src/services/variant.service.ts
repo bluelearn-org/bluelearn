@@ -220,15 +220,16 @@ export async function listVariantRevisions(
   };
 }
 
-// Distinct authors across this variant's revisions. Suspended profiles drop
-// out, so a contributor list never surfaces a hidden account.
+// Distinct authors across this variant's approved revisions. Suspended profiles
+// drop out, so a contributor list never surfaces a hidden account.
 export async function listVariantContributors(supabase: DB, id: string) {
   await requireVariant(supabase, id);
 
   const { data: revisions, error: revError } = await supabase
     .from("guide_revisions")
     .select("author_id")
-    .eq("guide_id", id);
+    .eq("guide_id", id)
+    .not("approved_at", "is", null);
 
   if (revError) {
     console.error(revError);

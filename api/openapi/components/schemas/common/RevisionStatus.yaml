@@ -1,6 +1,0 @@
-type: string
-description: >
-  A revision owns only draft|submitted. The review verdict is derived from
-  its review case, never stamped on the revision.
-enum: [draft, submitted]
-example: draft

@@ -5,10 +5,10 @@ import {
   guideSlugSchema,
   guideSummarySchema,
   guideTitleSchema,
-  guideTodoTitleSchema,
 } from "./fields";
 import { subjectNameSchema, subjectSummarySchema } from "../subjects";
 import {
+  disclaimerSchema,
   downvoteReasonSchema,
   knowledgeTypeSchema,
   voteDirectionSchema,
@@ -27,8 +27,16 @@ export const newSubjectSchema = z.object({
 });
 
 export const todoPrereqSchema = z.object({
-  title: guideTodoTitleSchema,
-  summary: guideSummarySchema,
+  title: z
+    .string()
+    .trim()
+    .min(1, "Title is required")
+    .max(50, "Title must be 50 characters or less"),
+  summary: z
+    .string()
+    .trim()
+    .min(1, "Summary is required")
+    .max(500, "Summary must be 500 characters or less"),
 });
 
 export const createGuideSchema = z.object({
@@ -41,6 +49,7 @@ export const createGuideSchema = z.object({
   newSubjects: z.array(newSubjectSchema).default([]),
   todoPrereqs: z.array(todoPrereqSchema).default([]),
   todoClaims: z.array(z.uuid()).default([]),
+  disclaimers: z.array(disclaimerSchema).default([]),
 });
 
 // A variant starts as a draft like a guide does, so every field here is optional
@@ -61,6 +70,7 @@ export const updateRevisionSchema = revisionContentSchema
     prerequisites: z.array(guideSlugSchema),
     newSubjects: z.array(newSubjectSchema),
     todoPrereqs: z.array(todoPrereqSchema),
+    disclaimers: z.array(disclaimerSchema),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RevisionDraft, RevisionDraftSnapshot } from "@/lib/guideUtils";
-import { isRevisionDraftUnchanged } from "@/lib/guideUtils";
+import { buildGuideMeta, isRevisionDraftUnchanged } from "@/lib/guideUtils";
 
 const snapshot: RevisionDraftSnapshot = {
   title: "Binary Search",
@@ -77,5 +77,73 @@ describe("isRevisionDraftUnchanged", () => {
         newSubjects: [{ name: "Rust", summary: null }],
       })
     ).toBe(false);
+  });
+});
+
+describe("buildGuideMeta", () => {
+  it("formats title with '| Bluelearn'", () => {
+    const meta = buildGuideMeta({
+      title: "Binary Search",
+    });
+    expect(meta).toContainEqual({ title: "Binary Search | Bluelearn" });
+    expect(meta).toContainEqual({
+      property: "og:title",
+      content: "Binary Search | Bluelearn",
+    });
+  });
+
+  it("uses summary as description when present", () => {
+    const meta = buildGuideMeta({
+      title: "Binary Search",
+      summary: "A search algorithm.",
+      body: "A much longer body text here...",
+    });
+    expect(meta).toContainEqual({
+      name: "description",
+      content: "A search algorithm.",
+    });
+    expect(meta).toContainEqual({
+      property: "og:description",
+      content: "A search algorithm.",
+    });
+  });
+
+  it("falls back to the first 150 characters of body when summary is missing", () => {
+    const longBody = "A".repeat(200);
+    const meta = buildGuideMeta({
+      title: "Binary Search",
+      summary: null,
+      body: longBody,
+    });
+    const expectedDescription = "A".repeat(150);
+    expect(meta).toContainEqual({
+      name: "description",
+      content: expectedDescription,
+    });
+    expect(meta).toContainEqual({
+      property: "og:description",
+      content: expectedDescription,
+    });
+  });
+
+  it("formats tags as comma-separated keywords", () => {
+    const meta = buildGuideMeta({
+      title: "Binary Search",
+      tags: [{ name: "Algorithms" }, { name: "Computer Science" }],
+    });
+    expect(meta).toContainEqual({
+      name: "keywords",
+      content: "Algorithms, Computer Science",
+    });
+  });
+
+  it("omits keywords tag when no tags are provided", () => {
+    const meta = buildGuideMeta({
+      title: "Binary Search",
+      tags: [],
+    });
+    expect(
+      meta.find((m) => "name" in m && m.name === "keywords")
+    ).toBeUndefined();
   });
 });

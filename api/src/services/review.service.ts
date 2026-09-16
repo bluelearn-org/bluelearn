@@ -38,7 +38,15 @@ type QueueRow = {
 type GuideLinkRow = {
   case_id: string;
   guide_revision_id: string;
-  guide_revisions: { title: string | null; summary: string | null };
+  guide_revisions: {
+    title: string | null;
+    summary: string | null;
+    guide_id: string;
+    guides: {
+      guide_base_id: string;
+      guide_bases: { canonical_guide_id: string | null } | null;
+    } | null;
+  };
 };
 
 type CaseListRow = {
@@ -58,7 +66,17 @@ type CaseListRow = {
   }>;
   guide_review_cases: {
     guide_revision_id: string;
-    guide_revisions: { title: string | null; summary: string | null } | null;
+    guide_revisions: {
+      title: string | null;
+      summary: string | null;
+      guide_id: string;
+      guides: {
+        guide_base_id: string;
+        guide_bases: {
+          canonical_guide_id: string | null;
+        } | null;
+      } | null;
+    } | null;
   } | null;
 };
 
@@ -113,6 +131,7 @@ type CaseDetailRow = {
 
 type TagsAndEdges = {
   knowledge_type: Database["public"]["Enums"]["knowledge_type"] | null;
+  is_variant: boolean;
   base: { slug: string; title: string | null } | null;
   tags: Array<{ id: string; name: string; status: string }>;
   prerequisites: Array<{ slug: string; title: string | null }>;
@@ -127,6 +146,7 @@ type TagsAndEdges = {
 
 export async function getReviewQueue(
   supabase: DB,
+  service: DB,
   userId: string,
   { page, limit }: Pagination = { page: 1, limit: 20 }
 ) {
@@ -162,10 +182,17 @@ export async function getReviewQueue(
 
   let guideLinks: GuideLinkRow[] = [];
   if (caseIds.length > 0) {
-    const { data: links, error: linkError } = await supabase
+    const { data: links, error: linkError } = await service
       .from("guide_review_cases")
       .select(
-        "case_id, guide_revision_id, guide_revisions!inner(title, summary)"
+        `case_id, guide_revision_id,
+        guide_revisions!inner(
+          title, summary, guide_id,
+          guides!guide_revisions_guide_id_fkey!inner(
+            guide_base_id,
+            guide_bases!guides_guide_base_id_fkey!inner(canonical_guide_id)
+          )
+        )`
       )
       .in("case_id", caseIds);
 
@@ -180,12 +207,16 @@ export async function getReviewQueue(
     .map((m) => {
       const rc = m.review_panels.review_cases;
       const link = guideLinks.find((l) => l.case_id === rc.id);
+      const canonicalId =
+        link?.guide_revisions?.guides?.guide_bases?.canonical_guide_id ?? null;
+      const guideId = link?.guide_revisions?.guide_id ?? null;
 
       return {
         id: rc.id,
         case_type: rc.case_type,
         status: rc.status,
         title: link?.guide_revisions?.title ?? null,
+        is_variant: canonicalId != null && canonicalId !== guideId,
         created_at: rc.created_at,
         decision: m.review_decisions?.decision ?? null,
         expires_at: m.expires_at,
@@ -210,9 +241,19 @@ export async function listReviewCases(supabase: DB) {
       `id, case_type, status, created_at, created_by, time_limit, updated_at,
        review_panels(id, target_seat_count, outcome, opened_at, closed_at),
        guide_review_cases(
-         guide_revision_id,
-         guide_revisions(title, summary)
-       )`
+        guide_revision_id,
+        guide_revisions(
+          title,
+          summary,
+          guide_id,
+          guides!guide_revisions_guide_id_fkey(
+            guide_base_id,
+            guide_bases!guides_guide_base_id_fkey(
+              canonical_guide_id
+            )
+          )
+        )
+      )`
     )
     .in("status", ["approved", "rejected"])
     .order("updated_at", { ascending: false });
@@ -224,13 +265,21 @@ export async function listReviewCases(supabase: DB) {
 
   const rows = (raw ?? []) as unknown as CaseListRow[];
 
-  return rows.map((c) => ({
-    id: c.id,
-    case_type: c.case_type,
-    status: c.status,
-    title: c.guide_review_cases?.guide_revisions?.title ?? null,
-    created_at: c.created_at,
-  }));
+  return rows.map((c) => {
+    const revision = c.guide_review_cases?.guide_revisions;
+    const guideId = revision?.guide_id ?? null;
+    const canonicalId =
+      revision?.guides?.guide_bases?.canonical_guide_id ?? null;
+
+    return {
+      id: c.id,
+      case_type: c.case_type,
+      status: c.status,
+      title: revision?.title ?? null,
+      is_variant: canonicalId != null && canonicalId !== guideId,
+      created_at: c.created_at,
+    };
+  });
 }
 
 // The knowledge type, tags, and edges a revision proposes. Uses service client
@@ -247,6 +296,7 @@ async function loadTagsAndEdges(
        guide_bases!guides_guide_base_id_fkey(
          knowledge_type,
          slug,
+         canonical_guide_id,
          canonical:guides!guide_bases_canonical_guide_id_fkey(
            current:guide_revisions!guides_current_revision_id_fkey(title)
          )
@@ -317,9 +367,11 @@ async function loadTagsAndEdges(
   }
 
   const baseSlug = guide?.guide_bases?.slug ?? null;
+  const canonicalId = guide?.guide_bases?.canonical_guide_id ?? null;
 
   return {
     knowledge_type: guide?.guide_bases?.knowledge_type ?? null,
+    is_variant: canonicalId != null && canonicalId !== guideId,
     base: baseSlug
       ? {
           slug: baseSlug,
@@ -503,6 +555,7 @@ export async function getReviewCase(
             ? (usernames.get(revision.author_id) ?? null)
             : null,
           knowledge_type: tagsAndEdges?.knowledge_type ?? null,
+          is_variant: tagsAndEdges?.is_variant ?? false,
           base: tagsAndEdges?.base ?? null,
           title: revision.title,
           summary: revision.summary,

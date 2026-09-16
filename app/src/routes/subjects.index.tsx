@@ -12,8 +12,15 @@ import {
 import { SubjectSidebar } from "@/components/sidebar/SubjectSidebar";
 
 import { listGroupedSubjects } from "@/lib/api/subjects";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/subjects/")({
+  head: () => ({
+    meta: buildPageMeta(
+      "Subjects",
+      "Browse subjects to find free guides and learning objectives on the topics you want to learn."
+    ),
+  }),
   loader: ({ abortController }) =>
     listGroupedSubjects({ signal: abortController.signal }),
   errorComponent: SubjectsLoadError,

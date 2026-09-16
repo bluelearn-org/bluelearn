@@ -195,6 +195,35 @@ describe("GET /variants/{id}/revisions", () => {
   });
 });
 
+describe("GET /variants/{id}/contributors", () => {
+  it("lists only authors of approved revisions", async () => {
+    const approvedAuthor = await makeUser();
+    const pendingAuthor = await makeUser();
+    const { guide } = await createPublishedGuide({
+      authorId: approvedAuthor.userId,
+    });
+    await createGuideRevision(guide.id, {
+      author_id: pendingAuthor.userId,
+      status: "submitted",
+    });
+
+    const res = await app.request(
+      `/variants/${guide.id}/contributors`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/variants/{id}/contributors");
+    const body = (await res.json()) as {
+      contributors: Array<{ id: string }>;
+    };
+    expect(body.contributors.map((contributor) => contributor.id)).toEqual([
+      approvedAuthor.userId,
+    ]);
+  });
+});
+
 describe("POST /variants/{id}/revisions", () => {
   it("401s without a token", async () => {
     const { guide } = await createPublishedGuide();

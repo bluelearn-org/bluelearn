@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Ellipsis, ListChecks } from "lucide-react";
-import type { GuideReference } from "@bluelearn/schemas";
+import type {
+  GuideReference,
+  TodoPrerequisiteReference,
+} from "@bluelearn/schemas";
 
 import type { GuideModalType } from "@/components/GuideActionModals";
 import { Button } from "@/components/ui/button";
@@ -25,6 +28,7 @@ type GuideMobileMenuProps = {
   guideTitle: string;
   menuItems: Array<{ label: string; to: string; icon: React.ReactNode }>;
   prerequisites?: Array<GuideReference>;
+  todoPrerequisites?: Array<TodoPrerequisiteReference>;
   isOfficial?: boolean;
 };
 
@@ -35,6 +39,7 @@ export function GuideMobileMenu({
   guideTitle,
   menuItems,
   prerequisites,
+  todoPrerequisites = [],
   isOfficial = false,
 }: GuideMobileMenuProps) {
   const [activeModal, setActiveModal] = useState<
@@ -44,7 +49,7 @@ export function GuideMobileMenu({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -105,6 +110,7 @@ export function GuideMobileMenu({
           open={activeModal === "prerequisites"}
           onOpenChange={close}
           prerequisites={prerequisites}
+          todoPrerequisites={todoPrerequisites}
           guideTitle={guideTitle}
           slug={slug}
         />

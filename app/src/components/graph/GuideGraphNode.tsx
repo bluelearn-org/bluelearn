@@ -1,6 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 import type { ReactNode } from "react";
-import type { GraphNodeData } from "./useGraphLayout";
+import type { GraphNodeData } from "@/lib/useGraphLayout";
 import { Card, CardHeader } from "@/components/ui/card";
 
 type GuideGraphNodeProps = {

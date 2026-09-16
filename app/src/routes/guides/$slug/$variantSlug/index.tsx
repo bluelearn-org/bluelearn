@@ -23,6 +23,7 @@ import { getVariantBySlug } from "@/lib/api/variants";
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { GuideReader } from "@/components/GuideReader";
+import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,8 @@ function RouteComponent() {
     created_at: current.created_at,
     tags: variant.tags,
     prerequisites: [],
+    disclaimers: variant.disclaimers,
+    todo_prerequisites: [],
   };
 
   const guideMenuItems = [
@@ -112,6 +115,7 @@ function RouteComponent() {
           guide={guide}
           slug={slug}
           showPrerequisites={false}
+          showFollowUps={false}
         />
 
         {/* MAIN */}
@@ -192,10 +196,10 @@ function RouteComponent() {
                     : null
                 }
                 onSubmit={async (reason, note) => {
-                  if (await downvote(reason, note)) setDownvoteOpen(false);
+                  await downvote(reason, note, () => setDownvoteOpen(false));
                 }}
                 onRemove={async () => {
-                  if (await removeVote()) setDownvoteOpen(false);
+                  await removeVote(() => setDownvoteOpen(false));
                 }}
               />
 
@@ -208,7 +212,7 @@ function RouteComponent() {
                 isOfficial={variant.is_official}
               />
 
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -234,6 +238,10 @@ function RouteComponent() {
           </div>
 
           <Separator className="mb-8" />
+
+          {variant.disclaimers.length > 0 && (
+            <DisclaimerBanner disclaimers={variant.disclaimers} />
+          )}
 
           <GuideReader
             guide={guide}

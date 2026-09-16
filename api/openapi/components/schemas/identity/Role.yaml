@@ -1,6 +1,0 @@
-type: string
-description: >
-  A granted role. learner is the implicit baseline and is never stored or
-  returned; an empty roles array means learner-only.
-enum: [verifier, moderator, admin]
-example: verifier

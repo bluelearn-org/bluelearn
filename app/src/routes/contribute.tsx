@@ -5,6 +5,7 @@ import ContributionFlow from "@/components/contribute/ContributionFlow";
 import { requireSession } from "@/lib/auth";
 import { RejectionFeedback } from "@/components/review/RejectionFeedback";
 import { ErrorFallback } from "@/components/ErrorFallback";
+import { buildPageMeta } from "@/lib/seo";
 
 export type ContributeSearch = {
   draft?: string;
@@ -19,6 +20,15 @@ export type ContributeSearch = {
 };
 
 export const Route = createFileRoute("/contribute")({
+  head: () => ({
+    // The form is client-only and can redirect to login before it loads.
+    meta: import.meta.env.SSR
+      ? []
+      : buildPageMeta(
+          "Contribute",
+          "Share what you know on Bluelearn. Write a guide, offer a different explanation, or create a learning objective."
+        ),
+  }),
   ssr: false,
   beforeLoad: requireSession,
   validateSearch: (search: Record<string, unknown>): ContributeSearch => {
@@ -113,13 +123,13 @@ function RouteComponent() {
     navigate({ search: {}, replace: true });
   };
 
-  // A resumed draft already carries its claims in the database, so the todo page's
-  // params only apply to a fresh start.
+  // resumed drafts so the todo already carries claims in the database
+  // params only apply to a fresh start
   const todoIds = draft || !todos ? [] : todos.split(",");
 
   return (
     <div className="mx-auto flex min-h-[max(calc(100vh-65px),750px)] w-full max-w-[1280px] flex-col bg-background">
-      <section className="relative flex min-h-0 flex-1 gap-8 border-b px-4 py-8 sm:px-8 lg:px-16">
+      <section className="relative flex min-h-0 flex-1 gap-8 border-b px-4 pt-8">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ContributionFlow
             type={type}

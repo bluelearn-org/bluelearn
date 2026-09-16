@@ -74,7 +74,7 @@ export async function search(
     },
     { init: { signal } }
   );
-  if (!res.ok) return assertOk(res) as Promise<never>;
+  await assertOk(res);
 
   const { results } = await res.json();
   return {

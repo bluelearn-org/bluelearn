@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { diffLineSchema, fieldDiffSchema, revisionRefSchema } from "../diff";
-import { subjectReferenceSchema } from "../subjects";
+import {
+  subjectReferenceSchema,
+  subjectTagSchema,
+} from "../subjects/references";
 import { guideReferenceSchema } from "../guides/references";
+import { objectiveRevisionStatusSchema, objectiveStatusSchema } from "./enums";
 
 export const objectiveNodeSchema = z.object({
   guide: guideReferenceSchema,
@@ -21,11 +25,11 @@ export const objectiveEdgeSchema = z.object({
 export const objectiveSchema = z.object({
   id: z.uuid(),
   slug: z.string(),
-  status: z.enum(["draft", "published", "archived"]),
+  status: objectiveStatusSchema,
   title: z.string().nullable(),
   summary: z.string().nullable(),
   curator: z.string().nullable(),
-  created_at: z.iso.datetime(),
+  created_at: z.iso.datetime({ offset: true }),
   tags: z.array(subjectReferenceSchema),
   current_revision_id: z.uuid().nullable(),
   guides_total: z.number().int(),
@@ -47,7 +51,7 @@ export const objectiveListItemSchema = z.object({
   title: z.string().nullable(),
   summary: z.string().nullable(),
   curator: z.string().nullable(),
-  created_at: z.iso.datetime(),
+  created_at: z.iso.datetime({ offset: true }),
   guides_total: z.number().int(),
   duration_minutes: z.number().int(),
   featured_sub_objective: z.array(featuredNodeSchema),
@@ -88,7 +92,7 @@ export const objectiveRevisionListItemSchema = z.object({
   id: z.string(),
   title: z.string().nullable(),
   change_summary: z.string().nullable(),
-  status: z.enum(["draft", "published", "archived"]),
+  status: objectiveRevisionStatusSchema,
   created_at: z.string(),
   published_at: z.string().nullable(),
   author: z.string().nullable(),
@@ -138,6 +142,68 @@ export type ObjectiveNodeChange = z.infer<typeof objectiveNodeChangeSchema>;
 export type ObjectiveTargetDiff = z.infer<typeof objectiveTargetDiffSchema>;
 export type ObjectiveRevisionDiff = z.infer<typeof objectiveRevisionDiffSchema>;
 
+const totalSchema = z.number().int().min(0);
+
+export const objectiveRevisionSchema = z.object({
+  id: z.uuid(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
+  change_summary: z.string().nullable(),
+  status: objectiveRevisionStatusSchema,
+  created_at: z.iso.datetime({ offset: true }),
+  published_at: z.iso.datetime({ offset: true }).nullable(),
+  updated_at: z.iso.datetime({ offset: true }),
+});
+
+export const archivedObjectiveSchema = z.object({
+  id: z.uuid(),
+  slug: z.string().nullable(),
+  status: objectiveStatusSchema,
+});
+
+export const objectiveListResponseSchema = z.strictObject({
+  objectives: z.array(objectiveListItemSchema),
+  total: totalSchema,
+});
+
+export const objectiveDetailResponseSchema = z.strictObject({
+  objective: objectiveSchema,
+  snapshot: objectiveSnapshotSchema,
+});
+
+export const archivedObjectiveResponseSchema = z.strictObject({
+  objective: archivedObjectiveSchema,
+});
+
+export const objectiveRevisionListResponseSchema = z.strictObject({
+  revisions: z.array(objectiveRevisionListItemSchema),
+  total: totalSchema,
+});
+
+export const objectiveRevisionDetailResponseSchema = z.strictObject({
+  revision: objectiveRevisionSchema,
+  objective: z.object({
+    id: z.uuid(),
+    current_revision_id: z.uuid().nullable(),
+  }),
+  snapshot: objectiveSnapshotSchema,
+  subjects: z.array(subjectTagSchema),
+});
+
+export const objectiveRevisionUpdateResponseSchema = z.strictObject({
+  revision: objectiveRevisionSchema,
+  subjects: z.array(subjectTagSchema),
+});
+
+export const objectiveNodeResponseSchema = z.strictObject({
+  node: objectiveSnapshotNodeSchema,
+});
+
+export const objectiveSlugResponseSchema = z.strictObject({
+  slug: z.string(),
+});
+
+export type ObjectiveRevision = z.infer<typeof objectiveRevisionSchema>;
 export type ObjectiveNode = z.infer<typeof objectiveNodeSchema>;
 export type ObjectiveEdge = z.infer<typeof objectiveEdgeSchema>;
 export type Objective = z.infer<typeof objectiveSchema>;

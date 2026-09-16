@@ -8,3 +8,14 @@ export const guideReferenceSchema = z.object({
 });
 
 export type GuideReference = z.infer<typeof guideReferenceSchema>;
+
+// Requested prerequisites don't have a guide slug to link to yet.
+export const todoPrerequisiteReferenceSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  summary: z.string(),
+});
+
+export type TodoPrerequisiteReference = z.infer<
+  typeof todoPrerequisiteReferenceSchema
+>;

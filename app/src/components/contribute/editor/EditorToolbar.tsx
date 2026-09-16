@@ -14,6 +14,7 @@ import {
   convertSelectionToNode$,
   currentBlockType$,
   insertDirective$,
+  viewMode$,
 } from "@mdxeditor/editor";
 import { useCellValue, usePublisher } from "@mdxeditor/gurx";
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
@@ -26,6 +27,8 @@ import {
   Code,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   Info,
   Lightbulb,
   Link as LinkIcon,
@@ -35,10 +38,12 @@ import {
   MoreHorizontal,
   Plus,
   Quote,
+  SquareDashedText,
   Table,
   Type,
   Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 import { InsertBlockMath, InsertInlineMath } from "./MathLivePlugin";
 import MarkdownLinkImageShortcutListener from "./MarkdownLinkImageShortcutListener";
 import H1RestrictionListener from "./H1RestrictionListener.tsx";
@@ -53,6 +58,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip.tsx";
 
 function CustomBlockTypeSelect() {
   const [open, setOpen] = useState(false);
@@ -107,40 +118,58 @@ function CustomBlockTypeSelect() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="toolbar-dropdown-trigger min-w-[100px] shrink-0 justify-between"
-          title="Select Block Type"
-        >
-          <span className="truncate text-xs font-medium">
-            {getLabel(currentBlockType)}
-          </span>
-          <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-60" />
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="toolbar-dropdown-trigger min-w-[100px] shrink-0 justify-between"
+              aria-label="Select Block Type"
+            >
+              <span className="truncate text-xs font-medium">
+                {getLabel(currentBlockType)}
+              </span>
+              <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-60" />
+            </button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+
+        <TooltipContent>Select Block Type</TooltipContent>
+      </Tooltip>
+
       <PopoverContent
         className="toolbar-popover-content w-40"
         align="start"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <div className="toolbar-popover-header">Block Type</div>
+
         <button
           type="button"
-          className={`toolbar-popover-item ${currentBlockType === "paragraph" || !currentBlockType ? "bg-accent font-semibold text-accent-foreground" : ""}`}
+          className={`toolbar-popover-item ${
+            currentBlockType === "paragraph" || !currentBlockType
+              ? "bg-accent font-semibold text-accent-foreground"
+              : ""
+          }`}
           onClick={() => handleSelect("paragraph")}
         >
           <Type className="h-3.5 w-3.5 opacity-70" />
           <span>Paragraph</span>
         </button>
+
         {hasHeadings &&
           allowedHeadingLevels.map((lvl) => {
             const hTag = `h${lvl}`;
+
             return (
               <button
                 key={hTag}
                 type="button"
-                className={`toolbar-popover-item ${currentBlockType === hTag ? "bg-accent font-semibold text-accent-foreground" : ""}`}
+                className={`toolbar-popover-item ${
+                  currentBlockType === hTag
+                    ? "bg-accent font-semibold text-accent-foreground"
+                    : ""
+                }`}
                 onClick={() => handleSelect(hTag)}
               >
                 <span className="w-3.5 text-center font-mono text-xs font-bold">
@@ -150,10 +179,15 @@ function CustomBlockTypeSelect() {
               </button>
             );
           })}
+
         {hasQuote && (
           <button
             type="button"
-            className={`toolbar-popover-item ${currentBlockType === "quote" ? "bg-accent font-semibold text-accent-foreground" : ""}`}
+            className={`toolbar-popover-item ${
+              currentBlockType === "quote"
+                ? "bg-accent font-semibold text-accent-foreground"
+                : ""
+            }`}
             onClick={() => handleSelect("quote")}
           >
             <Quote className="h-3.5 w-3.5 opacity-70" />
@@ -167,15 +201,52 @@ function CustomBlockTypeSelect() {
 
 interface EditorToolbarProps {
   editorRef: React.RefObject<MDXEditorMethods | null>;
+  markdown: string;
   onH1Attempted: () => void;
 }
 
 export default function EditorToolbar({
   editorRef,
+  markdown,
   onH1Attempted,
 }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
+  const [showWordCount, setShowWordCount] = useState(true);
+  const cleanText = markdown
+    // Remove HTML images completely
+    .replace(/<img\b[^>]*>/gi, "")
+    // Remove Markdown images completely
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    // Decode the spaces/tabs your editor produces
+    .replace(/&#x20;/g, " ")
+    .replace(/&#x9;/g, "\t");
+  // Treat Windows newlines as one character
+  const wordCountText = cleanText
+    // Newlines separate words, but are not themselves words
+    .replace(/\r\n/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\r/g, " ");
+
+  const wordCount = wordCountText.trim()
+    ? wordCountText.trim().split(/\s+/).length
+    : 0;
+  const MAX_WORD_COUNT = 2500;
+  const previousWordCountRef = useRef(wordCount);
+
+  useEffect(() => {
+    if (
+      previousWordCountRef.current <= MAX_WORD_COUNT &&
+      wordCount > MAX_WORD_COUNT
+    ) {
+      toast.warning("Word count limit exceeded", {
+        description: `Your guide has ${wordCount.toLocaleString()} words. The maximum allowed is ${MAX_WORD_COUNT.toLocaleString()}.`,
+      });
+    }
+
+    previousWordCountRef.current = wordCount;
+  }, [wordCount]);
+  const characterCount = cleanText.length;
 
   // Refs for hidden native buttons to trigger programmatically from our custom Popovers
   const linkRef = useRef<HTMLSpanElement>(null);
@@ -185,6 +256,14 @@ export default function EditorToolbar({
   const inlineMathRef = useRef<HTMLSpanElement>(null);
   const blockMathRef = useRef<HTMLSpanElement>(null);
   const insertDirective = usePublisher(insertDirective$);
+
+  // Source / Rich-text mode toggle (diffSourcePlugin)
+  const viewMode = useCellValue(viewMode$);
+  const setViewMode = usePublisher(viewMode$);
+  const isSourceMode = viewMode === "source";
+  const toggleSourceMode = () => {
+    setViewMode(isSourceMode ? "rich-text" : "source");
+  };
 
   const [isFullScreen, setIsFullScreen] = useState(false);
   const toggleFullScreen = () => {
@@ -254,346 +333,488 @@ export default function EditorToolbar({
   };
 
   return (
-    <div className="mdxeditor-toolbar-custom">
-      <MarkdownLinkImageShortcutListener />
-      <H1RestrictionListener onH1Attempted={onH1Attempted} />
-      <CodeBlockShortcutListener />
-      <CalloutShortcutListener />
-      <TabShortcutListener />
-      <UndoRedo />
-      <div className="mdx-toolbar-divider"></div>
-      <BoldItalicUnderlineToggles />
-      <StrikeThroughSupSubToggles options={["Strikethrough"]} />
-      <CodeToggle />
-      <div className="mdx-toolbar-divider"></div>
-      <CustomBlockTypeSelect />
-      <div className="mdx-toolbar-divider"></div>
-      <ListsToggle />
-      <IndentButtons />
+    <div className="editor-toolbar-wrapper">
+      <TooltipProvider>
+        <div className="mdxeditor-toolbar-custom">
+          <MarkdownLinkImageShortcutListener />
+          <H1RestrictionListener onH1Attempted={onH1Attempted} />
+          <CodeBlockShortcutListener />
+          <CalloutShortcutListener />
+          <TabShortcutListener />
+          <UndoRedo />
+          <div className="mdx-toolbar-divider" />
+          <BoldItalicUnderlineToggles />
+          <StrikeThroughSupSubToggles options={["Strikethrough"]} />
+          <CodeToggle />
+          <div className="mdx-toolbar-divider" />
+          <CustomBlockTypeSelect />
+          <div className="mdx-toolbar-divider" />
+          <ListsToggle />
+          <IndentButtons />
 
-      <div className="mdx-toolbar-divider"></div>
+          <div className="mdx-toolbar-divider" />
 
-      {/* Math Dropdown using Popover */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="toolbar-dropdown-trigger shrink-0"
-            title="Insert LaTeX Math Equation"
-          >
-            <span className="font-serif font-bold italic">f(x)</span>
-            <span>Math</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="toolbar-popover-content"
-          align="start"
-          onCloseAutoFocus={(e) => e.preventDefault()}
-        >
-          <div className="toolbar-popover-header">LaTeX Equations</div>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                inlineMathRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <span className="w-4 text-center font-serif font-bold text-muted-foreground">
-              x
+          {/* Math Dropdown using Popover */}
+          <Popover>
+            <Tooltip>
+              <PopoverTrigger asChild>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="toolbar-dropdown-trigger shrink-0"
+                  >
+                    <span className="font-serif font-bold italic">f(x)</span>
+                    <span>Math</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </button>
+                </TooltipTrigger>
+              </PopoverTrigger>
+
+              <TooltipContent>Insert LaTeX Math Equation</TooltipContent>
+            </Tooltip>
+
+            <PopoverContent
+              className="toolbar-popover-content"
+              align="start"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <div className="toolbar-popover-header">LaTeX Equations</div>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => {
+                  editorRef.current?.focus();
+                  setTimeout(() => {
+                    inlineMathRef.current?.querySelector("button")?.click();
+                  }, 10);
+                }}
+              >
+                <span className="w-4 text-center font-serif font-bold text-muted-foreground">
+                  x
+                </span>
+                <span>Inline Equation</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => {
+                  editorRef.current?.focus();
+                  setTimeout(() => {
+                    blockMathRef.current?.querySelector("button")?.click();
+                  }, 10);
+                }}
+              >
+                <span className="w-4 text-center font-serif font-bold text-muted-foreground italic">
+                  $$
+                </span>
+                <span>Block Equation</span>
+              </button>
+            </PopoverContent>
+          </Popover>
+
+          {/* Insert Dropdown using Popover */}
+          <Popover>
+            <Tooltip>
+              <PopoverTrigger asChild>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="toolbar-dropdown-trigger shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Insert</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </button>
+                </TooltipTrigger>
+              </PopoverTrigger>
+
+              <TooltipContent>Insert LaTeX Math Equation</TooltipContent>
+            </Tooltip>
+
+            <PopoverContent
+              className="toolbar-popover-content"
+              align="start"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <div className="toolbar-popover-header">Elements</div>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => {
+                  editorRef.current?.focus();
+                  setTimeout(() => {
+                    tableRef.current?.querySelector("button")?.click();
+                  }, 10);
+                }}
+              >
+                <Table className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Table</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => {
+                  editorRef.current?.focus();
+                  setTimeout(() => {
+                    codeBlockRef.current?.querySelector("button")?.click();
+                  }, 10);
+                }}
+              >
+                <Code className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Code Block</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => {
+                  editorRef.current?.focus();
+                  setTimeout(() => {
+                    linkRef.current?.querySelector("button")?.click();
+                  }, 10);
+                }}
+              >
+                <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Link</span>
+              </button>
+              <div className="my-1 h-px bg-border" />
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() => {
+                  editorRef.current?.focus();
+                  setTimeout(() => {
+                    thematicBreakRef.current?.querySelector("button")?.click();
+                  }, 10);
+                }}
+              >
+                <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Horizontal Line</span>
+              </button>
+              <div className="my-1 h-px bg-border" />
+              <div className="toolbar-popover-header">Callouts</div>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() =>
+                  insertDirective({ type: "containerDirective", name: "info" })
+                }
+              >
+                <Info className="h-3.5 w-3.5 text-blue-500" />
+                <span>Info Callout</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() =>
+                  insertDirective({ type: "containerDirective", name: "note" })
+                }
+              >
+                <Info className="h-3.5 w-3.5 text-blue-500" />
+                <span>Note Callout</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() =>
+                  insertDirective({ type: "containerDirective", name: "tip" })
+                }
+              >
+                <Lightbulb className="h-3.5 w-3.5 text-green-500" />
+                <span>Tip Callout</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() =>
+                  insertDirective({
+                    type: "containerDirective",
+                    name: "caution",
+                  })
+                }
+              >
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                <span>Caution Callout</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() =>
+                  insertDirective({
+                    type: "containerDirective",
+                    name: "warning",
+                  })
+                }
+              >
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                <span>Warning Callout</span>
+              </button>
+              <button
+                type="button"
+                className="toolbar-popover-item"
+                onClick={() =>
+                  insertDirective({
+                    type: "containerDirective",
+                    name: "danger",
+                  })
+                }
+              >
+                <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                <span>Danger Callout</span>
+              </button>
+            </PopoverContent>
+          </Popover>
+
+          <div className="mdx-toolbar-divider" />
+
+          {/* Desktop Actions & Sharing Button Group */}
+          <div className="ml-auto hidden shrink-0 items-center gap-1 p-0.5 sm:flex">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  aria-label="Copy Markdown to Clipboard"
+                >
+                  {copied ? <Check className="text-green-500" /> : <Copy />}
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>Copy Markdown to Clipboard</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  aria-label="Download as .md file"
+                >
+                  <Download />
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>Download as .md file</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleImportClick}
+                  title="Import .md file"
+                  aria-label="Import .md file"
+                >
+                  <Upload />
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>Import .md file</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setShowWordCount((visible) => !visible)}
+                  aria-label={
+                    showWordCount ? "Hide Word Count" : "Show Word Count"
+                  }
+                >
+                  {showWordCount ? <Eye /> : <EyeOff />}
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>
+                {showWordCount ? "Hide Word Count" : "Show Word Count"}
+              </TooltipContent>
+            </Tooltip>
+
+            <div className="mx-1 h-4 w-px bg-border" />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleSourceMode}
+                  aria-pressed={isSourceMode}
+                  aria-label={
+                    isSourceMode
+                      ? "Switch to Rich Text Mode"
+                      : "Switch to Source Mode"
+                  }
+                  className={
+                    isSourceMode ? "bg-accent text-accent-foreground" : ""
+                  }
+                >
+                  {isSourceMode ? <SquareDashedText /> : <Code />}
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>
+                {isSourceMode ? "Rich Text Mode" : "Source Mode (Markdown)"}
+              </TooltipContent>
+            </Tooltip>
+
+            <div className="mx-1 h-4 w-px bg-border" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleFullScreen}
+                  aria-label="Toggle Full Screen"
+                >
+                  {isFullScreen ? <Minimize /> : <Maximize />}
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent>
+                {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Mobile More Actions Menu */}
+          <div className="ml-auto flex shrink-0 items-center sm:hidden">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="toolbar-dropdown-trigger shrink-0"
+                  title="More Actions"
+                  aria-label="More Actions"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="toolbar-popover-content w-48"
+                align="end"
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
+                <div className="toolbar-popover-header">Actions</div>
+                <button
+                  type="button"
+                  className="toolbar-popover-item"
+                  onClick={() => setShowWordCount((visible) => !visible)}
+                >
+                  {showWordCount ? (
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+
+                  <span>
+                    {showWordCount ? "Hide word count" : "Show word count"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="toolbar-popover-item"
+                  onClick={handleCopy}
+                >
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <span>{copied ? "Copied!" : "Copy Markdown"}</span>
+                </button>
+                <button
+                  type="button"
+                  className="toolbar-popover-item"
+                  onClick={handleDownload}
+                >
+                  <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Download .md</span>
+                </button>
+                <button
+                  type="button"
+                  className="toolbar-popover-item"
+                  onClick={handleImportClick}
+                >
+                  <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Import .md</span>
+                </button>
+
+                <div className="my-1 h-px bg-border" />
+
+                <button
+                  type="button"
+                  className={`toolbar-popover-item ${
+                    isSourceMode
+                      ? "bg-accent font-semibold text-accent-foreground"
+                      : ""
+                  }`}
+                  onClick={toggleSourceMode}
+                >
+                  {isSourceMode ? (
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <Code className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <span>{isSourceMode ? "Rich Text Mode" : "Source Mode"}</span>
+                </button>
+
+                <div className="my-1 h-px bg-border" />
+                <button
+                  type="button"
+                  className="toolbar-popover-item"
+                  onClick={toggleFullScreen}
+                >
+                  {isFullScreen ? (
+                    <Minimize className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <Maximize className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <span>{isFullScreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+                </button>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Hidden native MDXEditor buttons so they still receive their reactive contexts */}
+          <div style={{ display: "none" }}>
+            <span ref={tableRef}>
+              <InsertTable />
             </span>
-            <span>Inline Equation</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                blockMathRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <span className="w-4 text-center font-serif font-bold text-muted-foreground italic">
-              $$
+            <span ref={codeBlockRef}>
+              <InsertCodeBlock />
             </span>
-            <span>Block Equation</span>
-          </button>
-        </PopoverContent>
-      </Popover>
+            <span ref={thematicBreakRef}>
+              <InsertThematicBreak />
+            </span>
+            <span ref={linkRef}>
+              <CreateLink />
+            </span>
+            <span ref={inlineMathRef}>
+              <InsertInlineMath />
+            </span>
+            <span ref={blockMathRef}>
+              <InsertBlockMath />
+            </span>
+          </div>
 
-      {/* Insert Dropdown using Popover */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="toolbar-dropdown-trigger shrink-0"
-            title="Insert Element"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Insert</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="toolbar-popover-content"
-          align="start"
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".md"
+            style={{ display: "none" }}
+          />
+        </div>
+      </TooltipProvider>
+
+      {showWordCount && (
+        <div
+          className={`editor-word-count ${
+            wordCount > MAX_WORD_COUNT ? "text-red-500" : ""
+          }`}
         >
-          <div className="toolbar-popover-header">Elements</div>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                tableRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <Table className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Table</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                codeBlockRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <Code className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Code Block</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                linkRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Link</span>
-          </button>
-          <div className="my-1 h-px bg-border" />
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() => {
-              editorRef.current?.focus();
-              setTimeout(() => {
-                thematicBreakRef.current?.querySelector("button")?.click();
-              }, 10);
-            }}
-          >
-            <Minus className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Horizontal Line</span>
-          </button>
-          <div className="my-1 h-px bg-border" />
-          <div className="toolbar-popover-header">Callouts</div>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "info" })
-            }
-          >
-            <Info className="h-3.5 w-3.5 text-blue-500" />
-            <span>Info Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "note" })
-            }
-          >
-            <Info className="h-3.5 w-3.5 text-blue-500" />
-            <span>Note Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "tip" })
-            }
-          >
-            <Lightbulb className="h-3.5 w-3.5 text-green-500" />
-            <span>Tip Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "caution" })
-            }
-          >
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-            <span>Caution Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "warning" })
-            }
-          >
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-            <span>Warning Callout</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-popover-item"
-            onClick={() =>
-              insertDirective({ type: "containerDirective", name: "danger" })
-            }
-          >
-            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-            <span>Danger Callout</span>
-          </button>
-        </PopoverContent>
-      </Popover>
-
-      <div className="mdx-toolbar-divider"></div>
-
-      {/* Desktop Actions & Sharing Button Group */}
-      <div className="ml-auto hidden shrink-0 items-center gap-1 p-0.5 sm:flex">
-        <button
-          type="button"
-          onClick={handleCopy}
-          title="Copy Markdown to Clipboard"
-          aria-label="Copy Markdown to Clipboard"
-        >
-          {copied ? <Check className="text-green-500" /> : <Copy />}
-        </button>
-        <button
-          type="button"
-          onClick={handleDownload}
-          title="Download as .md file"
-          aria-label="Download as .md file"
-        >
-          <Download />
-        </button>
-        <button
-          type="button"
-          onClick={handleImportClick}
-          title="Import .md file"
-          aria-label="Import .md file"
-        >
-          <Upload />
-        </button>
-        <div className="mx-1 h-4 w-px bg-border"></div>
-        <button
-          type="button"
-          onClick={toggleFullScreen}
-          title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
-          aria-label="Toggle Full Screen"
-        >
-          {isFullScreen ? <Minimize /> : <Maximize />}
-        </button>
-      </div>
-
-      {/* Mobile More Actions Menu */}
-      <div className="ml-auto flex shrink-0 items-center sm:hidden">
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="toolbar-dropdown-trigger shrink-0"
-              title="More Actions"
-              aria-label="More Actions"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="toolbar-popover-content w-48"
-            align="end"
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <div className="toolbar-popover-header">Actions</div>
-            <button
-              type="button"
-              className="toolbar-popover-item"
-              onClick={handleCopy}
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-green-500" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              <span>{copied ? "Copied!" : "Copy Markdown"}</span>
-            </button>
-            <button
-              type="button"
-              className="toolbar-popover-item"
-              onClick={handleDownload}
-            >
-              <Download className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Download .md</span>
-            </button>
-            <button
-              type="button"
-              className="toolbar-popover-item"
-              onClick={handleImportClick}
-            >
-              <Upload className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Import .md</span>
-            </button>
-            <div className="my-1 h-px bg-border" />
-            <button
-              type="button"
-              className="toolbar-popover-item"
-              onClick={toggleFullScreen}
-            >
-              {isFullScreen ? (
-                <Minimize className="h-3.5 w-3.5 text-muted-foreground" />
-              ) : (
-                <Maximize className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              <span>{isFullScreen ? "Exit Fullscreen" : "Fullscreen"}</span>
-            </button>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Hidden native MDXEditor buttons so they still receive their reactive contexts */}
-      <div style={{ display: "none" }}>
-        <span ref={tableRef}>
-          <InsertTable />
-        </span>
-        <span ref={codeBlockRef}>
-          <InsertCodeBlock />
-        </span>
-        <span ref={thematicBreakRef}>
-          <InsertThematicBreak />
-        </span>
-        <span ref={linkRef}>
-          <CreateLink />
-        </span>
-        <span ref={inlineMathRef}>
-          <InsertInlineMath />
-        </span>
-        <span ref={blockMathRef}>
-          <InsertBlockMath />
-        </span>
-      </div>
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".md"
-        style={{ display: "none" }}
-      />
+          {wordCount.toLocaleString()} words
+          <span className="mx-2">·</span>
+          {characterCount.toLocaleString()} characters
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import {
   createVote,
 } from "./factories/guides";
 import { createSubject, tagGuideRevision } from "./factories/subjects";
-import { createPrerequisite } from "./factories/graph";
+import { createPrerequisite, createTodo } from "./factories/graph";
 import { expectToMatchSpec } from "./openapi";
 
 describe("GET /guides", () => {
@@ -153,10 +153,50 @@ describe("GET /guides/{slug}", () => {
       slug: string;
       body: string | null;
       tags: Array<{ slug: string }>;
+      todo_prerequisites: unknown[];
     };
     expect(body.slug).toBe(base.slug);
     expect(body.body).toBe("Content");
     expect(body.tags.map((t) => t.slug)).toContain(subject.slug);
+    expect(body.todo_prerequisites).toEqual([]);
+  });
+
+  it("returns sorted open todos for this guide and omits resolved ones", async () => {
+    const { base } = await createPublishedGuide();
+    const open = await createTodo(base.id, { title: "Learn limits" });
+    const earlier = await createTodo(base.id, { title: "Learn algebra" });
+    const resolver = await createPublishedGuide();
+    await createTodo(resolver.base.id, { title: "Another guide's todo" });
+    await createPrerequisite(resolver.base.id, base.id);
+    await createTodo(base.id, {
+      title: "Learn derivatives",
+      status: "resolved",
+      resolved_guide_base_id: resolver.base.id,
+    });
+
+    const res = await app.request(`/guides/${base.slug}`, {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/guides/{slug}");
+    const body = (await res.json()) as {
+      todo_prerequisites: Array<{ id: string; title: string; summary: string }>;
+      prerequisites: Array<{ slug: string; title: string }>;
+    };
+    expect(body.todo_prerequisites).toEqual([
+      {
+        id: earlier.id,
+        title: "Learn algebra",
+        summary: "What the missing prerequisite should cover",
+      },
+      {
+        id: open.id,
+        title: "Learn limits",
+        summary: "What the missing prerequisite should cover",
+      },
+    ]);
+    expect(body.prerequisites).toEqual([
+      expect.objectContaining({ slug: resolver.base.slug }),
+    ]);
   });
 
   it("names the canonical variant so callers can build its permalink", async () => {

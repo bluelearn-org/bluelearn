@@ -89,25 +89,36 @@ const slugifyHeading = (text: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const getMarkdownText = (node: any): string => {
+  if (typeof node.value === "string") {
+    // strip HTML tags such as <u>, </u>, <strong>, etc.
+    return node.type === "html"
+      ? node.value.replace(/<[^>]*>/g, "")
+      : node.value;
+  }
+  return node.children?.map(getMarkdownText).join("") ?? "";
+};
+
 // extract headings from markdown content
 export const extractHeadings = (markdown: string) => {
   const tree = unified().use(remarkParse).parse(markdown);
 
-  const headings: Array<{ text: string; level: number; id: string }> = [];
-  const seen = new Map<string, number>();
+  const headings: Array<{
+    text: string;
+    level: number;
+    id: string;
+  }> = [];
+
+  const headingIds = new Map<string, number>();
 
   function walk(node: any) {
     if (node.type === "heading") {
-      const text = node.children?.map((c: any) => c.value ?? "").join("") || "";
-      const base = slugifyHeading(text);
-      const count = seen.get(base) ?? 0;
-      const id = count === 0 ? base : `${base}-${count + 1}`;
-      seen.set(base, count + 1);
+      const text = getMarkdownText(node).trim();
 
       headings.push({
         text,
         level: node.depth,
-        id,
+        id: getHeadingId(text, headingIds),
       });
     }
 
@@ -127,3 +138,23 @@ export const getHeadingId = (text: string, seen: Map<string, number>) => {
   seen.set(base, count + 1);
   return count === 0 ? base : `${base}-${count + 1}`;
 };
+
+// helper function for metadata SEO
+export function buildGuideMeta(guide: {
+  title: string;
+  summary?: string | null;
+  body?: string | null;
+  tags?: Array<{ name: string }>;
+}) {
+  const title = `${guide.title} | Bluelearn`; // <title> format to {guide.title} | Bluelearn
+  const description =
+    guide.summary || (guide.body ? guide.body.slice(0, 150) : "") || ""; // fallback: first 150 characters of content
+  const keywords = (guide.tags ?? []).map((t) => t.name).join(", ");
+  return [
+    { title },
+    { name: "description", content: description },
+    ...(keywords ? [{ name: "keywords", content: keywords }] : []),
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+  ];
+}

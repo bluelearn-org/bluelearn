@@ -18,6 +18,7 @@ type PropsTypes = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   submitting: boolean | undefined;
+  guideCount?: number;
   onPublish: (() => void) | undefined;
 };
 
@@ -25,10 +26,18 @@ export const GuideSubmitModal = ({
   open,
   onOpenChange,
   submitting,
+  guideCount = 1,
   onPublish,
 }: PropsTypes) => {
   const [acceptGuidelines, setAcceptGuidelines] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
+
+  // batch submit feedback
+  const batch = guideCount > 1;
+  const title = batch
+    ? `Submit all ${guideCount} guides?`
+    : "Are you sure you want to submit?";
+  const confirmLabel = batch ? `Submit All` : "Submit";
 
   const handleSubmit = () => {
     if (onPublish && acceptGuidelines) {
@@ -44,7 +53,7 @@ export const GuideSubmitModal = ({
             Submit for review
           </span>
           <DialogTitle className="editorial-heading text-lg">
-            Are you sure you want to submit?
+            {title}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Your work goes into the review queue, where a curator checks it
@@ -97,7 +106,7 @@ export const GuideSubmitModal = ({
             disabled={submitting || !acceptGuidelines}
             onClick={handleSubmit}
           >
-            {submitting ? "Submitting..." : "Submit"}
+            {submitting ? "Submitting..." : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

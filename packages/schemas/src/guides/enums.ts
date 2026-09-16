@@ -3,6 +3,7 @@ import { z } from "zod";
 export const knowledgeTypeSchema = z.enum(["theoretical", "practical"]);
 export const guideTypeSchema = z.enum(["canonical", "variant"]);
 export const guideStatusSchema = z.enum(["draft", "published", "archived"]);
+export const revisionStatusSchema = z.enum(["draft", "submitted"]);
 export const voteDirectionSchema = z.enum(["up", "down"]);
 export const downvoteReasons = [
   "unclear",
@@ -16,3 +17,13 @@ export const downvoteReasons = [
 ] as const;
 
 export const downvoteReasonSchema = z.enum(downvoteReasons);
+
+export const disclaimerSlugs = [
+  "medical",
+  "financial",
+  "legal",
+  "mature",
+  "profanity",
+] as const;
+export const disclaimerSchema = z.enum(disclaimerSlugs);
+export type DisclaimerSlug = z.infer<typeof disclaimerSchema>;

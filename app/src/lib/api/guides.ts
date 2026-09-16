@@ -57,7 +57,7 @@ export async function createGuide(
   body: InferRequestType<typeof guides.$post>["json"]
 ) {
   const res = await guides.$post({ json: body });
-  if (!res.ok) return assertOk(res) as Promise<never>;
+  await assertOk(res);
 
   const { revision_id } = await res.json();
   return revision_id;
@@ -71,7 +71,7 @@ export async function addGuideVariant(
     param: { slug },
     json: body,
   });
-  if (!res.ok) return assertOk(res) as Promise<never>;
+  await assertOk(res);
 
   const { revision_id } = await res.json();
   return revision_id;

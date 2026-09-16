@@ -1,5 +1,23 @@
 import { z } from "zod";
 
+export const roleSchema = z.enum(["verifier", "moderator", "admin"]);
+
+export const activityContentKindSchema = z.enum([
+  "guide",
+  "objective",
+  "review",
+]);
+
+export const activityStatusSchema = z.enum([
+  "draft",
+  "submitted",
+  "pending",
+  "in_review",
+  "approved",
+  "rejected",
+  "published",
+]);
+
 export const activityTypeFilterSchema = z.enum([
   "guide_creation",
   "guide_revision",
@@ -25,6 +43,9 @@ export const activitySortSchema = z.enum([
   "date_asc",
 ]);
 
+export type Role = z.infer<typeof roleSchema>;
+export type ActivityContentKind = z.infer<typeof activityContentKindSchema>;
+export type ActivityStatus = z.infer<typeof activityStatusSchema>;
 export type ActivityTypeFilter = z.infer<typeof activityTypeFilterSchema>;
 export type ActivityStatusFilter = z.infer<typeof activityStatusFilterSchema>;
 export type ActivitySort = z.infer<typeof activitySortSchema>;

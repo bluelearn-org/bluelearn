@@ -4,7 +4,7 @@ import type { ProfileActivitySearch } from "@bluelearn/schemas";
 import { getAvatarUrl, getInitials } from "@/lib/profile";
 import { getProfilePage } from "@/lib/api/identity";
 import { cn } from "@/lib/utils";
-import { ActivityTable } from "@/components/profile/ActivityTable";
+import { ActivityTable } from "@/components/tables/ActivityTable";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

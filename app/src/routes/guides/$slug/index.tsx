@@ -19,10 +19,12 @@ import { Button } from "@/components/ui/button";
 
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
 import { getGuide } from "@/lib/api/guides";
+import { buildGuideMeta } from "@/lib/guideUtils";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { GuideReader } from "@/components/GuideReader";
+import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +47,9 @@ export const Route = createFileRoute("/guides/$slug/")({
       throw notFound();
     }
   },
+  head: ({ loaderData }) => ({
+    meta: loaderData ? buildGuideMeta(loaderData) : [], // Metadata
+  }),
   component: RouteComponent,
 });
 
@@ -184,10 +189,10 @@ function RouteComponent() {
                     : null
                 }
                 onSubmit={async (reason, note) => {
-                  if (await downvote(reason, note)) setDownvoteOpen(false);
+                  await downvote(reason, note, () => setDownvoteOpen(false));
                 }}
                 onRemove={async () => {
-                  if (await removeVote()) setDownvoteOpen(false);
+                  await removeVote(() => setDownvoteOpen(false));
                 }}
               />
 
@@ -198,10 +203,11 @@ function RouteComponent() {
                 guideTitle={guide.title}
                 menuItems={guideMenuItems}
                 prerequisites={guide.prerequisites}
+                todoPrerequisites={guide.todo_prerequisites}
                 isOfficial={guide.is_official}
               />
 
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -227,6 +233,10 @@ function RouteComponent() {
           </div>
 
           <Separator className="mb-8" />
+
+          {guide.disclaimers.length > 0 && (
+            <DisclaimerBanner disclaimers={guide.disclaimers} />
+          )}
 
           {/* Header */}
 

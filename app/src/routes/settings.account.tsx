@@ -153,7 +153,9 @@ function RouteComponent() {
       </header>
 
       <section className="space-y-3">
-        <h2 className="mono-micro text-muted-foreground">Authentication</h2>
+        <h2 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
+          Authentication
+        </h2>
 
         <div className="border-t border-border">
           <form className="space-y-3 py-3" onSubmit={handleSave}>
@@ -368,9 +370,11 @@ function RouteComponent() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="mono-micro text-muted-foreground">Delete account</h2>
+        <h2 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
+          Delete account
+        </h2>
 
-        <div className="space-y-4 border-t border-destructive/30 py-5">
+        <div className="space-y-4 border-t py-5">
           <p className="text-xs text-muted-foreground">
             Deleting your account is permanent and cannot be undone.
             Contributions you authored stay published but are no longer

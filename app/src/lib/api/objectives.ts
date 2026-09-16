@@ -63,7 +63,7 @@ export async function createObjective(
   body: InferRequestType<typeof objectives.$post>["json"]
 ) {
   const res = await objectives.$post({ json: body });
-  if (!res.ok) return assertOk(res) as Promise<never>;
+  await assertOk(res);
 
   const { revision_id } = await res.json();
   return revision_id;

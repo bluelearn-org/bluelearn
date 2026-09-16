@@ -1,5 +1,5 @@
-import { GuideGraphNode } from "./GuideGraphNode";
-import type { GraphNodeData } from "./useGraphLayout";
+import type { GraphNodeData } from "@/lib/useGraphLayout";
+import { GuideGraphNode } from "@/components/graph/GuideGraphNode";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // The extras come from CurationGraph's getNodeState.

@@ -9,6 +9,11 @@ import {
 } from "lexical";
 import { Indent, Outdent } from "lucide-react";
 import type { LexicalEditor } from "lexical";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Executes an increase indent action on the active editor selection.
@@ -102,16 +107,21 @@ export function OutdentButton({ className }: { className?: string }) {
   }, [editor]);
 
   return (
-    <button
-      type="button"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={handleOutdent}
-      title="Decrease Indent (Shift+Tab)"
-      aria-label="Decrease Indent"
-      className={className}
-    >
-      <Outdent className="h-4 w-4" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleOutdent}
+          aria-label="Decrease Indent"
+          className={className}
+        >
+          <Outdent className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+
+      <TooltipContent>Select Block Type</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -123,16 +133,21 @@ export function IndentButton({ className }: { className?: string }) {
   }, [editor]);
 
   return (
-    <button
-      type="button"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={handleIndent}
-      title="Increase Indent (Tab)"
-      aria-label="Increase Indent"
-      className={className}
-    >
-      <Indent className="h-4 w-4" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleIndent}
+          aria-label="Increase Indent"
+          className={className}
+        >
+          <Indent className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+
+      <TooltipContent>Select Block Type</TooltipContent>
+    </Tooltip>
   );
 }
 

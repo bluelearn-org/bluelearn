@@ -9,10 +9,17 @@ import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 
 import { listObjectives } from "@/lib/api/objectives";
 import { formatDate, formatDuration } from "@/lib/guideUtils";
+import { buildPageMeta } from "@/lib/seo";
 
 const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/objectives/")({
+  head: () => ({
+    meta: buildPageMeta(
+      "Learning Objectives",
+      "Explore learning objectives and follow step-by-step guides to build your knowledge from the ground up."
+    ),
+  }),
   validateSearch: paginationSchema.pick({ page: true }),
   loaderDeps: ({ search: { page } }) => ({ page }),
   loader: ({ deps: { page }, abortController }) =>

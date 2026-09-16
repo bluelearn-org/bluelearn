@@ -12,6 +12,7 @@ export type QueueCase = {
   case_type: string;
   status: string;
   title: string | null;
+  is_variant: boolean;
   created_at: string;
   decision: "approved" | "rejected" | null;
   expires_at: string | null;
@@ -20,7 +21,7 @@ export type QueueCase = {
 export async function getReviewQueue({ signal }: FetchOptions = {}) {
   return collectAll<QueueCase>(async (query) => {
     const res = await reviews.queue.$get({ query }, { init: { signal } });
-    if (!res.ok) return assertOk(res) as Promise<never>;
+    await assertOk(res);
 
     const { cases: items, total } = await res.json();
     return { items, total };

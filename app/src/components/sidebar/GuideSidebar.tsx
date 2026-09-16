@@ -1,15 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import type { Guide, GuideReference } from "@bluelearn/schemas";
+import type {
+  Guide,
+  GuideReference,
+  TodoPrerequisiteReference,
+} from "@bluelearn/schemas";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { Badge } from "@/components/ui/badge";
 import { extractHeadings } from "@/lib/guideUtils";
 
 type PropTypes = {
-  guide: Omit<Guide, "variant_id" | "is_official">;
+  guide: Omit<Guide, "variant_id" | "is_official" | "todo_prerequisites"> & {
+    todo_prerequisites?: Array<TodoPrerequisiteReference>;
+  };
   slug: string;
   sidebarActions?: React.ReactNode;
   reviewSection?: React.ReactNode;
   showPrerequisites?: boolean;
+  showFollowUps?: boolean;
 };
 
 export const GuideSidebar = ({
@@ -18,11 +26,17 @@ export const GuideSidebar = ({
   sidebarActions,
   reviewSection,
   showPrerequisites = true,
+  showFollowUps = true,
 }: PropTypes) => {
   const headings = useMemo(
     () => extractHeadings(guide.body ?? ""),
     [guide.body]
   );
+
+  // Older API responses may not include todos during deployment.
+  const todoPrerequisites = guide.todo_prerequisites ?? [];
+  const prerequisiteCount =
+    guide.prerequisites.length + todoPrerequisites.length;
 
   return (
     <aside className="hidden px-6 py-6 md:sticky md:top-[65px] md:block md:h-[calc(100vh-65px)] md:self-start md:overflow-y-auto md:border-r">
@@ -61,7 +75,7 @@ export const GuideSidebar = ({
       {/* Prerequisites */}
       {showPrerequisites && (
         <CollapsibleSection defaultOpen={true} title="Prerequisites">
-          {guide.prerequisites.length === 0 ? (
+          {prerequisiteCount === 0 ? (
             <p
               className="text-xs text-muted-foreground"
               style={{ paddingLeft: 12 }}
@@ -88,6 +102,62 @@ export const GuideSidebar = ({
                     }}
                   >
                     {prereq.title}
+                  </Link>
+                </li>
+              ))}
+
+              {/* There's no guide to link to until the todo is resolved. */}
+              {todoPrerequisites.map((todo: TodoPrerequisiteReference) => (
+                <li
+                  key={todo.id}
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                  style={{ paddingLeft: 12 }}
+                  title={todo.summary}
+                >
+                  <span className="min-w-0 break-words">{todo.title}</span>
+                  <Badge
+                    variant="outline"
+                    className="border-transparent bg-brand-bright-blue/15 font-mono tracking-[0.06em] text-brand-dark-navy uppercase dark:text-brand-bright-blue"
+                  >
+                    Todo
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CollapsibleSection>
+      )}
+
+      {/* Follow Ups */}
+      {showFollowUps && (
+        <CollapsibleSection defaultOpen={true} title="Follow Up Guides">
+          {(guide.follow_ups ?? []).length === 0 ? (
+            <p
+              className="text-xs text-muted-foreground"
+              style={{ paddingLeft: 12 }}
+            >
+              None declared
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {(guide.follow_ups ?? []).map((follow_up: GuideReference) => (
+                <li
+                  key={follow_up.slug}
+                  className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+                  style={{ paddingLeft: 12 }}
+                >
+                  <Link
+                    to="/guides/$slug"
+                    params={{ slug: follow_up.slug }}
+                    state={{
+                      breadcrumbOrigin: {
+                        type: "guide",
+                        title: guide.title,
+                        path: `/guides/${slug}`,
+                      },
+                    }}
+                  >
+                    {follow_up.title}
                   </Link>
                 </li>
               ))}

@@ -1,4 +1,0 @@
-type: string
-description: Lifecycle of a graph node (guide_base, guide, objective).
-enum: [draft, published, archived]
-example: published

@@ -24,11 +24,11 @@ export const GuidelinesModal = ({ open, onOpenChange }: PropsTypes) => {
           </div>
 
           <DialogTitle className="editorial-heading text-2xl">
-            Guidelines
+            Quick Guidelines
           </DialogTitle>
 
           <DialogDescription className="text-xs text-muted-foreground">
-            Guidelines for creating guides.
+            The quick version of the guidelines for creating guides.
           </DialogDescription>
         </DialogHeader>
 
