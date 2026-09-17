@@ -5,8 +5,13 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn, signOut, updateEmail, updatePassword } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/authValidation";
-import { deleteMyAccount, getMyIdentity } from "@/lib/api/identity";
+import {
+  deleteMyAccount,
+  getMyDateOfBirth,
+  getMyIdentity,
+} from "@/lib/api/identity";
 import { Button } from "@/components/ui/button";
+import { DateOfBirthForm } from "@/components/forms/DateOfBirthForm";
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/ui/field";
 import {
@@ -23,12 +28,16 @@ import {
 export const Route = createFileRoute("/settings/account")({
   component: RouteComponent,
   loader: async ({ abortController }) => {
-    return getMyIdentity({ signal: abortController.signal });
+    const [identity, account] = await Promise.all([
+      getMyIdentity({ signal: abortController.signal }),
+      getMyDateOfBirth(),
+    ]);
+    return { ...identity, ...account };
   },
 });
 
 function RouteComponent() {
-  const { email: initialEmail, profile } = Route.useLoaderData();
+  const { email: initialEmail, profile, date_of_birth } = Route.useLoaderData();
   const currentEmail = initialEmail || "";
   const username = profile.username;
 
@@ -151,6 +160,13 @@ function RouteComponent() {
           Account
         </h1>
       </header>
+
+      <section className="space-y-3">
+        <h2 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
+          Account details
+        </h2>
+        <DateOfBirthForm initialValue={date_of_birth} />
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">

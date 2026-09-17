@@ -15,7 +15,7 @@ export const Route = createFileRoute("/verify-email")({
 });
 
 function RouteComponent() {
-  useRedirectIfAuthed();
+  useRedirectIfAuthed("/welcome");
   const { email, sent } = Route.useSearch();
 
   return (

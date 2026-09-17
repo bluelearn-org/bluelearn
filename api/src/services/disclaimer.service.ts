@@ -32,17 +32,6 @@ export async function replaceDisclaimers(
 ) {
   const unique = [...new Set(slugs)];
 
-  const { error: delError } = await supabase
-    .from("guide_disclaimers")
-    .delete()
-    .eq("guide_base_id", baseId);
-  if (delError) {
-    console.error(delError);
-    throw new ServiceError("Unable to update disclaimers", 400);
-  }
-
-  if (unique.length === 0) return;
-
   const { data: disclaimerRows, error: lookupError } = await supabase
     .from("disclaimers")
     .select("id, slug")
@@ -55,11 +44,29 @@ export async function replaceDisclaimers(
     throw new ServiceError("Unknown disclaimer slug", 400);
   }
 
-  const { error: insError } = await supabase.from("guide_disclaimers").insert(
+  // Keep retained warnings in place: deleting then reinserting them opens a
+  // window where restricted content would be publicly readable.
+  let remove = supabase
+    .from("guide_disclaimers")
+    .delete()
+    .eq("guide_base_id", baseId);
+  if (disclaimerRows!.length > 0) {
+    remove = remove.not(
+      "disclaimer_id",
+      "in",
+      `(${disclaimerRows!.map((d) => d.id).join(",")})`
+    );
+  }
+  const { error: delError } = await remove;
+  if (delError) throw new ServiceError("Unable to update disclaimers", 400);
+  if (unique.length === 0) return;
+
+  const { error: insError } = await supabase.from("guide_disclaimers").upsert(
     disclaimerRows!.map((d) => ({
       guide_base_id: baseId,
       disclaimer_id: d.id,
-    }))
+    })),
+    { onConflict: "guide_base_id,disclaimer_id", ignoreDuplicates: true }
   );
   if (insError) {
     console.error(insError);

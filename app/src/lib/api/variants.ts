@@ -11,10 +11,10 @@ type FetchOptions = { signal?: AbortSignal };
 export async function getVariantBySlug(
   slug: string,
   variantSlug: string,
-  { signal }: FetchOptions = {}
+  { signal, mature }: FetchOptions & { mature?: "confirmed" } = {}
 ) {
   const res = await guides[":slug"][":variantSlug"].$get(
-    { param: { slug, variantSlug } },
+    { param: { slug, variantSlug }, query: { mature } },
     { init: { signal } }
   );
   await assertOk(res);

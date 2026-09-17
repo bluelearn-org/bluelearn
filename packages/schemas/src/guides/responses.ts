@@ -17,7 +17,17 @@ import {
   guideReferenceSchema,
   todoPrerequisiteReferenceSchema,
 } from "./references";
+export const contentAccessSchema = z.enum([
+  "allowed",
+  "sign_in_required",
+  "date_of_birth_required",
+  "underage",
+  "confirmation_required",
+]);
+export type ContentAccess = z.infer<typeof contentAccessSchema>;
+
 export const guideSchema = z.object({
+  content_access: contentAccessSchema.optional(),
   slug: z.string(),
   variant_id: z.string().nullable(),
   variant_slug: z.string().nullable(),
@@ -112,6 +122,7 @@ export const guideVotesSchema = z.object({
 });
 
 export const variantSchema = z.object({
+  content_access: contentAccessSchema.optional(),
   id: z.uuid(),
   guide_base_id: z.uuid(),
   slug: z.string().nullable(),

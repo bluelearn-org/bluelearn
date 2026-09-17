@@ -14,7 +14,7 @@ export const Route = createFileRoute("/register")({
 });
 
 function RouteComponent() {
-  useRedirectIfAuthed();
+  useRedirectIfAuthed("/welcome");
 
   return (
     <div className="flex min-h-[calc(100svh_-_70px)] flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
