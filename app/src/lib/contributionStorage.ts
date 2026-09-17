@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import type { ContributionType } from "@/types/contributions";
 import type { UUID } from "node:crypto";
@@ -12,6 +12,8 @@ import {
  * all locally stored contribution drafts exist under one localStorage key
  */
 export const STORAGE_KEY = "bluelearn:contrib:drafts";
+
+export const DRAFTS_UPDATED_EVENT = "localDraftsUpdated";
 
 /**
  * localDraftId - identifies the draft inside this browser
@@ -61,11 +63,11 @@ const DRAFT_SCHEMAS = {
 };
 
 // types generated directly from Zod schemas
-type StoredGuideDraft = z.infer<typeof DRAFT_SCHEMAS.guide>;
+export type StoredGuideDraft = z.infer<typeof DRAFT_SCHEMAS.guide>;
 
-type StoredVariantDraft = z.infer<typeof DRAFT_SCHEMAS.variant>;
+export type StoredVariantDraft = z.infer<typeof DRAFT_SCHEMAS.variant>;
 
-type StoredObjectiveDraft = z.infer<typeof DRAFT_SCHEMAS.objective>;
+export type StoredObjectiveDraft = z.infer<typeof DRAFT_SCHEMAS.objective>;
 
 export type AnyStoredDraft =
   | StoredGuideDraft
@@ -119,6 +121,8 @@ function writeStoredDrafts(drafts: StoredDrafts): void {
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+
+    window.dispatchEvent(new Event(DRAFTS_UPDATED_EVENT));
   } catch (error) {
     console.warn("Failed to save contribution drafts:", error);
   }
@@ -547,4 +551,28 @@ export function useDebouncedContributionSave(
   return {
     cancel: () => cancelRef.current(),
   };
+}
+
+// Listens for changes to local guide drafts and notifies upon changes to guide drafts
+export function getLocalGuides(): Array<StoredGuideDraft> {
+  const [drafts, setDrafts] = useState<Array<StoredGuideDraft>>(() =>
+    getStoredDraftsByType("guide")
+  );
+
+  useEffect(() => {
+    const refresh = () => setDrafts(getStoredDraftsByType("guide"));
+
+    // Listens for writes to localStorage
+    window.addEventListener(DRAFTS_UPDATED_EVENT, refresh);
+
+    // Reads draft data
+    window.addEventListener("storage", refresh);
+
+    return () => {
+      window.removeEventListener(DRAFTS_UPDATED_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  return drafts;
 }

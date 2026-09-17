@@ -12,6 +12,7 @@ import type {
   VariantContribution,
 } from "@/types/contributions";
 
+import type { StoredGuideDraft } from "@/lib/contributionStorage";
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
 import { SelectType } from "@/components/contribute/steps/SelectType";
@@ -44,7 +45,9 @@ import {
 
 import {
   clearStoredDraft,
+  clearStoredDraftsByType,
   createLocalDraftId,
+  getLocalGuides,
   getStoredDraftsByType,
   setStoredDraft,
   useDebouncedContributionSave,
@@ -460,6 +463,25 @@ function Inner({
 
   const [autosaveReady, setAutosaveReady] = useState(!draftId && !editSlug);
 
+  // Track last saved snapshot to server
+  const savedSnapshotsRef = useRef<Record<string, string | undefined>>({});
+
+  const markSaved = (id: string, data: unknown) => {
+    savedSnapshotsRef.current[id] = JSON.stringify(data);
+  };
+
+  const checkDirty = (localDraftId: string, data: unknown): boolean => {
+    const draft = JSON.stringify(data);
+    const snapshot = savedSnapshotsRef.current[localDraftId];
+
+    if (snapshot === undefined) {
+      savedSnapshotsRef.current[localDraftId] = draft;
+      return false;
+    }
+
+    return draft !== snapshot;
+  };
+
   const {
     revisionId: removedRevisionId,
     localDraftId,
@@ -489,6 +511,22 @@ function Inner({
     revisionId,
     step
   );
+
+  const localDrafts: Array<StoredGuideDraft> = getLocalGuides();
+
+  // IDs of all locally stored guide drafts with unsaved changes
+
+  const dirtyGuides = useMemo(
+    () =>
+      localDrafts
+        .filter((draft) => checkDirty(draft.localDraftId, draft.data))
+        .map((draft) => draft.localDraftId),
+    [localDrafts]
+  );
+
+  const isDirty = dirtyGuides.length > 0;
+  const variantIsDirty = checkDirty(variantLocalDraftId, variantContData);
+  const objectiveIsDirty = checkDirty(objectiveLocalDraftId, objectiveContData);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -576,6 +614,7 @@ function Inner({
         .then((data) => {
           const objData = objectiveDataFromRevision(data);
           setObjectiveContData(objData);
+          markSaved(objectiveLocalDraftId, objData);
           setShowChangeSummary(!!data.objective.current_revision_id);
 
           storeContributionDraft(
@@ -629,6 +668,7 @@ function Inner({
           };
 
           setVariantContData(vData);
+          markSaved(variantLocalDraftId, vData);
 
           storeContributionDraft(
             "variant",
@@ -713,10 +753,13 @@ function Inner({
 
     getObjectiveRevision(sourceRevisionId)
       .then((data) => {
-        setObjectiveContData({
+        const objData = {
           ...objectiveDataFromRevision(data),
           changeSummary: "",
-        });
+        };
+
+        setObjectiveContData(objData);
+        markSaved(objectiveLocalDraftId, objData);
 
         setShowChangeSummary(!!data.objective.current_revision_id);
         setType("objective");
@@ -966,6 +1009,7 @@ function Inner({
           id,
           step
         );
+        markSaved(activeGuide.localDraftId, savedGuide);
 
         // update guide in state so revisionId is available
         if (id && id !== activeGuide.revisionId) {
@@ -987,6 +1031,7 @@ function Inner({
           id,
           step
         );
+        markSaved(variantLocalDraftId, variantContData);
       }
 
       if (type === "objective") {
@@ -997,6 +1042,7 @@ function Inner({
           id,
           step
         );
+        markSaved(objectiveLocalDraftId, objectiveContData);
       }
 
       toast.success("Draft saved");
@@ -1180,6 +1226,7 @@ function Inner({
 
         clearStoredDraft(objectiveLocalDraftId);
         setObjectiveContData(createObjectiveContData());
+        markSaved(objectiveLocalDraftId, createObjectiveContData());
         setRevisionId(null);
         onPublished?.();
 
@@ -1195,6 +1242,7 @@ function Inner({
 
         clearStoredDraft(variantLocalDraftId);
         setVariantContData(createVariantContData());
+        markSaved(variantLocalDraftId, createVariantContData());
         setRevisionId(null);
 
         onPublished?.();
@@ -1218,14 +1266,21 @@ function Inner({
 
   useBlocker({
     shouldBlockFn: ({ current, next }) => {
+      // Returns true to stop user from leaving
+      // Returns false to let user leave
       const isLeaving =
         current.routeId === "/contribute" && next.routeId !== "/contribute";
 
       if (isLeaving) {
-        const shouldLeave = window.confirm(
-          "Are you sure you want to leave? You have unsaved changes."
-        );
-        return !shouldLeave;
+        if (isDirty) {
+          const shouldLeave = window.confirm(
+            "Are you sure you want to leave? You have unsaved changes."
+          );
+          if (!shouldLeave) return true;
+        }
+
+        clearStoredDraftsByType("guide");
+        guideSave.cancel();
       }
 
       return false;
@@ -1309,6 +1364,7 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <PreviewGuide
@@ -1323,6 +1379,7 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
         />
 
         <VariantInfo
@@ -1337,6 +1394,7 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={variantIsDirty}
         />
 
         <PreviewVariant
@@ -1347,6 +1405,7 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={variantIsDirty}
         />
 
         <ObjectiveDetails
@@ -1360,6 +1419,7 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={objectiveIsDirty}
         />
 
         <OrderTargetGuides
@@ -1369,6 +1429,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           guides={guideOptions}
+          isDirty={objectiveIsDirty}
         />
 
         <OrderObjectiveGuides
@@ -1378,6 +1439,7 @@ function Inner({
           onSaveDraft={saveDraft}
           submitting={submitting}
           guides={guideOptions}
+          isDirty={objectiveIsDirty}
         />
 
         <PreviewObjective
@@ -1388,6 +1450,7 @@ function Inner({
           submitting={submitting}
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
+          isDirty={objectiveIsDirty}
         />
       </div>
     </div>
