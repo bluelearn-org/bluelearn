@@ -23,6 +23,7 @@ type PropTypes = {
   guideCount?: number;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
+  isDirty?: boolean;
 };
 
 export const StepperActionHeader = ({
@@ -38,6 +39,7 @@ export const StepperActionHeader = ({
   hideGuidelines,
   onSaveDraft,
   onPublish,
+  isDirty,
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -66,6 +68,14 @@ export const StepperActionHeader = ({
     const allDrafts = getAllStoredDrafts();
     setAllStoredDrafts(allDrafts);
   }, [saved]);
+
+  useEffect(() => {
+    if (isDirty) setSaved(false);
+  }, [isDirty]);
+
+  // isDirty (server-save state) takes precedence once known; the flash from a
+  // manual save click covers the moment before the parent re-renders with isDirty=false
+  const isSaved = isDirty === false || saved;
 
   const saveDraft = async () => {
     if (!onSaveDraft) return;
@@ -104,8 +114,17 @@ export const StepperActionHeader = ({
               disabled={submitting || saveDisabled}
               onClick={saveDraft}
             >
-              <Save className="size-4" />
-              {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
+              {isSaved ? (
+                <>
+                  <Check className="size-4" />
+                  {allStoredDrafts.length > 1 ? "All Saved" : "Saved"}
+                </>
+              ) : (
+                <>
+                  <Save className="size-4" />
+                  {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
+                </>
+              )}
             </button>
           )}
 
@@ -164,7 +183,7 @@ export const StepperActionHeader = ({
                 disabled={submitting || saveDisabled}
                 onClick={saveDraft}
               >
-                {saved ? (
+                {isSaved ? (
                   <>
                     <Check className="size-3.5 shrink-0" />
                     Saved
