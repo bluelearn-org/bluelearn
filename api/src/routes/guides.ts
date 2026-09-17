@@ -78,6 +78,9 @@ const createVariantBody = createVariantSchema.extend({
 });
 
 const slugParamSchema = z.object({ slug: z.string() });
+const readerQuerySchema = z.object({
+  mature: z.literal("confirmed").optional(),
+});
 const variantSlugParamSchema = z.object({
   slug: z.string(),
   variantSlug: z.string(),
@@ -148,10 +151,13 @@ export const guidesRouter = new Hono<HonoEnv>()
       },
     }),
     validate("param", slugParamSchema),
+    validate("query", readerQuerySchema),
     async (c) => {
+      c.header("Cache-Control", "private, no-store");
       const guide = await getGuideBySlug(
         c.get("supabase"),
-        c.req.valid("param").slug
+        c.req.valid("param").slug,
+        c.req.valid("query").mature === "confirmed"
       );
       return c.json(guide);
     }
@@ -300,12 +306,15 @@ export const guidesRouter = new Hono<HonoEnv>()
       },
     }),
     validate("param", variantSlugParamSchema),
+    validate("query", readerQuerySchema),
     async (c) => {
+      c.header("Cache-Control", "private, no-store");
       const { slug, variantSlug } = c.req.valid("param");
       const { variant } = await getVariantBySlug(
         c.get("supabase"),
         slug,
-        variantSlug
+        variantSlug,
+        c.req.valid("query").mature === "confirmed"
       );
       return c.json({ variant });
     }

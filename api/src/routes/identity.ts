@@ -6,6 +6,7 @@ import {
   myDraftsResponseSchema,
   profilePageResponseSchema,
   updateProfileSchema,
+  updateDateOfBirthSchema,
 } from "@bluelearn/schemas";
 import { errorResponses, jsonContent, validate } from "../lib/openapi";
 import {
@@ -25,8 +26,34 @@ import {
 } from "../services/identity.service";
 
 const usernameParamSchema = z.object({ username: z.string() });
+import {
+  getDateOfBirth,
+  saveDateOfBirth,
+} from "../services/mature-content.service";
 
 export const meRouter = new Hono<HonoEnv>()
+  .get("/date-of-birth", requireUser, async (c) => {
+    c.header("Cache-Control", "private, no-store");
+    return c.json({
+      date_of_birth: await getDateOfBirth(c.get("supabase"), c.get("user").id),
+    });
+  })
+  .patch(
+    "/date-of-birth",
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "date-of-birth-update" }),
+    validate("json", updateDateOfBirthSchema),
+    async (c) => {
+      c.header("Cache-Control", "private, no-store");
+      return c.json(
+        await saveDateOfBirth(
+          c.get("supabase"),
+          c.get("user").id,
+          c.req.valid("json").date_of_birth
+        )
+      );
+    }
+  )
   // Returns the caller's profile, email, and roles. 404 if no profile row.
   .get(
     "/",

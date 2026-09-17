@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as SubjectsRouteImport } from './routes/subjects'
@@ -49,6 +50,11 @@ import { Route as ObjectivesSlugRevisionsRevisionIdRouteImport } from './routes/
 import { Route as GuidesSlugVariantSlugEditRouteImport } from './routes/guides/$slug/$variantSlug/edit'
 import { Route as GuidesSlugVariantSlugRevisionsRevisionIdRouteImport } from './routes/guides/$slug/$variantSlug/revisions.$revisionId'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/subjects': typeof SubjectsRouteWithChildren
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/welcome': typeof WelcomeRoute
   '/dashboard/assignments': typeof DashboardAssignmentsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/welcome': typeof WelcomeRoute
   '/dashboard/assignments': typeof DashboardAssignmentsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -341,6 +349,7 @@ export interface FileRoutesById {
   '/subjects': typeof SubjectsRouteWithChildren
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/welcome': typeof WelcomeRoute
   '/dashboard/assignments': typeof DashboardAssignmentsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/todos'
     | '/verify-email'
+    | '/welcome'
     | '/dashboard/assignments'
     | '/dashboard/members'
     | '/dashboard/roles'
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/todos'
     | '/verify-email'
+    | '/welcome'
     | '/dashboard/assignments'
     | '/dashboard/members'
     | '/dashboard/roles'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/todos'
     | '/verify-email'
+    | '/welcome'
     | '/dashboard/assignments'
     | '/dashboard/members'
     | '/dashboard/roles'
@@ -501,12 +513,20 @@ export interface RootRouteChildren {
   SubjectsRoute: typeof SubjectsRouteWithChildren
   TodosRoute: typeof TodosRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  WelcomeRoute: typeof WelcomeRoute
   GuidesSlugRoute: typeof GuidesSlugRouteWithChildren
   GuidesIndexRoute: typeof GuidesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify-email': {
       id: '/verify-email'
       path: '/verify-email'
@@ -923,6 +943,7 @@ const rootRouteChildren: RootRouteChildren = {
   SubjectsRoute: SubjectsRouteWithChildren,
   TodosRoute: TodosRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  WelcomeRoute: WelcomeRoute,
   GuidesSlugRoute: GuidesSlugRouteWithChildren,
   GuidesIndexRoute: GuidesIndexRoute,
 }

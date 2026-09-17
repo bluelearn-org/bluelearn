@@ -34,6 +34,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_details: {
+        Row: { user_id: string; date_of_birth: string | null }
+        Insert: { user_id: string; date_of_birth?: string | null }
+        Update: { user_id?: string; date_of_birth?: string | null }
+        Relationships: [{ foreignKeyName: "account_details_user_id_fkey"; columns: ["user_id"]; isOneToOne: true; referencedRelation: "profiles"; referencedColumns: ["id"] }]
+      }
       disclaimers: {
         Row: {
           description: string | null
@@ -1244,6 +1250,14 @@ export type Database = {
       assemble_review_panel: {
         Args: { p_case_id: string; p_policy_default: number }
         Returns: string
+      }
+      can_read_mature_guide: {
+        Args: { p_guide_id: string }
+        Returns: boolean
+      }
+      get_guide_reader_metadata: {
+        Args: { p_guide_id: string }
+        Returns: { id: string; title: string; summary: string | null; word_count: number; created_at: string }[]
       }
       cast_review_decision: {
         Args: {

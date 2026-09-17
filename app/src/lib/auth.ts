@@ -20,7 +20,7 @@ export async function signUp(
     password,
     options: {
       data: { username },
-      emailRedirectTo: `${window.location.origin}/login`,
+      emailRedirectTo: `${window.location.origin}/login?welcome=true`,
     },
   });
 }
@@ -29,7 +29,9 @@ export async function resendVerification(email: string) {
   return supabase.auth.resend({
     type: "signup",
     email,
-    options: { emailRedirectTo: `${window.location.origin}/login` },
+    options: {
+      emailRedirectTo: `${window.location.origin}/login?welcome=true`,
+    },
   });
 }
 

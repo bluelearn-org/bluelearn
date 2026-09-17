@@ -22,6 +22,7 @@ import { getVariantBySlug } from "@/lib/api/variants";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
+import { useMatureContent } from "@/lib/useMatureContent";
 import { GuideReader } from "@/components/GuideReader";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import {
@@ -81,6 +82,7 @@ function RouteComponent() {
     todo_prerequisites: [],
   };
 
+  const reader = useMatureContent({ guide, variantSlug });
   const guideMenuItems = [
     {
       label: "Edit Variant",
@@ -112,7 +114,7 @@ function RouteComponent() {
               isOfficial={variant.is_official}
             />
           }
-          guide={guide}
+          guide={{ ...guide, body: reader.body }}
           slug={slug}
           showPrerequisites={false}
           showFollowUps={false}
@@ -244,7 +246,8 @@ function RouteComponent() {
           )}
 
           <GuideReader
-            guide={guide}
+            guide={{ ...guide, body: reader.body }}
+            contentNotice={reader.contentNotice}
             guideType={guide.knowledge_type}
             showToc
             isOfficial={variant.is_official}
