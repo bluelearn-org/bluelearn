@@ -116,9 +116,12 @@ function RouteComponent() {
     disclaimers: snapshot.disclaimers,
   }));
 
-  const [changeSummary, setChangeSummary] = useState(
-    snapshot.revision.change_summary ?? ""
-  );
+  const [changeSummary, setChangeSummary] = useState(() => {
+    if (snapshot.revision.status !== "draft") return "";
+    if (snapshot.revision.change_summary === null) return "";
+
+    return snapshot.revision.change_summary;
+  });
 
   const [revisionId, setRevisionId] = useState<string | null>(draftId);
 
