@@ -415,8 +415,8 @@ export async function archiveGuide(supabase: DB, rawSlug: string) {
   return data[0];
 }
 
-// Build the target's transitive prerequisite DAG (nodes + edges, RLS-filtered)
-// via the compute_walkthrough RPC.
+// Build the target's transitive prerequisite and follow-up graph (nodes + edges,
+// RLS-filtered) via the compute_walkthrough RPC.
 export async function getWalkthrough(supabase: DB, rawSlug: string) {
   const baseId = await resolveBaseId(supabase, rawSlug);
 

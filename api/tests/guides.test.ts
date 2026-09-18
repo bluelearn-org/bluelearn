@@ -255,10 +255,18 @@ describe("DELETE /guides/{slug}", () => {
 });
 
 describe("GET /guides/{slug}/walkthrough", () => {
-  it("returns the transitive prerequisite DAG", async () => {
-    const prereq = await createPublishedGuide();
+  it("returns prerequisites and transitive follow-ups around the target", async () => {
+    const prerequisite = await createPublishedGuide();
     const target = await createPublishedGuide();
-    await createPrerequisite(prereq.base.id, target.base.id);
+    const followUp = await createPublishedGuide();
+    const laterFollowUp = await createPublishedGuide();
+    const suspendedFollowUp = await createPublishedGuide();
+    await createPrerequisite(prerequisite.base.id, target.base.id);
+    await createPrerequisite(target.base.id, followUp.base.id);
+    await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+    await createPrerequisite(target.base.id, suspendedFollowUp.base.id, {
+      is_suspended: true,
+    });
 
     const res = await app.request(
       `/guides/${target.base.slug}/walkthrough`,
@@ -272,17 +280,42 @@ describe("GET /guides/{slug}/walkthrough", () => {
       nodes: Array<{ id: string; level: number }>;
       edges: Array<{ from_id: string; to_id: string }>;
     };
-    const ids = body.nodes.map((n) => n.id);
-    expect(ids).toContain(target.base.id);
-    expect(ids).toContain(prereq.base.id);
-    expect(body.edges).toContainEqual({
-      from_id: prereq.base.id,
-      to_id: target.base.id,
-    });
+    const levels = new Map(body.nodes.map((node) => [node.id, node.level]));
 
-    const prereqNode = body.nodes.find((n) => n.id === prereq.base.id);
-    const targetNode = body.nodes.find((n) => n.id === target.base.id);
-    expect(prereqNode?.level).toBeLessThan(targetNode!.level);
+    expect([...levels.keys()]).toEqual(
+      expect.arrayContaining([
+        prerequisite.base.id,
+        target.base.id,
+        followUp.base.id,
+        laterFollowUp.base.id,
+      ])
+    );
+    expect(levels.has(suspendedFollowUp.base.id)).toBe(false);
+    expect(body.edges).toEqual(
+      expect.arrayContaining([
+        {
+          from_id: prerequisite.base.id,
+          to_id: target.base.id,
+        },
+        {
+          from_id: target.base.id,
+          to_id: followUp.base.id,
+        },
+        {
+          from_id: followUp.base.id,
+          to_id: laterFollowUp.base.id,
+        },
+      ])
+    );
+    expect(levels.get(prerequisite.base.id)).toBeLessThan(
+      levels.get(target.base.id)!
+    );
+    expect(levels.get(target.base.id)).toBeLessThan(
+      levels.get(followUp.base.id)!
+    );
+    expect(levels.get(followUp.base.id)).toBeLessThan(
+      levels.get(laterFollowUp.base.id)!
+    );
   });
 });
 
