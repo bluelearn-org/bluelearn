@@ -11,6 +11,7 @@
     "typecheck": "pnpm --filter api build && tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@bluelearn/schemas": "workspace:*",
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",

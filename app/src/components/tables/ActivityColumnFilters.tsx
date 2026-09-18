@@ -45,7 +45,7 @@ function parseISODate(value: string | undefined) {
   return new Date(year, month - 1, day);
 }
 
-function ColumnFilter({
+export function ColumnFilter({
   label,
   active,
   onClear,
@@ -64,6 +64,7 @@ function ColumnFilter({
         <PopoverTrigger asChild>
           <button
             type="button"
+            aria-label={`Filter ${label}`}
             className={cn(
               "flex cursor-pointer items-center gap-1.5 uppercase transition-colors",
               active ? "text-brand-bright-blue" : "hover:text-foreground/70"
@@ -75,6 +76,7 @@ function ColumnFilter({
         </PopoverTrigger>
         <PopoverContent
           align="start"
+          aria-label={`Filter ${label}`}
           className={cn("w-56 gap-3 tracking-normal normal-case", className)}
         >
           <div className="text-xs font-medium">
@@ -97,7 +99,7 @@ function ColumnFilter({
   );
 }
 
-function SortRow({
+export function SortRow({
   active,
   ascending,
   label,
@@ -112,6 +114,7 @@ function SortRow({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
         "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
         active ? "bg-accent text-foreground" : "hover:bg-muted"
@@ -235,20 +238,30 @@ export function ChoiceColumnFilter({
 export function DateColumnFilter({
   search,
   setFilters,
+  label = "Date",
+  sortControl,
 }: {
   search: ActivityFilters;
   setFilters: SetFilters;
+  label?: string;
+  sortControl?: {
+    direction: "asc" | "desc" | null;
+    onChange: (direction: "asc" | "desc" | null) => void;
+    onClear: () => void;
+  };
 }) {
   const from = parseISODate(search.from);
   const to = parseISODate(search.to);
-  const colSort =
-    search.sort === "date_asc"
+  const colSort = sortControl
+    ? sortControl.direction
+    : search.sort === "date_asc"
       ? "asc"
       : search.sort === undefined
         ? "desc"
         : null;
   const active =
-    Boolean(search.from || search.to) || search.sort === "date_asc";
+    Boolean(search.from || search.to) ||
+    (sortControl ? colSort !== null : search.sort === "date_asc");
 
   // Which field the calendar popover is editing (null closes it).
   const [activeField, setActiveField] = useState<"from" | "to" | null>(null);
@@ -289,15 +302,19 @@ export function DateColumnFilter({
 
   return (
     <ColumnFilter
-      label="Date"
+      label={label}
       active={active}
-      onClear={() =>
+      onClear={() => {
+        if (sortControl) {
+          sortControl.onClear();
+          return;
+        }
         setFilters({
           from: undefined,
           to: undefined,
           sort: search.sort === "date_asc" ? undefined : search.sort,
-        })
-      }
+        });
+      }}
       className="w-auto"
     >
       <Popover
@@ -309,6 +326,7 @@ export function DateColumnFilter({
         <div className="flex items-center gap-2">
           <FieldAnchor active={activeField === "from"}>
             <DateField
+              label={`${label} from`}
               active={activeField === "from"}
               date={from}
               onClick={() => openField("from")}
@@ -317,6 +335,7 @@ export function DateColumnFilter({
           <span className="text-muted-foreground">and</span>
           <FieldAnchor active={activeField === "to"}>
             <DateField
+              label={`${label} to`}
               active={activeField === "to"}
               date={to}
               onClick={() => openField("to")}
@@ -347,14 +366,20 @@ export function DateColumnFilter({
           ascending={false}
           label="Sort Newest"
           active={colSort === "desc"}
-          onClick={() => setFilters({ sort: undefined })}
+          onClick={() =>
+            sortControl
+              ? sortControl.onChange(colSort === "desc" ? null : "desc")
+              : setFilters({ sort: undefined })
+          }
         />
         <SortRow
           ascending
           label="Sort Oldest"
           active={colSort === "asc"}
           onClick={() =>
-            setFilters({ sort: colSort === "asc" ? undefined : "date_asc" })
+            sortControl
+              ? sortControl.onChange(colSort === "asc" ? null : "asc")
+              : setFilters({ sort: colSort === "asc" ? undefined : "date_asc" })
           }
         />
       </div>
@@ -505,11 +530,17 @@ function FieldAnchor({
 
 const DateField = forwardRef<
   HTMLButtonElement,
-  { active: boolean; date: Date | undefined; onClick: () => void }
->(function DateFieldButton({ active, date, onClick }, ref) {
+  {
+    active: boolean;
+    date: Date | undefined;
+    onClick: () => void;
+    label: string;
+  }
+>(function DateFieldButton({ active, date, onClick, label }, ref) {
   return (
     <button
       ref={ref}
+      aria-label={label}
       type="button"
       onClick={onClick}
       className={cn(
