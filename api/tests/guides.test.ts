@@ -44,7 +44,7 @@ describe("POST /guides", () => {
   });
 
   it("creates a draft guide with its tags", async () => {
-    const { token } = await makeUser();
+    const { token, userId } = await makeUser();
     const subject = await createSubject();
 
     const res = await app.request(
@@ -65,10 +65,10 @@ describe("POST /guides", () => {
 
     const { data: revision } = await admin
       .from("guide_revisions")
-      .select("status")
+      .select("author_id, status")
       .eq("id", revision_id)
       .single();
-    expect(revision?.status).toBe("draft");
+    expect(revision).toMatchObject({ author_id: userId, status: "draft" });
 
     const { data: tags } = await admin
       .from("guide_revision_subjects")
@@ -90,7 +90,7 @@ describe("POST /guides", () => {
         body: "Body.",
         newSubjects: [{ name: newName, summary: "About it" }],
         prerequisites: [prereq.slug],
-        todoPrereqs: ["Learn limits"],
+        requests: [{ title: "Learn limits", summary: "About limits" }],
       }),
       env
     );
@@ -132,7 +132,7 @@ describe("POST /guides", () => {
     expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", baseId);
     expect(todos?.map((t) => t.title)).toEqual(["Learn limits"]);
@@ -153,12 +153,12 @@ describe("GET /guides/{slug}", () => {
       slug: string;
       body: string | null;
       tags: Array<{ slug: string }>;
-      todo_prerequisites: unknown[];
+      requests: unknown[];
     };
     expect(body.slug).toBe(base.slug);
     expect(body.body).toBe("Content");
     expect(body.tags.map((t) => t.slug)).toContain(subject.slug);
-    expect(body.todo_prerequisites).toEqual([]);
+    expect(body.requests).toEqual([]);
   });
 
   it("returns sorted open todos for this guide and omits resolved ones", async () => {
@@ -179,10 +179,10 @@ describe("GET /guides/{slug}", () => {
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "GET", "/guides/{slug}");
     const body = (await res.json()) as {
-      todo_prerequisites: Array<{ id: string; title: string; summary: string }>;
+      requests: Array<{ id: string; title: string; summary: string }>;
       prerequisites: Array<{ slug: string; title: string }>;
     };
-    expect(body.todo_prerequisites).toEqual([
+    expect(body.requests).toEqual([
       {
         id: earlier.id,
         title: "Learn algebra",

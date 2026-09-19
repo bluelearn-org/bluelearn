@@ -1,7 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
-import { normalizeTodoTitle, todoPrereqSchema } from "@bluelearn/schemas";
-
+import { normalizeTodoTitle, requestSchema } from "@bluelearn/schemas";
 import type {
   ContributionType,
   GuideContribution,
@@ -82,12 +81,12 @@ export const GuideDetails = ({
   changeSummary,
   onChangeSummaryChange,
 }: PropTypes) => {
-  const [todoPrereq, setTodoPrereq] = useState<{
+  const [request, setRequest] = useState<{
     title: string;
     summary: string;
   }>({ title: "", summary: "" });
 
-  const [todoPrereqError, setTodoPrereqError] = useState<{
+  const [requestError, setRequestError] = useState<{
     field: "title" | "summary";
     message: string;
   } | null>(null);
@@ -429,53 +428,49 @@ export const GuideDetails = ({
 
               <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <Input
-                  id="todo-prereqs"
+                  id="requests"
                   type="text"
                   maxLength={50}
                   placeholder="Enter title of missing prerequisite guide."
                   className={`h-10 ${
-                    todoPrereqError
+                    requestError
                       ? "outline-2 outline-offset-2 outline-destructive"
                       : ""
                   }`}
-                  value={todoPrereq.title}
+                  value={request.title}
                   onChange={(e) => {
-                    setTodoPrereqError(null);
+                    setRequestError(null);
 
-                    setTodoPrereq((prev) => ({
+                    setRequest((prev) => ({
                       ...prev,
                       title: e.target.value,
                     }));
                   }}
-                  aria-invalid={!!todoPrereqError}
-                  aria-describedby={
-                    todoPrereqError ? "todo-prereq-error" : undefined
-                  }
+                  aria-invalid={!!requestError}
+                  aria-describedby={requestError ? "request-error" : undefined}
                 />
 
                 <Input
-                  id="todo-prereq-summary"
+                  id="request-summary"
                   type="text"
                   maxLength={500}
                   placeholder="Enter summary of missing prerequisite guide."
                   className={`h-10 ${
-                    todoPrereqError
+                    requestError
                       ? "outline-2 outline-offset-2 outline-destructive"
                       : ""
                   }`}
-                  value={todoPrereq.summary}
+                  value={request.summary}
                   onChange={(e) => {
-                    setTodoPrereqError(null);
+                    setRequestError(null);
 
-                    setTodoPrereq((prev) => ({
+                    setRequest((prev) => ({
                       ...prev,
                       summary: e.target.value,
                     }));
                   }}
-                  aria-invalid={!!todoPrereqError}
-                  aria-describedby={
-                    todoPrereqError ? "todo-prereq-error" : undefined
-                  }
+                  aria-invalid={!!requestError}
+                  aria-describedby={requestError ? "request-error" : undefined}
                 />
 
                 <Button
@@ -484,16 +479,14 @@ export const GuideDetails = ({
                   size="icon"
                   className="btn-sec h-10 w-full rounded-md sm:w-24"
                   onClick={() => {
-                    const result = todoPrereqSchema.safeParse(todoPrereq);
-
+                    const result = requestSchema.safeParse(request);
                     if (!result.success) {
                       const issue = result.error.issues[0];
 
                       const field =
                         issue.path[0] === "summary" ? "summary" : "title";
 
-                      setTodoPrereqError({ field, message: issue.message });
-
+                      setRequestError({ field, message: issue.message });
                       return;
                     }
 
@@ -501,13 +494,13 @@ export const GuideDetails = ({
                       result.data.title
                     );
 
-                    const alreadyExists = guideContData.todoPrereqs.some(
+                    const alreadyExists = guideContData.requests.some(
                       (todo) =>
                         normalizeTodoTitle(todo.title) === normalizedTitle
                     );
 
                     if (alreadyExists) {
-                      setTodoPrereqError({
+                      setRequestError({
                         field: "title",
                         message:
                           "A TODO prerequisite with this title already exists.",
@@ -517,26 +510,26 @@ export const GuideDetails = ({
                     }
 
                     onGuideChange({
-                      todoPrereqs: [...guideContData.todoPrereqs, result.data],
+                      requests: [...guideContData.requests, result.data],
                     });
 
-                    setTodoPrereq({ title: "", summary: "" });
+                    setRequest({ title: "", summary: "" });
 
-                    setTodoPrereqError(null);
+                    setRequestError(null);
                   }}
                 >
                   Add Todo
                 </Button>
               </div>
 
-              <FieldError id="todo-prereq-error">
-                {todoPrereqError ? todoPrereqError.message : null}
+              <FieldError id="request-error">
+                {requestError ? requestError.message : null}
               </FieldError>
             </Field>
 
-            {guideContData.todoPrereqs.length > 0 && (
+            {guideContData.requests.length > 0 && (
               <div className="flex flex-col gap-2 px-1">
-                {guideContData.todoPrereqs.map((todo, index) => (
+                {guideContData.requests.map((todo, index) => (
                   <div
                     key={`${todo.title}-${index}`}
                     className="flex h-auto w-full items-start justify-between gap-1.5 rounded-md border border-input/20 px-3 py-1.5 text-left break-words whitespace-normal"
@@ -561,7 +554,7 @@ export const GuideDetails = ({
                       className="flex-shrink-0 rounded-full bg-transparent p-1.5 text-muted-foreground filter transition duration-150 outline-none hover:scale-105 hover:bg-muted/10 hover:text-foreground hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                       onClick={() =>
                         onGuideChange({
-                          todoPrereqs: guideContData.todoPrereqs.filter(
+                          requests: guideContData.requests.filter(
                             (_, i) => i !== index
                           ),
                         })

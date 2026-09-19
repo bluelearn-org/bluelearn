@@ -3,15 +3,15 @@ import { useMemo } from "react";
 import type {
   Guide,
   GuideReference,
-  TodoPrerequisiteReference,
+  RequestReference,
 } from "@bluelearn/schemas";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { Badge } from "@/components/ui/badge";
 import { extractHeadings } from "@/lib/guideUtils";
 
 type PropTypes = {
-  guide: Omit<Guide, "variant_id" | "is_official" | "todo_prerequisites"> & {
-    todo_prerequisites?: Array<TodoPrerequisiteReference>;
+  guide: Omit<Guide, "variant_id" | "is_official" | "requests"> & {
+    requests?: Array<RequestReference>;
   };
   slug: string;
   sidebarActions?: React.ReactNode;
@@ -34,9 +34,8 @@ export const GuideSidebar = ({
   );
 
   // Older API responses may not include todos during deployment.
-  const todoPrerequisites = guide.todo_prerequisites ?? [];
-  const prerequisiteCount =
-    guide.prerequisites.length + todoPrerequisites.length;
+  const requests = guide.requests ?? [];
+  const prerequisiteCount = guide.prerequisites.length + requests.length;
 
   return (
     <aside className="hidden px-6 py-6 md:sticky md:top-[65px] md:block md:h-[calc(100vh-65px)] md:self-start md:overflow-y-auto md:border-r">
@@ -107,7 +106,7 @@ export const GuideSidebar = ({
               ))}
 
               {/* There's no guide to link to until the todo is resolved. */}
-              {todoPrerequisites.map((todo: TodoPrerequisiteReference) => (
+              {requests.map((todo: RequestReference) => (
                 <li
                   key={todo.id}
                   className="flex items-center gap-2 text-xs text-muted-foreground"

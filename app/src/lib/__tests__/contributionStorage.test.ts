@@ -42,7 +42,7 @@ const sampleGuide: GuideContribution = {
   subjects: ["sub-1"],
   newSubjects: [],
   prereqs: [],
-  todoPrereqs: [],
+  requests: [],
   disclaimers: [],
 };
 
@@ -100,6 +100,64 @@ describe("contributionStorage", () => {
     expect(stored?.data.title).toBe("Understanding Persistent State");
     expect(stored?.revisionId).toBe("rev-123");
     expect(stored?.step).toBe("guide-details");
+  });
+
+  it.each([
+    { requests: [] },
+    { requests: [{ title: "Loops", summary: "How loops work" }] },
+  ])(
+    "restores legacy guide requests without discarding the draft: %j",
+    ({ requests }) => {
+      const localDraftId = createLocalDraftId();
+      const legacyData: Record<string, unknown> = {
+        ...sampleGuide,
+        todoPrereqs: requests,
+      };
+      delete legacyData.requests;
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          [localDraftId]: {
+            localDraftId,
+            type: "guide",
+            data: legacyData,
+            revisionId: "rev-legacy",
+            updatedAt: Date.now(),
+          },
+        })
+      );
+
+      const restored = getStoredDraft(localDraftId, "guide");
+      expect(restored?.data).toEqual({ ...sampleGuide, requests });
+      expect(restored?.revisionId).toBe("rev-legacy");
+      expect(hasStoredDraft(localDraftId)).toBe(true);
+      expect(restored).not.toBeNull();
+      setStoredDraft(restored!);
+      const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY)!);
+      expect(saved[localDraftId].data.requests).toEqual(requests);
+      expect(saved[localDraftId].data).not.toHaveProperty("todoPrereqs");
+    }
+  );
+
+  it("keeps the current requests when a draft also has a legacy field", () => {
+    const localDraftId = createLocalDraftId();
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        [localDraftId]: {
+          localDraftId,
+          type: "guide",
+          data: {
+            ...sampleGuide,
+            todoPrereqs: [{ title: "Old request", summary: "Already removed" }],
+          },
+          revisionId: null,
+          updatedAt: Date.now(),
+        },
+      })
+    );
+
+    expect(getStoredDraft(localDraftId, "guide")?.data.requests).toEqual([]);
   });
 
   it("clears a stored draft", () => {
@@ -178,7 +236,7 @@ describe("contributionStorage", () => {
       subjects: [],
       newSubjects: [],
       prereqs: [],
-      todoPrereqs: [],
+      requests: [],
       disclaimers: [],
     };
 

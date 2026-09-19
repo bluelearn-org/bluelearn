@@ -23,6 +23,8 @@ import {
   isRevisionDraftUnchanged,
 } from "@/lib/guideUtils";
 import { requireSession } from "@/lib/auth";
+import { useSuspensionStatus } from "@/lib/authContext";
+import { AccountStatusNotice } from "@/components/AccountStatusNotice";
 
 import { EditGuideInfo } from "@/components/contribute/steps/guide/EditGuideInfo";
 import { Submit } from "@/components/contribute/steps/Submit";
@@ -78,6 +80,20 @@ const editSteps = [
 const StepperInstance = defineStepper(editSteps);
 
 function RouteComponent() {
+  const status = useSuspensionStatus();
+
+  if (status === "pending") return null;
+  if (status === "unavailable") {
+    return <AccountStatusNotice status="unavailable" />;
+  }
+  if (status === "suspended") {
+    return <AccountStatusNotice status="suspended" />;
+  }
+
+  return <EditGuidePage />;
+}
+
+function EditGuidePage() {
   const { variant, current, snapshot, draftId } = Route.useLoaderData();
 
   const { Stepper } = StepperInstance;
@@ -112,7 +128,7 @@ function RouteComponent() {
     })),
 
     prereqs: snapshot.prerequisites,
-    todoPrereqs: snapshot.todos,
+    requests: snapshot.todos,
     disclaimers: snapshot.disclaimers,
   }));
 
@@ -225,7 +241,7 @@ function RouteComponent() {
         title: titleBySlug.get(slug) ?? slug,
       })),
       disclaimers: guideContData.disclaimers,
-      todo_prerequisites: [],
+      requests: [],
     };
   }, [
     guideContData,

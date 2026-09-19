@@ -333,7 +333,7 @@ async function loadTagsAndEdges(
       : { data: [], error: null },
     baseId
       ? service
-          .from("todo_prerequisites")
+          .from("requests")
           .select("id, title")
           .eq("dependent_guide_base_id", baseId)
           .eq("status", "open")
@@ -342,11 +342,11 @@ async function loadTagsAndEdges(
     // so the panel has to see them before voting.
     baseId
       ? service
-          .from("todo_claims")
+          .from("request_claims")
           .select(
-            `todo:todo_prerequisites!inner(
+            `todo:requests!inner(
                id, title, summary,
-               requester:guide_bases!todo_prerequisites_dependent_guide_base_id_fkey(
+               requester:guide_bases!requests_dependent_guide_base_id_fkey(
                  slug,
                  canonical:guides!guide_bases_canonical_guide_id_fkey(
                    current:guide_revisions!guides_current_revision_id_fkey(title)

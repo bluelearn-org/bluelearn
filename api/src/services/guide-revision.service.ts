@@ -15,7 +15,7 @@ type DraftTagsAndEdges = {
   tags?: string[];
   prerequisites?: string[];
   newSubjects?: { name: string; summary?: string | null }[];
-  todoPrereqs?: { title: string; summary: string }[];
+  requests?: { title: string; summary: string }[];
 };
 
 // The full snapshot of a single revision. RLS exposes a revision once it is
@@ -175,7 +175,7 @@ async function replaceTodos(
   todos: { title: string; summary: string }[]
 ) {
   const { error: delError } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .delete()
     .eq("dependent_guide_base_id", baseId)
     .eq("status", "open");
@@ -196,7 +196,7 @@ export async function syncDraftTagsAndEdges(
   revisionId: string,
   input: DraftTagsAndEdges
 ) {
-  const { tags, prerequisites, newSubjects = [], todoPrereqs } = input;
+  const { tags, prerequisites, newSubjects = [], requests } = input;
 
   const createdIds: string[] = [];
   for (const s of newSubjects) {
@@ -215,7 +215,7 @@ export async function syncDraftTagsAndEdges(
     ]);
   }
 
-  if (prerequisites !== undefined || todoPrereqs !== undefined) {
+  if (prerequisites !== undefined || requests !== undefined) {
     const base = await resolveRevisionBase(supabase, revisionId);
     // Guide revisions cannot edit prerequisites or todos because those
     // belong to the guide base.
@@ -228,8 +228,8 @@ export async function syncDraftTagsAndEdges(
     if (prerequisites !== undefined) {
       await replacePrerequisites(supabase, base.id, prerequisites);
     }
-    if (todoPrereqs !== undefined) {
-      await replaceTodos(supabase, base.id, todoPrereqs);
+    if (requests !== undefined) {
+      await replaceTodos(supabase, base.id, requests);
     }
   }
 }
@@ -269,7 +269,7 @@ async function loadDraftContext(supabase: DB, guideId: string) {
       .eq("to_guide_base_id", baseId)
       .eq("edge_type", "prerequisite"),
     supabase
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title, summary")
       .eq("dependent_guide_base_id", baseId)
       .eq("status", "open"),
@@ -393,14 +393,8 @@ export async function updateRevision(
   id: string,
   input: UpdateRevisionInput
 ) {
-  const {
-    tags,
-    prerequisites,
-    newSubjects,
-    todoPrereqs,
-    disclaimers,
-    ...fields
-  } = input;
+  const { tags, prerequisites, newSubjects, requests, disclaimers, ...fields } =
+    input;
 
   const patch = {
     ...fields,
@@ -453,7 +447,7 @@ export async function updateRevision(
     tags,
     prerequisites,
     newSubjects,
-    todoPrereqs,
+    requests,
   });
 
   if (disclaimers !== undefined) {
@@ -486,7 +480,7 @@ async function assertNoCompetingTodoClaim(supabase: DB, revisionId: string) {
   const baseId = rev.guides.guide_base_id;
 
   const { data: claims, error: claimsError } = await supabase
-    .from("todo_claims")
+    .from("request_claims")
     .select("todo_id")
     .eq("guide_base_id", baseId);
   if (claimsError) throw new ServiceError("Unable to submit revision", 400);
@@ -494,7 +488,7 @@ async function assertNoCompetingTodoClaim(supabase: DB, revisionId: string) {
   if (todoIds.length === 0) return;
 
   const { data: todos, error: todosError } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .select("status")
     .in("id", todoIds);
   if (todosError) throw new ServiceError("Unable to submit revision", 400);

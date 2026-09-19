@@ -1,17 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, ListChecks } from "lucide-react";
 import { BaseGuideModal } from "./BaseGuideModal";
-import type {
-  GuideReference,
-  TodoPrerequisiteReference,
-} from "@bluelearn/schemas";
+import type { GuideReference, RequestReference } from "@bluelearn/schemas";
 import { Badge } from "@/components/ui/badge";
 
 type PrerequisitesModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prerequisites: Array<GuideReference>;
-  todoPrerequisites: Array<TodoPrerequisiteReference>;
+  requests: Array<RequestReference>;
   guideTitle: string;
   slug: string;
 };
@@ -20,7 +17,7 @@ export function PrerequisitesModal({
   open,
   onOpenChange,
   prerequisites,
-  todoPrerequisites,
+  requests,
   guideTitle,
   slug,
 }: PrerequisitesModalProps) {
@@ -30,7 +27,7 @@ export function PrerequisitesModal({
       onOpenChange={onOpenChange}
       title="Prerequisites"
       description="Guides worth reading before this one."
-      isEmpty={prerequisites.length + todoPrerequisites.length === 0}
+      isEmpty={prerequisites.length + requests.length === 0}
       emptyIcon={<ListChecks className="h-6 w-6" />}
       emptyTitle="None declared"
       emptyDescription="This guide does not list any prerequisites."
@@ -56,7 +53,7 @@ export function PrerequisitesModal({
       ))}
 
       {/* There's no guide to link to until the todo is resolved. */}
-      {todoPrerequisites.map((todo) => (
+      {requests.map((todo) => (
         <div
           key={todo.id}
           className="flex w-full flex-col gap-1.5 rounded-lg border border-border bg-card p-3.5"
