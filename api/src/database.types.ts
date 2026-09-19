@@ -789,6 +789,105 @@ export type Database = {
         }
         Relationships: []
       }
+      request_claims: {
+        Row: {
+          created_at: string
+          guide_base_id: string
+          todo_id: string
+        }
+        Insert: {
+          created_at?: string
+          guide_base_id: string
+          todo_id: string
+        }
+        Update: {
+          created_at?: string
+          guide_base_id?: string
+          todo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_claims_guide_base_id_fkey"
+            columns: ["guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_claims_guide_base_id_fkey"
+            columns: ["guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_claims_todo_id_fkey"
+            columns: ["todo_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requests: {
+        Row: {
+          created_at: string
+          dependent_guide_base_id: string
+          id: string
+          resolved_guide_base_id: string | null
+          status: Database["public"]["Enums"]["todo_status"]
+          summary: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          dependent_guide_base_id: string
+          id?: string
+          resolved_guide_base_id?: string | null
+          status?: Database["public"]["Enums"]["todo_status"]
+          summary: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          dependent_guide_base_id?: string
+          id?: string
+          resolved_guide_base_id?: string | null
+          status?: Database["public"]["Enums"]["todo_status"]
+          summary?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_dependent_guide_base_id_fkey"
+            columns: ["dependent_guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_dependent_guide_base_id_fkey"
+            columns: ["dependent_guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_resolved_guide_base_id_fkey"
+            columns: ["resolved_guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_resolved_guide_base_id_fkey"
+            columns: ["resolved_guide_base_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_cases: {
         Row: {
           case_type: Database["public"]["Enums"]["case_type"]
@@ -988,105 +1087,6 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      todo_claims: {
-        Row: {
-          created_at: string
-          guide_base_id: string
-          todo_id: string
-        }
-        Insert: {
-          created_at?: string
-          guide_base_id: string
-          todo_id: string
-        }
-        Update: {
-          created_at?: string
-          guide_base_id?: string
-          todo_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "todo_claims_guide_base_id_fkey"
-            columns: ["guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "guide_bases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "todo_claims_guide_base_id_fkey"
-            columns: ["guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "published_guides"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "todo_claims_todo_id_fkey"
-            columns: ["todo_id"]
-            isOneToOne: false
-            referencedRelation: "todo_prerequisites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      todo_prerequisites: {
-        Row: {
-          created_at: string
-          dependent_guide_base_id: string
-          id: string
-          resolved_guide_base_id: string | null
-          status: Database["public"]["Enums"]["todo_status"]
-          summary: string
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          dependent_guide_base_id: string
-          id?: string
-          resolved_guide_base_id?: string | null
-          status?: Database["public"]["Enums"]["todo_status"]
-          summary: string
-          title: string
-        }
-        Update: {
-          created_at?: string
-          dependent_guide_base_id?: string
-          id?: string
-          resolved_guide_base_id?: string | null
-          status?: Database["public"]["Enums"]["todo_status"]
-          summary?: string
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "todo_prerequisites_dependent_guide_base_id_fkey"
-            columns: ["dependent_guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "guide_bases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "todo_prerequisites_dependent_guide_base_id_fkey"
-            columns: ["dependent_guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "published_guides"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "todo_prerequisites_resolved_guide_base_id_fkey"
-            columns: ["resolved_guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "guide_bases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "todo_prerequisites_resolved_guide_base_id_fkey"
-            columns: ["resolved_guide_base_id"]
-            isOneToOne: false
-            referencedRelation: "published_guides"
             referencedColumns: ["id"]
           },
         ]
@@ -1346,6 +1346,10 @@ export type Database = {
         Returns: string
       }
       sweep_expired_review_seats: { Args: never; Returns: Json }
+      todo_has_open_claim: {
+        Args: { p_exclude_base_id?: string; p_todo_ids: string[] }
+        Returns: boolean
+      }
       wilson_lower_bound: {
         Args: { downvotes: number; upvotes: number; z?: number }
         Returns: number
