@@ -42,10 +42,17 @@ export async function getGuide(slug: string, { signal }: FetchOptions = {}) {
 
 export async function getGuideWalkthrough(
   slug: string,
-  { signal }: FetchOptions = {}
+  {
+    signal,
+    followUpDepth,
+  }: FetchOptions & { followUpDepth?: number | null } = {}
 ) {
   const res = await guides[":slug"].walkthrough.$get(
-    { param: { slug } },
+    {
+      param: { slug },
+      query:
+        followUpDepth == null ? {} : { followUpDepth: String(followUpDepth) },
+    },
     { init: { signal } }
   );
   if (!res.ok) return assertOk(res) as Promise<never>;
