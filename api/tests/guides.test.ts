@@ -255,10 +255,22 @@ describe("DELETE /guides/{slug}", () => {
 });
 
 describe("GET /guides/{slug}/walkthrough", () => {
-  it("returns the transitive prerequisite DAG", async () => {
-    const prereq = await createPublishedGuide();
+  it("defaults to one follow-up level while preserving prerequisites", async () => {
+    const earlierPrerequisite = await createPublishedGuide();
+    const prerequisite = await createPublishedGuide();
     const target = await createPublishedGuide();
-    await createPrerequisite(prereq.base.id, target.base.id);
+    const followUp = await createPublishedGuide();
+    const otherFollowUp = await createPublishedGuide();
+    const laterFollowUp = await createPublishedGuide();
+    const suspendedFollowUp = await createPublishedGuide();
+    await createPrerequisite(earlierPrerequisite.base.id, prerequisite.base.id);
+    await createPrerequisite(prerequisite.base.id, target.base.id);
+    await createPrerequisite(target.base.id, followUp.base.id);
+    await createPrerequisite(target.base.id, otherFollowUp.base.id);
+    await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+    await createPrerequisite(target.base.id, suspendedFollowUp.base.id, {
+      is_suspended: true,
+    });
 
     const res = await app.request(
       `/guides/${target.base.slug}/walkthrough`,
@@ -272,18 +284,72 @@ describe("GET /guides/{slug}/walkthrough", () => {
       nodes: Array<{ id: string; level: number }>;
       edges: Array<{ from_id: string; to_id: string }>;
     };
-    const ids = body.nodes.map((n) => n.id);
-    expect(ids).toContain(target.base.id);
-    expect(ids).toContain(prereq.base.id);
-    expect(body.edges).toContainEqual({
-      from_id: prereq.base.id,
-      to_id: target.base.id,
-    });
+    const levels = new Map(body.nodes.map((node) => [node.id, node.level]));
 
-    const prereqNode = body.nodes.find((n) => n.id === prereq.base.id);
-    const targetNode = body.nodes.find((n) => n.id === target.base.id);
-    expect(prereqNode?.level).toBeLessThan(targetNode!.level);
+    expect([...levels.keys()]).toEqual(
+      expect.arrayContaining([
+        earlierPrerequisite.base.id,
+        prerequisite.base.id,
+        target.base.id,
+        followUp.base.id,
+        otherFollowUp.base.id,
+      ])
+    );
+    expect(levels.has(laterFollowUp.base.id)).toBe(false);
+    expect(levels.has(suspendedFollowUp.base.id)).toBe(false);
+    expect(
+      body.edges.some((edge) => edge.to_id === laterFollowUp.base.id)
+    ).toBe(false);
+    expect(body.edges).toEqual(
+      expect.arrayContaining([
+        {
+          from_id: prerequisite.base.id,
+          to_id: target.base.id,
+        },
+        {
+          from_id: target.base.id,
+          to_id: followUp.base.id,
+        },
+        {
+          from_id: target.base.id,
+          to_id: otherFollowUp.base.id,
+        },
+      ])
+    );
+    expect(levels.get(prerequisite.base.id)).toBeLessThan(
+      levels.get(target.base.id)!
+    );
+    expect(levels.get(target.base.id)).toBeLessThan(
+      levels.get(followUp.base.id)!
+    );
+    expect(levels.get(earlierPrerequisite.base.id)).toBeLessThan(
+      levels.get(prerequisite.base.id)!
+    );
   });
+
+  it.each([0, 2])(
+    "supports an explicit follow-up depth of %i",
+    async (depth) => {
+      const target = await createPublishedGuide();
+      const followUp = await createPublishedGuide();
+      const laterFollowUp = await createPublishedGuide();
+      await createPrerequisite(target.base.id, followUp.base.id);
+      await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+
+      const { data, error } = await admin.rpc("compute_walkthrough", {
+        p_guide_base_id: target.base.id,
+        p_follow_up_depth: depth,
+      });
+      expect(error).toBeNull();
+      const body = data as { nodes: Array<{ id: string }> };
+      expect(body.nodes.map((node) => node.id).sort()).toEqual(
+        (depth === 0
+          ? [target.base.id]
+          : [target.base.id, followUp.base.id, laterFollowUp.base.id]
+        ).sort()
+      );
+    }
+  );
 });
 
 // A second published variant under the same base, with a live revision.
