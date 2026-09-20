@@ -663,7 +663,7 @@ describe("close_review_panel via cast decision", () => {
       title: "Loop invariants",
     });
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: claimed.id, guide_base_id: base.id })
       .throwOnError();
     const { reviewCase, panelists } = await seedSeatedReviewCase({
@@ -681,12 +681,12 @@ describe("close_review_panel via cast decision", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       prerequisites: Array<{ slug: string }>;
-      todo_prerequisites: Array<{ id: string }>;
+      requests: Array<{ id: string }>;
     };
     expect(body.prerequisites).toEqual([
       expect.objectContaining({ slug: base.slug }),
     ]);
-    expect(body.todo_prerequisites).toEqual([
+    expect(body.requests).toEqual([
       expect.objectContaining({ id: unclaimed.id }),
     ]);
   });
@@ -699,7 +699,7 @@ describe("close_review_panel via cast decision", () => {
     const revision = await createGuideRevision(guide.id);
     await createPrerequisite(requester.base.id, base.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: claimed.id, guide_base_id: base.id })
       .throwOnError();
     const { reviewCase, panelists } = await seedSeatedReviewCase({
@@ -714,7 +714,7 @@ describe("close_review_panel via cast decision", () => {
     expect(await caseStatus(reviewCase.id)).toBe("approved");
 
     const { data: todo } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("status")
       .eq("id", claimed.id)
       .single();

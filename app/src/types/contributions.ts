@@ -27,7 +27,7 @@ export const guideContributionSchema = z.object({
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
   prereqs: z.array(z.string()),
-  todoPrereqs: z.array(z.object({ title: z.string(), summary: z.string() })),
+  requests: z.array(z.object({ title: z.string(), summary: z.string() })),
   disclaimers: z.array(disclaimerSlugSchema),
 });
 

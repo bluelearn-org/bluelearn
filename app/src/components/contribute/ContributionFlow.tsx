@@ -83,7 +83,7 @@ const createGuideContData = (): GuideContribution => ({
   subjects: [],
   newSubjects: [],
   prereqs: [],
-  todoPrereqs: [],
+  requests: [],
   disclaimers: [],
 });
 
@@ -688,7 +688,7 @@ function Inner({
             subjects: tagged,
             newSubjects: pending,
             prereqs: data.prerequisites,
-            todoPrereqs: data.todos,
+            requests: data.todos,
             disclaimers: data.disclaimers,
           };
 
@@ -706,7 +706,7 @@ function Inner({
               subjects: gData.subjects,
               newSubjects: gData.newSubjects,
               prereqs: gData.prereqs,
-              todoPrereqs: gData.todoPrereqs,
+              requests: gData.requests,
               disclaimers: gData.disclaimers,
             },
             gData.localDraftId,
@@ -801,7 +801,7 @@ function Inner({
       tags: [...guide.subjects, ...existingTagIds(guide.newSubjects)],
       prerequisites: guide.prereqs,
       newSubjects: unsavedSubjects(guide.newSubjects),
-      todoPrereqs: guide.todoPrereqs,
+      requests: guide.requests,
       disclaimers: guide.disclaimers,
     };
   };
@@ -858,7 +858,7 @@ function Inner({
     const newRevisionId = await createGuide({
       knowledge_type: guide.type === "practical" ? "practical" : "theoretical",
       ...draftFields(guide),
-      todoClaims: todoIds,
+      requestClaims: todoIds,
     });
 
     // store the server revisionId on this guide only

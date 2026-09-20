@@ -34,6 +34,7 @@ import { GuideSidebarActions } from "@/components/sidebar/GuideSidebarActions";
 import { GuideMobileMenu } from "@/components/GuideMobileMenu";
 import { DownvoteModal } from "@/components/modals/DownvoteModal";
 import { useVote } from "@/lib/useVote";
+import { useSuspensionStatus } from "@/lib/authContext";
 
 export const Route = createFileRoute("/guides/$slug/$variantSlug/")({
   loader: async ({ params, abortController }) => {
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/guides/$slug/$variantSlug/")({
 });
 
 function RouteComponent() {
+  const canAuthor = useSuspensionStatus() === "active";
   const { slug, variantSlug } = Route.useParams();
   const { variant, current } = Route.useLoaderData();
 
@@ -78,25 +80,25 @@ function RouteComponent() {
     tags: variant.tags,
     prerequisites: [],
     disclaimers: variant.disclaimers,
-    todo_prerequisites: [],
+    requests: [],
   };
 
-  const guideMenuItems = [
-    {
+  const guideMenuItems = [];
+  if (canAuthor) {
+    guideMenuItems.push({
       label: "Edit Variant",
       to: `/guides/${slug}/${variantSlug}/edit`,
       icon: <Pencil className="h-4 w-4" />,
-    },
-    ...(variant.is_official
-      ? []
-      : [
-          {
-            label: "Create Variant",
-            to: "/contribute",
-            icon: <Plus className="h-4 w-4" />,
-          },
-        ]),
-  ];
+    });
+  }
+
+  if (canAuthor && !variant.is_official) {
+    guideMenuItems.push({
+      label: "Create Variant",
+      to: "/contribute",
+      icon: <Plus className="h-4 w-4" />,
+    });
+  }
 
   const breadcrumbs = buildBreadcrumbs(guide.title, breadcrumbOrigin);
 
@@ -212,28 +214,30 @@ function RouteComponent() {
                 isOfficial={variant.is_official}
               />
 
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden h-9 w-9 cursor-pointer rounded-md md:inline-flex"
-                  >
-                    <Ellipsis className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+              {guideMenuItems.length > 0 && (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hidden h-9 w-9 cursor-pointer rounded-md md:inline-flex"
+                    >
+                      <Ellipsis className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-48 font-mono">
-                  {guideMenuItems.map((item) => (
-                    <DropdownMenuItem key={item.to} asChild>
-                      <Link to={item.to} className="cursor-pointer text-xs">
-                        {item.icon}
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <DropdownMenuContent align="end" className="w-48 font-mono">
+                    {guideMenuItems.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to} className="cursor-pointer text-xs">
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 

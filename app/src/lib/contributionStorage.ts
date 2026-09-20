@@ -56,8 +56,22 @@ const draftEnvelopeSchema = z.object({
 });
 
 // schemas for each contribution type
+const storedGuideDataSchema = z.preprocess((data) => {
+  // Drafts saved before the request rename still use todoPrereqs.
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    !Array.isArray(data) &&
+    !("requests" in data) &&
+    "todoPrereqs" in data
+  ) {
+    return { ...data, requests: data.todoPrereqs };
+  }
+  return data;
+}, guideContributionSchema);
+
 const DRAFT_SCHEMAS = {
-  guide: persistedDraftSchema("guide", guideContributionSchema),
+  guide: persistedDraftSchema("guide", storedGuideDataSchema),
   variant: persistedDraftSchema("variant", variantContributionSchema),
   objective: persistedDraftSchema("objective", objectiveContributionSchema),
 };

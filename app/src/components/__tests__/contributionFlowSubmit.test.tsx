@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as TanStackRouter from "@tanstack/react-router";
 import type { GuideContribution } from "@/types/contributions";
 import {
   clearAllStoredDrafts,
@@ -25,6 +26,16 @@ const { createGuide, submitRevision, toast } = vi.hoisted(() => ({
 }));
 
 vi.mock("sonner", () => ({ toast }));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const router = await importOriginal<typeof TanStackRouter>();
+
+  return {
+    ...router,
+    useBlocker: vi.fn(),
+    useLocation: () => ({ pathname: "/contribute" }),
+  };
+});
 
 vi.mock("@/lib/api/guides", () => ({
   createGuide: (...args: Array<unknown>) => createGuide(...args),
@@ -76,7 +87,7 @@ const blankGuide = (): GuideContribution => ({
   subjects: [],
   newSubjects: [],
   prereqs: [],
-  todoPrereqs: [],
+  requests: [],
   disclaimers: [],
 });
 
@@ -155,7 +166,7 @@ describe("ContributionFlow batch submit", () => {
     renderPreview();
 
     // desktop header and mobile bar both render a submit button
-    const buttons = screen.getAllByRole("button", { name: /All/i });
+    const buttons = screen.getAllByRole("button", { name: /^submit all/i });
     expect(buttons).toHaveLength(2);
     fireEvent.click(buttons[0]);
 

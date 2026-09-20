@@ -7,11 +7,11 @@ type DB = SupabaseClient<Database>;
 
 export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
   const { data, error } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .select(
       `id, dependent_guide_base_id, title, summary, status, created_at,
-       claims:todo_claims(count),
-       base:guide_bases!todo_prerequisites_dependent_guide_base_id_fkey!inner(
+       claims:request_claims(count),
+       base:guide_bases!requests_dependent_guide_base_id_fkey!inner(
          slug,
          canonical:guides!guide_bases_canonical_guide_id_fkey(
            current:guide_revisions!guides_current_revision_id_fkey(title)
@@ -46,7 +46,7 @@ export async function createTodo(
   summary: string
 ) {
   const { data, error } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .insert({
       dependent_guide_base_id: guideBaseId,
       title,
@@ -79,7 +79,7 @@ export async function claimTodos(
   todoIds: Array<string>
 ) {
   const { data, error } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .select("id, status")
     .in("id", todoIds);
 
@@ -96,7 +96,7 @@ export async function claimTodos(
   }
 
   const { error: claimError } = await supabase
-    .from("todo_claims")
+    .from("request_claims")
     .insert(todoIds.map((id) => ({ todo_id: id, guide_base_id: guideBaseId })));
 
   if (claimError) {

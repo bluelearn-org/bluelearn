@@ -129,7 +129,7 @@ export const SelectDraftModal = ({
         subjects: tagged,
         newSubjects: pending,
         prereqs: remote.prerequisites,
-        todoPrereqs: remote.todos,
+        requests: remote.todos,
         disclaimers: remote.disclaimers,
       },
       revisionId: remote.revision.id,

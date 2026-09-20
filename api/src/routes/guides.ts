@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { z } from "zod";
-import { requireUser } from "../middleware/auth.middleware";
+import {
+  requireUnsuspendedUser,
+  requireUser,
+} from "../middleware/auth.middleware";
 import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
 import { CONTRIBUTION, CREATE, MODERATION } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
@@ -67,9 +70,10 @@ import {
 } from "../services/search.service";
 
 // Normalize a blank summary to NULL to match the create_guide RPC defaults.
-const createGuideBody = createGuideSchema.extend({
-  summary: createGuideSchema.shape.summary.transform((v) => v || null),
-});
+const createGuideBody = createGuideSchema.transform((guide) => ({
+  ...guide,
+  summary: guide.summary || null,
+}));
 
 // Same NULL normalization for create_variant.
 const createVariantBody = createVariantSchema.extend({
@@ -120,10 +124,11 @@ export const guidesRouter = new Hono<HonoEnv>()
           revisionIdResponseSchema,
           "Created; draft revision id"
         ),
-        ...errorResponses(400, 401, 429),
+        ...errorResponses(400, 401, 403, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CREATE, bucket: "guide-create" }),
     validate("json", createGuideBody),
     async (c) => {
@@ -166,10 +171,11 @@ export const guidesRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(archivedGuideResponseSchema, "The archived guide"),
-        ...errorResponses(401, 404, 429),
+        ...errorResponses(401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "guide-archive" }),
     validate("param", slugParamSchema),
     async (c) => {
@@ -246,10 +252,11 @@ export const guidesRouter = new Hono<HonoEnv>()
           revisionIdResponseSchema,
           "Created; draft revision id"
         ),
-        ...errorResponses(400, 401, 404, 429),
+        ...errorResponses(400, 401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "variant-create" }),
     validate("param", slugParamSchema),
     validate("json", createVariantBody),
@@ -342,10 +349,11 @@ export const variantsRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(archivedVariantResponseSchema, "The archived variant"),
-        ...errorResponses(401, 404, 429),
+        ...errorResponses(401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "variant-archive" }),
     validate("param", idParamSchema),
     async (c) => {
@@ -493,10 +501,11 @@ export const variantsRouter = new Hono<HonoEnv>()
           revisionIdResponseSchema,
           "Created; draft revision id"
         ),
-        ...errorResponses(401, 404, 429),
+        ...errorResponses(401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "variant-revision-create" }),
     validate("param", idParamSchema),
     async (c) => {
@@ -518,10 +527,11 @@ export const variantsRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(revisionIdResponseSchema, "Created; new revision id"),
-        ...errorResponses(400, 401, 404, 429),
+        ...errorResponses(400, 401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "variant-rollback" }),
     validate("param", idParamSchema),
     validate("json", rollbackRevisionSchema),
@@ -596,10 +606,11 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
           guideRevisionUpdateResponseSchema,
           "The updated revision"
         ),
-        ...errorResponses(400, 401, 404, 422, 429),
+        ...errorResponses(400, 401, 403, 404, 422, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "guide-revision-update" }),
     validate("param", idParamSchema),
     validate("json", updateRevisionSchema),
@@ -623,10 +634,11 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(reviewCaseIdResponseSchema, "Review case opened"),
-        ...errorResponses(400, 401, 404, 409, 422, 429),
+        ...errorResponses(400, 401, 403, 404, 409, 422, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "guide-revision-submit" }),
     validate("param", idParamSchema),
     async (c) => {
@@ -649,10 +661,11 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(revisionIdResponseSchema, "The draft to edit"),
-        ...errorResponses(401, 404, 429),
+        ...errorResponses(401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "guide-revision-revise" }),
     validate("param", idParamSchema),
     async (c) => {

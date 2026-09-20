@@ -8,6 +8,7 @@ import {
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/Navbar";
+import { SuspendedBanner } from "@/components/SuspendedBanner";
 import { Footer } from "@/components/Footer";
 import { NotFound } from "@/components/NotFound";
 import { ErrorFallback } from "@/components/ErrorFallback";
@@ -55,6 +56,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <AuthProvider>
             <div className="flex min-h-screen flex-col">
               <Navbar />
+              <SuspendedBanner />
               <TooltipProvider>
                 <main className="flex-1">{children}</main>
               </TooltipProvider>

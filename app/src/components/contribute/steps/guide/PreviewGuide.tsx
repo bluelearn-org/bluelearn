@@ -90,7 +90,7 @@ export const PreviewGuide = ({
           title: slug,
         })),
 
-        todo_prerequisites: activeGuide.todoPrereqs.map((slug) => {
+        requests: activeGuide.requests.map((slug) => {
           return {
             title: slug.title,
             summary: slug.summary,

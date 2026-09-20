@@ -148,7 +148,7 @@ Only `prerequisite` edges form the learning DAG. Walkthrough generation, level c
 
 There must be a trigger that prevents cycles among prerequisite edges. Related edges may be cyclic because they do not define learning order. Related edges are used for "related" or "see also" links, discovery/navigation, and contextual suggestions. See [Related Edges in Practice](#related-edges-in-practice) for how the directed table represents these undirected links.
 
-### `todo_prerequisites`
+### `requests`
 
 Missing prerequisite topics declared by authors when a real guide base does not exist yet. Also acts as a recruitment surface for topics that still need writing.
 
@@ -172,11 +172,11 @@ Because walkthrough and level generation use the **longest** path, redundant tra
 
 What over-declaration does cost is **graph bloat**: redundant edges clutter the DAG, walkthroughs, and diffs. A later **transitive reduction** pass can drop any edge `A -> C` when a longer path `A -> ... -> C` already exists. This is a tidiness optimization, not a correctness requirement, since levels stay correct without it. 
 
-### `todo_claims`
+### `request_claims`
 
 Records that someone has started writing a guide for a todo. A contributor who opens a todo from the todo page claims it on their first save, so the todo page can show the topic is already being worked on and the publish step knows which todos to close.
 
-- `todo_id`: the claimed todo (FK to `todo_prerequisites`).
+- `todo_id`: the claimed todo (FK to `requests`).
 - `guide_base_id`: the draft guide base being written to fulfil it (FK to `guide_bases`).
 - `created_at`: when the claim was made.
 - Primary key is `(todo_id, guide_base_id)`.

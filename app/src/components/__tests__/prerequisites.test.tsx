@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type {
   Guide,
   GuideReference,
-  TodoPrerequisiteReference,
+  RequestReference,
 } from "@bluelearn/schemas";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { PrerequisitesModal } from "@/components/modals/PrerequisitesModal";
@@ -34,7 +34,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 const prerequisite: GuideReference = { slug: "variables", title: "Variables" };
-const todo: TodoPrerequisiteReference = {
+const todo: RequestReference = {
   id: "20000000-0000-4000-8000-000000000001",
   title: "Loop invariants",
   summary: "How to reason about each iteration of a loop.",
@@ -42,7 +42,7 @@ const todo: TodoPrerequisiteReference = {
 
 function makeGuide(
   prerequisites: Array<GuideReference>,
-  todos: Array<TodoPrerequisiteReference>
+  todos: Array<RequestReference>
 ): Guide {
   return {
     slug: "binary-search",
@@ -57,7 +57,7 @@ function makeGuide(
     created_at: "2026-09-10T00:00:00Z",
     tags: [],
     prerequisites,
-    todo_prerequisites: todos,
+    requests: todos,
     is_official: false,
     disclaimers: [],
   };
@@ -70,7 +70,7 @@ describe.each(["sidebar", "mobile dialog"] as const)(
   (surface) => {
     function show(
       prerequisites: Array<GuideReference>,
-      todos: Array<TodoPrerequisiteReference>
+      todos: Array<RequestReference>
     ) {
       return render(
         surface === "sidebar" ? (
@@ -83,7 +83,7 @@ describe.each(["sidebar", "mobile dialog"] as const)(
             open
             onOpenChange={() => {}}
             prerequisites={prerequisites}
-            todoPrerequisites={todos}
+            requests={todos}
             guideTitle="Binary search"
             slug="binary-search"
           />
@@ -121,7 +121,7 @@ describe.each(["sidebar", "mobile dialog"] as const)(
 
 it("accepts older guide responses without the todo field", () => {
   const guide = makeGuide([prerequisite], []);
-  Reflect.deleteProperty(guide, "todo_prerequisites");
+  Reflect.deleteProperty(guide, "requests");
   render(<GuideSidebar guide={guide} slug="binary-search" />);
   expect(screen.getByRole("link", { name: "Variables" })).toBeDefined();
 });
@@ -145,7 +145,7 @@ it("closes the mobile dialog when an existing prerequisite is selected", () => {
       open
       onOpenChange={onOpenChange}
       prerequisites={[prerequisite]}
-      todoPrerequisites={[todo]}
+      requests={[todo]}
       guideTitle="Binary search"
       slug="binary-search"
     />

@@ -37,6 +37,7 @@ import { DownvoteModal } from "@/components/modals/DownvoteModal";
 
 import { useVote } from "@/lib/useVote";
 import { GuideSidebarActions } from "@/components/sidebar/GuideSidebarActions";
+import { useSuspensionStatus } from "@/lib/authContext";
 import { GuideMobileMenu } from "@/components/GuideMobileMenu";
 
 export const Route = createFileRoute("/guides/$slug/")({
@@ -54,6 +55,7 @@ export const Route = createFileRoute("/guides/$slug/")({
 });
 
 function RouteComponent() {
+  const canAuthor = useSuspensionStatus() === "active";
   const { slug } = Route.useParams();
   const guide = Route.useLoaderData();
 
@@ -66,23 +68,22 @@ function RouteComponent() {
     select: (location) => location.state.breadcrumbOrigin,
   });
 
-  const guideMenuItems = [
-    {
+  const guideMenuItems = [];
+  if (canAuthor) {
+    guideMenuItems.push({
       label: "Edit Guide",
       to: `/guides/${slug}/${guide.variant_slug}/edit`,
       icon: <Pencil className="h-4 w-4" />,
-    },
-    ...(guide.is_official
-      ? []
-      : [
-          {
-            label: "Create Variant",
-            to: "/contribute",
-            icon: <Plus className="h-4 w-4" />,
-          },
-        ]),
-    // { label: "Report", to: "/report", <Flag className="h-4 w-4" /> },// TODO: Implement post v1
-  ];
+    });
+  }
+
+  if (canAuthor && !guide.is_official) {
+    guideMenuItems.push({
+      label: "Create Variant",
+      to: "/contribute",
+      icon: <Plus className="h-4 w-4" />,
+    });
+  }
 
   const breadcrumbs = buildBreadcrumbs(guide.title, breadcrumbOrigin);
 
@@ -203,32 +204,34 @@ function RouteComponent() {
                 guideTitle={guide.title}
                 menuItems={guideMenuItems}
                 prerequisites={guide.prerequisites}
-                todoPrerequisites={guide.todo_prerequisites}
+                requests={guide.requests}
                 isOfficial={guide.is_official}
               />
 
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden h-9 w-9 cursor-pointer rounded-md md:inline-flex"
-                  >
-                    <Ellipsis className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+              {guideMenuItems.length > 0 && (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hidden h-9 w-9 cursor-pointer rounded-md md:inline-flex"
+                    >
+                      <Ellipsis className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-48 font-mono">
-                  {guideMenuItems.map((item) => (
-                    <DropdownMenuItem key={item.to} asChild>
-                      <Link to={item.to} className="cursor-pointer text-xs">
-                        {item.icon}
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <DropdownMenuContent align="end" className="w-48 font-mono">
+                    {guideMenuItems.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to} className="cursor-pointer text-xs">
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 
