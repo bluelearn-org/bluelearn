@@ -114,17 +114,10 @@ export const StepperActionHeader = ({
               disabled={submitting || saveDisabled}
               onClick={saveDraft}
             >
-              {isSaved ? (
-                <>
-                  <Check className="size-4" />
-                  {allStoredDrafts.length > 1 ? "All Saved" : "Saved"}
-                </>
-              ) : (
-                <>
-                  <Save className="size-4" />
-                  {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
-                </>
-              )}
+              <>
+                <Save className="size-4" />
+                {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
+              </>
             </button>
           )}
 
