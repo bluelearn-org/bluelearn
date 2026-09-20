@@ -19,6 +19,14 @@ export async function assertOk(res: Response) {
     error?: string;
   } | null;
 
+  if (
+    res.status === 403 &&
+    body?.error === "Suspended users cannot create or edit guides." &&
+    typeof window !== "undefined"
+  ) {
+    window.dispatchEvent(new Event("bluelearn:account-status-stale"));
+  }
+
   throw new ApiError(
     body?.error ?? `Request failed (${res.status})`,
     res.status

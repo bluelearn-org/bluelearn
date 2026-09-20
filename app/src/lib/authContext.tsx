@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { getSession, onAuthStateChange } from "./auth";
@@ -10,7 +17,14 @@ type CurrentProfile = {
   username: string;
   display_name: string | null;
   bio: string | null;
+  is_suspended: boolean;
 };
+
+export type SuspensionStatus =
+  | "pending"
+  | "suspended"
+  | "active"
+  | "unavailable";
 
 type AuthState = {
   session: Session | null;
@@ -19,6 +33,8 @@ type AuthState = {
   currentProfile: CurrentProfile | null;
   loading: boolean;
   rolesLoading: boolean;
+  identityError: boolean;
+  refreshIdentity: () => void;
 };
 
 const AuthContext = createContext<AuthState>({
@@ -28,6 +44,8 @@ const AuthContext = createContext<AuthState>({
   currentProfile: null,
   loading: true,
   rolesLoading: true,
+  identityError: false,
+  refreshIdentity: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -38,6 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const [loading, setLoading] = useState(true);
   const [rolesLoading, setRolesLoading] = useState(true);
+  const [identityError, setIdentityError] = useState(false);
+  const [identityVersion, setIdentityVersion] = useState(0);
+  const identityUserRef = useRef<string | null>(null);
+  const refreshIdentity = useCallback(() => {
+    setIdentityVersion((version) => version + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -68,28 +92,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!userId) {
       setRoles([]);
       setCurrentProfile(null);
+      identityUserRef.current = null;
       setRolesLoading(loading);
+      setIdentityError(false);
       return;
     }
 
     const controller = new AbortController();
-    setRolesLoading(true);
+    const isInitialIdentityLoad = identityUserRef.current !== userId;
+    setRolesLoading(isInitialIdentityLoad);
+    setIdentityError(false);
 
     getMyIdentity({ signal: controller.signal })
       .then((data) => {
         setRoles(data.roles);
         setCurrentProfile(data.profile);
+        identityUserRef.current = userId;
+        setIdentityError(false);
       })
       .catch(() => {
+        if (controller.signal.aborted || !isInitialIdentityLoad) return;
+
         setRoles([]);
         setCurrentProfile(null);
+        setIdentityError(true);
       })
       .finally(() => {
         if (!controller.signal.aborted) setRolesLoading(false);
       });
 
     return () => controller.abort();
-  }, [userId, loading]);
+  }, [userId, loading, identityVersion]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    window.addEventListener("focus", refreshIdentity);
+    window.addEventListener("bluelearn:account-status-stale", refreshIdentity);
+
+    return () => {
+      window.removeEventListener("focus", refreshIdentity);
+      window.removeEventListener(
+        "bluelearn:account-status-stale",
+        refreshIdentity
+      );
+    };
+  }, [userId, refreshIdentity]);
 
   return (
     <AuthContext.Provider
@@ -100,6 +148,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentProfile,
         loading,
         rolesLoading,
+        identityError,
+        refreshIdentity,
       }}
     >
       {children}
@@ -126,6 +176,20 @@ export function useRequireRole(role: string | Array<string>) {
   return allowed.some((r) => roles.includes(r))
     ? ("allowed" as const)
     : ("not-found" as const);
+}
+
+// Authoring gates read this instead of the raw profile so a signed-in user is
+// "pending" until /me answers.
+// Signed-out visitors are "active": the public surface does not change for them.
+export function useSuspensionStatus(): SuspensionStatus {
+  const { session, currentProfile, loading, rolesLoading, identityError } =
+    useAuth();
+
+  if (loading || (session && rolesLoading)) return "pending";
+  if (session && identityError) return "unavailable";
+  if (session && !currentProfile) return "pending";
+
+  return currentProfile?.is_suspended ? "suspended" : "active";
 }
 
 // Redirect already-authed users away from auth-only pages (login, register).

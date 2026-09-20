@@ -44,7 +44,7 @@ describe("POST /guides", () => {
   });
 
   it("creates a draft guide with its tags", async () => {
-    const { token } = await makeUser();
+    const { token, userId } = await makeUser();
     const subject = await createSubject();
 
     const res = await app.request(
@@ -65,10 +65,10 @@ describe("POST /guides", () => {
 
     const { data: revision } = await admin
       .from("guide_revisions")
-      .select("status")
+      .select("author_id, status")
       .eq("id", revision_id)
       .single();
-    expect(revision?.status).toBe("draft");
+    expect(revision).toMatchObject({ author_id: userId, status: "draft" });
 
     const { data: tags } = await admin
       .from("guide_revision_subjects")
