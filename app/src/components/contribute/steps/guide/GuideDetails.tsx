@@ -132,50 +132,53 @@ export const GuideDetails = ({
             />
           </Field>
         )}
+        {showBaseFields && (
+          <>
+            <div className="space-y-1">
+              <FieldLabel
+                required
+                className="font-mono text-[14px] tracking-[0.08em] uppercase"
+              >
+                Type
+              </FieldLabel>
 
-        <div className="space-y-1">
-          <FieldLabel
-            required
-            className="font-mono text-[14px] tracking-[0.08em] uppercase"
-          >
-            Type
-          </FieldLabel>
+              <FieldDescription className="text-xs">
+                Choose whether this guide explains a concept or teaches a
+                process for accomplishing a goal.
+              </FieldDescription>
+            </div>
 
-          <FieldDescription className="text-xs">
-            Choose whether this guide explains a concept or teaches a process
-            for accomplishing a goal.
-          </FieldDescription>
-        </div>
+            <Field className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              <button
+                type="button"
+                className="mono-micro rounded-full border border-badge-border p-3 tracking-[0.08em] text-badge-foreground sm:p-4"
+                style={{
+                  backgroundColor:
+                    guideContData.type === "theoretical"
+                      ? "var(--badge-bg)"
+                      : "var(--muted-bg)",
+                }}
+                onClick={() => onGuideChange({ type: "theoretical" })}
+              >
+                Theoretical
+              </button>
 
-        <Field className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <button
-            type="button"
-            className="mono-micro rounded-full border border-badge-border p-3 tracking-[0.08em] text-badge-foreground sm:p-4"
-            style={{
-              backgroundColor:
-                guideContData.type === "theoretical"
-                  ? "var(--badge-bg)"
-                  : "var(--muted-bg)",
-            }}
-            onClick={() => onGuideChange({ type: "theoretical" })}
-          >
-            Theoretical
-          </button>
-
-          <button
-            type="button"
-            className="mono-micro rounded-full border border-badge-border p-3 tracking-[0.08em] text-badge-foreground sm:p-4"
-            style={{
-              backgroundColor:
-                guideContData.type === "practical"
-                  ? "var(--badge-bg)"
-                  : "var(--muted-bg)",
-            }}
-            onClick={() => onGuideChange({ type: "practical" })}
-          >
-            Practical
-          </button>
-        </Field>
+              <button
+                type="button"
+                className="mono-micro rounded-full border border-badge-border p-3 tracking-[0.08em] text-badge-foreground sm:p-4"
+                style={{
+                  backgroundColor:
+                    guideContData.type === "practical"
+                      ? "var(--badge-bg)"
+                      : "var(--muted-bg)",
+                }}
+                onClick={() => onGuideChange({ type: "practical" })}
+              >
+                Practical
+              </button>
+            </Field>
+          </>
+        )}
 
         <Field className="py-2">
           <div className="space-y-1">
