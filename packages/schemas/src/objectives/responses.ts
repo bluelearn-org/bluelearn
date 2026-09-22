@@ -59,8 +59,8 @@ export const objectiveListItemSchema = z.object({
 
 export const objectiveSnapshotNodeSchema = z.object({
   id: z.string(),
-  guide_base_id: z.string(),
-  guide_id: z.string(),
+  guide_base_id: z.string().nullable(),
+  guide_id: z.string().nullable(),
   slug: z.string().nullable(),
   title: z.string().nullable(),
   is_target: z.boolean(),

@@ -5,11 +5,7 @@ import { ServiceError } from "../lib/service-error";
 
 type DB = SupabaseClient<Database>;
 
-export async function listOpenTodos(
-  supabase: DB
-): Promise<
-  Array<Omit<TodoListItem, "guide_base_id"> & { guide_base_id: string | null }>
-> {
+export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
   const { data, error } = await supabase
     .from("requests")
     .select(

@@ -3,7 +3,7 @@ import { edgeTypeSchema, todoStatusSchema } from "./enums";
 
 export const todoListItemSchema = z.object({
   id: z.uuid(),
-  guide_base_id: z.uuid(),
+  guide_base_id: z.uuid().nullable(),
   guide_slug: z.string().nullable(),
   guide_title: z.string().nullable(),
   title: z.string(),
