@@ -97,9 +97,15 @@ export async function getRevisionSnapshot(
   const projectedQuery =
     projectedSource === "live"
       ? supabase.rpc("project_objective_edges", { p_revision_id: revisionId })
-      : supabase
+      : // Frozen rows key on node ids now. Each endpoint is embedded under its
+        // own alias to reach the guide base it holds: two embeds of the same
+        // table need distinct aliases or PostgREST names them both once.
+        supabase
           .from("objective_revision_edges")
-          .select("from_guide_base_id, to_guide_base_id")
+          .select(
+            `from:objective_revision_nodes!objective_revision_edges_from_is_node(guide_base_id),
+             to:objective_revision_nodes!objective_revision_edges_to_is_node(guide_base_id)`
+          )
           .eq("revision_id", revisionId);
 
   const [projected, raw] = await Promise.all([
@@ -132,7 +138,13 @@ export async function getRevisionSnapshot(
     to_id: e.to_guide_base_id,
   });
 
-  const projected_edges = (projected.data ?? []).map(toEdge);
+  // The live projection already names guide bases; a frozen row reaches them
+  // through its endpoints' nodes. Both land as base ids, as they always have.
+  const projected_edges = (projected.data ?? []).map((e) =>
+    "from_guide_base_id" in e
+      ? toEdge(e)
+      : { from_id: e.from.guide_base_id, to_id: e.to.guide_base_id }
+  );
   const raw_edges = (raw?.data ?? []).map(toEdge);
 
   return { nodes, orders: orderRows ?? [], projected_edges, raw_edges };

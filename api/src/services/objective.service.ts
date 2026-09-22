@@ -342,6 +342,7 @@ export async function createObjectiveRevision(
     .from("objective_revisions")
     .insert({
       objective_id: objective.id,
+      based_on_revision_id: objective.current_revision_id,
       title: source?.title ?? null,
       summary: source?.summary ?? null,
       author_id: authorId,
