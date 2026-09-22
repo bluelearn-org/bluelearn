@@ -19,4 +19,8 @@ export const flows = {
     { id: "objective-ordering", title: "Order Guides" },
     { id: "preview-objective", title: "Preview" },
   ],
+
+  "guide-request": [
+    { id: "guide-request-details", title: "Guide Request Details" },
+  ],
 } as const;

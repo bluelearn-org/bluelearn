@@ -17,6 +17,7 @@ import { listTodos } from "@/lib/api/todos";
 import { groupTodosByTitle } from "@/lib/groupTodos";
 import { usePagination } from "@/lib/usePagination";
 import { buildPageMeta } from "@/lib/seo";
+import { useAuth } from "@/lib/authContext";
 
 const PAGE_SIZE = 10;
 
@@ -49,13 +50,28 @@ type TodosPageProps = {
 };
 
 const TodosPage = ({ children }: TodosPageProps) => {
+  const { currentProfile } = useAuth();
+
   return (
     <div className="mx-auto max-w-[1280px] bg-background">
       <div className="px-8 py-8 lg:px-16">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-4">
           <h1 className="font-mono text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
             Guides Waiting To Be Written
           </h1>
+
+          {currentProfile?.is_suspended !== true && (
+            <Link
+              to="/contribute"
+              search={{
+                contributionType: "guide-request",
+                step: "guide-request-details",
+              }}
+              className="btn-cta shrink-0 tracking-[0.08em]"
+            >
+              Request Guide
+            </Link>
+          )}
         </div>
 
         <Separator className="mb-4 bg-border" />

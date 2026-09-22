@@ -2,7 +2,12 @@ import { z } from "zod";
 
 // Schemas are only used to check drafts restored from localStorage. Doesn't use shared
 // schemas because an empty field here is "" not null.
-export const contributionTypeSchema = z.enum(["guide", "variant", "objective"]);
+export const contributionTypeSchema = z.enum([
+  "guide",
+  "variant",
+  "objective",
+  "guide-request",
+]);
 export const guideTypeSchema = z.enum(["theoretical", "practical"]);
 
 const disclaimerSlugSchema = z.enum([

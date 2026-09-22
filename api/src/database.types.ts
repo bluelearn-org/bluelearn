@@ -832,7 +832,7 @@ export type Database = {
       requests: {
         Row: {
           created_at: string
-          dependent_guide_base_id: string
+          dependent_guide_base_id: string | null
           id: string
           resolved_guide_base_id: string | null
           status: Database["public"]["Enums"]["todo_status"]
@@ -841,7 +841,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          dependent_guide_base_id: string
+          dependent_guide_base_id: string | null
           id?: string
           resolved_guide_base_id?: string | null
           status?: Database["public"]["Enums"]["todo_status"]
@@ -850,7 +850,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          dependent_guide_base_id?: string
+          dependent_guide_base_id?: string | null
           id?: string
           resolved_guide_base_id?: string | null
           status?: Database["public"]["Enums"]["todo_status"]

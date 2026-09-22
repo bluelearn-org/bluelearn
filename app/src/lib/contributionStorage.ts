@@ -296,6 +296,9 @@ export function getStoredDraftsByType(
       return getAllStoredDrafts().filter(
         (draft): draft is StoredObjectiveDraft => draft.type === "objective"
       );
+
+    case "guide-request":
+      return [];
   }
 }
 
