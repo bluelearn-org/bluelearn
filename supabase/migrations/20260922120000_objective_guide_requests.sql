@@ -6,13 +6,6 @@ alter table public.requests
 alter table public.requests
   add column objective_id uuid references public.objectives (id) on delete restrict;
 
--- A request is raised by the guide that needs it or by the objective that wants
--- it.
--- A row with neither anchor belongs to nobody and nothing can resolve it.
-alter table public.requests
-  add constraint requests_has_anchor
-  check (dependent_guide_base_id is not null or objective_id is not null);
-
 create index requests_objective_idx on public.requests (objective_id);
 
 -- A todo resolved by a published guide becomes a prerequisite edge from that

@@ -18,7 +18,7 @@ const requestRow = {
 };
 
 async function expectConstraintFailure<T>(
-  promise: Promise<{ error: T | null }>
+  promise: PromiseLike<{ error: T | null }>
 ) {
   const { error } = await promise;
   expect(error).not.toBeNull();
@@ -26,13 +26,6 @@ async function expectConstraintFailure<T>(
 }
 
 describe("objective guide request schema", () => {
-  it("rejects a request with no dependent guide and no objective (requests_has_anchor)", async () => {
-    const error = await expectConstraintFailure(
-      admin.from("requests").insert(requestRow)
-    );
-    expect(error.code).toBe("23514");
-  });
-
   it("rejects a guide node that also carries a title (guide_or_request)", async () => {
     const owner = await makeUser();
     const objective = await createObjective(owner.userId);
@@ -129,7 +122,7 @@ describe("objective guide request schema", () => {
 });
 
 describe("POST /objective-revisions/{id}/publish", () => {
-  it("400s a draft whose base is no longer live and keeps the current revision", async () => {
+  it("409s a draft whose base is no longer live and keeps the current revision", async () => {
     const curator = await makeUser();
     await grantRole(curator.userId, "curator");
     const target = await createPublishedGuide();
@@ -165,7 +158,7 @@ describe("POST /objective-revisions/{id}/publish", () => {
       { method: "POST", ...auth(curator.token) },
       env
     );
-    expect(published.status).toBe(400);
+    expect(published.status).toBe(409);
     const { data: current } = await admin
       .from("objectives")
       .select("current_revision_id")

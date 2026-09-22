@@ -42,7 +42,11 @@ export async function getRevisionSnapshot(
     throw new ServiceError("Failed to load revision", 500);
   }
 
-  const baseIds = (nodeRows ?? []).map((n) => n.guide_base_id);
+  const baseIds = (nodeRows ?? [])
+    .filter(
+      (n): n is typeof n & { guide_base_id: string } => n.guide_base_id !== null
+    )
+    .map((n) => n.guide_base_id);
   const baseMeta = new Map<
     string,
     { slug: string | null; title: string | null }
@@ -74,8 +78,12 @@ export async function getRevisionSnapshot(
     id: n.id,
     guide_base_id: n.guide_base_id,
     guide_id: n.guide_id,
-    slug: baseMeta.get(n.guide_base_id)?.slug ?? null,
-    title: baseMeta.get(n.guide_base_id)?.title ?? null,
+    slug: n.guide_base_id
+      ? (baseMeta.get(n.guide_base_id)?.slug ?? null)
+      : null,
+    title: n.guide_base_id
+      ? (baseMeta.get(n.guide_base_id)?.title ?? null)
+      : null,
     is_target: n.is_target,
     is_included: n.is_included,
     is_featured: n.is_featured,
@@ -337,7 +345,7 @@ export async function updateObjectiveNode(
          current:guide_revisions!guides_current_revision_id_fkey(title)
        )`
     )
-    .eq("id", node.guide_base_id)
+    .eq("id", baseId)
     .maybeSingle();
 
   if (baseError) {
@@ -427,7 +435,7 @@ export async function syncDraftCuration(
 
   const stale = (existing ?? [])
     .map((n) => n.guide_base_id)
-    .filter((id) => !closureSet.has(id));
+    .filter((id): id is string => id !== null && !closureSet.has(id));
 
   if (stale.length > 0) {
     const { error } = await selectInBatches(stale, (batch) =>
@@ -543,13 +551,24 @@ export async function syncDraftCuration(
   }
 
   const nodeIdByBase = new Map(
-    (nodes ?? []).map((n) => [n.guide_base_id, n.id])
+    (nodes ?? [])
+      .filter((n) => n.guide_base_id !== null)
+      .map((n) => [n.guide_base_id, n.id])
   );
   const included = (nodes ?? [])
-    .filter((n) => n.is_target || sequenced.has(n.guide_base_id))
+    .filter(
+      (n) =>
+        n.guide_base_id !== null &&
+        (n.is_target || sequenced.has(n.guide_base_id))
+    )
     .map((n) => n.id);
   const excluded = (nodes ?? [])
-    .filter((n) => !n.is_target && !sequenced.has(n.guide_base_id))
+    .filter(
+      (n) =>
+        n.guide_base_id !== null &&
+        !n.is_target &&
+        !sequenced.has(n.guide_base_id)
+    )
     .map((n) => n.id);
 
   for (const [ids, value] of [
@@ -619,6 +638,11 @@ export async function publishObjectiveRevision(
       throw new ServiceError("Revision not found", 404);
     if (error.code === "42501")
       throw new ServiceError("Not permitted to publish this revision", 403);
+    if (error.code === "P0001")
+      throw new ServiceError(
+        "A newer revision was published; review it before publishing",
+        409
+      );
     throw new ServiceError("Unable to publish revision", 400);
   }
   return { slug };
@@ -656,8 +680,8 @@ export async function rollbackObjectiveRevision(
 // sequence.
 type SnapshotNode = {
   id: string;
-  guide_base_id: string;
-  guide_id: string;
+  guide_base_id: string | null;
+  guide_id: string | null;
   slug: string | null;
   title: string | null;
   is_target: boolean;
@@ -730,7 +754,7 @@ export async function diffObjectiveRevisions(
 // so paired nodes never share one.
 function sameNode(
   a: {
-    guide_id: string;
+    guide_id: string | null;
     is_target: boolean;
     is_included: boolean;
     is_featured: boolean;
@@ -738,7 +762,7 @@ function sameNode(
     note: string | null;
   },
   b: {
-    guide_id: string;
+    guide_id: string | null;
     is_target: boolean;
     is_included: boolean;
     is_featured: boolean;
@@ -787,7 +811,8 @@ function buildSubObjectives(snapshot: {
 }
 
 function stepLabel(node: SnapshotNode) {
-  const label = node.title ?? node.slug ?? node.guide_base_id.slice(0, 8);
+  const label =
+    node.title ?? node.slug ?? node.guide_base_id?.slice(0, 8) ?? "";
   return node.is_included ? label : `${label} (skipped)`;
 }
 
@@ -797,7 +822,7 @@ function diffTargets(
   toSnapshot: { nodes: SnapshotNode[]; orders: SnapshotOrder[] }
 ) {
   const fromSequences = new Map(
-    buildSubObjectives(fromSnapshot).map((s) => [s.target.guide_base_id, s])
+    buildSubObjectives(fromSnapshot).map((s) => [s.target.guide_base_id!, s])
   );
   const toSequences = buildSubObjectives(toSnapshot);
   const seen = new Set<string>();
@@ -812,14 +837,14 @@ function diffTargets(
     const lines = diffSequences(
       fromSteps,
       toSteps,
-      (node) => node.guide_base_id,
+      (node) => node.guide_base_id!,
       stepLabel
     );
-    const fromByBase = new Map(fromSteps.map((s) => [s.guide_base_id, s]));
+    const fromByBase = new Map(fromSteps.map((s) => [s.guide_base_id!, s]));
 
     const changed = toSteps
       .map((step) => {
-        const before = fromByBase.get(step.guide_base_id);
+        const before = fromByBase.get(step.guide_base_id!);
         if (!before || sameNode(before, step)) return null;
         return { from: before, to: step };
       })
@@ -841,7 +866,7 @@ function diffTargets(
   };
 
   const targets = toSequences.map((sequence) => {
-    const baseId = sequence.target.guide_base_id;
+    const baseId = sequence.target.guide_base_id!;
     seen.add(baseId);
     const before = fromSequences.get(baseId);
 
