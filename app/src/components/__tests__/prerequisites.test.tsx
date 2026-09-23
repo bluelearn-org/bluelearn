@@ -14,15 +14,23 @@ import { PrerequisitesModal } from "@/components/modals/PrerequisitesModal";
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
+    to,
     params,
+    search,
     onClick,
   }: {
     children: ReactNode;
-    params: { slug: string };
+    to: string;
+    params?: { slug: string };
+    search?: Record<string, string>;
     onClick?: () => void;
   }) => (
     <a
-      href={`/guides/${params.slug}`}
+      href={
+        params
+          ? `/guides/${params.slug}`
+          : `${to}?${new URLSearchParams(search).toString()}`
+      }
       onClick={(event) => {
         event.preventDefault();
         onClick?.();
@@ -96,9 +104,19 @@ describe.each(["sidebar", "mobile dialog"] as const)(
       expect(screen.queryByText("Todo")).toBeNull();
     });
 
-    it("shows a todo without a link when there are no existing prerequisites", () => {
+    it("links a todo to the contribution flow seeded with its details", () => {
       show([], [todo]);
-      expect(screen.getByText(todo.title).closest("a")).toBeNull();
+      const href = screen
+        .getByText(todo.title)
+        .closest("a")
+        ?.getAttribute("href");
+      expect(href).toBe(
+        `/contribute?${new URLSearchParams({
+          todoTitle: todo.title,
+          todoSummary: todo.summary,
+          todos: todo.id,
+        }).toString()}`
+      );
       expect(screen.getByText("Todo")).toBeDefined();
       if (surface === "mobile dialog") {
         expect(screen.getByText(todo.summary)).toBeDefined();
@@ -114,7 +132,9 @@ describe.each(["sidebar", "mobile dialog"] as const)(
       expect(
         screen.getByRole("link", { name: "Variables" }).getAttribute("href")
       ).toBe("/guides/variables");
-      expect(screen.getByText(todo.title).closest("a")).toBeNull();
+      expect(
+        screen.getByText(todo.title).closest("a")?.getAttribute("href")
+      ).toContain("/contribute?");
     });
   }
 );

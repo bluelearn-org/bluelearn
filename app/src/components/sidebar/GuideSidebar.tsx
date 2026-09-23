@@ -105,21 +105,31 @@ export const GuideSidebar = ({
                 </li>
               ))}
 
-              {/* There's no guide to link to until the todo is resolved. */}
+              {/* No guide exists yet, so open the contribution flow seeded with the todo. */}
               {requests.map((todo: RequestReference) => (
                 <li
                   key={todo.id}
-                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                  className="text-xs text-muted-foreground hover:text-foreground"
                   style={{ paddingLeft: 12 }}
                   title={todo.summary}
                 >
-                  <span className="min-w-0 break-words">{todo.title}</span>
-                  <Badge
-                    variant="outline"
-                    className="border-transparent bg-brand-bright-blue/15 font-mono tracking-[0.06em] text-brand-dark-navy uppercase dark:text-brand-bright-blue"
+                  <Link
+                    to="/contribute"
+                    search={{
+                      todoTitle: todo.title,
+                      todoSummary: todo.summary,
+                      todos: todo.id,
+                    }}
+                    className="flex items-center gap-2"
                   >
-                    Todo
-                  </Badge>
+                    <span className="min-w-0 break-words">{todo.title}</span>
+                    <Badge
+                      variant="outline"
+                      className="border-transparent bg-brand-bright-blue/15 font-mono tracking-[0.06em] text-brand-dark-navy uppercase dark:text-brand-bright-blue"
+                    >
+                      Todo
+                    </Badge>
+                  </Link>
                 </li>
               ))}
             </ul>
