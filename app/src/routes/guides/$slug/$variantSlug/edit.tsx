@@ -143,6 +143,9 @@ function EditGuidePage() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // whether there are edits since the last time the draft was saved
+  const [isDirty, setIsDirty] = useState(false);
+
   // must match one of the IDs
   const [activeStep, setActiveStep] = useState("guide-details");
 
@@ -352,6 +355,8 @@ function EditGuidePage() {
 
       await router.invalidate();
 
+      setIsDirty(false);
+
       toast.success("Draft saved");
 
       return true;
@@ -408,6 +413,8 @@ function EditGuidePage() {
 
       await router.invalidate();
 
+      setIsDirty(false);
+
       toast.success("Submitted for review");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not submit");
@@ -454,27 +461,33 @@ function EditGuidePage() {
                 Stepper={Stepper}
                 type="variant"
                 guideContData={guideContData}
-                onGuideChange={(update) =>
+                onGuideChange={(update) => {
                   setGuideContData((previous) => ({
                     ...previous,
                     ...update,
-                  }))
-                }
+                  }));
+                  setIsDirty(true);
+                }}
                 subjects={subjectOptions}
                 guides={guideOptions}
                 body={guideContData.body}
-                onBodyChange={(body) =>
+                onBodyChange={(body) => {
                   setGuideContData((previous) => ({
                     ...previous,
                     body,
-                  }))
-                }
+                  }));
+                  setIsDirty(true);
+                }}
                 onUploadImage={uploadGuideImage}
                 onSaveDraft={saveDraft}
                 submitting={submitting}
+                isDirty={isDirty}
                 hideBackBtn
                 changeSummary={changeSummary}
-                onChangeSummaryChange={setChangeSummary}
+                onChangeSummaryChange={(value) => {
+                  setChangeSummary(value);
+                  setIsDirty(true);
+                }}
               />
 
               <Submit
@@ -484,6 +497,7 @@ function EditGuidePage() {
                 onSaveDraft={saveDraft}
                 onPublish={publish}
                 submitting={submitting}
+                isDirty={isDirty}
                 title="Preview"
                 publishLabel="Submit Guide Revision"
               />
