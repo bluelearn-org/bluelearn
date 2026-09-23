@@ -1,4 +1,7 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useState } from "react";
+import type { GuideListItem } from "@bluelearn/schemas";
+
+import type { ObjectiveGraphNode } from "@/types/contributions";
 import {
   Dialog,
   DialogClose,
@@ -9,44 +12,84 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 import { Button } from "@/components/ui/button";
 
-type GuideOption = {
-  slug: string | null;
-  title: string | null;
-  summary: string | null;
-};
+type Mode = "existing" | "request";
 
 type PropTypes = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  guides: Array<GuideOption>;
-  selectedExistingGuides: Array<string>;
-  setSelectedExistingGuides: Dispatch<SetStateAction<Array<string | null>>>;
+  guides: Array<GuideListItem>;
+  existingGuideBaseIds: Array<string>;
+  onAdd: (nodes: Array<ObjectiveGraphNode>) => void;
 };
 
 export const AddGuideNodeModal = ({
   open,
   onOpenChange,
   guides,
-  selectedExistingGuides,
+  existingGuideBaseIds,
+  onAdd,
 }: PropTypes) => {
-  const guideItems = guides
-    .filter((g): g is GuideOption & { slug: string } => !!g.slug)
-    .map((g) => {
-      return {
-        value: g.slug,
-        label: g.title ?? g.slug,
-        description: g.summary ?? undefined,
-      };
-    });
+  const [mode, setMode] = useState<Mode>("existing");
+  const [selectedBaseIds, setSelectedBaseIds] = useState<Array<string>>([]);
+  const [requestTitle, setRequestTitle] = useState("");
+  const [requestSummary, setRequestSummary] = useState("");
 
-  const onExistingGuidesSelected = () => {};
+  useEffect(() => {
+    if (!open) return;
+    setMode("existing");
+    setSelectedBaseIds([]);
+    setRequestTitle("");
+    setRequestSummary("");
+  }, [open]);
 
-  const handleAddExistingGuides = async () => {};
+  // g.id is the guide base id
+  const availableGuides = guides.filter(
+    (g): g is GuideListItem & { slug: string } =>
+      !!g.slug && !existingGuideBaseIds.includes(g.id)
+  );
 
-  const handleCancel = () => {
+  const guideItems = availableGuides.map((g) => ({
+    value: g.id,
+    label: g.title ?? g.slug,
+    description: g.summary ?? undefined,
+  }));
+
+  const title = requestTitle.trim();
+  const summary = requestSummary.trim();
+
+  const canAdd =
+    mode === "existing"
+      ? selectedBaseIds.length > 0
+      : title.length > 0 && summary.length > 0;
+
+  const chosenNodes = (): Array<ObjectiveGraphNode> => {
+    if (mode === "request") {
+      return [
+        { id: crypto.randomUUID(), type: "guide_request", title, summary },
+      ];
+    }
+
+    return availableGuides
+      .filter((g) => selectedBaseIds.includes(g.id))
+      .map((g) => ({
+        id: crypto.randomUUID(),
+        type: "guide",
+        guideBaseId: g.id,
+        guideSlug: g.slug,
+        title: g.title ?? g.slug,
+      }));
+  };
+
+  const handleAdd = () => {
+    if (!canAdd) return;
+    onAdd(chosenNodes());
     onOpenChange(false);
   };
 
@@ -59,46 +102,75 @@ export const AddGuideNodeModal = ({
           </div>
 
           <DialogTitle className="editorial-heading text-2xl">
-            Select Existing Guides
+            Add a Guide
           </DialogTitle>
 
           <DialogDescription className="text-xs text-muted-foreground">
-            Add existing guides to the objective.
+            Add existing guides to the objective, or request one that does not
+            exist yet.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6">
-          {/* {!loading ? ( */}
-          <Combobox
-            multiple
-            items={guideItems}
-            value={selectedExistingGuides}
-            onValueChange={onExistingGuidesSelected}
-            placeholder="Select existing guides..."
-          />
-          {/* ) : (
-                        <p>Loading Existing Guides</p>
-                    )} */}
-        </div>
+        <Tabs
+          value={mode}
+          onValueChange={(value) => setMode(value as Mode)}
+          className="p-6"
+        >
+          <TabsList>
+            <TabsTrigger value="existing">Existing guide</TabsTrigger>
+            <TabsTrigger value="request">Request a guide</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="existing" className="pt-4">
+            <Combobox
+              multiple
+              items={guideItems}
+              value={selectedBaseIds}
+              onValueChange={setSelectedBaseIds}
+              modal
+            />
+          </TabsContent>
+
+          <TabsContent value="request" className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <FieldLabel htmlFor="guide-request-title" required>
+                Title
+              </FieldLabel>
+              <Input
+                id="guide-request-title"
+                value={requestTitle}
+                onChange={(e) => setRequestTitle(e.target.value)}
+                maxLength={50}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <FieldLabel htmlFor="guide-request-summary" required>
+                Summary
+              </FieldLabel>
+              <Textarea
+                id="guide-request-summary"
+                value={requestSummary}
+                onChange={(e) => setRequestSummary(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter className="p-5 pt-0">
           <DialogClose asChild>
-            <Button
-              variant="outline"
-              size="lg"
-              className="btn-sec"
-              onClick={handleCancel}
-            >
+            <Button variant="outline" size="lg" className="btn-sec">
               Cancel
             </Button>
           </DialogClose>
           <Button
             size="lg"
             className="btn-pri"
-            onClick={handleAddExistingGuides}
-            disabled={selectedExistingGuides.length === 0}
+            onClick={handleAdd}
+            disabled={!canAdd}
           >
-            Add Guides
+            Add
           </Button>
         </DialogFooter>
       </DialogContent>

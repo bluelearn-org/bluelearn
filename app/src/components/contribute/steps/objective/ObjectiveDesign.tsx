@@ -8,16 +8,25 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import type { Edge, Node } from "@xyflow/react";
+import type { Connection, Edge, Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import type {
   ContributionType,
   ObjectiveGraphData,
+  ObjectiveGraphNode,
 } from "@/types/contributions";
 import type { listGuides } from "@/lib/api/guides";
 import type { ObjectiveNodeData } from "@/components/contribute/steps/objective/ObjectiveGraphNode";
 import { layoutObjectiveGraph } from "@/lib/objectiveGraphLayout";
+import {
+  addGuideNode,
+  addRequestNode,
+  connectNodes,
+  isDrawnEdge,
+  removeEdges,
+  removeNodes,
+} from "@/lib/objectiveGraphEdits";
 import { useTheme } from "@/lib/themeProvider";
 
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
@@ -56,8 +65,30 @@ export const ObjectiveDesign = ({
   hideBackBtn,
   onSaveDraft,
   submitting,
+  guides,
   objectiveGraph,
+  setObjectiveGraph,
 }: PropTypes) => {
+  const guideBaseIdsOnCanvas = objectiveGraph.nodes.flatMap((n) =>
+    n.type === "guide_request" ? [] : [n.guideBaseId]
+  );
+
+  const addGuideNodes = (nodes: Array<ObjectiveGraphNode>) => {
+    const graph = nodes.reduce(
+      (next, node) =>
+        node.type === "guide_request"
+          ? addRequestNode(next, { title: node.title, summary: node.summary })
+          : addGuideNode(next, {
+              guideBaseId: node.guideBaseId,
+              guideSlug: node.guideSlug,
+              title: node.title,
+            }),
+      objectiveGraph
+    );
+
+    setObjectiveGraph?.(graph);
+  };
+
   return (
     <Stepper.Content step="objective-design">
       <StepperActionHeader
@@ -67,11 +98,17 @@ export const ObjectiveDesign = ({
         hideBackBtn={hideBackBtn}
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        guides={guides}
+        existingGuideBaseIds={guideBaseIdsOnCanvas}
+        onAddGuideNodes={setObjectiveGraph && addGuideNodes}
       />
 
       <div className="min-h-[calc(100vh-65px)] min-w-0 flex-1 pt-4">
         <ReactFlowProvider>
-          <ObjectiveGraph graph={objectiveGraph} />
+          <ObjectiveGraph
+            graph={objectiveGraph}
+            onGraphChange={setObjectiveGraph}
+          />
         </ReactFlowProvider>
       </div>
     </Stepper.Content>
@@ -80,9 +117,10 @@ export const ObjectiveDesign = ({
 
 type ObjectiveGraphProps = {
   graph: ObjectiveGraphData;
+  onGraphChange?: (graph: ObjectiveGraphData) => void;
 };
 
-const ObjectiveGraph = ({ graph }: ObjectiveGraphProps) => {
+const ObjectiveGraph = ({ graph, onGraphChange }: ObjectiveGraphProps) => {
   const { theme } = useTheme();
 
   const flowNodes = useMemo(() => toFlowNodes(graph), [graph]);
@@ -93,6 +131,20 @@ const ObjectiveGraph = ({ graph }: ObjectiveGraphProps) => {
 
   useEffect(() => setNodes(flowNodes), [flowNodes, setNodes]);
   useEffect(() => setEdges(flowEdges), [flowEdges, setEdges]);
+
+  const handleConnect = ({ source, target }: Connection) =>
+    onGraphChange?.(connectNodes(graph, source, target));
+
+  // onNodesDelete and onEdgesDelete would each edit the same stale graph
+  const handleDelete = (deleted: {
+    nodes: Array<Node>;
+    edges: Array<Edge>;
+  }) => {
+    const nodeIds = deleted.nodes.map((n) => n.id);
+    const edgeIds = deleted.edges.map((e) => e.id);
+
+    onGraphChange?.(removeEdges(removeNodes(graph, nodeIds), edgeIds));
+  };
 
   return (
     // xyflow sizes itself with height: 100%, which needs a definite height here;
@@ -109,11 +161,13 @@ const ObjectiveGraph = ({ graph }: ObjectiveGraphProps) => {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onConnect={handleConnect}
+          onDelete={handleDelete}
           deleteKeyCode={["Backspace", "Delete"]}
           fitView
           nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
+          nodesConnectable
+          elementsSelectable
           colorMode={theme}
           className="bg-transparent"
           minZoom={0.2}
@@ -161,6 +215,7 @@ function toFlowEdges(graph: ObjectiveGraphData): Array<Edge> {
     source: edge.source,
     target: edge.target,
     style: { stroke: EDGE_COLOR, strokeWidth: 2 },
+    deletable: isDrawnEdge(edge),
     markerEnd: { type: MarkerType.ArrowClosed, color: EDGE_COLOR },
   }));
 }

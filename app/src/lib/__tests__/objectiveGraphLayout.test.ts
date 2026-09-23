@@ -11,6 +11,7 @@ const OPTIONS = { nodeWidth: 200, nodeSpacing: 300, levelSpacing: 150 };
 const guide = (id: string): ObjectiveGraphNode => ({
   id,
   type: "guide",
+  guideBaseId: id,
   guideSlug: id,
   title: id,
 });
@@ -40,7 +41,13 @@ describe("layoutObjectiveGraph", () => {
   it("puts a target on the bottom row even when nothing leads to it", () => {
     const positions = positionsOf({
       nodes: [
-        { id: "t", type: "target", guideSlug: "t", title: "t" },
+        {
+          id: "t",
+          type: "target",
+          guideBaseId: "t",
+          guideSlug: "t",
+          title: "t",
+        },
         guide("a"),
         guide("b"),
         guide("c"),

@@ -70,10 +70,17 @@ describe("ObjectiveDesign", () => {
   it("renders guide, target and request cards from the draft graph", () => {
     renderDesign({
       nodes: [
-        { id: "n1", type: "guide", guideSlug: "loops", title: "Loops" },
+        {
+          id: "n1",
+          type: "guide",
+          guideBaseId: "b1",
+          guideSlug: "loops",
+          title: "Loops",
+        },
         {
           id: "n2",
           type: "target",
+          guideBaseId: "b2",
           guideSlug: "recursion",
           title: "Recursion",
         },

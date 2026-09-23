@@ -54,6 +54,7 @@ export const objectiveGraphNodeSchema = z.discriminatedUnion("type", [
   z.object({
     id: z.string(),
     type: z.enum(["guide", "target"]),
+    guideBaseId: z.string(),
     guideSlug: z.string(),
     title: z.string(),
   }),

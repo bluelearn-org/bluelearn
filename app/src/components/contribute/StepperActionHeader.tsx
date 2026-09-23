@@ -1,7 +1,11 @@
 import { Check, Save, Scroll } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { GuideListItem } from "@bluelearn/schemas";
 
-import type { ContributionType } from "@/types/contributions";
+import type {
+  ContributionType,
+  ObjectiveGraphNode,
+} from "@/types/contributions";
 import type { AnyStoredDraft } from "@/lib/contributionStorage";
 
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +28,9 @@ type PropTypes = {
   guideCount?: number;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
+  guides?: Array<GuideListItem>;
+  existingGuideBaseIds?: Array<string>;
+  onAddGuideNodes?: (nodes: Array<ObjectiveGraphNode>) => void;
 };
 
 export const StepperActionHeader = ({
@@ -39,6 +46,9 @@ export const StepperActionHeader = ({
   hideGuidelines,
   onSaveDraft,
   onPublish,
+  guides = [],
+  existingGuideBaseIds = [],
+  onAddGuideNodes,
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -54,7 +64,7 @@ export const StepperActionHeader = ({
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
   const toggleAddGuideNodeModal = () =>
-    setOpenAddGuideNodeModal(!showSubmitModal);
+    setOpenAddGuideNodeModal((open) => !open);
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
 
   // batch submit feedback so it's more obvious for the user
@@ -115,7 +125,7 @@ export const StepperActionHeader = ({
             </button>
           )}
 
-          {type == "objective" && (
+          {type == "objective" && onAddGuideNodes && (
             <button
               type="button"
               className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
@@ -224,13 +234,15 @@ export const StepperActionHeader = ({
         onOpenChange={toggleGuidelineModal}
       />
 
-      <AddGuideNodeModal
-        open={openAddGuideNodeModal}
-        onOpenChange={toggleAddGuideNodeModal}
-        guides={[]}
-        selectedExistingGuides={[]}
-        setSelectedExistingGuides={() => {}}
-      />
+      {onAddGuideNodes && (
+        <AddGuideNodeModal
+          open={openAddGuideNodeModal}
+          onOpenChange={toggleAddGuideNodeModal}
+          guides={guides}
+          existingGuideBaseIds={existingGuideBaseIds}
+          onAdd={onAddGuideNodes}
+        />
+      )}
 
       {type == "objective" ? (
         <ObjectivePublishModal

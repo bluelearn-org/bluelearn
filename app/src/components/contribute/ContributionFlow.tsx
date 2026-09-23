@@ -43,6 +43,11 @@ import {
   submitObjectiveRevision,
   updateObjectiveRevision,
 } from "@/lib/api/objectiveRevisions";
+import {
+  drawnEdgeId,
+  graphToApi,
+  guideEdgeId,
+} from "@/lib/objectiveGraphEdits";
 
 import {
   clearStoredDraft,
@@ -123,27 +128,43 @@ const objectiveGraphFromSnapshot = (
   const nodes: Array<ObjectiveGraphNode> = [];
 
   for (const n of snapshot.nodes) {
-    // ponytail: request nodes (slug null) are skipped until A3 hydrates them.
-    if (n.slug === null) continue;
+    if (n.guide_base_id === null) {
+      nodes.push({
+        id: n.id,
+        type: "guide_request",
+        title: n.title ?? "",
+        summary: n.summary ?? "",
+      });
+      continue;
+    }
 
-    if (n.guide_base_id) nodeIdByBaseId.set(n.guide_base_id, n.id);
+    nodeIdByBaseId.set(n.guide_base_id, n.id);
     nodes.push({
       id: n.id,
       type: n.is_target ? "target" : "guide",
-      guideSlug: n.slug,
-      title: n.title ?? n.slug,
+      guideBaseId: n.guide_base_id,
+      guideSlug: n.slug ?? "",
+      title: n.title ?? n.slug ?? "",
     });
   }
 
-  const edges = snapshot.raw_edges.flatMap((e) => {
+  const drawnEdges = snapshot.drawn_edges.map((e) => ({
+    id: drawnEdgeId(e.from_node_id, e.to_node_id),
+    source: e.from_node_id,
+    target: e.to_node_id,
+  }));
+  const drawnIds = new Set(drawnEdges.map((e) => e.id));
+
+  const guideEdges = snapshot.raw_edges.flatMap((e) => {
     const source = nodeIdByBaseId.get(e.from_id);
     const target = nodeIdByBaseId.get(e.to_id);
     if (!source || !target) return [];
+    if (drawnIds.has(drawnEdgeId(source, target))) return [];
 
-    return [{ id: `${e.from_id}-${e.to_id}`, source, target }];
+    return [{ id: guideEdgeId(source, target), source, target }];
   });
 
-  return { nodes, edges };
+  return { nodes, edges: [...drawnEdges, ...guideEdges] };
 };
 
 const objectiveDataFromRevision = (
@@ -869,6 +890,12 @@ function Inner({
     if (type === "objective") {
       const target_ids = objectiveContData.targets.map(baseIdForSlug);
 
+      // an empty graph would delete the targets
+      const graphField =
+        objectiveContData.graph.nodes.length > 0
+          ? { graph: graphToApi(objectiveContData.graph) }
+          : {};
+
       if (target_ids.length === 0) {
         throw new Error(
           "Learning objectives require at least one target guide."
@@ -882,6 +909,7 @@ function Inner({
           change_summary: objectiveContData.changeSummary || null,
           tags: objectiveContData.subjects,
           targets: objectiveTargets(),
+          ...graphField,
         });
 
         return revisionId;
@@ -897,6 +925,7 @@ function Inner({
                 change_summary: objectiveContData.changeSummary || null,
                 tags: objectiveContData.subjects,
                 targets: objectiveTargets(),
+                ...graphField,
               });
 
               setRevisionId(id);
@@ -919,7 +948,10 @@ function Inner({
           tags: objectiveContData.subjects,
         })
           .then(async (id) => {
-            await updateObjectiveRevision(id, { targets: objectiveTargets() });
+            await updateObjectiveRevision(id, {
+              targets: objectiveTargets(),
+              ...graphField,
+            });
             setRevisionId(id);
             return id;
           })
