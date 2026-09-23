@@ -149,6 +149,26 @@ describe("AddGuideNodeModal", () => {
     ]);
   });
 
+  it("starts the Target tab with its own empty selection after guides were picked in Existing", async () => {
+    const { dialog } = renderModal();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /select/i }));
+    fireEvent.click((await screen.findAllByRole("option"))[0]);
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    openTab(dialog, /target guide/i);
+
+    expect(within(dialog).getByText(/a target is a guide/i)).toBeTruthy();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: /remove loops/i,
+        hidden: true,
+      })
+    ).toBeNull();
+    expect(addButton(dialog).disabled).toBe(true);
+  });
+
   it("offers every guide while none is on the canvas", async () => {
     const { dialog } = renderModal();
 

@@ -37,14 +37,16 @@ export const AddGuideNodeModal = ({
   onAdd,
 }: PropTypes) => {
   const [mode, setMode] = useState<Mode>("existing");
-  const [selectedBaseIds, setSelectedBaseIds] = useState<Array<string>>([]);
+  const [selectedGuideIds, setSelectedGuideIds] = useState<Array<string>>([]);
+  const [selectedTargetIds, setSelectedTargetIds] = useState<Array<string>>([]);
   const [requestTitle, setRequestTitle] = useState("");
   const [requestSummary, setRequestSummary] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setMode("existing");
-    setSelectedBaseIds([]);
+    setSelectedGuideIds([]);
+    setSelectedTargetIds([]);
     setRequestTitle("");
     setRequestSummary("");
   }, [open]);
@@ -63,6 +65,9 @@ export const AddGuideNodeModal = ({
 
   const title = requestTitle.trim();
   const summary = requestSummary.trim();
+
+  const selectedBaseIds =
+    mode === "target" ? selectedTargetIds : selectedGuideIds;
 
   const canAdd =
     mode === "request"
@@ -122,17 +127,30 @@ export const AddGuideNodeModal = ({
             <TabsTrigger value="request">Request a guide</TabsTrigger>
           </TabsList>
 
-          {(["existing", "target"] as const).map((guideMode) => (
-            <TabsContent key={guideMode} value={guideMode} className="pt-4">
-              <Combobox
-                multiple
-                items={guideItems}
-                value={selectedBaseIds}
-                onValueChange={setSelectedBaseIds}
-                modal
-              />
-            </TabsContent>
-          ))}
+          <TabsContent value="existing" className="pt-4">
+            {/* ponytail: modal popover eats the first tab click while open; upgrade when ui/combobox scrolls without modal */}
+            <Combobox
+              multiple
+              items={guideItems}
+              value={selectedGuideIds}
+              onValueChange={setSelectedGuideIds}
+              modal
+            />
+          </TabsContent>
+
+          <TabsContent value="target" className="space-y-2 pt-4">
+            <p className="text-xs text-muted-foreground">
+              A target is a guide the objective leads to. Its prerequisites are
+              added with it.
+            </p>
+            <Combobox
+              multiple
+              items={guideItems}
+              value={selectedTargetIds}
+              onValueChange={setSelectedTargetIds}
+              modal
+            />
+          </TabsContent>
 
           <TabsContent value="request" className="space-y-4 pt-4">
             <div className="space-y-2">
