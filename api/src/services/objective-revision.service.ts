@@ -106,19 +106,19 @@ export async function getRevisionSnapshot(
     throw new ServiceError("Failed to load revision order", 500);
   }
 
+  // Two embeds of the same table need distinct aliases, or PostgREST names
+  // them both once.
+  const frozenQuery = supabase
+    .from("objective_revision_edges")
+    .select(
+      `from:objective_revision_nodes!objective_revision_edges_from_is_node(guide_base_id),
+       to:objective_revision_nodes!objective_revision_edges_to_is_node(guide_base_id)`
+    )
+    .eq("revision_id", revisionId);
   const projectedQuery =
     projectedSource === "live"
       ? supabase.rpc("project_objective_edges", { p_revision_id: revisionId })
-      : // Frozen rows key on node ids now. Each endpoint is embedded under its
-        // own alias to reach the guide base it holds: two embeds of the same
-        // table need distinct aliases or PostgREST names them both once.
-        supabase
-          .from("objective_revision_edges")
-          .select(
-            `from:objective_revision_nodes!objective_revision_edges_from_is_node(guide_base_id),
-             to:objective_revision_nodes!objective_revision_edges_to_is_node(guide_base_id)`
-          )
-          .eq("revision_id", revisionId);
+      : frozenQuery;
 
   const [projected, raw, drawn] = await Promise.all([
     projectedQuery,
@@ -510,6 +510,32 @@ export async function syncDraftCuration(
     throw new ServiceError("Unable to update targets", 400);
   }
 
+  const { data: nodes, error: nodesError } = await supabase
+    .from("objective_revision_nodes")
+    .select("id, guide_base_id, is_target")
+    .eq("revision_id", revisionId);
+
+  if (nodesError) {
+    console.error(nodesError);
+    throw new ServiceError("Failed to load revision nodes", 500);
+  }
+
+  // an unsequenced target keeps its rows through the early return below
+  const nonTargets = (nodes ?? []).filter((n) => !n.is_target).map((n) => n.id);
+  if (nonTargets.length > 0) {
+    const { error } = await selectInBatches(nonTargets, (batch) =>
+      supabase
+        .from("objective_revision_node_orders")
+        .delete()
+        .eq("revision_id", revisionId)
+        .in("target_node_id", batch)
+    );
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update curation", 400);
+    }
+  }
+
   if (targets.every((t) => t.sequence === undefined)) return;
 
   const sequenced = new Set(targets.flatMap((t) => t.sequence ?? []));
@@ -533,16 +559,6 @@ export async function syncDraftCuration(
         : "A guide in the sequence is not a prerequisite of any target guide",
       400
     );
-  }
-
-  const { data: nodes, error: nodesError } = await supabase
-    .from("objective_revision_nodes")
-    .select("id, guide_base_id, is_target")
-    .eq("revision_id", revisionId);
-
-  if (nodesError) {
-    console.error(nodesError);
-    throw new ServiceError("Failed to load revision nodes", 500);
   }
 
   const nodeIdByBase = new Map(
