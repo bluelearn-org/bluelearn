@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { auth, env, jsonAuth, makeUser } from "./helpers";
+import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
 import { grantRole } from "./factories/identity";
 import { createPublishedGuide } from "./factories/guides";
 import { createPrerequisite } from "./factories/graph";
@@ -250,6 +250,91 @@ describe("PATCH /objective-revisions/{id} curation", () => {
         target_position: 0,
       }),
     ]);
+  });
+
+  describe("stale sequence rows", () => {
+    const setup = async () => {
+      const { curator, revision } = await curatorDraft();
+      const patch = async (targets: unknown) => {
+        const res = await app.request(
+          `/objective-revisions/${revision.id}`,
+          jsonAuth(curator.token, "PATCH", { targets }),
+          env
+        );
+        expect(res.status).toBe(200);
+      };
+      const nodeIdOf = async (baseId: string) => {
+        const { data, error } = await admin
+          .from("objective_revision_nodes")
+          .select("id")
+          .eq("revision_id", revision.id)
+          .eq("guide_base_id", baseId)
+          .single();
+        if (error) throw error;
+        return data.id;
+      };
+      const orderRows = async () => {
+        const { data, error } = await admin
+          .from("objective_revision_node_orders")
+          .select("target_node_id, node_id, position")
+          .eq("revision_id", revision.id)
+          .order("target_node_id")
+          .order("position");
+        if (error) throw error;
+        return data;
+      };
+      return { patch, nodeIdOf, orderRows };
+    };
+
+    it("drops every order row when the target set empties", async () => {
+      const { patch, nodeIdOf, orderRows } = await setup();
+      const prereq = await createPublishedGuide();
+      const goal = await createPublishedGuide();
+      await createPrerequisite(prereq.base.id, goal.base.id);
+
+      await patch([
+        {
+          guide_base_id: goal.base.id,
+          sequence: [prereq.base.id, goal.base.id],
+        },
+      ]);
+      const goalNode = await nodeIdOf(goal.base.id);
+      expect((await orderRows()).map((r) => r.target_node_id)).toContain(
+        goalNode
+      );
+
+      await patch([]);
+      expect(await orderRows()).toEqual([]);
+    });
+
+    it("drops a former target's rows and keeps the unsequenced target's", async () => {
+      const { patch, nodeIdOf, orderRows } = await setup();
+      const prereqA = await createPublishedGuide();
+      const a = await createPublishedGuide();
+      const prereqB = await createPublishedGuide();
+      const b = await createPublishedGuide();
+      await createPrerequisite(prereqA.base.id, a.base.id);
+      await createPrerequisite(prereqB.base.id, b.base.id);
+
+      await patch([
+        { guide_base_id: a.base.id, sequence: [prereqA.base.id, a.base.id] },
+        { guide_base_id: b.base.id, sequence: [prereqB.base.id, b.base.id] },
+      ]);
+      const aNode = await nodeIdOf(a.base.id);
+      const bNode = await nodeIdOf(b.base.id);
+      const before = await orderRows();
+      const aRows = before.filter((r) => r.target_node_id === aNode);
+      expect(aRows.map((r) => r.node_id)).toEqual([
+        await nodeIdOf(prereqA.base.id),
+        aNode,
+      ]);
+      expect(before.map((r) => r.target_node_id)).toContain(bNode);
+
+      await patch([{ guide_base_id: a.base.id }]);
+      const after = await orderRows();
+      expect(after.filter((r) => r.target_node_id === bNode)).toEqual([]);
+      expect(after.filter((r) => r.target_node_id === aNode)).toEqual(aRows);
+    });
   });
 
   it("403s for a non-curator author", async () => {
