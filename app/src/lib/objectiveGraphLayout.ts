@@ -11,8 +11,8 @@ type NodePosition = {
   position: { x: number; y: number };
 };
 
-// Top to bottom: prerequisites above their dependents, targets on the last
-// row, each row centred around x = 0 like useGraphLayout.
+// Prerequisites above dependents, matching the node handles (in at the top,
+// out at the bottom): flip both together. Rows centre on x = 0 like useGraphLayout.
 export function layoutObjectiveGraph(
   graph: ObjectiveGraphData,
   { nodeWidth, nodeSpacing, levelSpacing }: LayoutOptions
@@ -49,13 +49,10 @@ export function layoutObjectiveGraph(
   });
 }
 
-// A node's level is the longest edge path reaching it from a node with no
-// incoming edge. Edges naming a node outside the graph are ignored.
 function longestPathLevels(graph: ObjectiveGraphData) {
   const levelById = new Map(graph.nodes.map((n) => [n.id, 0]));
 
-  // enough: a DAG settles within one pass per node; a cycle stops here instead
-  // of looping, and is refused upstream before it reaches the canvas.
+  // ponytail: a cycle lands on wrong rows, never errors; upgrade when one can reach the canvas
   for (let pass = 0; pass < graph.nodes.length; pass++) {
     let changed = false;
 
