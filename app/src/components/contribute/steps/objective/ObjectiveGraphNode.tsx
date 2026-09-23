@@ -32,6 +32,7 @@ export function ObjectiveGuideNode({ data }: ObjectiveNodeProps) {
       isSelected={false}
       handles={CANVAS_HANDLES}
       fixedWidth
+      focusOnHover
     />
   );
 }
@@ -43,6 +44,7 @@ export function ObjectiveRequestNode({ data }: ObjectiveNodeProps) {
       isSelected={false}
       handles={CANVAS_HANDLES}
       fixedWidth
+      focusOnHover
       isRequest
     />
   );

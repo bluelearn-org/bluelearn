@@ -19,7 +19,7 @@ import type {
 import { getGuideWalkthrough } from "@/lib/api/guides";
 import {
   ObjectiveDesign,
-  highlightedFrom,
+  upstreamAndDownstream,
 } from "@/components/contribute/steps/objective/ObjectiveDesign";
 
 // Render each node through its registered type so jsdom never measures, the
@@ -386,23 +386,42 @@ describe("ObjectiveDesign", () => {
   });
 });
 
-describe("highlightedFrom", () => {
+describe("upstreamAndDownstream", () => {
+  const reach = (sides: ReturnType<typeof upstreamAndDownstream>) =>
+    new Set([...sides.upstream, ...sides.downstream]);
+
   it("reaches everything upstream and downstream, and nothing unconnected", () => {
     const edges = [
       { id: "a-b", source: "a", target: "b" },
       { id: "b-c", source: "b", target: "c" },
     ];
 
-    expect(highlightedFrom(edges, "b")).toEqual(new Set(["a", "b", "c"]));
-    expect(highlightedFrom(edges, "d")).toEqual(new Set(["d"]));
+    expect(reach(upstreamAndDownstream(edges, "b"))).toEqual(
+      new Set(["a", "c"])
+    );
+    expect(reach(upstreamAndDownstream(edges, "d"))).toEqual(new Set());
   });
 
-  it("terminates on a cycle", () => {
+  it("keeps prerequisites upstream and follow-ups downstream", () => {
+    const edges = [
+      { id: "a-h", source: "a", target: "h" },
+      { id: "h-c", source: "h", target: "c" },
+    ];
+
+    const { upstream, downstream } = upstreamAndDownstream(edges, "h");
+    expect(upstream).toEqual(new Set(["a"]));
+    expect(downstream).toEqual(new Set(["c"]));
+  });
+
+  it("terminates on a cycle, leaving the hovered node on neither side", () => {
     const edges = [
       { id: "a-b", source: "a", target: "b" },
       { id: "b-a", source: "b", target: "a" },
     ];
 
-    expect(highlightedFrom(edges, "a")).toEqual(new Set(["a", "b"]));
+    expect(upstreamAndDownstream(edges, "a")).toEqual({
+      upstream: new Set(["b"]),
+      downstream: new Set(["b"]),
+    });
   });
 });

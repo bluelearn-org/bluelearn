@@ -27,6 +27,10 @@ type GuideGraphNodeProps = {
   handles?: { target: Position; source: Position; className: string };
   // The design canvas lays out a fixed column (OBJECTIVE_NODE_WIDTH).
   fixedWidth?: boolean;
+  // The design canvas's hover is a focus: the card glows while its
+  // prerequisites and follow-ups light up. The walkthrough and curation keep
+  // the plain tint.
+  focusOnHover?: boolean;
 };
 
 export function GuideGraphNode({
@@ -37,6 +41,7 @@ export function GuideGraphNode({
   isRequest = false,
   handles,
   fixedWidth = false,
+  focusOnHover = false,
 }: GuideGraphNodeProps) {
   const {
     isTarget,
@@ -62,6 +67,10 @@ export function GuideGraphNode({
 
   const width = fixedWidth ? "w-[260px]" : "w-max min-w-[260px]";
   const titleWrap = fixedWidth ? "" : "whitespace-nowrap";
+  const glow =
+    focusOnHover && isHovered
+      ? "ring-2 ring-brand-bright-blue shadow-[0_0_16px_0] shadow-brand-bright-blue/40"
+      : "";
 
   return (
     <div
@@ -87,7 +96,7 @@ export function GuideGraphNode({
             : isHovered || isSelected
               ? "bg-muted"
               : "bg-background"
-        } ${border}`}
+        } ${border} ${glow}`}
       >
         <CardHeader className="[container-type:normal] gap-1 py-3.5">
           <div className="flex items-start gap-3">

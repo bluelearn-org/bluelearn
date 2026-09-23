@@ -62,7 +62,8 @@ const edgeTypes = { drawn: DrawnEdge };
 const NODE_SPACING = 320;
 const LEVEL_SPACING = 200;
 const EDGE_COLOR = "#94a3b8";
-const LIT_EDGE_COLOR = "#3b82f6";
+const PREREQUISITE_EDGE_COLOR = "var(--brand-orange)";
+const FOLLOW_UP_EDGE_COLOR = "var(--brand-muted-green)";
 const DIMMED_EDGE_COLOR = "#94a3b833";
 
 type Guide = Awaited<ReturnType<typeof listGuides>>[number];
@@ -204,16 +205,23 @@ const ObjectiveGraph = ({
   useEffect(() => setNodes(flowNodes), [flowNodes, setNodes]);
   useEffect(() => setEdges(flowEdges), [flowEdges, setEdges]);
 
-  // Same numbers as the walkthrough graph (lib/useGraphLayout.ts), so the two
-  // canvases read as one product.
+  // Widths and dimming match the walkthrough graph (lib/useGraphLayout.ts);
+  // only the design canvas tells a guide's prerequisites from its follow-ups.
   useEffect(() => {
-    const lit = hoveredNodeId
-      ? highlightedFrom(graph.edges, hoveredNodeId)
-      : new Set<string>();
+    const { upstream, downstream } = hoveredNodeId
+      ? upstreamAndDownstream(graph.edges, hoveredNodeId)
+      : { upstream: new Set<string>(), downstream: new Set<string>() };
+    const onPrerequisiteSide = (id: string) =>
+      id === hoveredNodeId || upstream.has(id);
+    const onFollowUpSide = (id: string) =>
+      id === hoveredNodeId || downstream.has(id);
 
     setNodes((nds) =>
       nds.map((n) => {
-        const isDimmed = hoveredNodeId !== null && !lit.has(n.id);
+        const isDimmed =
+          hoveredNodeId !== null &&
+          !onPrerequisiteSide(n.id) &&
+          !onFollowUpSide(n.id);
         const isHovered = n.id === hoveredNodeId;
         return n.data.isDimmed === isDimmed && n.data.isHovered === isHovered
           ? n
@@ -224,13 +232,15 @@ const ObjectiveGraph = ({
     setEdges((eds) =>
       eds
         .map((e) => {
-          const isLit =
-            hoveredNodeId !== null && lit.has(e.source) && lit.has(e.target);
-          const stroke = isLit
-            ? LIT_EDGE_COLOR
-            : hoveredNodeId
-              ? DIMMED_EDGE_COLOR
-              : EDGE_COLOR;
+          const isPrerequisite =
+            onPrerequisiteSide(e.source) && onPrerequisiteSide(e.target);
+          const isFollowUp =
+            onFollowUpSide(e.source) && onFollowUpSide(e.target);
+          const isLit = isPrerequisite || isFollowUp;
+
+          let stroke = hoveredNodeId ? DIMMED_EDGE_COLOR : EDGE_COLOR;
+          if (isPrerequisite) stroke = PREREQUISITE_EDGE_COLOR;
+          else if (isFollowUp) stroke = FOLLOW_UP_EDGE_COLOR;
           const strokeWidth = isLit ? 3 : 2;
 
           const unchanged =
@@ -375,27 +385,30 @@ function toFlowEdges(graph: ObjectiveGraphData): Array<Edge> {
   }));
 }
 
-export function highlightedFrom(
+export function upstreamAndDownstream(
   edges: ObjectiveGraphData["edges"],
   hoveredId: string
-): Set<string> {
-  const reached = new Set<string>();
+): { upstream: Set<string>; downstream: Set<string> } {
   const walk = (from: "source" | "target", to: "source" | "target") => {
-    const visited = new Set<string>();
+    const reached = new Set<string>();
     const queue = [hoveredId];
     while (queue.length > 0) {
       const current = queue.shift()!;
-      if (visited.has(current)) continue;
-      visited.add(current);
-      reached.add(current);
       for (const edge of edges)
-        if (edge[from] === current) queue.push(edge[to]);
+        if (edge[from] === current && !reached.has(edge[to])) {
+          reached.add(edge[to]);
+          queue.push(edge[to]);
+        }
     }
+
+    reached.delete(hoveredId);
+    return reached;
   };
 
-  walk("source", "target");
-  walk("target", "source");
-  return reached;
+  return {
+    upstream: walk("target", "source"),
+    downstream: walk("source", "target"),
+  };
 }
 
 function DrawnEdge({
