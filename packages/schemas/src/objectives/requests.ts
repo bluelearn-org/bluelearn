@@ -5,12 +5,12 @@ import {
   objectiveTitleSchema,
 } from "./fields";
 
-// Create a draft objective. The objective is built to reach target_ids (at least one
-// goal); title is optional at creation and only required to publish.
+// Create a draft objective. The objective is built to reach target_ids; targets
+// and title are optional at creation and only required to publish.
 export const createObjectiveSchema = z.object({
   title: objectiveTitleSchema.nullish(),
   summary: objectiveSummarySchema.nullish(),
-  target_ids: z.array(z.uuid()).min(1),
+  target_ids: z.array(z.uuid()),
   tags: z.array(z.uuid()).default([]),
 });
 
@@ -63,7 +63,7 @@ export const updateObjectiveRevisionSchema = z
     summary: objectiveSummarySchema.nullish(),
     change_summary: objectiveChangeSummarySchema.nullish(),
     tags: z.array(z.uuid()),
-    targets: z.array(objectiveTargetSchema).min(1),
+    targets: z.array(objectiveTargetSchema),
     graph: objectiveGraphSchema,
   })
   .partial()

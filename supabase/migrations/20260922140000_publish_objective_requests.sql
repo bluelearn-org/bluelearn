@@ -61,6 +61,14 @@ begin
       using errcode = 'invalid_parameter_value';
   end if;
 
+  if not exists (
+    select 1 from public.objective_revision_nodes
+      where revision_id = p_revision_id and is_target
+  ) then
+    raise exception 'At least one target guide is required to publish an objective'
+      using errcode = 'invalid_parameter_value';
+  end if;
+
   update public.objective_revisions
     set status = 'published',
         published_at = now()

@@ -56,6 +56,40 @@ describe("POST /objectives", () => {
     expect(revision_id).toBeTruthy();
   });
 
+  it("creates a draft with no target, and flags a named target", async () => {
+    const curator = await makeUser();
+    await grantRole(curator.userId, "curator");
+    const target = await createPublishedGuide();
+
+    const targetsOf = async (targetIds: string[]) => {
+      const created = await app.request(
+        "/objectives",
+        jsonAuth(curator.token, "POST", { target_ids: targetIds }),
+        env
+      );
+      expect(created.status).toBe(201);
+      const { revision_id } = (await created.json()) as {
+        revision_id: string;
+      };
+      const res = await app.request(
+        `/objective-revisions/${revision_id}`,
+        auth(curator.token),
+        env
+      );
+      const { snapshot } = (await res.json()) as {
+        snapshot: {
+          nodes: Array<{ guide_base_id: string; is_target: boolean }>;
+        };
+      };
+      return snapshot.nodes
+        .filter((n) => n.is_target)
+        .map((n) => n.guide_base_id);
+    };
+
+    expect(await targetsOf([])).toEqual([]);
+    expect(await targetsOf([target.base.id])).toEqual([target.base.id]);
+  });
+
   it("403s for a non-curator", async () => {
     const user = await makeUser();
     const target = await createPublishedGuide();
