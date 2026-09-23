@@ -1,0 +1,77 @@
+import type { ObjectiveGraphData } from "@/types/contributions";
+
+type LayoutOptions = {
+  nodeWidth: number;
+  nodeSpacing: number;
+  levelSpacing: number;
+};
+
+type NodePosition = {
+  id: string;
+  position: { x: number; y: number };
+};
+
+// Top to bottom: prerequisites above their dependents, targets on the last
+// row, each row centred around x = 0 like useGraphLayout.
+export function layoutObjectiveGraph(
+  graph: ObjectiveGraphData,
+  { nodeWidth, nodeSpacing, levelSpacing }: LayoutOptions
+): Array<NodePosition> {
+  const levelById = longestPathLevels(graph);
+
+  const bottomLevel = Math.max(0, ...levelById.values());
+  for (const node of graph.nodes) {
+    if (node.type === "target") levelById.set(node.id, bottomLevel);
+  }
+
+  const idsByLevel = new Map<number, Array<string>>();
+  for (const node of graph.nodes) {
+    const level = levelById.get(node.id)!;
+    idsByLevel.set(level, [...(idsByLevel.get(level) ?? []), node.id]);
+  }
+
+  // Rows are numbered by rank, so a level emptied by moving targets down
+  // leaves no gap.
+  const levels = [...idsByLevel.keys()].sort((a, b) => a - b);
+
+  return levels.flatMap((level, row) => {
+    const ids = idsByLevel.get(level)!;
+    const startX = -(ids.length * nodeSpacing) / 2;
+
+    return ids.map((id, index) => {
+      const cellCenterX = startX + index * nodeSpacing + nodeSpacing / 2;
+
+      return {
+        id,
+        position: { x: cellCenterX - nodeWidth / 2, y: row * levelSpacing },
+      };
+    });
+  });
+}
+
+// A node's level is the longest edge path reaching it from a node with no
+// incoming edge. Edges naming a node outside the graph are ignored.
+function longestPathLevels(graph: ObjectiveGraphData) {
+  const levelById = new Map(graph.nodes.map((n) => [n.id, 0]));
+
+  // enough: a DAG settles within one pass per node; a cycle stops here instead
+  // of looping, and is refused upstream before it reaches the canvas.
+  for (let pass = 0; pass < graph.nodes.length; pass++) {
+    let changed = false;
+
+    for (const edge of graph.edges) {
+      const sourceLevel = levelById.get(edge.source);
+      const targetLevel = levelById.get(edge.target);
+      if (sourceLevel === undefined || targetLevel === undefined) continue;
+
+      if (targetLevel < sourceLevel + 1) {
+        levelById.set(edge.target, sourceLevel + 1);
+        changed = true;
+      }
+    }
+
+    if (!changed) break;
+  }
+
+  return levelById;
+}

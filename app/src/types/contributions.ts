@@ -48,6 +48,34 @@ export const subObjectiveSchema = z.object({
   curatedSequence: z.array(z.string()),
 });
 
+// The design canvas draft. Positions are not stored: the layout computes them
+// from the edges, so an edge is always prerequisite (source) -> dependent (target).
+export const objectiveGraphNodeSchema = z.discriminatedUnion("type", [
+  z.object({
+    id: z.string(),
+    type: z.enum(["guide", "target"]),
+    guideSlug: z.string(),
+    title: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("guide_request"),
+    title: z.string(),
+    summary: z.string(),
+  }),
+]);
+
+export const objectiveGraphEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+});
+
+export const objectiveGraphSchema = z.object({
+  nodes: z.array(objectiveGraphNodeSchema),
+  edges: z.array(objectiveGraphEdgeSchema),
+});
+
 export const objectiveContributionSchema = z.object({
   title: z.string(),
   summary: z.string(),
@@ -56,6 +84,8 @@ export const objectiveContributionSchema = z.object({
   featuredSubObjective: z.string(),
   subObjectives: z.array(subObjectiveSchema),
   subjects: z.array(z.string()),
+  // Drafts stored before the canvas existed have no graph.
+  graph: objectiveGraphSchema.default({ nodes: [], edges: [] }),
 });
 
 export type ContributionType = z.infer<typeof contributionTypeSchema>;
@@ -64,3 +94,6 @@ export type GuideContribution = z.infer<typeof guideContributionSchema>;
 export type VariantContribution = z.infer<typeof variantContributionSchema>;
 export type SubObjective = z.infer<typeof subObjectiveSchema>;
 export type ObjectiveContribution = z.infer<typeof objectiveContributionSchema>;
+export type ObjectiveGraphNode = z.infer<typeof objectiveGraphNodeSchema>;
+export type ObjectiveGraphEdge = z.infer<typeof objectiveGraphEdgeSchema>;
+export type ObjectiveGraphData = z.infer<typeof objectiveGraphSchema>;

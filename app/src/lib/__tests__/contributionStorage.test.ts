@@ -65,6 +65,7 @@ const sampleObjective: ObjectiveContribution = {
   featuredSubObjective: "sub-obj-1",
   subObjectives: [],
   subjects: ["sub-1"],
+  graph: { nodes: [], edges: [] },
 };
 
 describe("contributionStorage", () => {

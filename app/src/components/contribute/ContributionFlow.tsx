@@ -8,6 +8,8 @@ import type {
   ContributionType,
   GuideContribution,
   ObjectiveContribution,
+  ObjectiveGraphData,
+  ObjectiveGraphNode,
   VariantContribution,
 } from "@/types/contributions";
 
@@ -109,9 +111,40 @@ const createObjectiveContData = (): ObjectiveContribution => ({
   featuredSubObjective: "",
   subObjectives: [],
   subjects: [],
+  graph: { nodes: [], edges: [] },
 });
 
 type ObjectiveRevisionData = Awaited<ReturnType<typeof getObjectiveRevision>>;
+
+const objectiveGraphFromSnapshot = (
+  snapshot: ObjectiveRevisionData["snapshot"]
+): ObjectiveGraphData => {
+  const nodeIdByBaseId = new Map<string, string>();
+  const nodes: Array<ObjectiveGraphNode> = [];
+
+  for (const n of snapshot.nodes) {
+    // ponytail: request nodes (slug null) are skipped until A3 hydrates them.
+    if (n.slug === null) continue;
+
+    if (n.guide_base_id) nodeIdByBaseId.set(n.guide_base_id, n.id);
+    nodes.push({
+      id: n.id,
+      type: n.is_target ? "target" : "guide",
+      guideSlug: n.slug,
+      title: n.title ?? n.slug,
+    });
+  }
+
+  const edges = snapshot.raw_edges.flatMap((e) => {
+    const source = nodeIdByBaseId.get(e.from_id);
+    const target = nodeIdByBaseId.get(e.to_id);
+    if (!source || !target) return [];
+
+    return [{ id: `${e.from_id}-${e.to_id}`, source, target }];
+  });
+
+  return { nodes, edges };
+};
 
 const objectiveDataFromRevision = (
   data: ObjectiveRevisionData
@@ -147,6 +180,7 @@ const objectiveDataFromRevision = (
       ];
     }),
     subjects: data.subjects.map((s) => s.id),
+    graph: objectiveGraphFromSnapshot(data.snapshot),
   };
 };
 
@@ -1335,7 +1369,15 @@ function Inner({
           guides={guideOptions}
         />
 
-        <ObjectiveDesign Stepper={Stepper} type={type} guides={guideOptions} />
+        <ObjectiveDesign
+          Stepper={Stepper}
+          type={type}
+          guides={guideOptions}
+          objectiveGraph={objectiveContData.graph}
+          setObjectiveGraph={(graph) =>
+            setObjectiveContData((prev) => ({ ...prev, graph }))
+          }
+        />
 
         <OrderObjectiveGuides
           Stepper={Stepper}
