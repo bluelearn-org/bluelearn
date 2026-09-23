@@ -63,6 +63,8 @@ export const objectiveSnapshotNodeSchema = z.object({
   guide_id: z.string().nullable(),
   slug: z.string().nullable(),
   title: z.string().nullable(),
+  summary: z.string().nullable(),
+  request_id: z.string().nullable(),
   is_target: z.boolean(),
   is_included: z.boolean(),
   is_featured: z.boolean(),
@@ -86,6 +88,9 @@ export const objectiveSnapshotSchema = z.object({
   orders: z.array(objectiveSnapshotOrderSchema),
   projected_edges: z.array(objectiveSnapshotEdgeSchema),
   raw_edges: z.array(objectiveSnapshotEdgeSchema),
+  drawn_edges: z.array(
+    z.object({ from_node_id: z.string(), to_node_id: z.string() })
+  ),
 });
 
 export const objectiveRevisionListItemSchema = z.object({
@@ -195,8 +200,9 @@ export const objectiveRevisionUpdateResponseSchema = z.strictObject({
   subjects: z.array(subjectTagSchema),
 });
 
+// updateObjectiveNode is keyed by guide base and returns a guide node only.
 export const objectiveNodeResponseSchema = z.strictObject({
-  node: objectiveSnapshotNodeSchema,
+  node: objectiveSnapshotNodeSchema.omit({ summary: true, request_id: true }),
 });
 
 export const objectiveSlugResponseSchema = z.strictObject({

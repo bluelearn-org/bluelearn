@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  ObjectiveGraphInput,
   ObjectiveTargetInput,
   UpdateObjectiveNodeInput,
   UpdateObjectiveRevisionInput,
@@ -34,7 +35,7 @@ export async function getRevisionSnapshot(
 ) {
   const { data: nodeRows, error: nodeError } = await supabase
     .from("objective_revision_nodes")
-    .select(NODE_COLS)
+    .select(`${NODE_COLS}, request_id, title, summary`)
     .eq("revision_id", revisionId);
 
   if (nodeError) {
@@ -74,22 +75,25 @@ export async function getRevisionSnapshot(
       });
   }
 
-  const nodes = (nodeRows ?? []).map((n) => ({
-    id: n.id,
-    guide_base_id: n.guide_base_id,
-    guide_id: n.guide_id,
-    slug: n.guide_base_id
-      ? (baseMeta.get(n.guide_base_id)?.slug ?? null)
-      : null,
-    title: n.guide_base_id
-      ? (baseMeta.get(n.guide_base_id)?.title ?? null)
-      : null,
-    is_target: n.is_target,
-    is_included: n.is_included,
-    is_featured: n.is_featured,
-    target_position: n.target_position,
-    note: n.note,
-  }));
+  const nodes = (nodeRows ?? []).map((n) => {
+    const base = n.guide_base_id ? baseMeta.get(n.guide_base_id) : undefined;
+    const isRequest = n.guide_base_id === null;
+
+    return {
+      id: n.id,
+      guide_base_id: n.guide_base_id,
+      guide_id: n.guide_id,
+      slug: base?.slug ?? null,
+      title: isRequest ? n.title : (base?.title ?? null),
+      summary: isRequest ? n.summary : null,
+      request_id: n.request_id,
+      is_target: n.is_target,
+      is_included: n.is_included,
+      is_featured: n.is_featured,
+      target_position: n.target_position,
+      note: n.note,
+    };
+  });
 
   const { data: orderRows, error: orderError } = await supabase
     .from("objective_revision_node_orders")
@@ -116,7 +120,7 @@ export async function getRevisionSnapshot(
           )
           .eq("revision_id", revisionId);
 
-  const [projected, raw] = await Promise.all([
+  const [projected, raw, drawn] = await Promise.all([
     projectedQuery,
     baseIds.length > 0
       ? supabase
@@ -127,6 +131,10 @@ export async function getRevisionSnapshot(
           .in("from_guide_base_id", baseIds)
           .in("to_guide_base_id", baseIds)
       : null,
+    supabase
+      .from("objective_revision_edges")
+      .select("from_node_id, to_node_id")
+      .eq("revision_id", revisionId),
   ]);
 
   if (projected.error) {
@@ -135,6 +143,10 @@ export async function getRevisionSnapshot(
   }
   if (raw?.error) {
     console.error(raw.error);
+    throw new ServiceError("Failed to load revision edges", 500);
+  }
+  if (drawn.error) {
+    console.error(drawn.error);
     throw new ServiceError("Failed to load revision edges", 500);
   }
 
@@ -155,7 +167,13 @@ export async function getRevisionSnapshot(
   );
   const raw_edges = (raw?.data ?? []).map(toEdge);
 
-  return { nodes, orders: orderRows ?? [], projected_edges, raw_edges };
+  return {
+    nodes,
+    orders: orderRows ?? [],
+    projected_edges,
+    raw_edges,
+    drawn_edges: drawn.data ?? [],
+  };
 }
 
 export async function loadRevisionTags(supabase: DB, revisionId: string) {
@@ -255,7 +273,7 @@ export async function updateObjectiveRevision(
   revisionId: string,
   input: UpdateObjectiveRevisionInput
 ) {
-  const { tags, targets, ...fields } = input;
+  const { tags, targets, graph, ...fields } = input;
 
   // Blank summary/change_summary are stored as NULL so a cleared field reads as
   // absent, matching the guide revision path.
@@ -310,6 +328,9 @@ export async function updateObjectiveRevision(
   }
   if (targets !== undefined) {
     await syncDraftCuration(supabase, userId, revisionId, targets);
+  }
+  if (graph !== undefined) {
+    await syncDraftGraph(supabase, userId, revisionId, graph);
   }
 
   const subjects = await loadRevisionTags(supabase, revisionId);
@@ -423,33 +444,8 @@ export async function syncDraftCuration(
     throw new ServiceError("Unable to update targets", 400);
   }
 
-  const { data: existing, error: existingError } = await supabase
-    .from("objective_revision_nodes")
-    .select("guide_base_id")
-    .eq("revision_id", revisionId);
-
-  if (existingError) {
-    console.error(existingError);
-    throw new ServiceError("Failed to load revision nodes", 500);
-  }
-
-  const stale = (existing ?? [])
-    .map((n) => n.guide_base_id)
-    .filter((id): id is string => id !== null && !closureSet.has(id));
-
-  if (stale.length > 0) {
-    const { error } = await selectInBatches(stale, (batch) =>
-      supabase
-        .from("objective_revision_nodes")
-        .delete()
-        .eq("revision_id", revisionId)
-        .in("guide_base_id", batch)
-    );
-    if (error) {
-      console.error(error);
-      throw new ServiceError("Unable to update targets", 400);
-    }
-  }
+  // Closure only adds nodes. Removing one is the drawn graph's call, made in
+  // syncDraftGraph.
 
   const { data: bases, error: basesError } = await selectInBatches(
     closure,
@@ -619,6 +615,168 @@ export async function syncDraftCuration(
   }
 }
 
+// Replace a draft's node set and drawn edges with the graph the canvas sent.
+// Target flags, inclusion, and notes are left to syncDraftCuration.
+// ponytail: six statements, no transaction, like syncDraftCuration. A failed
+// edge insert leaves the nodes updated and the old edges dropped; the next save
+// from the canvas repairs it. The way up is one RPC that does all six.
+export async function syncDraftGraph(
+  supabase: DB,
+  userId: string,
+  revisionId: string,
+  graph: ObjectiveGraphInput
+) {
+  await requireCurator(supabase, userId);
+
+  const clientIds = new Set(graph.nodes.map((n) => n.id));
+  if (clientIds.size !== graph.nodes.length) {
+    throw new ServiceError("Graph nodes must be distinct", 400);
+  }
+
+  const dangling = graph.edges.some(
+    (e) => !clientIds.has(e.from_node_id) || !clientIds.has(e.to_node_id)
+  );
+  if (dangling) {
+    throw new ServiceError(
+      "An edge names a node that is not in the graph",
+      400
+    );
+  }
+
+  const selfLoop = graph.edges.some((e) => e.from_node_id === e.to_node_id);
+  if (selfLoop) {
+    throw new ServiceError("A node cannot be its own prerequisite", 400);
+  }
+
+  const guideNodes = graph.nodes.filter((n) => "guide_base_id" in n);
+  const requestNodes = graph.nodes.filter((n) => "title" in n);
+  const baseIds = guideNodes.map((n) => n.guide_base_id);
+
+  const { data: bases, error: basesError } = await selectInBatches(
+    baseIds,
+    (batch) =>
+      supabase
+        .from("guide_bases")
+        .select("id, canonical_guide_id")
+        .in("id", batch)
+  );
+
+  if (basesError) {
+    console.error(basesError);
+    throw new ServiceError("Failed to load guides", 500);
+  }
+
+  const canonicalByBase = new Map(
+    (bases ?? [])
+      .filter((b) => b.canonical_guide_id !== null)
+      .map((b) => [b.id, b.canonical_guide_id as string])
+  );
+
+  if (baseIds.some((id) => !canonicalByBase.has(id))) {
+    throw new ServiceError(
+      "A guide in the graph has no published variant",
+      400
+    );
+  }
+
+  if (guideNodes.length > 0) {
+    const { error } = await supabase.from("objective_revision_nodes").upsert(
+      guideNodes.map((n) => ({
+        revision_id: revisionId,
+        guide_base_id: n.guide_base_id,
+        guide_id: canonicalByBase.get(n.guide_base_id) as string,
+      })),
+      { onConflict: "revision_id, guide_base_id", ignoreDuplicates: true }
+    );
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update graph", 400);
+    }
+  }
+
+  if (requestNodes.length > 0) {
+    const { error } = await supabase.from("objective_revision_nodes").upsert(
+      requestNodes.map((n) => ({
+        id: n.id,
+        revision_id: revisionId,
+        title: n.title,
+        summary: n.summary ?? null,
+      })),
+      { onConflict: "id" }
+    );
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update graph", 400);
+    }
+  }
+
+  const { data: stored, error: storedError } = await supabase
+    .from("objective_revision_nodes")
+    .select("id, guide_base_id")
+    .eq("revision_id", revisionId);
+
+  if (storedError) {
+    console.error(storedError);
+    throw new ServiceError("Failed to load revision nodes", 500);
+  }
+
+  // A guide node already on the draft keeps its stored id, so the client's id
+  // for it is only a name the edges in this body use.
+  const storedIdByBase = new Map(
+    (stored ?? [])
+      .filter((n) => n.guide_base_id !== null)
+      .map((n) => [n.guide_base_id, n.id])
+  );
+  const storedIdByClientId = new Map(
+    graph.nodes.map((n) => [
+      n.id,
+      "guide_base_id" in n
+        ? (storedIdByBase.get(n.guide_base_id) as string)
+        : n.id,
+    ])
+  );
+  const kept = new Set(storedIdByClientId.values());
+  const removed = (stored ?? []).map((n) => n.id).filter((id) => !kept.has(id));
+
+  if (removed.length > 0) {
+    const { error } = await selectInBatches(removed, (batch) =>
+      supabase.from("objective_revision_nodes").delete().in("id", batch)
+    );
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update graph", 400);
+    }
+  }
+
+  const { error: dropError } = await supabase
+    .from("objective_revision_edges")
+    .delete()
+    .eq("revision_id", revisionId);
+
+  if (dropError) {
+    console.error(dropError);
+    throw new ServiceError("Unable to update graph", 400);
+  }
+
+  if (graph.edges.length > 0) {
+    const { error } = await supabase.from("objective_revision_edges").insert(
+      graph.edges.map((e) => ({
+        revision_id: revisionId,
+        from_node_id: storedIdByClientId.get(e.from_node_id) as string,
+        to_node_id: storedIdByClientId.get(e.to_node_id) as string,
+      }))
+    );
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update graph", 400);
+    }
+  }
+}
+
 // Publish the draft directly (no review gate): freeze its edge projection, point
 // the objective at it, and freeze the slug on first publish in one transaction via the
 // publish_objective_revision RPC. Returns the live slug for routing.
@@ -684,6 +842,8 @@ type SnapshotNode = {
   guide_id: string | null;
   slug: string | null;
   title: string | null;
+  summary: string | null;
+  request_id: string | null;
   is_target: boolean;
   is_included: boolean;
   is_featured: boolean;

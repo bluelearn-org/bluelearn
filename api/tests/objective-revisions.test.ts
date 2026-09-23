@@ -150,7 +150,7 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     ]);
   });
 
-  it("drops nodes no longer reached once a target leaves", async () => {
+  it("keeps closure nodes when a target leaves; the graph removes them", async () => {
     const { curator, revision } = await curatorDraft();
     const prereq = await createPublishedGuide();
     const goal = await createPublishedGuide();
@@ -170,16 +170,36 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     ]);
     await patch([{ guide_base_id: kept.base.id }]);
 
-    const res = await app.request(
+    const readBases = async () => {
+      const res = await app.request(
+        `/objective-revisions/${revision.id}`,
+        auth(curator.token),
+        env
+      );
+      const { snapshot } = (await res.json()) as {
+        snapshot: { nodes: Array<{ guide_base_id: string }> };
+      };
+      return snapshot.nodes.map((n) => n.guide_base_id);
+    };
+
+    const afterTargets = await readBases();
+    expect([...afterTargets].sort()).toEqual(
+      [goal.base.id, kept.base.id, prereq.base.id].sort()
+    );
+
+    await app.request(
       `/objective-revisions/${revision.id}`,
-      {},
+      jsonAuth(curator.token, "PATCH", {
+        graph: {
+          nodes: [{ id: crypto.randomUUID(), guide_base_id: kept.base.id }],
+          edges: [],
+        },
+      }),
       env
     );
-    const { snapshot } = (await res.json()) as {
-      snapshot: { nodes: Array<{ guide_base_id: string }> };
-    };
-    const bases = snapshot.nodes.map((n) => n.guide_base_id);
-    expect(bases).toEqual([kept.base.id]);
+
+    const afterGraph = await readBases();
+    expect(afterGraph).toEqual([kept.base.id]);
   });
 
   it("403s for a non-curator author", async () => {
