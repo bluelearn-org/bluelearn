@@ -200,7 +200,7 @@ describe("ObjectiveDesign", () => {
 
     expect(screen.getByText("Loops")).toBeTruthy();
     expect(screen.getByText("Recursion")).toBeTruthy();
-    expect(screen.getAllByText("Target")).toHaveLength(1);
+    expect(screen.getAllByText("Target Guide")).toHaveLength(1);
     expect(screen.getByText("Call stacks")).toBeTruthy();
     expect(screen.getByText("What a frame holds")).toBeTruthy();
     expect(screen.getAllByText(/guide request/i)).toHaveLength(1);
@@ -238,7 +238,7 @@ describe("ObjectiveDesign", () => {
     expect(getGuideWalkthrough).toHaveBeenCalledWith("recursion");
     expect(await screen.findByText("Loops")).toBeTruthy();
     expect(screen.getAllByText("Recursion")).toHaveLength(1);
-    expect(screen.getAllByText("Target")).toHaveLength(1);
+    expect(screen.getAllByText("Target Guide")).toHaveLength(1);
   });
 
   it("leaves no prerequisites behind for a target deleted before its walkthrough arrives", async () => {

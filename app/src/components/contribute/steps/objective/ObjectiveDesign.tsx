@@ -214,9 +214,10 @@ const ObjectiveGraph = ({
     setNodes((nds) =>
       nds.map((n) => {
         const isDimmed = hoveredNodeId !== null && !lit.has(n.id);
-        return n.data.isDimmed === isDimmed
+        const isHovered = n.id === hoveredNodeId;
+        return n.data.isDimmed === isDimmed && n.data.isHovered === isHovered
           ? n
-          : { ...n, data: { ...n.data, isDimmed } };
+          : { ...n, data: { ...n.data, isDimmed, isHovered } };
       })
     );
 
@@ -343,6 +344,7 @@ function toFlowNodes(
             title: node.title,
             summary: node.summary,
             isTarget: false,
+            isHovered: false,
             isDimmed: false,
           },
         }
@@ -353,6 +355,7 @@ function toFlowNodes(
           data: {
             title: node.title,
             isTarget: node.type === "target",
+            isHovered: false,
             isDimmed: false,
           },
         }
