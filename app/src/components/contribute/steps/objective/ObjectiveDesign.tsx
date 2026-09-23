@@ -62,6 +62,8 @@ const edgeTypes = { drawn: DrawnEdge };
 const NODE_SPACING = 320;
 const LEVEL_SPACING = 200;
 const EDGE_COLOR = "#94a3b8";
+const LIT_EDGE_COLOR = "#3b82f6";
+const DIMMED_EDGE_COLOR = "#94a3b833";
 
 type Guide = Awaited<ReturnType<typeof listGuides>>[number];
 
@@ -185,9 +187,54 @@ const ObjectiveGraph = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   useEffect(() => setNodes(flowNodes), [flowNodes, setNodes]);
   useEffect(() => setEdges(flowEdges), [flowEdges, setEdges]);
+
+  // Same numbers as the walkthrough graph (lib/useGraphLayout.ts), so the two
+  // canvases read as one product.
+  useEffect(() => {
+    const lit = hoveredNodeId
+      ? highlightedFrom(graph.edges, hoveredNodeId)
+      : new Set<string>();
+
+    setNodes((nds) =>
+      nds.map((n) => {
+        const isDimmed = hoveredNodeId !== null && !lit.has(n.id);
+        return n.data.isDimmed === isDimmed
+          ? n
+          : { ...n, data: { ...n.data, isDimmed } };
+      })
+    );
+
+    setEdges((eds) =>
+      eds.map((e) => {
+        const isLit =
+          hoveredNodeId !== null && lit.has(e.source) && lit.has(e.target);
+        const stroke = isLit
+          ? LIT_EDGE_COLOR
+          : hoveredNodeId
+            ? DIMMED_EDGE_COLOR
+            : EDGE_COLOR;
+        const strokeWidth = isLit ? 3 : 2;
+
+        const unchanged =
+          e.style?.stroke === stroke &&
+          e.style.strokeWidth === strokeWidth &&
+          Boolean(e.animated) === isLit;
+        return unchanged
+          ? e
+          : {
+              ...e,
+              style: { ...e.style, stroke, strokeWidth },
+              animated: isLit,
+              zIndex: isLit ? 10 : 0,
+              markerEnd: { type: MarkerType.ArrowClosed, color: stroke },
+            };
+      })
+    );
+  }, [hoveredNodeId, graph, setNodes, setEdges]);
 
   const handleNodeDragStop: OnNodeDrag = (_event, _node, dragged) => {
     for (const node of dragged)
@@ -211,6 +258,10 @@ const ObjectiveGraph = ({
     onGraphChange?.(removeEdges(removeNodes(graph, nodeIds), edgeIds));
     if (removedTargets.length > 0)
       onTargetsChange?.({ removed: removedTargets });
+
+    // A deleted node never fires mouse leave, so its hover would dim the rest.
+    if (hoveredNodeId && nodeIds.includes(hoveredNodeId))
+      setHoveredNodeId(null);
   };
 
   return (
@@ -230,6 +281,8 @@ const ObjectiveGraph = ({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
+          onNodeMouseEnter={(_event, node) => setHoveredNodeId(node.id)}
+          onNodeMouseLeave={() => setHoveredNodeId(null)}
           onConnect={handleConnect}
           onDelete={handleDelete}
           deleteKeyCode={["Backspace", "Delete"]}
@@ -271,13 +324,22 @@ function toFlowNodes(
           id: node.id,
           type: "objectiveRequest",
           position: positionOf(node.id),
-          data: { title: node.title, summary: node.summary, isTarget: false },
+          data: {
+            title: node.title,
+            summary: node.summary,
+            isTarget: false,
+            isDimmed: false,
+          },
         }
       : {
           id: node.id,
           type: "objectiveGuide",
           position: positionOf(node.id),
-          data: { title: node.title, isTarget: node.type === "target" },
+          data: {
+            title: node.title,
+            isTarget: node.type === "target",
+            isDimmed: false,
+          },
         }
   );
 }
@@ -293,6 +355,29 @@ function toFlowEdges(graph: ObjectiveGraphData): Array<Edge> {
     deletable: isDrawnEdge(edge),
     markerEnd: { type: MarkerType.ArrowClosed, color: EDGE_COLOR },
   }));
+}
+
+export function highlightedFrom(
+  edges: ObjectiveGraphData["edges"],
+  hoveredId: string
+): Set<string> {
+  const reached = new Set<string>();
+  const walk = (from: "source" | "target", to: "source" | "target") => {
+    const visited = new Set<string>();
+    const queue = [hoveredId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      reached.add(current);
+      for (const edge of edges)
+        if (edge[from] === current) queue.push(edge[to]);
+    }
+  };
+
+  walk("source", "target");
+  walk("target", "source");
+  return reached;
 }
 
 function DrawnEdge({

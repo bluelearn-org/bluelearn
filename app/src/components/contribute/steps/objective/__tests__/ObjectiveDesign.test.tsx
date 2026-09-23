@@ -17,7 +17,10 @@ import type {
   ObjectiveGraphNode,
 } from "@/types/contributions";
 import { getGuideWalkthrough } from "@/lib/api/guides";
-import { ObjectiveDesign } from "@/components/contribute/steps/objective/ObjectiveDesign";
+import {
+  ObjectiveDesign,
+  highlightedFrom,
+} from "@/components/contribute/steps/objective/ObjectiveDesign";
 
 // Render each node through its registered type so jsdom never measures, the
 // same reason components/graph/__tests__/GuideGraph.test.tsx mocks xyflow.
@@ -33,6 +36,8 @@ vi.mock("@xyflow/react", async () => {
       nodeTypes,
       onDelete,
       onNodeDragStop,
+      onNodeMouseEnter,
+      onNodeMouseLeave,
     }: {
       nodes: Array<{
         id: string;
@@ -50,6 +55,8 @@ vi.mock("@xyflow/react", async () => {
         node: unknown,
         nodes: Array<unknown>
       ) => void;
+      onNodeMouseEnter: (event: unknown, node: { id: string }) => void;
+      onNodeMouseLeave: (event: unknown, node: { id: string }) => void;
     }) => (
       <div data-testid="react-flow">
         {nodes.map((node) => {
@@ -60,6 +67,8 @@ vi.mock("@xyflow/react", async () => {
               key={node.id}
               data-testid={`node-${node.id}`}
               data-position={`${node.position.x},${node.position.y}`}
+              onMouseEnter={(event) => onNodeMouseEnter(event, node)}
+              onMouseLeave={(event) => onNodeMouseLeave(event, node)}
             >
               <NodeComponent data={node.data} />
               <button onClick={() => onDelete({ nodes: [node], edges: [] })}>
@@ -76,8 +85,6 @@ vi.mock("@xyflow/react", async () => {
     Background: () => null,
     Controls: () => null,
     Handle: () => null,
-    useNodesState: (initial: Array<unknown>) => [initial, vi.fn(), vi.fn()],
-    useEdgesState: (initial: Array<unknown>) => [initial, vi.fn(), vi.fn()],
   };
 });
 
@@ -326,5 +333,76 @@ describe("ObjectiveDesign", () => {
 
     expect(await screen.findByText("Recursion")).toBeTruthy();
     expect(screen.getByTestId("node-n1").dataset.position).toBe("999,999");
+  });
+
+  const guide = (id: string) => ({
+    id,
+    type: "guide" as const,
+    guideBaseId: `base-${id}`,
+    guideSlug: id,
+    title: id.toUpperCase(),
+  });
+  const isDimmed = (id: string) =>
+    screen
+      .getByTestId(`node-${id}`)
+      .firstElementChild!.classList.contains("opacity-30");
+
+  it("dims only what the hovered node neither needs nor leads to, until the pointer leaves", () => {
+    renderDesign({
+      nodes: ["a", "b", "c", "d"].map(guide),
+      edges: [
+        { id: "a-b", source: "a", target: "b" },
+        { id: "b-c", source: "b", target: "c" },
+      ],
+    });
+
+    fireEvent.mouseEnter(screen.getByTestId("node-b"));
+    expect(["a", "b", "c", "d"].map(isDimmed)).toEqual([
+      false,
+      false,
+      false,
+      true,
+    ]);
+
+    fireEvent.mouseLeave(screen.getByTestId("node-b"));
+    expect(isDimmed("d")).toBe(false);
+  });
+
+  it("dims nothing once the hovered node is deleted", () => {
+    render(
+      <DesignWithState
+        initial={{
+          nodes: ["a", "b"].map(guide),
+          edges: [{ id: "a-b", source: "a", target: "b" }],
+        }}
+        onTargetsChange={() => {}}
+      />
+    );
+
+    fireEvent.mouseEnter(screen.getByTestId("node-b"));
+    fireEvent.click(screen.getByRole("button", { name: "Delete b" }));
+
+    expect(isDimmed("a")).toBe(false);
+  });
+});
+
+describe("highlightedFrom", () => {
+  it("reaches everything upstream and downstream, and nothing unconnected", () => {
+    const edges = [
+      { id: "a-b", source: "a", target: "b" },
+      { id: "b-c", source: "b", target: "c" },
+    ];
+
+    expect(highlightedFrom(edges, "b")).toEqual(new Set(["a", "b", "c"]));
+    expect(highlightedFrom(edges, "d")).toEqual(new Set(["d"]));
+  });
+
+  it("terminates on a cycle", () => {
+    const edges = [
+      { id: "a-b", source: "a", target: "b" },
+      { id: "b-a", source: "b", target: "a" },
+    ];
+
+    expect(highlightedFrom(edges, "a")).toEqual(new Set(["a", "b"]));
   });
 });

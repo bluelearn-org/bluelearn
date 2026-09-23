@@ -11,6 +11,7 @@ export type ObjectiveNodeData = {
   title: string;
   summary?: string;
   isTarget: boolean;
+  isDimmed: boolean;
 };
 
 type ObjectiveNodeProps = {
@@ -20,11 +21,11 @@ type ObjectiveNodeProps = {
 const CARD_CLASS = "gap-0 rounded-md border bg-background py-0 ring-0";
 
 const HANDLE_CLASS =
-  "!h-3 !w-12 !cursor-crosshair rounded-full !border-none !bg-primary/70 transition-[scale,background-color] hover:scale-125 hover:!bg-primary";
+  "!h-3 !w-3 !cursor-crosshair rounded-full !border-none !bg-primary/70 transition-[scale,background-color] hover:scale-150 hover:!bg-primary";
 
 export function ObjectiveGuideNode({ data }: ObjectiveNodeProps) {
   return (
-    <NodeFrame>
+    <NodeFrame isDimmed={data.isDimmed}>
       <Card className={cn(CARD_CLASS, "border-foreground")}>
         <CardHeader className="[container-type:normal] gap-1 py-3.5">
           {data.isTarget && <Badge>Target</Badge>}
@@ -37,7 +38,7 @@ export function ObjectiveGuideNode({ data }: ObjectiveNodeProps) {
 
 export function ObjectiveRequestNode({ data }: ObjectiveNodeProps) {
   return (
-    <NodeFrame>
+    <NodeFrame isDimmed={data.isDimmed}>
       <Card className={cn(CARD_CLASS, "border-dashed border-foreground/60")}>
         <CardHeader className="[container-type:normal] gap-1 py-3.5">
           <p className="mono-micro text-muted-foreground">Guide request</p>
@@ -51,9 +52,20 @@ export function ObjectiveRequestNode({ data }: ObjectiveNodeProps) {
   );
 }
 
-function NodeFrame({ children }: { children: ReactNode }) {
+function NodeFrame({
+  isDimmed,
+  children,
+}: {
+  isDimmed: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className="relative w-[260px] select-none">
+    <div
+      className={cn(
+        "relative w-[260px] transition-opacity duration-150 select-none",
+        isDimmed && "opacity-30"
+      )}
+    >
       <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
       {children}
       <Handle
