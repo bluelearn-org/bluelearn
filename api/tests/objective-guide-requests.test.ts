@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
-import { admin, auth, env, insert, makeUser } from "./helpers";
+import { admin, auth, env, insert, jsonAuth, makeUser } from "./helpers";
 import { grantRole } from "./factories/identity";
 import {
   createObjective,
@@ -90,6 +90,116 @@ describe("objective guide request schema", () => {
       .eq("from_guide_base_id", resolver.base.id)
       .throwOnError();
     expect(edges).toEqual([]);
+  });
+
+  it("links a resolved request through the current revision's canvas only", async () => {
+    const curator = await makeUser();
+    await grantRole(curator.userId, "curator");
+    const objective = await createObjective(curator.userId);
+    const first = await createObjectiveRevision(objective.id, {
+      author_id: curator.userId,
+      status: "draft",
+      title: `Objective ${crypto.randomUUID().slice(0, 8)}`,
+    });
+    const goal = await createPublishedGuide();
+    const older = await createPublishedGuide();
+    const current = await createPublishedGuide();
+    const goalId = crypto.randomUUID();
+    const olderId = crypto.randomUUID();
+    const requestNodeId = crypto.randomUUID();
+    const { title, summary } = requestRow;
+    const send = (path: string, method: string, body: unknown) =>
+      app.request(path, jsonAuth(curator.token, method, body), env);
+    const publish = (revisionId: string) =>
+      app.request(
+        `/objective-revisions/${revisionId}/publish`,
+        { method: "POST", ...auth(curator.token) },
+        env
+      );
+
+    const seeded = await send(`/objective-revisions/${first.id}`, "PATCH", {
+      targets: [{ guide_base_id: goal.base.id }],
+    });
+    expect(seeded.status).toBe(200);
+    const drawn = await send(`/objective-revisions/${first.id}`, "PATCH", {
+      graph: {
+        nodes: [
+          { id: olderId, guide_base_id: older.base.id },
+          { id: requestNodeId, title, summary },
+          { id: goalId, guide_base_id: goal.base.id },
+        ],
+        edges: [
+          { from_node_id: olderId, to_node_id: requestNodeId },
+          { from_node_id: requestNodeId, to_node_id: goalId },
+        ],
+      },
+    });
+    expect(drawn.status).toBe(200);
+    expect((await publish(first.id)).status).toBe(200);
+
+    const rolled = await send(
+      `/objective-revisions/${first.id}/rollback`,
+      "POST",
+      {
+        revision_id: first.id,
+      }
+    );
+    expect(rolled.status).toBe(201);
+    const { revision_id: secondId } = (await rolled.json()) as {
+      revision_id: string;
+    };
+    const { data: carried } = await admin
+      .from("objective_revision_nodes")
+      .select("id, request_id")
+      .eq("revision_id", secondId)
+      .is("guide_base_id", null)
+      .single()
+      .throwOnError();
+    const currentId = crypto.randomUUID();
+    const redrawn = await send(`/objective-revisions/${secondId}`, "PATCH", {
+      graph: {
+        nodes: [
+          { id: currentId, guide_base_id: current.base.id },
+          { id: carried.id, title, summary },
+          { id: goalId, guide_base_id: goal.base.id },
+        ],
+        edges: [
+          { from_node_id: currentId, to_node_id: carried.id },
+          { from_node_id: carried.id, to_node_id: goalId },
+        ],
+      },
+    });
+    expect(redrawn.status).toBe(200);
+    expect((await publish(secondId)).status).toBe(200);
+
+    // the older revision must still hold older -> R, or the assertion below proves nothing
+    const { data: olderEdges } = await admin
+      .from("objective_revision_edges")
+      .select("revision_id")
+      .eq("revision_id", first.id)
+      .throwOnError();
+    expect(olderEdges).toHaveLength(2);
+
+    const resolver = await createPublishedGuide();
+    await admin
+      .from("requests")
+      .update({ status: "resolved", resolved_guide_base_id: resolver.base.id })
+      .eq("id", carried.request_id!)
+      .throwOnError();
+
+    const { data: into } = await admin
+      .from("guide_edges")
+      .select("from_guide_base_id")
+      .eq("to_guide_base_id", resolver.base.id)
+      .throwOnError();
+    expect(into.map((e) => e.from_guide_base_id)).toEqual([current.base.id]);
+
+    const { data: out } = await admin
+      .from("guide_edges")
+      .select("to_guide_base_id")
+      .eq("from_guide_base_id", resolver.base.id)
+      .throwOnError();
+    expect(out.map((e) => e.to_guide_base_id)).toEqual([goal.base.id]);
   });
 
   it("rejects an edge whose to_node sits in another revision (to_is_node)", async () => {
