@@ -6,7 +6,11 @@ export type TodoGroup = {
   title: string;
   summary: string;
   todoIds: Array<string>;
-  requestedBy: Array<{ slug: string; title: string | null }>;
+  requestedBy: Array<{
+    kind: "guide" | "objective";
+    slug: string;
+    title: string | null;
+  }>;
   claimCount: number;
 };
 
@@ -36,12 +40,25 @@ export const groupTodosByTitle = (
       title: sorted[0].title,
       summary: sorted[0].summary,
       todoIds: sorted.map((row) => row.id),
-      requestedBy: sorted
-        .filter((row) => row.guide_slug)
-        .map((row) => ({
-          slug: row.guide_slug as string,
-          title: row.guide_title,
-        })),
+      requestedBy: sorted.flatMap((row): TodoGroup["requestedBy"] => {
+        if (row.guide_slug) {
+          return [
+            { kind: "guide", slug: row.guide_slug, title: row.guide_title },
+          ];
+        }
+
+        if (row.objective_slug) {
+          return [
+            {
+              kind: "objective",
+              slug: row.objective_slug,
+              title: row.objective_title,
+            },
+          ];
+        }
+
+        return [];
+      }),
       claimCount: Math.max(...sorted.map((row) => row.claim_count)),
     };
   });
