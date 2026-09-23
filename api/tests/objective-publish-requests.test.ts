@@ -203,6 +203,22 @@ describe("POST /objective-revisions/{id}/publish request nodes", () => {
     const res = await publish(second, curator.token);
     expect(res.status).toBe(409);
   });
+
+  it("400s a titled draft with no target and keeps the draft", async () => {
+    const { curator, revision } = await curatorDraft();
+    const goal = await createPublishedGuide();
+
+    const res = await publish(revision.id, curator.token);
+    expect(res.status).toBe(400);
+    expect(await statusOf(revision.id)).toBe("draft");
+
+    const seeded = await patch(revision.id, curator.token, {
+      targets: [{ guide_base_id: goal.base.id }],
+    });
+    expect(seeded.status).toBe(200);
+    expect((await publish(revision.id, curator.token)).status).toBe(200);
+    expect(await statusOf(revision.id)).toBe("published");
+  });
 });
 
 describe("POST /objective-revisions/{id}/rollback request nodes", () => {

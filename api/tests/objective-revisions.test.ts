@@ -202,6 +202,56 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     expect(afterGraph).toEqual([kept.base.id]);
   });
 
+  it("clears every target on an empty target set, and flags one again", async () => {
+    const { curator, revision } = await curatorDraft();
+    const prereq = await createPublishedGuide();
+    const goal = await createPublishedGuide();
+    await createPrerequisite(prereq.base.id, goal.base.id);
+
+    const patch = async (targets: unknown) => {
+      const res = await app.request(
+        `/objective-revisions/${revision.id}`,
+        jsonAuth(curator.token, "PATCH", { targets }),
+        env
+      );
+      expect(res.status).toBe(200);
+    };
+    const readTargets = async () => {
+      const res = await app.request(
+        `/objective-revisions/${revision.id}`,
+        auth(curator.token),
+        env
+      );
+      const { snapshot } = (await res.json()) as {
+        snapshot: {
+          nodes: Array<{
+            guide_base_id: string;
+            is_target: boolean;
+            is_featured: boolean;
+            target_position: number | null;
+          }>;
+        };
+      };
+      return snapshot.nodes.filter(
+        (n) => n.is_target || n.is_featured || n.target_position !== null
+      );
+    };
+
+    await patch([{ guide_base_id: goal.base.id, is_featured: true }]);
+    await patch([]);
+    expect(await readTargets()).toEqual([]);
+
+    await patch([{ guide_base_id: goal.base.id }]);
+    expect(await readTargets()).toEqual([
+      expect.objectContaining({
+        guide_base_id: goal.base.id,
+        is_target: true,
+        is_featured: true,
+        target_position: 0,
+      }),
+    ]);
+  });
+
   it("403s for a non-curator author", async () => {
     const author = await makeUser();
     const objective = await createObjective(author.userId);
