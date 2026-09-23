@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Button } from "@/components/ui/button";
 
-type Mode = "existing" | "request";
+type Mode = "existing" | "target" | "request";
 
 type PropTypes = {
   open: boolean;
@@ -65,9 +65,9 @@ export const AddGuideNodeModal = ({
   const summary = requestSummary.trim();
 
   const canAdd =
-    mode === "existing"
-      ? selectedBaseIds.length > 0
-      : title.length > 0 && summary.length > 0;
+    mode === "request"
+      ? title.length > 0 && summary.length > 0
+      : selectedBaseIds.length > 0;
 
   const chosenNodes = (): Array<ObjectiveGraphNode> => {
     if (mode === "request") {
@@ -80,7 +80,7 @@ export const AddGuideNodeModal = ({
       .filter((g) => selectedBaseIds.includes(g.id))
       .map((g) => ({
         id: crypto.randomUUID(),
-        type: "guide",
+        type: mode === "target" ? "target" : "guide",
         guideBaseId: g.id,
         guideSlug: g.slug,
         title: g.title ?? g.slug,
@@ -106,8 +106,8 @@ export const AddGuideNodeModal = ({
           </DialogTitle>
 
           <DialogDescription className="text-xs text-muted-foreground">
-            Add existing guides to the objective, or request one that does not
-            exist yet.
+            Add existing guides or target guides to the objective, or request
+            one that does not exist yet.
           </DialogDescription>
         </DialogHeader>
 
@@ -118,18 +118,21 @@ export const AddGuideNodeModal = ({
         >
           <TabsList>
             <TabsTrigger value="existing">Existing guide</TabsTrigger>
+            <TabsTrigger value="target">Target guide</TabsTrigger>
             <TabsTrigger value="request">Request a guide</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="existing" className="pt-4">
-            <Combobox
-              multiple
-              items={guideItems}
-              value={selectedBaseIds}
-              onValueChange={setSelectedBaseIds}
-              modal
-            />
-          </TabsContent>
+          {(["existing", "target"] as const).map((guideMode) => (
+            <TabsContent key={guideMode} value={guideMode} className="pt-4">
+              <Combobox
+                multiple
+                items={guideItems}
+                value={selectedBaseIds}
+                onValueChange={setSelectedBaseIds}
+                modal
+              />
+            </TabsContent>
+          ))}
 
           <TabsContent value="request" className="space-y-4 pt-4">
             <div className="space-y-2">

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Walkthrough } from "@bluelearn/schemas";
 
 import type {
   ObjectiveGraphData,
@@ -6,6 +7,7 @@ import type {
 } from "@/types/contributions";
 import {
   addGuideNode,
+  addWalkthrough,
   connectNodes,
   drawnEdgeId,
   graphToApi,
@@ -46,7 +48,12 @@ const pairs = (graph: ObjectiveGraphData) =>
 
 describe("addGuideNode", () => {
   it("adds a guide once, however many times it is added", () => {
-    const loops = { guideBaseId: "base-loops", guideSlug: "loops", title: "L" };
+    const loops = {
+      type: "guide" as const,
+      guideBaseId: "base-loops",
+      guideSlug: "loops",
+      title: "L",
+    };
 
     const once = addGuideNode({ nodes: [], edges: [] }, loops);
     const twice = addGuideNode(once, loops);
@@ -58,11 +65,110 @@ describe("addGuideNode", () => {
   it("adds a second guide with a different base", () => {
     const graph = addGuideNode(
       { nodes: [guide("a")], edges: [] },
-      { guideBaseId: "base-b", guideSlug: "b", title: "b" }
+      { type: "guide", guideBaseId: "base-b", guideSlug: "b", title: "b" }
     );
 
     expect(graph.nodes.map((n) => n.type)).toEqual(["guide", "guide"]);
     expect(new Set(graph.nodes.map((n) => n.id)).size).toBe(2);
+  });
+
+  it("keeps the target type it is given", () => {
+    const graph = addGuideNode(
+      { nodes: [guide("a")], edges: [] },
+      { type: "target", guideBaseId: "base-b", guideSlug: "b", title: "b" }
+    );
+
+    expect(graph.nodes.map((n) => n.type)).toEqual(["guide", "target"]);
+  });
+});
+
+describe("addWalkthrough", () => {
+  const step = (id: string): Walkthrough["nodes"][number] => ({
+    id: `base-${id}`,
+    slug: id,
+    title: id,
+    summary: null,
+    level: 1,
+    duration_minutes: 5,
+    tags: [],
+  });
+
+  const prerequisite = (from: string, to: string) => ({
+    from_id: `base-${from}`,
+    to_id: `base-${to}`,
+  });
+
+  const target: ObjectiveGraphNode = {
+    id: "t",
+    type: "target",
+    guideBaseId: "base-t",
+    guideSlug: "t",
+    title: "t",
+  };
+
+  const slugs = (graph: ObjectiveGraphData) =>
+    graph.nodes.map((n) => (n.type === "guide_request" ? n.id : n.guideSlug));
+
+  const slugPairs = (graph: ObjectiveGraphData) => {
+    const slugById = new Map(
+      graph.nodes.map((n) => [
+        n.id,
+        n.type === "guide_request" ? n.id : n.guideSlug,
+      ])
+    );
+    return graph.edges.map(
+      (e) => `${slugById.get(e.source)}>${slugById.get(e.target)}`
+    );
+  };
+
+  it("places the prerequisites as guides joined by guide edges", () => {
+    const graph = addWalkthrough(
+      { nodes: [target], edges: [] },
+      {
+        nodes: [step("a"), step("b"), step("t")],
+        edges: [prerequisite("a", "b"), prerequisite("b", "t")],
+      }
+    );
+
+    expect(slugs(graph)).toEqual(["t", "a", "b"]);
+    expect(graph.nodes.map((n) => n.type)).toEqual([
+      "target",
+      "guide",
+      "guide",
+    ]);
+    expect(slugPairs(graph)).toEqual(["a>b", "b>t"]);
+    expect(graph.edges.every((e) => e.id.startsWith("g:"))).toBe(true);
+  });
+
+  it("keeps a guide already on the canvas and joins it by its own id", () => {
+    const graph = addWalkthrough(
+      { nodes: [target, guide("a")], edges: [] },
+      { nodes: [step("a"), step("t")], edges: [prerequisite("a", "t")] }
+    );
+
+    expect(graph.nodes.map((n) => n.id)).toEqual(["t", "a"]);
+    expect(graph.edges).toEqual([fromGuides("a", "t")]);
+  });
+
+  it("adds no guide edge where the curator already drew one", () => {
+    const graph = addWalkthrough(
+      { nodes: [target, guide("a")], edges: [drawn("a", "t")] },
+      { nodes: [step("a"), step("t")], edges: [prerequisite("a", "t")] }
+    );
+
+    expect(graph.edges).toEqual([drawn("a", "t")]);
+  });
+
+  it("skips an edge with an end that is not on the canvas", () => {
+    const graph = addWalkthrough(
+      { nodes: [target], edges: [] },
+      {
+        nodes: [step("a"), step("t")],
+        edges: [prerequisite("ghost", "t"), prerequisite("a", "t")],
+      }
+    );
+
+    expect(slugPairs(graph)).toEqual(["a>t"]);
   });
 });
 

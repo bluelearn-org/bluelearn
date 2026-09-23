@@ -1,4 +1,4 @@
-import type { ObjectiveGraphInput } from "@bluelearn/schemas";
+import type { ObjectiveGraphInput, Walkthrough } from "@bluelearn/schemas";
 
 import type {
   ObjectiveGraphData,
@@ -20,7 +20,12 @@ export const isDrawnEdge = (edge: ObjectiveGraphEdge) =>
 
 export function addGuideNode(
   graph: ObjectiveGraphData,
-  guide: { guideBaseId: string; guideSlug: string; title: string }
+  guide: {
+    type: "guide" | "target";
+    guideBaseId: string;
+    guideSlug: string;
+    title: string;
+  }
 ): ObjectiveGraphData {
   const onCanvas = graph.nodes.some(
     (n) => n.type !== "guide_request" && n.guideBaseId === guide.guideBaseId
@@ -29,11 +34,44 @@ export function addGuideNode(
 
   return {
     ...graph,
-    nodes: [
-      ...graph.nodes,
-      { id: crypto.randomUUID(), type: "guide", ...guide },
-    ],
+    nodes: [...graph.nodes, { id: crypto.randomUUID(), ...guide }],
   };
+}
+
+export function addWalkthrough(
+  graph: ObjectiveGraphData,
+  walkthrough: Walkthrough
+): ObjectiveGraphData {
+  const placed = walkthrough.nodes.reduce(
+    (next, n) =>
+      addGuideNode(next, {
+        type: "guide",
+        guideBaseId: n.id,
+        guideSlug: n.slug,
+        title: n.title,
+      }),
+    graph
+  );
+
+  const nodeIdByBaseId = new Map(
+    placed.nodes.flatMap((n) =>
+      n.type === "guide_request" ? [] : [[n.guideBaseId, n.id] as const]
+    )
+  );
+  const edgeIds = new Set(placed.edges.map((e) => e.id));
+
+  const guideEdges = walkthrough.edges.flatMap((e) => {
+    const source = nodeIdByBaseId.get(e.from_id);
+    const target = nodeIdByBaseId.get(e.to_id);
+    if (!source || !target) return [];
+
+    const id = guideEdgeId(source, target);
+    if (edgeIds.has(id) || edgeIds.has(drawnEdgeId(source, target))) return [];
+
+    return [{ id, source, target }];
+  });
+
+  return { ...placed, edges: [...placed.edges, ...guideEdges] };
 }
 
 export function addRequestNode(

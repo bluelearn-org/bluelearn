@@ -8,8 +8,10 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import type { Connection, Edge, Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { toast } from "sonner";
+import type { Dispatch, SetStateAction } from "react";
+import type { Connection, Edge, Node } from "@xyflow/react";
 
 import type {
   ContributionType,
@@ -18,10 +20,12 @@ import type {
 } from "@/types/contributions";
 import type { listGuides } from "@/lib/api/guides";
 import type { ObjectiveNodeData } from "@/components/contribute/steps/objective/ObjectiveGraphNode";
+import { getGuideWalkthrough } from "@/lib/api/guides";
 import { layoutObjectiveGraph } from "@/lib/objectiveGraphLayout";
 import {
   addGuideNode,
   addRequestNode,
+  addWalkthrough,
   connectNodes,
   isDrawnEdge,
   removeEdges,
@@ -47,6 +51,8 @@ const EDGE_COLOR = "#94a3b8";
 
 type Guide = Awaited<ReturnType<typeof listGuides>>[number];
 
+type TargetsChange = { added?: Array<string>; removed?: Array<string> };
+
 type PropTypes = {
   Stepper: any;
   type: ContributionType | null;
@@ -56,7 +62,8 @@ type PropTypes = {
   submitting?: boolean;
   guides?: Array<Guide>;
   objectiveGraph: ObjectiveGraphData;
-  setObjectiveGraph?: (graph: ObjectiveGraphData) => void;
+  setObjectiveGraph?: Dispatch<SetStateAction<ObjectiveGraphData>>;
+  onTargetsChange?: (change: TargetsChange) => void;
 };
 
 export const ObjectiveDesign = ({
@@ -68,25 +75,50 @@ export const ObjectiveDesign = ({
   guides,
   objectiveGraph,
   setObjectiveGraph,
+  onTargetsChange,
 }: PropTypes) => {
   const guideBaseIdsOnCanvas = objectiveGraph.nodes.flatMap((n) =>
     n.type === "guide_request" ? [] : [n.guideBaseId]
   );
 
   const addGuideNodes = (nodes: Array<ObjectiveGraphNode>) => {
-    const graph = nodes.reduce(
-      (next, node) =>
-        node.type === "guide_request"
-          ? addRequestNode(next, { title: node.title, summary: node.summary })
-          : addGuideNode(next, {
-              guideBaseId: node.guideBaseId,
-              guideSlug: node.guideSlug,
-              title: node.title,
-            }),
-      objectiveGraph
+    setObjectiveGraph?.((graph) =>
+      nodes.reduce(
+        (next, node) =>
+          node.type === "guide_request"
+            ? addRequestNode(next, { title: node.title, summary: node.summary })
+            : addGuideNode(next, {
+                type: node.type,
+                guideBaseId: node.guideBaseId,
+                guideSlug: node.guideSlug,
+                title: node.title,
+              }),
+        graph
+      )
     );
 
-    setObjectiveGraph?.(graph);
+    const targets = nodes.flatMap((n) => (n.type === "target" ? [n] : []));
+    if (targets.length === 0) return;
+
+    onTargetsChange?.({ added: targets.map((t) => t.guideSlug) });
+
+    for (const target of targets) {
+      getGuideWalkthrough(target.guideSlug)
+        .then((walkthrough) =>
+          setObjectiveGraph?.((graph) => {
+            const targetStillThere = graph.nodes.some(
+              (n) => n.type === "target" && n.guideBaseId === target.guideBaseId
+            );
+
+            return targetStillThere
+              ? addWalkthrough(graph, walkthrough)
+              : graph;
+          })
+        )
+        .catch(() =>
+          toast.error(`Could not load the prerequisites of ${target.title}`)
+        );
+    }
   };
 
   return (
@@ -108,6 +140,7 @@ export const ObjectiveDesign = ({
           <ObjectiveGraph
             graph={objectiveGraph}
             onGraphChange={setObjectiveGraph}
+            onTargetsChange={onTargetsChange}
           />
         </ReactFlowProvider>
       </div>
@@ -118,9 +151,14 @@ export const ObjectiveDesign = ({
 type ObjectiveGraphProps = {
   graph: ObjectiveGraphData;
   onGraphChange?: (graph: ObjectiveGraphData) => void;
+  onTargetsChange?: (change: TargetsChange) => void;
 };
 
-const ObjectiveGraph = ({ graph, onGraphChange }: ObjectiveGraphProps) => {
+const ObjectiveGraph = ({
+  graph,
+  onGraphChange,
+  onTargetsChange,
+}: ObjectiveGraphProps) => {
   const { theme } = useTheme();
 
   const flowNodes = useMemo(() => toFlowNodes(graph), [graph]);
@@ -142,8 +180,13 @@ const ObjectiveGraph = ({ graph, onGraphChange }: ObjectiveGraphProps) => {
   }) => {
     const nodeIds = deleted.nodes.map((n) => n.id);
     const edgeIds = deleted.edges.map((e) => e.id);
+    const removedTargets = graph.nodes.flatMap((n) =>
+      n.type === "target" && nodeIds.includes(n.id) ? [n.guideSlug] : []
+    );
 
     onGraphChange?.(removeEdges(removeNodes(graph, nodeIds), edgeIds));
+    if (removedTargets.length > 0)
+      onTargetsChange?.({ removed: removedTargets });
   };
 
   return (

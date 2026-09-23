@@ -1,8 +1,11 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
 import { Separator } from "@/components/ui/separator";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
+import { Combobox } from "@/components/ui/combobox";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +14,7 @@ import { Footer } from "@/components/cards/Footer";
 type PropTypes = {
   Stepper: any;
   objectiveContData: ObjectiveContribution;
+  setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
   onSaveDraft?: () => void;
   onPublish: () => void;
   submitting: boolean;
@@ -128,6 +132,7 @@ function PreviewObjectiveCard({ objective }: { objective: any }) {
 export const PreviewObjective = ({
   Stepper,
   objectiveContData,
+  setObjectiveContData,
   onSaveDraft,
   onPublish,
   submitting,
@@ -190,6 +195,13 @@ export const PreviewObjective = ({
 
   const featuredTargetSlug =
     objectiveContData.featuredSubObjective || objectiveContData.targets[0];
+
+  const targetItems = objectiveContData.targets.map((slug) => ({
+    value: slug,
+    label: getGuideTitle(slug),
+    description: getGuideSummary(slug) ?? undefined,
+  }));
+
   const featuredSub = featuredTargetSlug
     ? objectiveContData.subObjectives.find(
         (s) => s.targetSlug === featuredTargetSlug
@@ -251,6 +263,31 @@ export const PreviewObjective = ({
       <Separator className="mb-8 bg-border" />
 
       <div className="mt-8 flex w-full flex-col gap-12">
+        <Field className="space-y-2">
+          <div className="space-y-1">
+            <FieldLabel className="mono-micro">
+              Featured Sub-Objective
+            </FieldLabel>
+            <FieldDescription className="text-xs">
+              {targetItems.length === 0
+                ? "Add a target guide on the design canvas first."
+                : "The primary target guide to showcase on the objective card."}
+            </FieldDescription>
+          </div>
+
+          <Combobox
+            disabled={targetItems.length === 0}
+            items={targetItems}
+            value={featuredTargetSlug}
+            onValueChange={(featuredSubObjective) =>
+              setObjectiveContData((prev) => ({
+                ...prev,
+                featuredSubObjective,
+              }))
+            }
+          />
+        </Field>
+
         <PreviewObjectiveCard objective={previewData} />
 
         <div className="space-y-6">

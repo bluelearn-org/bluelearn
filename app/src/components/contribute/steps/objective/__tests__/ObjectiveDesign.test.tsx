@@ -1,10 +1,22 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import type * as XyflowReact from "@xyflow/react";
+import type { Walkthrough } from "@bluelearn/schemas";
 
-import type { ObjectiveGraphData } from "@/types/contributions";
+import type {
+  ObjectiveGraphData,
+  ObjectiveGraphNode,
+} from "@/types/contributions";
+import { getGuideWalkthrough } from "@/lib/api/guides";
 import { ObjectiveDesign } from "@/components/contribute/steps/objective/ObjectiveDesign";
 
 // Render each node through its registered type so jsdom never measures, the
@@ -19,14 +31,26 @@ vi.mock("@xyflow/react", async () => {
     ReactFlow: ({
       nodes,
       nodeTypes,
+      onDelete,
     }: {
       nodes: Array<{ id: string; type: string; data: unknown }>;
       nodeTypes: Record<string, ComponentType<{ data: unknown }>>;
+      onDelete: (deleted: {
+        nodes: Array<unknown>;
+        edges: Array<unknown>;
+      }) => void;
     }) => (
       <div data-testid="react-flow">
         {nodes.map((node) => {
           const NodeComponent = nodeTypes[node.type];
-          return <NodeComponent key={node.id} data={node.data} />;
+          return (
+            <div key={node.id}>
+              <NodeComponent data={node.data} />
+              <button onClick={() => onDelete({ nodes: [node], edges: [] })}>
+                Delete {node.id}
+              </button>
+            </div>
+          );
         })}
       </div>
     ),
@@ -42,13 +66,66 @@ vi.mock("@/lib/themeProvider", () => ({
   useTheme: () => ({ theme: "light" }),
 }));
 
+const RECURSION_TARGET: ObjectiveGraphNode = {
+  id: "picked",
+  type: "target",
+  guideBaseId: "base-rec",
+  guideSlug: "recursion",
+  title: "Recursion",
+};
+
 vi.mock("@/components/contribute/StepperActionHeader", () => ({
-  StepperActionHeader: () => null,
+  StepperActionHeader: ({
+    onAddGuideNodes,
+  }: {
+    onAddGuideNodes?: (nodes: Array<ObjectiveGraphNode>) => void;
+  }) => (
+    <button onClick={() => onAddGuideNodes?.([RECURSION_TARGET])}>
+      Add target
+    </button>
+  ),
 }));
+
+vi.mock("@/lib/api/guides", () => ({
+  getGuideWalkthrough: vi.fn(),
+}));
+
+const walkthroughStep = (id: string, title: string) => ({
+  id,
+  slug: title.toLowerCase(),
+  title,
+  summary: null,
+  level: 1,
+  duration_minutes: 5,
+  tags: [],
+});
 
 const Stepper = {
   Content: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 };
+
+function DesignWithState({
+  initial,
+  onTargetsChange,
+}: {
+  initial: ObjectiveGraphData;
+  onTargetsChange: (change: {
+    added?: Array<string>;
+    removed?: Array<string>;
+  }) => void;
+}) {
+  const [graph, setGraph] = useState(initial);
+
+  return (
+    <ObjectiveDesign
+      Stepper={Stepper}
+      type="objective"
+      objectiveGraph={graph}
+      setObjectiveGraph={setGraph}
+      onTargetsChange={onTargetsChange}
+    />
+  );
+}
 
 const EMPTY_HINT = /no guides yet/i;
 
@@ -65,6 +142,7 @@ function renderDesign(graph: ObjectiveGraphData) {
 describe("ObjectiveDesign", () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
   });
 
   it("renders guide, target and request cards from the draft graph", () => {
@@ -109,5 +187,98 @@ describe("ObjectiveDesign", () => {
     expect(screen.getByText(EMPTY_HINT)).toBeTruthy();
     expect(screen.queryByTestId("react-flow")).toBeNull();
     expect(container.querySelector('[data-slot="card"]')).toBeNull();
+  });
+
+  it("adds a target with its prerequisites and reports its slug up", async () => {
+    const walkthrough: Walkthrough = {
+      nodes: [
+        walkthroughStep("base-loops", "Loops"),
+        walkthroughStep("base-rec", "Recursion"),
+      ],
+      edges: [{ from_id: "base-loops", to_id: "base-rec" }],
+    };
+    vi.mocked(getGuideWalkthrough).mockResolvedValue(walkthrough);
+    const onTargetsChange = vi.fn();
+
+    render(
+      <DesignWithState
+        initial={{ nodes: [], edges: [] }}
+        onTargetsChange={onTargetsChange}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
+
+    expect(onTargetsChange).toHaveBeenCalledWith({ added: ["recursion"] });
+    expect(getGuideWalkthrough).toHaveBeenCalledWith("recursion");
+    expect(await screen.findByText("Loops")).toBeTruthy();
+    expect(screen.getAllByText("Recursion")).toHaveLength(1);
+    expect(screen.getAllByText("Target")).toHaveLength(1);
+  });
+
+  it("leaves no prerequisites behind for a target deleted before its walkthrough arrives", async () => {
+    let resolveWalkthrough: (walkthrough: Walkthrough) => void = () => {};
+    vi.mocked(getGuideWalkthrough).mockReturnValue(
+      new Promise((resolve) => {
+        resolveWalkthrough = resolve;
+      })
+    );
+
+    render(
+      <DesignWithState
+        initial={{ nodes: [], edges: [] }}
+        onTargetsChange={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
+    fireEvent.click(screen.getByRole("button", { name: /^delete /i }));
+
+    await act(async () => {
+      resolveWalkthrough({
+        nodes: [
+          walkthroughStep("base-loops", "Loops"),
+          walkthroughStep("base-rec", "Recursion"),
+        ],
+        edges: [{ from_id: "base-loops", to_id: "base-rec" }],
+      });
+    });
+
+    expect(screen.queryByText("Loops")).toBeNull();
+    expect(screen.getByText(EMPTY_HINT)).toBeTruthy();
+  });
+
+  it("reports a deleted target as removed, and a deleted guide not at all", () => {
+    const onTargetsChange = vi.fn();
+
+    render(
+      <DesignWithState
+        initial={{
+          nodes: [
+            {
+              id: "n1",
+              type: "guide",
+              guideBaseId: "b1",
+              guideSlug: "loops",
+              title: "Loops",
+            },
+            {
+              id: "n2",
+              type: "target",
+              guideBaseId: "b2",
+              guideSlug: "recursion",
+              title: "Recursion",
+            },
+          ],
+          edges: [],
+        }}
+        onTargetsChange={onTargetsChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete n1" }));
+    expect(onTargetsChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete n2" }));
+    expect(onTargetsChange).toHaveBeenCalledWith({ removed: ["recursion"] });
+    expect(screen.queryByText("Recursion")).toBeNull();
   });
 });

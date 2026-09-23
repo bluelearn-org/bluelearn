@@ -856,6 +856,24 @@ function Inner({
       };
     });
 
+  const changeObjectiveTargets = ({
+    added = [],
+    removed = [],
+  }: {
+    added?: Array<string>;
+    removed?: Array<string>;
+  }) =>
+    setObjectiveContData((prev) => {
+      const targets = [...new Set([...prev.targets, ...added])].filter(
+        (slug) => !removed.includes(slug)
+      );
+      const featuredSubObjective = targets.includes(prev.featuredSubObjective)
+        ? prev.featuredSubObjective
+        : "";
+
+      return { ...prev, targets, featuredSubObjective };
+    });
+
   // prevent two simultaneous create requests
   const creatingRef = useRef<Promise<string> | null>(null);
 
@@ -895,12 +913,6 @@ function Inner({
         objectiveContData.graph.nodes.length > 0
           ? { graph: graphToApi(objectiveContData.graph) }
           : {};
-
-      if (target_ids.length === 0) {
-        throw new Error(
-          "Learning objectives require at least one target guide."
-        );
-      }
 
       if (revisionId) {
         await updateObjectiveRevision(revisionId, {
@@ -1114,11 +1126,6 @@ function Inner({
         field: "targets",
         label: "a target guide",
       });
-    } else if (!objectiveContData.featuredSubObjective) {
-      missing.push({
-        field: "featuredSubObjective",
-        label: "a featured sub-objective",
-      });
     }
 
     return missing;
@@ -1223,7 +1230,10 @@ function Inner({
         if (missing.length > 0) {
           setPublishAttempted(true);
 
-          stepper.goTo("objective-details");
+          const onlyTargetMissing = missing.every((m) => m.field === "targets");
+          stepper.goTo(
+            onlyTargetMissing ? "objective-design" : "objective-details"
+          );
 
           throw new Error(
             `Your objective is missing ${missing.map((m) => m.label).join(", ")}`
@@ -1384,7 +1394,6 @@ function Inner({
           objectiveContData={objectiveContData}
           setObjectiveContData={setObjectiveContData}
           subjects={subjectOptions}
-          guides={guideOptions}
           showChangeSummary={showChangeSummary}
           invalidFields={invalidObjectiveFields}
           hideBackBtn={skipTypeStep}
@@ -1406,9 +1415,13 @@ function Inner({
           type={type}
           guides={guideOptions}
           objectiveGraph={objectiveContData.graph}
-          setObjectiveGraph={(graph) =>
-            setObjectiveContData((prev) => ({ ...prev, graph }))
+          setObjectiveGraph={(update) =>
+            setObjectiveContData((prev) => ({
+              ...prev,
+              graph: typeof update === "function" ? update(prev.graph) : update,
+            }))
           }
+          onTargetsChange={changeObjectiveTargets}
         />
 
         <OrderObjectiveGuides
@@ -1423,6 +1436,7 @@ function Inner({
         <PreviewObjective
           Stepper={Stepper}
           objectiveContData={objectiveContData}
+          setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}

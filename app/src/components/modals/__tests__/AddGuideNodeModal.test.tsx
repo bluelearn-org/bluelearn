@@ -126,6 +126,29 @@ describe("AddGuideNodeModal", () => {
     ]);
   });
 
+  it("adds the chosen guide as a target from the target tab, never one already on the canvas", async () => {
+    const { dialog, added } = renderModal(["base-rec"]);
+    openTab(dialog, /target guide/i);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /select/i }));
+
+    const options = await screen.findAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(["Loops"]);
+
+    fireEvent.click(options[0]);
+    fireEvent.click(addButton(dialog));
+
+    expect(added.nodes).toEqual([
+      {
+        id: expect.any(String),
+        type: "target",
+        guideBaseId: "base-loops",
+        guideSlug: "loops",
+        title: "Loops",
+      },
+    ]);
+  });
+
   it("offers every guide while none is on the canvas", async () => {
     const { dialog } = renderModal();
 
