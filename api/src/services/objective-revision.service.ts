@@ -158,13 +158,12 @@ export async function getRevisionSnapshot(
     to_id: e.to_guide_base_id,
   });
 
-  // The live projection already names guide bases; a frozen row reaches them
-  // through its endpoints' nodes. Both land as base ids, as they always have.
-  const projected_edges = (projected.data ?? []).map((e) =>
-    "from_guide_base_id" in e
-      ? toEdge(e)
-      : { from_id: e.from.guide_base_id, to_id: e.to.guide_base_id }
-  );
+  // frozen rows may touch a request node; those only make sense in drawn_edges
+  const projected_edges = (projected.data ?? []).flatMap((e) => {
+    if ("from_guide_base_id" in e) return [toEdge(e)];
+    if (e.from.guide_base_id === null || e.to.guide_base_id === null) return [];
+    return [{ from_id: e.from.guide_base_id, to_id: e.to.guide_base_id }];
+  });
   const raw_edges = (raw?.data ?? []).map(toEdge);
 
   return {
@@ -714,7 +713,7 @@ export async function syncDraftGraph(
 
   const { data: stored, error: storedError } = await supabase
     .from("objective_revision_nodes")
-    .select("id, guide_base_id")
+    .select("id, guide_base_id, is_target")
     .eq("revision_id", revisionId);
 
   if (storedError) {
@@ -737,8 +736,21 @@ export async function syncDraftGraph(
         : n.id,
     ])
   );
+  // the canvas never sees the closure targets seeded, so don't let it delete it
+  const targetBases = (stored ?? [])
+    .filter((n) => n.is_target && n.guide_base_id !== null)
+    .map((n) => n.guide_base_id as string);
+  const closure = new Set(
+    targetBases.length > 0 ? await loadClosure(supabase, targetBases) : []
+  );
   const kept = new Set(storedIdByClientId.values());
-  const removed = (stored ?? []).map((n) => n.id).filter((id) => !kept.has(id));
+  const removed = (stored ?? [])
+    .filter(
+      (n) =>
+        !kept.has(n.id) &&
+        !(n.guide_base_id !== null && closure.has(n.guide_base_id))
+    )
+    .map((n) => n.id);
 
   if (removed.length > 0) {
     const { error } = await selectInBatches(removed, (batch) =>
@@ -796,20 +808,22 @@ export async function publishObjectiveRevision(
       throw new ServiceError("Revision not found", 404);
     if (error.code === "42501")
       throw new ServiceError("Not permitted to publish this revision", 403);
-    if (error.code === "P0001")
+    if (error.code === "40001")
       throw new ServiceError(
         "A newer revision was published; review it before publishing",
         409
       );
+    if (error.code === "P0001")
+      throw new ServiceError("This would create a cycle", 409);
     throw new ServiceError("Unable to publish revision", 400);
   }
   return { slug };
 }
 
-// Roll an older revision forward as a new draft: clone its nodes into a fresh
-// draft on the same objective in one transaction via the rollback_objective_revision
-// RPC. Edges are not copied; a draft projects them live and freezes them only at
-// publish. Returns the draft revision id, so the client routes to its editor.
+// Roll an older revision forward as a new draft: clone its nodes, orders and
+// drawn edges into a fresh draft on the same objective in one transaction via
+// the rollback_objective_revision RPC. Returns the draft revision id, so the
+// client routes to its editor.
 export async function rollbackObjectiveRevision(
   supabase: DB,
   revisionId: string,

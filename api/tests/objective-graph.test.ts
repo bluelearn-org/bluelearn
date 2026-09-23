@@ -3,6 +3,7 @@ import app from "../src/index";
 import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
 import { grantRole } from "./factories/identity";
 import { createPublishedGuide } from "./factories/guides";
+import { createPrerequisite } from "./factories/graph";
 import {
   createObjective,
   createObjectiveRevision,
@@ -160,6 +161,29 @@ describe("PATCH /objective-revisions/{id} graph", () => {
     await patch(revision.id, curator.token, graph([goal.base.id]));
     const dropped = await snapshotOf(revision.id, curator.token);
     expect(dropped.nodes.map((n) => n.guide_base_id)).toEqual([goal.base.id]);
+  });
+
+  it("keeps the targets' prerequisites through a graph save that omits them", async () => {
+    const { curator, revision } = await curatorDraft();
+    const prereq = await createPublishedGuide();
+    const goal = await createPublishedGuide();
+    await createPrerequisite(prereq.base.id, goal.base.id);
+    await patch(revision.id, curator.token, {
+      targets: [{ guide_base_id: goal.base.id }],
+    });
+
+    const res = await patch(revision.id, curator.token, {
+      graph: {
+        nodes: [{ id: crypto.randomUUID(), guide_base_id: goal.base.id }],
+        edges: [],
+      },
+    });
+    expect(res.status).toBe(200);
+
+    const bases = (await snapshotOf(revision.id, curator.token)).nodes.map(
+      (n) => n.guide_base_id
+    );
+    expect(bases.sort()).toEqual([goal.base.id, prereq.base.id].sort());
   });
 
   it("400s an edge naming a node outside the graph and writes nothing", async () => {
