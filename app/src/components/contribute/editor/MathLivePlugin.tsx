@@ -366,6 +366,14 @@ export function SingletonMathEditor() {
           math-virtual-keyboard-policy={isMobile ? "auto" : "manual"}
           className="w-full text-lg text-foreground outline-none"
           style={{ backgroundColor: "transparent", color: "var(--foreground)" }}
+          // disallowing space key in block equations to prevent accidental exit from latex
+          onKeyDownCapture={(e: any) => {
+            if (e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+          }}
           onKeyDown={(e: any) => {
             if (e.key === "Enter" || e.key === "Escape") {
               e.preventDefault();
