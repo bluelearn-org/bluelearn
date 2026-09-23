@@ -21,6 +21,7 @@ import { VariantInfo } from "@/components/contribute/steps/variant/VariantInfo";
 import { PreviewVariant } from "@/components/contribute/steps/variant/PreviewVariant";
 
 import { ObjectiveDetails } from "@/components/contribute/steps/objective/ObjectiveDetails";
+import { ObjectiveDesign } from "@/components/contribute/steps/objective/ObjectiveDesign";
 import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/OrderObjectiveGuides";
 import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
@@ -1333,6 +1334,8 @@ function Inner({
           submitting={submitting}
           guides={guideOptions}
         />
+
+        <ObjectiveDesign Stepper={Stepper} type={type} guides={guideOptions} />
 
         <OrderObjectiveGuides
           Stepper={Stepper}

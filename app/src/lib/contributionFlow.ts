@@ -15,6 +15,7 @@ export const flows = {
 
   objective: [
     { id: "objective-details", title: "Objective Details" },
+    { id: "objective-design", title: "Objective Design" },
     { id: "target-ordering", title: "Order Target Guides" },
     { id: "objective-ordering", title: "Order Guides" },
     { id: "preview-objective", title: "Preview" },

@@ -9,6 +9,7 @@ import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
 import { GuideSubmitModal } from "@/components/modals/GuideSubmitModal";
 import { ObjectivePublishModal } from "@/components/modals/ObjectivePublishModal";
 import { getAllStoredDrafts } from "@/lib/contributionStorage";
+import { AddGuideNodeModal } from "@/components/modals/AddGuideNodeModal";
 
 type PropTypes = {
   title: string;
@@ -41,14 +42,19 @@ export const StepperActionHeader = ({
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [openAddGuideNodeModal, setOpenAddGuideNodeModal] = useState(false);
+
   const [saved, setSaved] = useState(false);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [allStoredDrafts, setAllStoredDrafts] = useState<Array<AnyStoredDraft>>(
     []
   );
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
+  const toggleAddGuideNodeModal = () =>
+    setOpenAddGuideNodeModal(!showSubmitModal);
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
 
   // batch submit feedback so it's more obvious for the user
@@ -106,6 +112,16 @@ export const StepperActionHeader = ({
             >
               <Save className="size-4" />
               {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
+            </button>
+          )}
+
+          {type == "objective" && (
+            <button
+              type="button"
+              className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
+              onClick={() => setOpenAddGuideNodeModal((open) => !open)}
+            >
+              Add Guide
             </button>
           )}
 
@@ -206,6 +222,14 @@ export const StepperActionHeader = ({
       <GuidelinesModal
         open={openGuidelineModal}
         onOpenChange={toggleGuidelineModal}
+      />
+
+      <AddGuideNodeModal
+        open={openAddGuideNodeModal}
+        onOpenChange={toggleAddGuideNodeModal}
+        guides={[]}
+        selectedExistingGuides={[]}
+        setSelectedExistingGuides={() => {}}
       />
 
       {type == "objective" ? (
