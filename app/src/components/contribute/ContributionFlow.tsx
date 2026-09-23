@@ -49,6 +49,8 @@ import {
   useDebouncedContributionSave,
 } from "@/lib/contributionStorage";
 
+import { getWordCount } from "@/lib/wordCount";
+
 const MAX_WORD_COUNT = 2500;
 
 type PropTypes = {
@@ -461,7 +463,7 @@ function Inner({
 
   const {
     revisionId: removedRevisionId,
-    localDraftId,
+    localDraftId: removedLocalDraftId,
     ...savedGuide
   } = activeGuide;
 
@@ -1089,7 +1091,7 @@ function Inner({
 
   const wordLimitMessage = (guide: MultiGuide) => {
     const text = guide.body.trim();
-    const wordCount = text ? text.split(/\s+/).length : 0;
+    const wordCount = getWordCount(text);
 
     if (wordCount <= MAX_WORD_COUNT) {
       return null;
