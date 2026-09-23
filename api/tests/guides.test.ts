@@ -255,7 +255,7 @@ describe("DELETE /guides/{slug}", () => {
 });
 
 describe("GET /guides/{slug}/walkthrough", () => {
-  it("defaults to one follow-up level while preserving prerequisites", async () => {
+  it("defaults to every reachable follow-up while preserving prerequisites", async () => {
     const earlierPrerequisite = await createPublishedGuide();
     const prerequisite = await createPublishedGuide();
     const target = await createPublishedGuide();
@@ -293,27 +293,16 @@ describe("GET /guides/{slug}/walkthrough", () => {
         target.base.id,
         followUp.base.id,
         otherFollowUp.base.id,
+        laterFollowUp.base.id,
       ])
     );
-    expect(levels.has(laterFollowUp.base.id)).toBe(false);
     expect(levels.has(suspendedFollowUp.base.id)).toBe(false);
-    expect(
-      body.edges.some((edge) => edge.to_id === laterFollowUp.base.id)
-    ).toBe(false);
     expect(body.edges).toEqual(
       expect.arrayContaining([
-        {
-          from_id: prerequisite.base.id,
-          to_id: target.base.id,
-        },
-        {
-          from_id: target.base.id,
-          to_id: followUp.base.id,
-        },
-        {
-          from_id: target.base.id,
-          to_id: otherFollowUp.base.id,
-        },
+        { from_id: prerequisite.base.id, to_id: target.base.id },
+        { from_id: target.base.id, to_id: followUp.base.id },
+        { from_id: target.base.id, to_id: otherFollowUp.base.id },
+        { from_id: followUp.base.id, to_id: laterFollowUp.base.id },
       ])
     );
     expect(levels.get(prerequisite.base.id)).toBeLessThan(
@@ -327,6 +316,61 @@ describe("GET /guides/{slug}/walkthrough", () => {
     );
   });
 
+  it("keeps the explicit one-level HTTP contract", async () => {
+    const target = await createPublishedGuide();
+    const followUp = await createPublishedGuide();
+    const laterFollowUp = await createPublishedGuide();
+    await createPrerequisite(target.base.id, followUp.base.id);
+    await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+
+    const res = await app.request(
+      `/guides/${target.base.slug}/walkthrough?followUpDepth=1`,
+      {},
+      env
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { nodes: Array<{ id: string }> };
+    expect(body.nodes.map((node) => node.id).sort()).toEqual(
+      [target.base.id, followUp.base.id].sort()
+    );
+    expect(body.nodes.some((node) => node.id === laterFollowUp.base.id)).toBe(
+      false
+    );
+  });
+
+  it.each(["", "-1", "1.5", "abc", "2147483648"])(
+    "rejects invalid follow-up depth %j",
+    async (depth) => {
+      const target = await createPublishedGuide();
+      const res = await app.request(
+        `/guides/${target.base.slug}/walkthrough?followUpDepth=${encodeURIComponent(depth)}`,
+        {},
+        env
+      );
+      expect(res.status).toBe(400);
+    }
+  );
+
+  it.each([0, 2])("serializes explicit HTTP depth %i", async (depth) => {
+    const target = await createPublishedGuide();
+    const followUp = await createPublishedGuide();
+    const laterFollowUp = await createPublishedGuide();
+    await createPrerequisite(target.base.id, followUp.base.id);
+    await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+    const res = await app.request(
+      `/guides/${target.base.slug}/walkthrough?followUpDepth=${depth}`,
+      {},
+      env
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { nodes: Array<{ id: string }> };
+    expect(body.nodes.map((node) => node.id).sort()).toEqual(
+      (depth === 0
+        ? [target.base.id]
+        : [target.base.id, followUp.base.id, laterFollowUp.base.id]
+      ).sort()
+    );
+  });
   it.each([0, 2])(
     "supports an explicit follow-up depth of %i",
     async (depth) => {
@@ -350,6 +394,152 @@ describe("GET /guides/{slug}/walkthrough", () => {
       );
     }
   );
+  it.each([
+    { targetIndex: 101, depth: 0 },
+    { targetIndex: 0, depth: undefined },
+    { targetIndex: 0, depth: 101 },
+  ])(
+    "keeps a 102-node chain at $targetIndex with depth $depth",
+    async ({ targetIndex, depth }) => {
+      const ids = Array.from({ length: 102 }, () => crypto.randomUUID());
+      try {
+        await admin
+          .from("guide_bases")
+          .insert(
+            ids.map((id) => ({
+              id,
+              slug: `walkthrough-${id}`,
+              knowledge_type: "theoretical" as const,
+              status: "published" as const,
+            }))
+          )
+          .throwOnError();
+        await admin
+          .from("guide_edges")
+          .insert(
+            ids.slice(1).map((id, index) => ({
+              from_guide_base_id: ids[index],
+              to_guide_base_id: id,
+              edge_type: "prerequisite" as const,
+            }))
+          )
+          .throwOnError();
+
+        const { data, error } = await admin.rpc("compute_walkthrough", {
+          p_guide_base_id: ids[targetIndex],
+          p_follow_up_depth: depth,
+        });
+        expect(error).toBeNull();
+        const body = data as { nodes: Array<{ id: string; level: number }> };
+        expect(body.nodes.map((node) => node.id)).toEqual(ids);
+        expect(body.nodes.map((node) => node.level)).toEqual(
+          ids.map((_, index) => index + 1)
+        );
+      } finally {
+        await admin.from("guide_bases").delete().in("id", ids).throwOnError();
+      }
+    }
+  );
+
+  it("treats omitted and null RPC depth as unbounded", async () => {
+    const target = await createPublishedGuide();
+    const followUp = await createPublishedGuide();
+    const laterFollowUp = await createPublishedGuide();
+    await createPrerequisite(target.base.id, followUp.base.id);
+    await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+
+    const omitted = await admin.rpc("compute_walkthrough", {
+      p_guide_base_id: target.base.id,
+    });
+    const nullable = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rpc/compute_walkthrough`,
+      {
+        method: "POST",
+        headers: {
+          apikey: env.SUPABASE_SECRET_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_guide_base_id: target.base.id,
+          p_follow_up_depth: null,
+        }),
+      }
+    );
+    expect(omitted.error).toBeNull();
+    expect(nullable.status).toBe(200);
+    const ids = (value: unknown) =>
+      (value as { nodes: Array<{ id: string }> }).nodes
+        .map((node) => node.id)
+        .sort();
+    expect(ids(omitted.data)).toEqual(
+      [target.base.id, followUp.base.id, laterFollowUp.base.id].sort()
+    );
+    expect(ids(await nullable.json())).toEqual(ids(omitted.data));
+  });
+
+  it("uses shortest reach for membership and longest selected paths for levels", async () => {
+    const ids = Array.from({ length: 6 }, () => crypto.randomUUID());
+    const [target, first, second, joined, outside, disconnected] = ids;
+    try {
+      await admin
+        .from("guide_bases")
+        .insert(
+          ids.map((id) => ({
+            id,
+            slug: `walkthrough-${id}`,
+            knowledge_type: "theoretical" as const,
+            status: "published" as const,
+          }))
+        )
+        .throwOnError();
+      await admin
+        .from("guide_edges")
+        .insert(
+          [
+            [target, joined],
+            [target, first],
+            [first, second],
+            [second, joined],
+            [outside, joined],
+          ].map(([from, to]) => ({
+            from_guide_base_id: from,
+            to_guide_base_id: to,
+            edge_type: "prerequisite" as const,
+          }))
+        )
+        .throwOnError();
+
+      for (const depth of [1, undefined]) {
+        const { data, error } = await admin.rpc("compute_walkthrough", {
+          p_guide_base_id: target,
+          p_follow_up_depth: depth,
+        });
+        expect(error).toBeNull();
+        const body = data as {
+          nodes: Array<{ id: string; level: number }>;
+          edges: Array<{ from_id: string; to_id: string }>;
+        };
+        const levels = new Map(body.nodes.map((node) => [node.id, node.level]));
+        expect([...levels.keys()].sort()).toEqual(
+          (depth === 1
+            ? [target, first, joined]
+            : [target, first, second, joined]
+          ).sort()
+        );
+        expect(levels.has(outside)).toBe(false);
+        expect(levels.has(disconnected)).toBe(false);
+        expect(levels.get(joined)).toBe(depth === 1 ? 2 : 4);
+        for (const edge of body.edges) {
+          expect(levels.get(edge.from_id)).toBeLessThan(
+            levels.get(edge.to_id)!
+          );
+        }
+      }
+    } finally {
+      await admin.from("guide_bases").delete().in("id", ids).throwOnError();
+    }
+  });
 });
 
 // A second published variant under the same base, with a live revision.
