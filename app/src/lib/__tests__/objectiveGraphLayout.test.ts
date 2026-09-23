@@ -29,16 +29,16 @@ function positionsOf(graph: ObjectiveGraphData) {
 }
 
 describe("layoutObjectiveGraph", () => {
-  it("puts a dependent below its prerequisite", () => {
+  it("puts a dependent above its prerequisite", () => {
     const positions = positionsOf({
       nodes: [guide("b"), guide("a")],
       edges: [edge("a", "b")],
     });
 
-    expect(positions.get("b")!.y).toBeGreaterThan(positions.get("a")!.y);
+    expect(positions.get("b")!.y).toBeLessThan(positions.get("a")!.y);
   });
 
-  it("puts a target on the bottom row even when nothing leads to it", () => {
+  it("puts a target on the top row even when nothing leads to it", () => {
     const positions = positionsOf({
       nodes: [
         {
@@ -57,9 +57,9 @@ describe("layoutObjectiveGraph", () => {
 
     const targetY = positions.get("t")!.y;
     for (const id of ["a", "b", "c"]) {
-      expect(targetY).toBeGreaterThanOrEqual(positions.get(id)!.y);
+      expect(targetY).toBeLessThanOrEqual(positions.get(id)!.y);
     }
-    expect(targetY).toBeGreaterThan(positions.get("a")!.y);
+    expect(targetY).toBeLessThan(positions.get("a")!.y);
   });
 
   it("gives two nodes on one level distinct x", () => {
@@ -83,12 +83,12 @@ describe("layoutObjectiveGraph", () => {
   });
 
   it("uses the longest path, not the shortest, to place a node", () => {
-    // a -> b -> c and a -> c: c must sit below b, not beside it.
+    // a -> b -> c and a -> c: c must sit above b, not beside it.
     const positions = positionsOf({
       nodes: [guide("a"), guide("b"), guide("c")],
       edges: [edge("a", "c"), edge("a", "b"), edge("b", "c")],
     });
 
-    expect(positions.get("c")!.y).toBeGreaterThan(positions.get("b")!.y);
+    expect(positions.get("c")!.y).toBeLessThan(positions.get("b")!.y);
   });
 });

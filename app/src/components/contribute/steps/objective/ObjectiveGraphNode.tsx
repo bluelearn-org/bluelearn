@@ -21,7 +21,7 @@ type ObjectiveNodeProps = {
 const CARD_CLASS = "gap-0 rounded-md border bg-background py-0 ring-0";
 
 const HANDLE_CLASS =
-  "!h-3 !w-3 !cursor-crosshair rounded-full !border-none !bg-primary/70 transition-[scale,background-color] hover:scale-150 hover:!bg-primary";
+  "!h-3 !w-3 !cursor-crosshair rounded-full !border-none !bg-primary/70 transition-[width,height,background-color] hover:!h-4.5 hover:!w-4.5 hover:!bg-primary";
 
 export function ObjectiveGuideNode({ data }: ObjectiveNodeProps) {
   return (
@@ -66,13 +66,13 @@ function NodeFrame({
         isDimmed && "opacity-30"
       )}
     >
-      <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
-      {children}
       <Handle
-        type="source"
+        type="target"
         position={Position.Bottom}
         className={HANDLE_CLASS}
       />
+      {children}
+      <Handle type="source" position={Position.Top} className={HANDLE_CLASS} />
     </div>
   );
 }

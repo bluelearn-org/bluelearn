@@ -221,30 +221,33 @@ const ObjectiveGraph = ({
     );
 
     setEdges((eds) =>
-      eds.map((e) => {
-        const isLit =
-          hoveredNodeId !== null && lit.has(e.source) && lit.has(e.target);
-        const stroke = isLit
-          ? LIT_EDGE_COLOR
-          : hoveredNodeId
-            ? DIMMED_EDGE_COLOR
-            : EDGE_COLOR;
-        const strokeWidth = isLit ? 3 : 2;
+      eds
+        .map((e) => {
+          const isLit =
+            hoveredNodeId !== null && lit.has(e.source) && lit.has(e.target);
+          const stroke = isLit
+            ? LIT_EDGE_COLOR
+            : hoveredNodeId
+              ? DIMMED_EDGE_COLOR
+              : EDGE_COLOR;
+          const strokeWidth = isLit ? 3 : 2;
 
-        const unchanged =
-          e.style?.stroke === stroke &&
-          e.style.strokeWidth === strokeWidth &&
-          Boolean(e.animated) === isLit;
-        return unchanged
-          ? e
-          : {
-              ...e,
-              style: { ...e.style, stroke, strokeWidth },
-              animated: isLit,
-              zIndex: isLit ? 10 : 0,
-              markerEnd: { type: MarkerType.ArrowClosed, color: stroke },
-            };
-      })
+          const unchanged =
+            e.style?.stroke === stroke &&
+            e.style.strokeWidth === strokeWidth &&
+            Boolean(e.animated) === isLit;
+          return unchanged
+            ? e
+            : {
+                ...e,
+                style: { ...e.style, stroke, strokeWidth },
+                animated: isLit,
+                markerEnd: { type: MarkerType.ArrowClosed, color: stroke },
+              };
+        })
+        .sort(
+          (a, b) => Number(Boolean(a.animated)) - Number(Boolean(b.animated))
+        )
     );
   }, [hoveredNodeId, graph, setNodes, setEdges]);
 
