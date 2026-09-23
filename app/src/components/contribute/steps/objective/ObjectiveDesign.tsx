@@ -1,17 +1,29 @@
-import { useEffect, useMemo } from "react";
+import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
+  BaseEdge,
   Controls,
+  EdgeLabelRenderer,
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
+  getBezierPath,
   useEdgesState,
   useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toast } from "sonner";
 import type { Dispatch, SetStateAction } from "react";
-import type { Connection, Edge, Node } from "@xyflow/react";
+import type {
+  Connection,
+  Edge,
+  EdgeProps,
+  Node,
+  OnNodeDrag,
+  XYPosition,
+} from "@xyflow/react";
 
 import type {
   ContributionType,
@@ -44,6 +56,8 @@ const nodeTypes = {
   objectiveGuide: ObjectiveGuideNode,
   objectiveRequest: ObjectiveRequestNode,
 };
+
+const edgeTypes = { drawn: DrawnEdge };
 
 const NODE_SPACING = 320;
 const LEVEL_SPACING = 200;
@@ -160,8 +174,13 @@ const ObjectiveGraph = ({
   onTargetsChange,
 }: ObjectiveGraphProps) => {
   const { theme } = useTheme();
+  // ponytail: dragged positions live for the session; upgrade when the API stores node positions
+  const draggedPositions = useRef(new Map<string, XYPosition>());
 
-  const flowNodes = useMemo(() => toFlowNodes(graph), [graph]);
+  const flowNodes = useMemo(
+    () => toFlowNodes(graph, draggedPositions.current),
+    [graph]
+  );
   const flowEdges = useMemo(() => toFlowEdges(graph), [graph]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
@@ -169,6 +188,11 @@ const ObjectiveGraph = ({
 
   useEffect(() => setNodes(flowNodes), [flowNodes, setNodes]);
   useEffect(() => setEdges(flowEdges), [flowEdges, setEdges]);
+
+  const handleNodeDragStop: OnNodeDrag = (_event, _node, dragged) => {
+    for (const node of dragged)
+      draggedPositions.current.set(node.id, node.position);
+  };
 
   const handleConnect = ({ source, target }: Connection) =>
     onGraphChange?.(connectNodes(graph, source, target));
@@ -202,13 +226,16 @@ const ObjectiveGraph = ({
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeDragStop={handleNodeDragStop}
           onConnect={handleConnect}
           onDelete={handleDelete}
           deleteKeyCode={["Backspace", "Delete"]}
+          connectionRadius={40}
           fitView
-          nodesDraggable={false}
+          nodesDraggable
           nodesConnectable
           elementsSelectable
           colorMode={theme}
@@ -225,7 +252,8 @@ const ObjectiveGraph = ({
 };
 
 function toFlowNodes(
-  graph: ObjectiveGraphData
+  graph: ObjectiveGraphData,
+  draggedPositions: Map<string, XYPosition>
 ): Array<Node<ObjectiveNodeData>> {
   const positionById = new Map(
     layoutObjectiveGraph(graph, {
@@ -234,19 +262,21 @@ function toFlowNodes(
       levelSpacing: LEVEL_SPACING,
     }).map((n) => [n.id, n.position])
   );
+  const positionOf = (id: string) =>
+    draggedPositions.get(id) ?? positionById.get(id)!;
 
   return graph.nodes.map((node) =>
     node.type === "guide_request"
       ? {
           id: node.id,
           type: "objectiveRequest",
-          position: positionById.get(node.id)!,
+          position: positionOf(node.id),
           data: { title: node.title, summary: node.summary, isTarget: false },
         }
       : {
           id: node.id,
           type: "objectiveGuide",
-          position: positionById.get(node.id)!,
+          position: positionOf(node.id),
           data: { title: node.title, isTarget: node.type === "target" },
         }
   );
@@ -257,8 +287,69 @@ function toFlowEdges(graph: ObjectiveGraphData): Array<Edge> {
     id: edge.id,
     source: edge.source,
     target: edge.target,
+    type: isDrawnEdge(edge) ? "drawn" : undefined,
     style: { stroke: EDGE_COLOR, strokeWidth: 2 },
+    interactionWidth: 24,
     deletable: isDrawnEdge(edge),
     markerEnd: { type: MarkerType.ArrowClosed, color: EDGE_COLOR },
   }));
+}
+
+function DrawnEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style,
+  markerEnd,
+  interactionWidth,
+  selected,
+}: EdgeProps) {
+  const { deleteElements } = useReactFlow();
+  const [hovered, setHovered] = useState(false);
+  const [path, midX, midY] = getBezierPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  });
+
+  const hover = {
+    onMouseEnter: () => setHovered(true),
+    onMouseLeave: () => setHovered(false),
+  };
+
+  return (
+    <>
+      <g {...hover}>
+        <BaseEdge
+          path={path}
+          style={style}
+          markerEnd={markerEnd}
+          interactionWidth={interactionWidth}
+        />
+      </g>
+      {(hovered || selected) && (
+        <EdgeLabelRenderer>
+          <button
+            {...hover}
+            type="button"
+            aria-label="Remove connection"
+            onClick={() => deleteElements({ edges: [{ id }] })}
+            className="nodrag nopan pointer-events-auto absolute flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground hover:border-destructive hover:text-destructive"
+            style={{
+              transform: `translate(-50%, -50%) translate(${midX}px, ${midY}px)`,
+            }}
+          >
+            <X className="size-3" />
+          </button>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
 }

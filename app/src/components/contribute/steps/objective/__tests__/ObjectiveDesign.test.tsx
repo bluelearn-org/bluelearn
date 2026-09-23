@@ -32,22 +32,41 @@ vi.mock("@xyflow/react", async () => {
       nodes,
       nodeTypes,
       onDelete,
+      onNodeDragStop,
     }: {
-      nodes: Array<{ id: string; type: string; data: unknown }>;
+      nodes: Array<{
+        id: string;
+        type: string;
+        data: unknown;
+        position: { x: number; y: number };
+      }>;
       nodeTypes: Record<string, ComponentType<{ data: unknown }>>;
       onDelete: (deleted: {
         nodes: Array<unknown>;
         edges: Array<unknown>;
       }) => void;
+      onNodeDragStop: (
+        event: unknown,
+        node: unknown,
+        nodes: Array<unknown>
+      ) => void;
     }) => (
       <div data-testid="react-flow">
         {nodes.map((node) => {
           const NodeComponent = nodeTypes[node.type];
+          const dropped = { ...node, position: { x: 999, y: 999 } };
           return (
-            <div key={node.id}>
+            <div
+              key={node.id}
+              data-testid={`node-${node.id}`}
+              data-position={`${node.position.x},${node.position.y}`}
+            >
               <NodeComponent data={node.data} />
               <button onClick={() => onDelete({ nodes: [node], edges: [] })}>
                 Delete {node.id}
+              </button>
+              <button onClick={() => onNodeDragStop({}, dropped, [dropped])}>
+                Drag {node.id}
               </button>
             </div>
           );
@@ -280,5 +299,32 @@ describe("ObjectiveDesign", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete n2" }));
     expect(onTargetsChange).toHaveBeenCalledWith({ removed: ["recursion"] });
     expect(screen.queryByText("Recursion")).toBeNull();
+  });
+
+  it("keeps a dragged node where it was dropped when a guide is added", async () => {
+    vi.mocked(getGuideWalkthrough).mockResolvedValue({ nodes: [], edges: [] });
+
+    render(
+      <DesignWithState
+        initial={{
+          nodes: [
+            {
+              id: "n1",
+              type: "guide",
+              guideBaseId: "b1",
+              guideSlug: "loops",
+              title: "Loops",
+            },
+          ],
+          edges: [],
+        }}
+        onTargetsChange={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
+
+    expect(await screen.findByText("Recursion")).toBeTruthy();
+    expect(screen.getByTestId("node-n1").dataset.position).toBe("999,999");
   });
 });
