@@ -252,35 +252,37 @@ export function useGraphLayout({
     );
 
     setEdges((eds) =>
-      eds.map((e) => {
-        const isDimmed =
-          hoveredGuide !== null &&
-          !(highlighted.has(e.source) && highlighted.has(e.target));
-        const strokeColor = isDimmed
-          ? "#94a3b833"
-          : hoveredGuide
-            ? "#3b82f6"
-            : "#94a3b8";
-        const strokeWidth = hoveredGuide && !isDimmed ? 3 : 2;
-        const zIndex = hoveredGuide && !isDimmed ? 10 : 0;
-        const animated = hoveredGuide !== null && !isDimmed;
+      eds
+        .map((e) => {
+          const isDimmed =
+            hoveredGuide !== null &&
+            !(highlighted.has(e.source) && highlighted.has(e.target));
+          const strokeColor = isDimmed
+            ? "#94a3b833"
+            : hoveredGuide
+              ? "#3b82f6"
+              : "#94a3b8";
+          const strokeWidth = hoveredGuide && !isDimmed ? 3 : 2;
+          const animated = hoveredGuide !== null && !isDimmed;
 
-        if (
-          !e.style ||
-          e.style.stroke !== strokeColor ||
-          e.style.strokeWidth !== strokeWidth ||
-          e.animated !== animated
-        ) {
-          return {
-            ...e,
-            style: { ...e.style, stroke: strokeColor, strokeWidth },
-            animated,
-            zIndex,
-            markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
-          };
-        }
-        return e;
-      })
+          if (
+            !e.style ||
+            e.style.stroke !== strokeColor ||
+            e.style.strokeWidth !== strokeWidth ||
+            e.animated !== animated
+          ) {
+            return {
+              ...e,
+              style: { ...e.style, stroke: strokeColor, strokeWidth },
+              animated,
+              markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
+            };
+          }
+          return e;
+        })
+        .sort(
+          (a, b) => Number(Boolean(a.animated)) - Number(Boolean(b.animated))
+        )
     );
   }, [hoveredGuide, getNodeState, walkthroughData, setNodes, setEdges]);
 
