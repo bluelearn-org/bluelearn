@@ -2,8 +2,77 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TodoListItem } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
+import { selectInBatches } from "../lib/batch";
 
 type DB = SupabaseClient<Database>;
+
+// Published objectives that list a requesting guide in their current revision,
+// keyed by guide base id. Todos don't carry subjects/objectives directly, so
+// the todos page filters by the requesting guide's associations.
+async function loadGuideObjectives(
+  supabase: DB,
+  baseIds: string[]
+): Promise<Map<string, Array<{ slug: string; title: string }>>> {
+  const map = new Map<string, Array<{ slug: string; title: string }>>();
+  if (baseIds.length === 0) return map;
+
+  const { data: nodes, error: nodeError } = await selectInBatches(
+    baseIds,
+    (batch) =>
+      supabase
+        .from("objective_revision_nodes")
+        .select("guide_base_id, revision_id")
+        .in("guide_base_id", batch)
+  );
+  if (nodeError) {
+    console.error(nodeError);
+    throw new ServiceError("Failed to load todo objectives", 500);
+  }
+
+  const revisionIds = [...new Set((nodes ?? []).map((n) => n.revision_id))];
+  if (revisionIds.length === 0) return map;
+
+  const { data: objectives, error: objectiveError } = await selectInBatches(
+    revisionIds,
+    (batch) =>
+      supabase
+        .from("objectives")
+        .select(
+          `id, current_revision_id, slug,
+           current:objective_revisions!objectives_current_revision_id_fkey(title)`
+        )
+        .in("current_revision_id", batch)
+        .eq("status", "published")
+  );
+  if (objectiveError) {
+    console.error(objectiveError);
+    throw new ServiceError("Failed to load todo objectives", 500);
+  }
+
+  const objectivesByRevision = new Map<
+    string,
+    Array<{ slug: string; title: string }>
+  >();
+  for (const objective of objectives ?? []) {
+    if (!objective.current_revision_id || !objective.slug) continue;
+    if (!objective.current?.title) continue;
+    const list = objectivesByRevision.get(objective.current_revision_id) ?? [];
+    list.push({ slug: objective.slug, title: objective.current.title });
+    objectivesByRevision.set(objective.current_revision_id, list);
+  }
+
+  for (const node of nodes ?? []) {
+    for (const objective of objectivesByRevision.get(node.revision_id) ?? []) {
+      const list = map.get(node.guide_base_id) ?? [];
+      list.push(objective);
+      map.set(node.guide_base_id, list);
+    }
+  }
+
+  for (const list of map.values())
+    list.sort((a, b) => a.title.localeCompare(b.title));
+  return map;
+}
 
 export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
   const { data, error } = await supabase
@@ -14,7 +83,10 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
        base:guide_bases!requests_dependent_guide_base_id_fkey!inner(
          slug,
          canonical:guides!guide_bases_canonical_guide_id_fkey(
-           current:guide_revisions!guides_current_revision_id_fkey(title)
+           current:guide_revisions!guides_current_revision_id_fkey(
+             title,
+             subjects:guide_revision_subjects(subjects(slug, name))
+           )
          )
        )`
     )
@@ -26,6 +98,11 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
     throw new ServiceError("Failed to fetch todos", 500);
   }
 
+  const objectivesByBase = await loadGuideObjectives(
+    supabase,
+    (data ?? []).map((row) => row.dependent_guide_base_id)
+  );
+
   return (data ?? []).map((row) => ({
     id: row.id,
     guide_base_id: row.dependent_guide_base_id,
@@ -36,6 +113,10 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
     status: row.status,
     claim_count: row.claims[0]?.count ?? 0,
     created_at: row.created_at,
+    subjects: (row.base.canonical?.current?.subjects ?? [])
+      .map((s) => s.subjects)
+      .filter((s): s is { slug: string; name: string } => !!s?.slug),
+    objectives: objectivesByBase.get(row.dependent_guide_base_id) ?? [],
   }));
 }
 

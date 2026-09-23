@@ -17,6 +17,8 @@ function makeTodoItem(overrides: Partial<TodoListItem> = {}): TodoListItem {
     status: "open",
     claim_count: 0,
     created_at: new Date("2026-01-01T10:00:00Z").toISOString(),
+    subjects: [],
+    objectives: [],
     ...overrides,
   };
 }
