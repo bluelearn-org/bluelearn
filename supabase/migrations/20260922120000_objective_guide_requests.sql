@@ -8,31 +8,49 @@ alter table public.requests
 
 create index requests_objective_idx on public.requests (objective_id);
 
--- A todo resolved by a published guide becomes a prerequisite edge from that
--- guide to the one that requested it. Without the edge the requester's page
--- dropped the entry entirely: the API lists open todos and guide_edges, nothing else.
+-- A resolved request becomes prerequisite edges from the guide that resolved it;
+-- without them the requester's page drops the entry (the API lists open todos
+-- and guide_edges, nothing else). A guide-raised request names its one dependent;
+-- an objective-raised one has its arrows on the current revision's frozen canvas.
 create or replace function public.link_resolved_todo()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_edge record;
 begin
-  -- enough: an objective-raised request has no dependent guide, so there is no
-  -- guide_edges row to write and this trigger has nothing to say about it. Such
-  -- a request keeps its arrows on the frozen canvas (objective_revision_edges),
-  -- which this function does not read. The way up: walk the edges of the nodes
-  -- whose request_id = new.id and insert one guide_edges row per guide endpoint.
-  if new.dependent_guide_base_id is null then
-    return null;
-  end if;
+  for v_edge in
+    select new.resolved_guide_base_id as from_id,
+           new.dependent_guide_base_id as to_id
+     where new.dependent_guide_base_id is not null
+    union
+    select coalesce(f.guide_base_id, fr.resolved_guide_base_id),
+           coalesce(t.guide_base_id, tr.resolved_guide_base_id)
+      from public.objective_revision_edges e
+      join public.objectives o on o.current_revision_id = e.revision_id
+      join public.objective_revision_nodes f on f.id = e.from_node_id
+      join public.objective_revision_nodes t on t.id = e.to_node_id
+      left join public.requests fr on fr.id = f.request_id
+      left join public.requests tr on tr.id = t.request_id
+     where new.id in (f.request_id, t.request_id)
+  loop
+    -- the other end is a request nobody has resolved yet; its turn writes this edge
+    if v_edge.from_id is null or v_edge.to_id is null then
+      continue;
+    end if;
 
-  insert into public.guide_edges (from_guide_base_id, to_guide_base_id, edge_type)
-    values (new.resolved_guide_base_id, new.dependent_guide_base_id, 'prerequisite')
-    on conflict do nothing;
-  return null;
-exception when raise_exception or check_violation then
-  -- guide_edges_prevent_cycle: the requester already depends on this guide.
+    begin
+      insert into public.guide_edges (from_guide_base_id, to_guide_base_id, edge_type)
+        values (v_edge.from_id, v_edge.to_id, 'prerequisite')
+        on conflict do nothing;
+    exception when raise_exception or check_violation then
+      -- guide_edges_prevent_cycle: the dependent already depends on this guide
+      null;
+    end;
+  end loop;
+
   return null;
 end;
 $$;

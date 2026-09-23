@@ -232,3 +232,94 @@ describe("POST /objective-revisions/{id}/rollback request nodes", () => {
     ]);
   });
 });
+
+async function resolveRequest(requestId: string, resolvedBaseId: string) {
+  await admin
+    .from("requests")
+    .update({ status: "resolved", resolved_guide_base_id: resolvedBaseId })
+    .eq("id", requestId)
+    .throwOnError();
+}
+
+async function edgesFrom(baseId: string) {
+  const { data } = await admin
+    .from("guide_edges")
+    .select("to_guide_base_id")
+    .eq("from_guide_base_id", baseId)
+    .throwOnError();
+  return data.map((e) => e.to_guide_base_id);
+}
+
+async function requestIdOf(revisionId: string, nodeId: string, token: string) {
+  const snapshot = await snapshotOf(revisionId, token);
+  const node = snapshot.nodes.find((n) => n.id === nodeId);
+  expect(node?.request_id).toEqual(expect.any(String));
+  return node!.request_id!;
+}
+
+describe("resolving an objective-raised request", () => {
+  it("writes its drawn edges into the guide graph", async () => {
+    const before = await createPublishedGuide();
+    const goal = await createPublishedGuide();
+    const beforeId = crypto.randomUUID();
+    const requestNodeId = crypto.randomUUID();
+    const goalId = crypto.randomUUID();
+    const { curator, revision } = await drawnDraft(goal.base.id, {
+      nodes: [
+        { id: beforeId, guide_base_id: before.base.id },
+        { id: requestNodeId, ...request },
+        { id: goalId, guide_base_id: goal.base.id },
+      ],
+      edges: [
+        { from_node_id: beforeId, to_node_id: requestNodeId },
+        { from_node_id: requestNodeId, to_node_id: goalId },
+      ],
+    });
+    expect((await publish(revision.id, curator.token)).status).toBe(200);
+    const requestId = await requestIdOf(
+      revision.id,
+      requestNodeId,
+      curator.token
+    );
+
+    const resolved = await createPublishedGuide();
+    await resolveRequest(requestId, resolved.base.id);
+
+    expect(await edgesFrom(before.base.id)).toEqual([resolved.base.id]);
+    expect(await edgesFrom(resolved.base.id)).toEqual([goal.base.id]);
+  });
+
+  it("waits for the other end of a request-to-request edge", async () => {
+    const goal = await createPublishedGuide();
+    const firstId = crypto.randomUUID();
+    const secondId = crypto.randomUUID();
+    const goalId = crypto.randomUUID();
+    const { curator, revision } = await drawnDraft(goal.base.id, {
+      nodes: [
+        { id: firstId, title: "First request", summary: "Comes first" },
+        { id: secondId, title: "Second request", summary: "Comes second" },
+        { id: goalId, guide_base_id: goal.base.id },
+      ],
+      edges: [
+        { from_node_id: firstId, to_node_id: secondId },
+        { from_node_id: secondId, to_node_id: goalId },
+      ],
+    });
+    expect((await publish(revision.id, curator.token)).status).toBe(200);
+    const firstRequest = await requestIdOf(revision.id, firstId, curator.token);
+    const secondRequest = await requestIdOf(
+      revision.id,
+      secondId,
+      curator.token
+    );
+
+    const first = await createPublishedGuide();
+    await resolveRequest(firstRequest, first.base.id);
+    expect(await edgesFrom(first.base.id)).toEqual([]);
+
+    const second = await createPublishedGuide();
+    await resolveRequest(secondRequest, second.base.id);
+    expect(await edgesFrom(first.base.id)).toEqual([second.base.id]);
+    expect(await edgesFrom(second.base.id)).toEqual([goal.base.id]);
+  });
+});
