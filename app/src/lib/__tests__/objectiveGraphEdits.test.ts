@@ -122,7 +122,7 @@ describe("addWalkthrough", () => {
   };
 
   it("places the prerequisites as guides joined by guide edges", () => {
-    const graph = addWalkthrough(
+    const { graph } = addWalkthrough(
       { nodes: [target], edges: [] },
       {
         nodes: [step("a"), step("b"), step("t")],
@@ -141,7 +141,7 @@ describe("addWalkthrough", () => {
   });
 
   it("keeps a guide already on the canvas and joins it by its own id", () => {
-    const graph = addWalkthrough(
+    const { graph } = addWalkthrough(
       { nodes: [target, guide("a")], edges: [] },
       { nodes: [step("a"), step("t")], edges: [prerequisite("a", "t")] }
     );
@@ -151,7 +151,7 @@ describe("addWalkthrough", () => {
   });
 
   it("adds no guide edge where the curator already drew one", () => {
-    const graph = addWalkthrough(
+    const { graph } = addWalkthrough(
       { nodes: [target, guide("a")], edges: [drawn("a", "t")] },
       { nodes: [step("a"), step("t")], edges: [prerequisite("a", "t")] }
     );
@@ -160,7 +160,7 @@ describe("addWalkthrough", () => {
   });
 
   it("skips an edge with an end that is not on the canvas", () => {
-    const graph = addWalkthrough(
+    const { graph } = addWalkthrough(
       { nodes: [target], edges: [] },
       {
         nodes: [step("a"), step("t")],
@@ -169,6 +169,62 @@ describe("addWalkthrough", () => {
     );
 
     expect(slugPairs(graph)).toEqual(["a>t"]);
+  });
+
+  it("lets a guide edge in by removing the drawn edge it would cycle with", () => {
+    const drawnFirst = connectNodes(
+      { nodes: [target, guide("a")], edges: [] },
+      "a",
+      "t"
+    );
+
+    const { graph, removedDrawnEdges } = addWalkthrough(drawnFirst, {
+      nodes: [step("a"), step("t")],
+      edges: [prerequisite("t", "a")],
+    });
+
+    expect(graph.edges).toEqual([fromGuides("t", "a")]);
+    expect(removedDrawnEdges).toEqual([drawn("a", "t")]);
+  });
+
+  it("removes every drawn edge on a longer path back to the source", () => {
+    const { graph, removedDrawnEdges } = addWalkthrough(
+      {
+        nodes: [guide("a"), guide("b"), guide("c")],
+        edges: [drawn("a", "b"), drawn("b", "c")],
+      },
+      { nodes: [step("a"), step("c")], edges: [prerequisite("c", "a")] }
+    );
+
+    expect(graph.edges).toEqual([fromGuides("c", "a")]);
+    expect(removedDrawnEdges).toEqual([drawn("a", "b"), drawn("b", "c")]);
+  });
+
+  it("removes nothing for a guide edge that closes no cycle", () => {
+    const { graph, removedDrawnEdges } = addWalkthrough(
+      {
+        nodes: [guide("a"), guide("b"), guide("c")],
+        edges: [drawn("a", "b"), drawn("b", "c")],
+      },
+      { nodes: [step("a"), step("c")], edges: [prerequisite("a", "c")] }
+    );
+
+    expect(graph.edges).toEqual([
+      drawn("a", "b"),
+      drawn("b", "c"),
+      fromGuides("a", "c"),
+    ]);
+    expect(removedDrawnEdges).toEqual([]);
+  });
+
+  it("skips a guide edge that would close a loop of guide edges only", () => {
+    const { graph, removedDrawnEdges } = addWalkthrough(
+      { nodes: [guide("a"), guide("b")], edges: [fromGuides("a", "b")] },
+      { nodes: [step("a"), step("b")], edges: [prerequisite("b", "a")] }
+    );
+
+    expect(graph.edges).toEqual([fromGuides("a", "b")]);
+    expect(removedDrawnEdges).toEqual([]);
   });
 });
 

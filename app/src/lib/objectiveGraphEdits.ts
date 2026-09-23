@@ -41,7 +41,10 @@ export function addGuideNode(
 export function addWalkthrough(
   graph: ObjectiveGraphData,
   walkthrough: Walkthrough
-): ObjectiveGraphData {
+): {
+  graph: ObjectiveGraphData;
+  removedDrawnEdges: Array<ObjectiveGraphEdge>;
+} {
   const placed = walkthrough.nodes.reduce(
     (next, n) =>
       addGuideNode(next, {
@@ -58,20 +61,35 @@ export function addWalkthrough(
       n.type === "guide_request" ? [] : [[n.guideBaseId, n.id] as const]
     )
   );
-  const edgeIds = new Set(placed.edges.map((e) => e.id));
 
-  const guideEdges = walkthrough.edges.flatMap((e) => {
+  let edges = placed.edges;
+  const removedDrawnEdges: Array<ObjectiveGraphEdge> = [];
+
+  for (const e of walkthrough.edges) {
     const source = nodeIdByBaseId.get(e.from_id);
     const target = nodeIdByBaseId.get(e.to_id);
-    if (!source || !target) return [];
+    if (!source || !target) continue;
 
     const id = guideEdgeId(source, target);
-    if (edgeIds.has(id) || edgeIds.has(drawnEdgeId(source, target))) return [];
+    const drawnId = drawnEdgeId(source, target);
+    if (edges.some((edge) => edge.id === id || edge.id === drawnId)) continue;
 
-    return [{ id, source, target }];
-  });
+    // the guide's arrow wins: publish would 409 on the cycle a drawn edge closes
+    let cycle = reaches({ ...placed, edges }, target, source);
+    while (cycle) {
+      const drawnOnCycle = cycle.filter(isDrawnEdge);
+      if (drawnOnCycle.length === 0) break;
 
-  return { ...placed, edges: [...placed.edges, ...guideEdges] };
+      removedDrawnEdges.push(...drawnOnCycle);
+      edges = edges.filter((edge) => !drawnOnCycle.includes(edge));
+      cycle = reaches({ ...placed, edges }, target, source);
+    }
+    if (cycle) continue;
+
+    edges = [...edges, { id, source, target }];
+  }
+
+  return { graph: { ...placed, edges }, removedDrawnEdges };
 }
 
 export function addRequestNode(
@@ -155,20 +173,31 @@ export function graphToApi(graph: ObjectiveGraphData): ObjectiveGraphInput {
   };
 }
 
-function reaches(graph: ObjectiveGraphData, fromId: string, toId: string) {
+function reaches(
+  graph: ObjectiveGraphData,
+  fromId: string,
+  toId: string
+): Array<ObjectiveGraphEdge> | null {
+  const arrivedBy = new Map<string, ObjectiveGraphEdge>();
   const seen = new Set([fromId]);
   const pending = [fromId];
 
   while (pending.length > 0) {
     const current = pending.pop()!;
-    if (current === toId) return true;
+    if (current === toId) {
+      const path: Array<ObjectiveGraphEdge> = [];
+      for (let e = arrivedBy.get(toId); e; e = arrivedBy.get(e.source))
+        path.unshift(e);
+      return path;
+    }
 
     for (const edge of graph.edges) {
       if (edge.source !== current || seen.has(edge.target)) continue;
       seen.add(edge.target);
+      arrivedBy.set(edge.target, edge);
       pending.push(edge.target);
     }
   }
 
-  return false;
+  return null;
 }

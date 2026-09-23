@@ -125,10 +125,22 @@ export const ObjectiveDesign = ({
             const targetStillThere = graph.nodes.some(
               (n) => n.type === "target" && n.guideBaseId === target.guideBaseId
             );
+            if (!targetStillThere) return graph;
 
-            return targetStillThere
-              ? addWalkthrough(graph, walkthrough)
-              : graph;
+            const added = addWalkthrough(graph, walkthrough);
+            const titleOf = (id: string) =>
+              added.graph.nodes.find((n) => n.id === id)?.title ?? id;
+
+            for (const edge of added.removedDrawnEdges) {
+              const from = titleOf(edge.source);
+              const to = titleOf(edge.target);
+              toast.warning(
+                `Removed ${from} → ${to}: ${to} already comes before ${from}.`,
+                { id: edge.id }
+              );
+            }
+
+            return added.graph;
           })
         )
         .catch(() =>
