@@ -139,6 +139,33 @@ describe("PATCH /objective-revisions/{id} graph", () => {
     expect(snapshot.nodes.map((n) => n.id)).not.toContain(goalClientId);
   });
 
+  it("curates a re-added guide named by its fresh id under its stored id", async () => {
+    const { curator, revision, goal, goalNode } = await draftWithTarget();
+    const freshId = crypto.randomUUID();
+
+    const res = await patch(revision.id, curator.token, {
+      graph: {
+        nodes: [{ id: freshId, guide_base_id: goal.base.id }],
+        edges: [],
+      },
+      targets: [{ node_id: freshId, sequence: [freshId] }],
+    });
+    expect(res.status).toBe(200);
+
+    const snapshot = await snapshotOf(revision.id, curator.token);
+    expect(snapshot.nodes).toEqual([
+      expect.objectContaining({
+        id: goalNode.id,
+        guide_base_id: goal.base.id,
+        is_target: true,
+        target_position: 0,
+      }),
+    ]);
+    expect(snapshot.orders).toEqual([
+      { target_node_id: goalNode.id, node_id: goalNode.id, position: 0 },
+    ]);
+  });
+
   it("removes a request node the graph no longer holds, with its edge", async () => {
     const { curator, revision, goal, goalNode } = await draftWithTarget();
     const goalClientId = crypto.randomUUID();
