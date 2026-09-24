@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Background,
   BaseEdge,
@@ -22,7 +22,7 @@ import type {
   Edge,
   EdgeProps,
   Node,
-  OnConnectStart,
+  OnConnectEnd,
   OnNodeDrag,
   OnNodesChange,
 } from "@xyflow/react";
@@ -295,19 +295,7 @@ const ObjectiveGraph = ({
     );
   };
 
-  // Loose mode lets any dot meet any dot, and xyflow then names the node under
-  // a target-typed start dot as the target; the drag's start is the prerequisite
-  // whichever dot it left.
-  const connectFrom = useRef<string | null>(null);
-  const handleConnectStart: OnConnectStart = (_event, { nodeId }) => {
-    connectFrom.current = nodeId;
-  };
-
-  const handleConnect = (connection: Connection) => {
-    const startedOnTarget = connection.target === connectFrom.current;
-    const source = startedOnTarget ? connection.target : connection.source;
-    const target = startedOnTarget ? connection.source : connection.target;
-
+  const connect = (source: string, target: string) => {
     const cut = edgesCutByConnecting(graph, source, target);
     onGraphChange?.(connectNodes(graph, source, target));
     if (cut.length === 0) return;
@@ -321,6 +309,31 @@ const ObjectiveGraph = ({
         .map((e) => arrow(e.source, e.target))
         .join(", ")}.`
     );
+  };
+
+  // In loose mode xyflow reads direction off the start dot: a top (source) dot
+  // leads to the other node, a bottom (target) dot takes it as a prerequisite.
+  const handleConnect = ({ source, target }: Connection) =>
+    connect(source, target);
+
+  // A drop on a card's body, off its dots, connects to that card by the same
+  // start-dot rule.
+  const handleConnectEnd: OnConnectEnd = (
+    event,
+    { isValid, fromNode, fromHandle }
+  ) => {
+    if (isValid || !fromNode) return;
+
+    // touchend lists the lifted finger in changedTouches
+    const point = "changedTouches" in event ? event.changedTouches[0] : event;
+    const card = document
+      .elementFromPoint(point.clientX, point.clientY)
+      ?.closest<HTMLElement>(".react-flow__node");
+    const cardId = card?.dataset.id;
+    if (!cardId || cardId === fromNode.id) return;
+
+    if (fromHandle.type === "source") connect(fromNode.id, cardId);
+    else connect(cardId, fromNode.id);
   };
 
   // onNodesDelete and onEdgesDelete would each edit the same stale graph
@@ -362,8 +375,8 @@ const ObjectiveGraph = ({
           onNodeDragStop={handleNodeDragStop}
           onNodeMouseEnter={(_event, node) => setHoveredNodeId(node.id)}
           onNodeMouseLeave={() => setHoveredNodeId(null)}
-          onConnectStart={handleConnectStart}
           onConnect={handleConnect}
+          onConnectEnd={handleConnectEnd}
           connectionMode={ConnectionMode.Loose}
           onDelete={handleDelete}
           deleteKeyCode={["Backspace", "Delete"]}

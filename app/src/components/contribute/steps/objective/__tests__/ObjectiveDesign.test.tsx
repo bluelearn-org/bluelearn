@@ -35,9 +35,10 @@ vi.mock("@xyflow/react", async () => {
     ),
     ReactFlow: ({
       nodes,
+      edges,
       nodeTypes,
       onDelete,
-      onConnectStart,
+      onConnectEnd,
       onConnect,
       onNodesChange,
       onNodeDragStop,
@@ -50,14 +51,19 @@ vi.mock("@xyflow/react", async () => {
         data: unknown;
         position: { x: number; y: number };
       }>;
+      edges: Array<{ source: string; target: string }>;
       nodeTypes: Record<string, ComponentType<{ data: unknown }>>;
       onDelete: (deleted: {
         nodes: Array<unknown>;
         edges: Array<unknown>;
       }) => void;
-      onConnectStart: (
-        event: unknown,
-        params: { nodeId: string; handleId: null; handleType: string }
+      onConnectEnd: (
+        event: { clientX: number; clientY: number },
+        state: {
+          isValid: boolean;
+          fromNode: { id: string };
+          fromHandle: { type: "source" | "target" };
+        }
       ) => void;
       onConnect: (connection: {
         source: string;
@@ -74,7 +80,10 @@ vi.mock("@xyflow/react", async () => {
       onNodeMouseEnter: (event: unknown, node: { id: string }) => void;
       onNodeMouseLeave: (event: unknown, node: { id: string }) => void;
     }) => (
-      <div data-testid="react-flow">
+      <div
+        data-testid="react-flow"
+        data-edges={edges.map((e) => `${e.source}>${e.target}`).join(" ")}
+      >
         {nodes.map((node) => {
           const NodeComponent = nodeTypes[node.type];
           const dropped = { ...node, position: { x: 999, y: 999 } };
@@ -93,6 +102,8 @@ vi.mock("@xyflow/react", async () => {
           return (
             <div
               key={node.id}
+              className="react-flow__node"
+              data-id={node.id}
               data-testid={`node-${node.id}`}
               data-position={`${node.position.x},${node.position.y}`}
               onMouseEnter={(event) => onNodeMouseEnter(event, node)}
@@ -111,54 +122,46 @@ vi.mock("@xyflow/react", async () => {
               <button onClick={() => moveBy(40, 10)}>
                 Nudge {node.id} along
               </button>
-              {nodes
-                .filter((other) => other.id !== node.id)
-                .map((other) => (
-                  <span key={other.id}>
-                    {/* xyflow's loose-mode Connection: a drag from a
-                        target-typed dot names its own node the target. */}
-                    <button
-                      onClick={() => {
-                        onConnectStart(
-                          {},
-                          {
-                            nodeId: node.id,
-                            handleId: null,
-                            handleType: "source",
-                          }
-                        );
-                        onConnect({
-                          source: node.id,
-                          target: other.id,
-                          sourceHandle: null,
-                          targetHandle: null,
-                        });
-                      }}
-                    >
-                      Draw {node.id} to {other.id} from the top dot
-                    </button>
-                    <button
-                      onClick={() => {
-                        onConnectStart(
-                          {},
-                          {
-                            nodeId: node.id,
-                            handleId: null,
-                            handleType: "target",
-                          }
-                        );
-                        onConnect({
-                          source: other.id,
-                          target: node.id,
-                          sourceHandle: null,
-                          targetHandle: null,
-                        });
-                      }}
-                    >
-                      Draw {node.id} to {other.id} from the bottom dot
+              {(["top", "bottom"] as const).map((dot) => {
+                // The top dot is a source handle, the bottom one a target.
+                const fromHandle = {
+                  type:
+                    dot === "top" ? ("source" as const) : ("target" as const),
+                };
+                const endConnect = (isValid: boolean) =>
+                  onConnectEnd(
+                    { clientX: 10, clientY: 10 },
+                    { isValid, fromNode: node, fromHandle }
+                  );
+
+                return (
+                  <span key={dot}>
+                    {nodes
+                      .filter((other) => other.id !== node.id)
+                      .map((other) => (
+                        <button
+                          key={other.id}
+                          onClick={() => {
+                            // xyflow's loose-mode Connection names the start
+                            // node the target when it left a target dot.
+                            onConnect({
+                              source: dot === "top" ? node.id : other.id,
+                              target: dot === "top" ? other.id : node.id,
+                              sourceHandle: null,
+                              targetHandle: null,
+                            });
+                            endConnect(true);
+                          }}
+                        >
+                          From {node.id} {dot} dot to {other.id} dot
+                        </button>
+                      ))}
+                    <button onClick={() => endConnect(false)}>
+                      From {node.id} {dot} dot to the pointer
                     </button>
                   </span>
-                ))}
+                );
+              })}
             </div>
           );
         })}
@@ -471,57 +474,105 @@ describe("ObjectiveDesign", () => {
     guideSlug: "recursion",
     title: "Recursion",
   };
-  const LOOPS_BEFORE_RECURSION = {
+  const LOOPS_AND_RECURSION: ObjectiveGraphData = {
     nodes: [LOOPS, RECURSION_GUIDE],
-    edges: [{ id: drawnEdgeId("n1", "n2"), source: "n1", target: "n2" }],
+    edges: [],
   };
 
-  it.each(["top", "bottom"])(
-    "keeps a reversed edge drawn from the %s dot and names the edge it removed",
-    (dot) => {
-      render(
-        <DesignWithState
-          initial={LOOPS_BEFORE_RECURSION}
-          onTargetsChange={() => {}}
-        />
-      );
+  const edgesDrawn = () => screen.getByTestId("react-flow").dataset.edges;
 
-      fireEvent.click(
-        screen.getByRole("button", {
-          name: `Draw n2 to n1 from the ${dot} dot`,
-        })
-      );
+  // jsdom has no layout, so the test says what lies under the pointer.
+  const pointAt = (element: Element | null) => {
+    document.elementFromPoint = () => element;
+  };
 
-      expect(toast.warning).toHaveBeenCalledWith(
-        "Kept Recursion → Loops; removed Loops → Recursion."
-      );
-
-      // The reversed edge stuck: redrawing the original now cuts it back.
-      fireEvent.click(
-        screen.getByRole("button", { name: "Draw n1 to n2 from the top dot" })
-      );
-      expect(toast.warning).toHaveBeenLastCalledWith(
-        "Kept Loops → Recursion; removed Recursion → Loops."
-      );
-    }
-  );
-
-  it("says nothing when a drawn edge contradicts none", () => {
+  it.each([
+    ["top", "n1>n2"],
+    ["bottom", "n2>n1"],
+  ])("reads a drag from A's %s dot to B's dot as %s", (dot, edge) => {
     render(
       <DesignWithState
-        initial={{ nodes: [LOOPS, RECURSION_GUIDE], edges: [] }}
+        initial={LOOPS_AND_RECURSION}
         onTargetsChange={() => {}}
       />
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Draw n2 to n1 from the bottom dot" })
-    );
-    fireEvent.click(
-      screen.getByRole("button", { name: "Draw n2 to n1 from the top dot" })
+      screen.getByRole("button", { name: `From n1 ${dot} dot to n2 dot` })
     );
 
+    expect(edgesDrawn()).toBe(edge);
+  });
+
+  it.each([
+    ["top", "n1>n2"],
+    ["bottom", "n2>n1"],
+  ])(
+    "reads a drag from A's %s dot dropped on B's card body as %s",
+    (dot, edge) => {
+      render(
+        <DesignWithState
+          initial={LOOPS_AND_RECURSION}
+          onTargetsChange={() => {}}
+        />
+      );
+
+      pointAt(screen.getByText("Recursion"));
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `From n1 ${dot} dot to the pointer`,
+        })
+      );
+
+      expect(edgesDrawn()).toBe(edge);
+    }
+  );
+
+  it("draws nothing for a drop on the start card or on empty canvas", () => {
+    render(
+      <DesignWithState
+        initial={LOOPS_AND_RECURSION}
+        onTargetsChange={() => {}}
+      />
+    );
+
+    for (const under of [
+      screen.getByText("Loops"),
+      screen.getByTestId("react-flow"),
+      null,
+    ]) {
+      pointAt(under);
+      for (const dot of ["top", "bottom"])
+        fireEvent.click(
+          screen.getByRole("button", {
+            name: `From n1 ${dot} dot to the pointer`,
+          })
+        );
+    }
+
+    expect(edgesDrawn()).toBe("");
     expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it("keeps a reversed edge and names the edge it removed", () => {
+    render(
+      <DesignWithState
+        initial={{
+          nodes: [LOOPS, RECURSION_GUIDE],
+          edges: [{ id: drawnEdgeId("n1", "n2"), source: "n1", target: "n2" }],
+        }}
+        onTargetsChange={() => {}}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "From n1 bottom dot to n2 dot" })
+    );
+
+    expect(edgesDrawn()).toBe("n2>n1");
+    expect(toast.warning).toHaveBeenCalledWith(
+      "Kept Recursion → Loops; removed Loops → Recursion."
+    );
   });
 
   const guide = (id: string) => ({
