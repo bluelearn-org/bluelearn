@@ -113,8 +113,9 @@ export const objectiveNodeChangeSchema = z.object({
 // added or removed — a guide that moved shows up as both. `changed` carries
 // the per-step field edits (variant, note, skipped...) that reordering alone
 // cannot express, so a step can be unchanged in `lines` yet listed here.
+// A request target has no guide base, so `guide_base_id` is null for it.
 export const objectiveTargetDiffSchema = z.object({
-  guide_base_id: z.string(),
+  guide_base_id: z.string().nullable(),
   slug: z.string().nullable(),
   title: z.string().nullable(),
   status: z.enum(["added", "removed", "changed", "unchanged"]),

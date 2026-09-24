@@ -117,10 +117,6 @@ describe("objective guide request schema", () => {
         env
       );
 
-    const seeded = await send(`/objective-revisions/${first.id}`, "PATCH", {
-      targets: [{ guide_base_id: goal.base.id }],
-    });
-    expect(seeded.status).toBe(200);
     const drawn = await send(`/objective-revisions/${first.id}`, "PATCH", {
       graph: {
         nodes: [

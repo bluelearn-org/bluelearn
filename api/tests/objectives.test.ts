@@ -39,13 +39,11 @@ describe("POST /objectives", () => {
   it("creates a draft objective for a curator", async () => {
     const curator = await makeUser();
     await grantRole(curator.userId, "curator");
-    const target = await createPublishedGuide();
 
     const res = await app.request(
       "/objectives",
       jsonAuth(curator.token, "POST", {
         title: `Objective ${crypto.randomUUID().slice(0, 8)}`,
-        target_ids: [target.base.id],
       }),
       env
     );
@@ -56,15 +54,14 @@ describe("POST /objectives", () => {
     expect(revision_id).toBeTruthy();
   });
 
-  it("creates a draft with no target, and flags a named target", async () => {
+  it("creates a draft with no target", async () => {
     const curator = await makeUser();
     await grantRole(curator.userId, "curator");
-    const target = await createPublishedGuide();
 
-    const targetsOf = async (targetIds: string[]) => {
+    const targetsOf = async () => {
       const created = await app.request(
         "/objectives",
-        jsonAuth(curator.token, "POST", { target_ids: targetIds }),
+        jsonAuth(curator.token, "POST", {}),
         env
       );
       expect(created.status).toBe(201);
@@ -86,17 +83,15 @@ describe("POST /objectives", () => {
         .map((n) => n.guide_base_id);
     };
 
-    expect(await targetsOf([])).toEqual([]);
-    expect(await targetsOf([target.base.id])).toEqual([target.base.id]);
+    expect(await targetsOf()).toEqual([]);
   });
 
   it("403s for a non-curator", async () => {
     const user = await makeUser();
-    const target = await createPublishedGuide();
 
     const res = await app.request(
       "/objectives",
-      jsonAuth(user.token, "POST", { target_ids: [target.base.id] }),
+      jsonAuth(user.token, "POST", {}),
       env
     );
 

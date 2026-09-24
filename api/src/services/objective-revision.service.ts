@@ -325,19 +325,21 @@ export async function updateObjectiveRevision(
   if (tags !== undefined) {
     await replaceRevisionTags(supabase, revisionId, tags);
   }
-  if (targets !== undefined) {
-    await syncDraftCuration(supabase, userId, revisionId, targets);
-  }
+  // The graph decides which nodes exist and which are targets; curation then
+  // orders and features those targets, so it has to read the saved graph.
   if (graph !== undefined) {
     await syncDraftGraph(supabase, userId, revisionId, graph);
+  }
+  if (targets !== undefined) {
+    await syncDraftCuration(supabase, userId, revisionId, targets);
   }
 
   const subjects = await loadRevisionTags(supabase, revisionId);
   return { revision, subjects };
 }
 
-// Edit one node of a draft revision: swap the pinned variant, toggle target/skip,
-// or set a note.
+// Edit one node of a draft revision: swap the pinned variant, skip it, or set a
+// note. Whether it is a target is the graph's to say, in syncDraftGraph.
 export async function updateObjectiveNode(
   supabase: DB,
   revisionId: string,
@@ -417,6 +419,8 @@ export async function requireCurator(supabase: DB, userId: string) {
   }
 }
 
+// Order and feature the targets the graph derived, and place the topics under
+// each. Which nodes exist and which are targets is not decided here.
 export async function syncDraftCuration(
   supabase: DB,
   userId: string,
@@ -425,89 +429,9 @@ export async function syncDraftCuration(
 ) {
   await requireCurator(supabase, userId);
 
-  const targetIds = targets.map((t) => t.guide_base_id);
+  const targetIds = targets.map((t) => t.node_id);
   if (new Set(targetIds).size !== targetIds.length) {
     throw new ServiceError("Targets must be distinct", 400);
-  }
-
-  const closure = await loadClosure(supabase, targetIds);
-  const closureSet = new Set(closure);
-
-  const { error: clearError } = await supabase
-    .from("objective_revision_nodes")
-    .update({ is_target: false, target_position: null, is_featured: false })
-    .eq("revision_id", revisionId);
-
-  if (clearError) {
-    console.error(clearError);
-    throw new ServiceError("Unable to update targets", 400);
-  }
-
-  // Closure only adds nodes. Removing one is the drawn graph's call, made in
-  // syncDraftGraph.
-
-  const { data: bases, error: basesError } = await selectInBatches(
-    closure,
-    (batch) =>
-      supabase
-        .from("guide_bases")
-        .select("id, canonical_guide_id")
-        .in("id", batch)
-  );
-
-  if (basesError) {
-    console.error(basesError);
-    throw new ServiceError("Failed to load guides", 500);
-  }
-
-  const canonicalByBase = new Map(
-    (bases ?? [])
-      .filter((b) => b.canonical_guide_id !== null)
-      .map((b) => [b.id, b.canonical_guide_id as string])
-  );
-
-  const missingTarget = targetIds.find((id) => !canonicalByBase.has(id));
-  if (missingTarget) {
-    throw new ServiceError("Target guide has no published variant", 400);
-  }
-
-  const { error: seedError } = await supabase
-    .from("objective_revision_nodes")
-    .upsert(
-      closure
-        .filter((id) => canonicalByBase.has(id))
-        .map((id) => ({
-          revision_id: revisionId,
-          guide_base_id: id,
-          guide_id: canonicalByBase.get(id) as string,
-        })),
-      { onConflict: "revision_id, guide_base_id", ignoreDuplicates: true }
-    );
-
-  if (seedError) {
-    console.error(seedError);
-    throw new ServiceError("Unable to update targets", 400);
-  }
-
-  const featuredIndex = targets.findIndex((t) => t.is_featured);
-  const { error: flagError } = await supabase
-    .from("objective_revision_nodes")
-    .upsert(
-      targets.map((t, i) => ({
-        revision_id: revisionId,
-        guide_base_id: t.guide_base_id,
-        guide_id: canonicalByBase.get(t.guide_base_id) as string,
-        is_target: true,
-        is_included: true,
-        target_position: i,
-        is_featured: i === (featuredIndex === -1 ? 0 : featuredIndex),
-      })),
-      { onConflict: "revision_id, guide_base_id" }
-    );
-
-  if (flagError) {
-    console.error(flagError);
-    throw new ServiceError("Unable to update targets", 400);
   }
 
   const { data: nodes, error: nodesError } = await supabase
@@ -520,27 +444,81 @@ export async function syncDraftCuration(
     throw new ServiceError("Failed to load revision nodes", 500);
   }
 
-  // an unsequenced target keeps its rows through the early return below
-  const nonTargets = (nodes ?? []).filter((n) => !n.is_target).map((n) => n.id);
-  if (nonTargets.length > 0) {
-    const { error } = await selectInBatches(nonTargets, (batch) =>
-      supabase
-        .from("objective_revision_node_orders")
-        .delete()
-        .eq("revision_id", revisionId)
-        .in("target_node_id", batch)
+  const nodeById = new Map((nodes ?? []).map((n) => [n.id, n]));
+  if (targetIds.some((id) => !nodeById.get(id)?.is_target)) {
+    throw new ServiceError("Node is not a target of this revision", 400);
+  }
+
+  // A request target has no variant to publish yet; only a guide target needs one.
+  const targetBases = targetIds
+    .map((id) => nodeById.get(id)?.guide_base_id ?? null)
+    .filter((id): id is string => id !== null);
+
+  if (targetBases.length > 0) {
+    const { data: bases, error: basesError } = await selectInBatches(
+      targetBases,
+      (batch) =>
+        supabase
+          .from("guide_bases")
+          .select("id, canonical_guide_id")
+          .in("id", batch)
     );
+
+    if (basesError) {
+      console.error(basesError);
+      throw new ServiceError("Failed to load guides", 500);
+    }
+
+    const published = new Set(
+      (bases ?? [])
+        .filter((b) => b.canonical_guide_id !== null)
+        .map((b) => b.id)
+    );
+    if (targetBases.some((id) => !published.has(id))) {
+      throw new ServiceError("Target guide has no published variant", 400);
+    }
+  }
+
+  // Clear first: position and featured are unique per revision, so a target
+  // cannot take a slot another still holds.
+  const { error: clearError } = await supabase
+    .from("objective_revision_nodes")
+    .update({ target_position: null, is_featured: false })
+    .eq("revision_id", revisionId);
+
+  if (clearError) {
+    console.error(clearError);
+    throw new ServiceError("Unable to update targets", 400);
+  }
+
+  const featuredIndex = targets.findIndex((t) => t.is_featured);
+  for (const [i, t] of targets.entries()) {
+    const { error } = await supabase
+      .from("objective_revision_nodes")
+      .update({
+        is_included: true,
+        target_position: i,
+        is_featured: i === (featuredIndex === -1 ? 0 : featuredIndex),
+      })
+      .eq("revision_id", revisionId)
+      .eq("id", t.node_id);
+
     if (error) {
       console.error(error);
-      throw new ServiceError("Unable to update curation", 400);
+      throw new ServiceError("Unable to update targets", 400);
     }
   }
 
   if (targets.every((t) => t.sequence === undefined)) return;
 
+  const nodeIdByBase = new Map(
+    (nodes ?? [])
+      .filter((n) => n.guide_base_id !== null)
+      .map((n) => [n.guide_base_id as string, n.id])
+  );
   const sequenced = new Set(targets.flatMap((t) => t.sequence ?? []));
-  const unreached = [...sequenced].find((id) => !closureSet.has(id));
-  if (unreached) {
+  const unplaced = [...sequenced].find((id) => !nodeIdByBase.has(id));
+  if (unplaced) {
     const { data: base } = await supabase
       .from("guide_bases")
       .select(
@@ -549,28 +527,23 @@ export async function syncDraftCuration(
            current:guide_revisions!guides_current_revision_id_fkey(title)
          )`
       )
-      .eq("id", unreached)
+      .eq("id", unplaced)
       .maybeSingle();
 
     const name = base?.canonical?.current?.title ?? base?.slug;
     throw new ServiceError(
       name
-        ? `"${name}" is not a prerequisite of any target guide, so it cannot be ordered here`
-        : "A guide in the sequence is not a prerequisite of any target guide",
+        ? `"${name}" is not in this objective's graph, so it cannot be ordered here`
+        : "A guide in the sequence is not in this objective's graph",
       400
     );
   }
 
-  const nodeIdByBase = new Map(
-    (nodes ?? [])
-      .filter((n) => n.guide_base_id !== null)
-      .map((n) => [n.guide_base_id, n.id])
-  );
   const included = (nodes ?? [])
     .filter(
       (n) =>
-        n.guide_base_id !== null &&
-        (n.is_target || sequenced.has(n.guide_base_id))
+        n.is_target ||
+        (n.guide_base_id !== null && sequenced.has(n.guide_base_id))
     )
     .map((n) => n.id);
   const excluded = (nodes ?? [])
@@ -591,6 +564,7 @@ export async function syncDraftCuration(
       supabase
         .from("objective_revision_nodes")
         .update({ is_included: value })
+        .eq("revision_id", revisionId)
         .in("id", batch)
     );
     if (error) {
@@ -612,7 +586,7 @@ export async function syncDraftCuration(
   const rows = targets.flatMap((t) =>
     (t.sequence ?? []).map((baseId, position) => ({
       revision_id: revisionId,
-      target_node_id: nodeIdByBase.get(t.guide_base_id) as string,
+      target_node_id: t.node_id,
       node_id: nodeIdByBase.get(baseId) as string,
       position,
     }))
@@ -630,11 +604,110 @@ export async function syncDraftCuration(
   }
 }
 
-// Replace a draft's node set and drawn edges with the graph the canvas sent.
-// Target flags, inclusion, and notes are left to syncDraftCuration.
-// ponytail: six statements, no transaction, like syncDraftCuration. A failed
-// edge insert leaves the nodes updated and the old edges dropped; the next save
-// from the canvas repairs it. The way up is one RPC that does all six.
+type GraphNode = { id: string; guide_base_id: string | null };
+type NodeEdge = { from_node_id: string; to_node_id: string };
+type GuideEdge = { from_guide_base_id: string; to_guide_base_id: string };
+
+// Prerequisite edges among the given guide bases, walked the same way as
+// objective_closure: prerequisite -> dependent, suspended edges ignored.
+async function loadGuideEdges(
+  supabase: DB,
+  baseIds: string[]
+): Promise<GuideEdge[]> {
+  const { data, error } = await selectInBatches(baseIds, (batch) =>
+    supabase
+      .from("guide_edges")
+      .select("from_guide_base_id, to_guide_base_id")
+      .eq("edge_type", "prerequisite")
+      .eq("is_suspended", false)
+      .in("from_guide_base_id", batch)
+  );
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to resolve prerequisites", 500);
+  }
+
+  const bases = new Set(baseIds);
+  return (data ?? []).filter((e) => bases.has(e.to_guide_base_id));
+}
+
+// A target is the end of a sub-objective: a node with no edge out to another
+// node of the same set, drawn or between two of its guides. A request has no
+// base, so only drawn edges can lead out of it.
+function deriveTargets(
+  nodes: GraphNode[],
+  drawn: NodeEdge[],
+  guideEdges: GuideEdge[]
+): Set<string> {
+  const ids = new Set(nodes.map((n) => n.id));
+  const bases = new Set(
+    nodes.map((n) => n.guide_base_id).filter((b): b is string => b !== null)
+  );
+  const leadsOn = new Set(
+    drawn
+      .filter((e) => ids.has(e.from_node_id) && ids.has(e.to_node_id))
+      .map((e) => e.from_node_id)
+  );
+  const baseLeadsOn = new Set(
+    guideEdges
+      .filter(
+        (e) => bases.has(e.from_guide_base_id) && bases.has(e.to_guide_base_id)
+      )
+      .map((e) => e.from_guide_base_id)
+  );
+
+  return new Set(
+    nodes
+      .filter(
+        (n) =>
+          !leadsOn.has(n.id) &&
+          !(n.guide_base_id !== null && baseLeadsOn.has(n.guide_base_id))
+      )
+      .map((n) => n.id)
+  );
+}
+
+// A node that stops being a target loses the curation hung on it: its position
+// and featured flag (the checks require it) and the order rows it heads.
+async function dropTargetCuration(
+  supabase: DB,
+  revisionId: string,
+  nodeIds: string[]
+) {
+  if (nodeIds.length === 0) return;
+
+  const { error: flagError } = await selectInBatches(nodeIds, (batch) =>
+    supabase
+      .from("objective_revision_nodes")
+      .update({ is_target: false, target_position: null, is_featured: false })
+      .eq("revision_id", revisionId)
+      .in("id", batch)
+  );
+  if (flagError) {
+    console.error(flagError);
+    throw new ServiceError("Unable to update targets", 400);
+  }
+
+  const { error: orderError } = await selectInBatches(nodeIds, (batch) =>
+    supabase
+      .from("objective_revision_node_orders")
+      .delete()
+      .eq("revision_id", revisionId)
+      .in("target_node_id", batch)
+  );
+  if (orderError) {
+    console.error(orderError);
+    throw new ServiceError("Unable to update curation", 400);
+  }
+}
+
+// Replace a draft's node set and drawn edges with the graph the canvas sent,
+// then derive which nodes are targets from it: the flags belong to the graph.
+// Position, featured, inclusion, and notes are left to syncDraftCuration.
+// ponytail: a run of statements, no transaction, like syncDraftCuration. A
+// failed write leaves the save half done; the next save from the canvas repairs
+// it. The way up is one RPC that does all of it.
 export async function syncDraftGraph(
   supabase: DB,
   userId: string,
@@ -742,7 +815,7 @@ export async function syncDraftGraph(
   const storedIdByBase = new Map(
     (stored ?? [])
       .filter((n) => n.guide_base_id !== null)
-      .map((n) => [n.guide_base_id, n.id])
+      .map((n) => [n.guide_base_id as string, n.id])
   );
   const storedIdByClientId = new Map(
     graph.nodes.map((n) => [
@@ -752,14 +825,26 @@ export async function syncDraftGraph(
         : n.id,
     ])
   );
-  // the canvas never sees the closure targets seeded, so don't let it delete it
+  const kept = new Set(storedIdByClientId.values());
+  const drawn = graph.edges.map((e) => ({
+    from_node_id: storedIdByClientId.get(e.from_node_id) as string,
+    to_node_id: storedIdByClientId.get(e.to_node_id) as string,
+  }));
+  const guideEdges = await loadGuideEdges(supabase, [...storedIdByBase.keys()]);
+
+  // The canvas may not hold every prerequisite of its targets (a draft seeded
+  // before the graph owned membership), so don't let it delete them.
+  const graphTargets = deriveTargets(
+    (stored ?? []).filter((n) => kept.has(n.id)),
+    drawn,
+    guideEdges
+  );
   const targetBases = (stored ?? [])
-    .filter((n) => n.is_target && n.guide_base_id !== null)
+    .filter((n) => graphTargets.has(n.id) && n.guide_base_id !== null)
     .map((n) => n.guide_base_id as string);
   const closure = new Set(
     targetBases.length > 0 ? await loadClosure(supabase, targetBases) : []
   );
-  const kept = new Set(storedIdByClientId.values());
   const removed = (stored ?? [])
     .filter(
       (n) =>
@@ -770,7 +855,11 @@ export async function syncDraftGraph(
 
   if (removed.length > 0) {
     const { error } = await selectInBatches(removed, (batch) =>
-      supabase.from("objective_revision_nodes").delete().in("id", batch)
+      supabase
+        .from("objective_revision_nodes")
+        .delete()
+        .eq("revision_id", revisionId)
+        .in("id", batch)
     );
 
     if (error) {
@@ -789,18 +878,43 @@ export async function syncDraftGraph(
     throw new ServiceError("Unable to update graph", 400);
   }
 
-  if (graph.edges.length > 0) {
-    const { error } = await supabase.from("objective_revision_edges").insert(
-      graph.edges.map((e) => ({
-        revision_id: revisionId,
-        from_node_id: storedIdByClientId.get(e.from_node_id) as string,
-        to_node_id: storedIdByClientId.get(e.to_node_id) as string,
-      }))
-    );
+  if (drawn.length > 0) {
+    const { error } = await supabase
+      .from("objective_revision_edges")
+      .insert(drawn.map((e) => ({ revision_id: revisionId, ...e })));
 
     if (error) {
       console.error(error);
       throw new ServiceError("Unable to update graph", 400);
+    }
+  }
+
+  // Derive over what the revision holds now, the protected prerequisites too.
+  const gone = new Set(removed);
+  const remaining = (stored ?? []).filter((n) => !gone.has(n.id));
+  const targets = deriveTargets(remaining, drawn, guideEdges);
+
+  await dropTargetCuration(
+    supabase,
+    revisionId,
+    remaining.filter((n) => n.is_target && !targets.has(n.id)).map((n) => n.id)
+  );
+
+  const becomeTargets = remaining
+    .filter((n) => !n.is_target && targets.has(n.id))
+    .map((n) => n.id);
+  if (becomeTargets.length > 0) {
+    const { error } = await selectInBatches(becomeTargets, (batch) =>
+      supabase
+        .from("objective_revision_nodes")
+        .update({ is_target: true })
+        .eq("revision_id", revisionId)
+        .in("id", batch)
+    );
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Unable to update targets", 400);
     }
   }
 }
@@ -937,11 +1051,11 @@ export async function diffObjectiveRevisions(
   };
 }
 
-// Two nodes with the same guide_base_id are "the same" iff every per-revision
-// column matches. slug/title are excluded: both snapshots read them live from
-// the current guide_bases row, so a paired node always agrees on them and they
+// Two nodes paired by diffKey are "the same" iff every per-revision column
+// matches. slug/title are excluded: both snapshots read them live from the
+// current guide_bases row, so a paired guide always agrees on them and they
 // can never signal a change. id is excluded too: it is a per-revision surrogate,
-// so paired nodes never share one.
+// so paired guides never share one.
 function sameNode(
   a: {
     guide_id: string | null;
@@ -1006,35 +1120,35 @@ function stepLabel(node: SnapshotNode) {
   return node.is_included ? label : `${label} (skipped)`;
 }
 
+// Node ids are per-revision surrogates, so a guide pairs across the two
+// revisions by its base. A request node has no base and pairs only by its id.
+function diffKey(node: SnapshotNode) {
+  return node.guide_base_id ?? node.id;
+}
+
 // Per sub-objective view of the diff.
 function diffTargets(
   fromSnapshot: { nodes: SnapshotNode[]; orders: SnapshotOrder[] },
   toSnapshot: { nodes: SnapshotNode[]; orders: SnapshotOrder[] }
 ) {
   const fromSequences = new Map(
-    buildSubObjectives(fromSnapshot).map((s) => [s.target.guide_base_id!, s])
+    buildSubObjectives(fromSnapshot).map((s) => [diffKey(s.target), s])
   );
   const toSequences = buildSubObjectives(toSnapshot);
   const seen = new Set<string>();
 
   const build = (
-    guideBaseId: string,
     target: SnapshotNode,
     fromSteps: SnapshotNode[],
     toSteps: SnapshotNode[],
     status: "added" | "removed" | "changed" | "unchanged"
   ) => {
-    const lines = diffSequences(
-      fromSteps,
-      toSteps,
-      (node) => node.guide_base_id!,
-      stepLabel
-    );
-    const fromByBase = new Map(fromSteps.map((s) => [s.guide_base_id!, s]));
+    const lines = diffSequences(fromSteps, toSteps, diffKey, stepLabel);
+    const fromByKey = new Map(fromSteps.map((s) => [diffKey(s), s]));
 
     const changed = toSteps
       .map((step) => {
-        const before = fromByBase.get(step.guide_base_id!);
+        const before = fromByKey.get(diffKey(step));
         if (!before || sameNode(before, step)) return null;
         return { from: before, to: step };
       })
@@ -1043,7 +1157,7 @@ function diffTargets(
     const sequenceChanged = lines.some((l) => l.type !== "unchanged");
 
     return {
-      guide_base_id: guideBaseId,
+      guide_base_id: target.guide_base_id,
       slug: target.slug,
       title: target.title,
       status:
@@ -1056,12 +1170,11 @@ function diffTargets(
   };
 
   const targets = toSequences.map((sequence) => {
-    const baseId = sequence.target.guide_base_id!;
-    seen.add(baseId);
-    const before = fromSequences.get(baseId);
+    const key = diffKey(sequence.target);
+    seen.add(key);
+    const before = fromSequences.get(key);
 
     return build(
-      baseId,
       sequence.target,
       before?.steps ?? [],
       sequence.steps,
@@ -1069,9 +1182,9 @@ function diffTargets(
     );
   });
 
-  for (const [baseId, sequence] of fromSequences) {
-    if (seen.has(baseId)) continue;
-    targets.push(build(baseId, sequence.target, sequence.steps, [], "removed"));
+  for (const [key, sequence] of fromSequences) {
+    if (seen.has(key)) continue;
+    targets.push(build(sequence.target, sequence.steps, [], "removed"));
   }
 
   return targets;
