@@ -14,6 +14,8 @@ type PropTypes = {
   onSaveDraft?: () => void;
   onPublish: () => void;
   submitting: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   guideOptions: Array<any>;
   subjectOptions: Array<any>;
 };
@@ -131,6 +133,8 @@ export const PreviewObjective = ({
   onSaveDraft,
   onPublish,
   submitting,
+  isDirty,
+  isSynced,
   guideOptions,
   subjectOptions,
 }: PropTypes) => {
@@ -246,6 +250,8 @@ export const PreviewObjective = ({
         onPublish={onPublish}
         publishLabel="Publish"
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <Separator className="mb-8 bg-border" />

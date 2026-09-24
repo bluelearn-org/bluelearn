@@ -98,21 +98,38 @@ create policy "Active authors can suspend prerequisites"
   using ((select public.is_active_guide_author()))
   with check ((select public.is_active_guide_author()));
 
-create policy "Active authors can insert todos"
-  on public.todo_prerequisites as restrictive for insert to authenticated
-  with check ((select public.is_active_guide_author()));
-
-create policy "Active authors can delete todos"
-  on public.todo_prerequisites as restrictive for delete to authenticated
-  using ((select public.is_active_guide_author()));
-
-create policy "Active authors can insert todo claims"
-  on public.todo_claims as restrictive for insert to authenticated
-  with check ((select public.is_active_guide_author()));
-
-create policy "Active authors can delete todo claims"
-  on public.todo_claims as restrictive for delete to authenticated
-  using ((select public.is_active_guide_author()));
+-- Live databases can apply the requests rename before this older migration.
+do $$
+declare
+  requests_table text := coalesce(
+    to_regclass('public.requests')::text, 'public.todo_prerequisites'
+  );
+  claims_table text := coalesce(
+    to_regclass('public.request_claims')::text, 'public.todo_claims'
+  );
+begin
+  execute format(
+    'create policy "Active authors can insert todos" on %s as restrictive for insert to authenticated
+     with check ((select public.is_active_guide_author()))',
+    requests_table
+  );
+  execute format(
+    'create policy "Active authors can delete todos" on %s as restrictive for delete to authenticated
+     using ((select public.is_active_guide_author()))',
+    requests_table
+  );
+  execute format(
+    'create policy "Active authors can insert todo claims" on %s as restrictive for insert to authenticated
+     with check ((select public.is_active_guide_author()))',
+    claims_table
+  );
+  execute format(
+    'create policy "Active authors can delete todo claims" on %s as restrictive for delete to authenticated
+     using ((select public.is_active_guide_author()))',
+    claims_table
+  );
+end;
+$$;
 
 create policy "Active authors can insert disclaimers"
   on public.guide_disclaimers as restrictive for insert to authenticated
