@@ -302,16 +302,17 @@ export async function listPublishedObjectives(
   };
 }
 
-// Create a objective: bundles the objective shell + revision 1 + the targets' prerequisite
-// closure as the initial node set in one transaction via the create_objective
-// RPC (RLS still applies, SECURITY INVOKER). Returns the draft revision id so the
-// client routes straight to its editor.
+// Create a objective: bundles the objective shell + revision 1 in one
+// transaction via the create_objective RPC (RLS still applies, SECURITY
+// INVOKER). It starts with no nodes; the graph's first save places them and
+// derives the targets. Returns the draft revision id so the client routes
+// straight to its editor.
 export async function createObjective(
   supabase: DB,
   input: CreateObjectiveInput
 ) {
   const { data: revision_id, error } = await supabase.rpc("create_objective", {
-    p_targets: input.target_ids,
+    p_targets: [],
     p_title: input.title ?? undefined,
     p_summary: input.summary ?? undefined,
   });

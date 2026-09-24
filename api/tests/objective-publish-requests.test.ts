@@ -87,18 +87,12 @@ async function statusOf(revisionId: string) {
   return data.status;
 }
 
-async function drawnDraft(
-  targetBaseId: string,
-  graph: {
-    nodes: Array<Record<string, string>>;
-    edges: Array<{ from_node_id: string; to_node_id: string }>;
-  }
-) {
+// The graph save alone places the nodes and derives the targets from it.
+async function drawnDraft(graph: {
+  nodes: Array<Record<string, string>>;
+  edges: Array<{ from_node_id: string; to_node_id: string }>;
+}) {
   const draft = await curatorDraft();
-  const seeded = await patch(draft.revision.id, draft.curator.token, {
-    targets: [{ guide_base_id: targetBaseId }],
-  });
-  expect(seeded.status).toBe(200);
   const drawn = await patch(draft.revision.id, draft.curator.token, { graph });
   expect(drawn.status).toBe(200);
   return draft;
@@ -108,7 +102,7 @@ async function draftWithRequest() {
   const goal = await createPublishedGuide();
   const goalId = crypto.randomUUID();
   const requestNodeId = crypto.randomUUID();
-  const draft = await drawnDraft(goal.base.id, {
+  const draft = await drawnDraft({
     nodes: [
       { id: goalId, guide_base_id: goal.base.id },
       { id: requestNodeId, ...request },
@@ -168,7 +162,7 @@ describe("POST /objective-revisions/{id}/publish request nodes", () => {
 
   it("writes a drawn guide edge into the guide graph", async () => {
     const { from, to, graph } = await draftWithGuideEdge();
-    const { curator, revision } = await drawnDraft(to.base.id, graph);
+    const { curator, revision } = await drawnDraft(graph);
 
     const res = await publish(revision.id, curator.token);
     expect(res.status).toBe(200);
@@ -186,7 +180,14 @@ describe("POST /objective-revisions/{id}/publish request nodes", () => {
   it("409s a drawn guide edge that closes a cycle and keeps the draft", async () => {
     const { from, to, graph } = await draftWithGuideEdge();
     await createPrerequisite(to.base.id, from.base.id);
-    const { curator, revision } = await drawnDraft(to.base.id, graph);
+    // without an endpoint past the cycle there is no target, and publish 400s first
+    const end = await createPublishedGuide();
+    const endId = crypto.randomUUID();
+    const toId = graph.edges[0].to_node_id;
+    const { curator, revision } = await drawnDraft({
+      nodes: [...graph.nodes, { id: endId, guide_base_id: end.base.id }],
+      edges: [...graph.edges, { from_node_id: toId, to_node_id: endId }],
+    });
 
     const res = await publish(revision.id, curator.token);
     expect(res.status).toBe(409);
@@ -213,7 +214,10 @@ describe("POST /objective-revisions/{id}/publish request nodes", () => {
     expect(await statusOf(revision.id)).toBe("draft");
 
     const seeded = await patch(revision.id, curator.token, {
-      targets: [{ guide_base_id: goal.base.id }],
+      graph: {
+        nodes: [{ id: crypto.randomUUID(), guide_base_id: goal.base.id }],
+        edges: [],
+      },
     });
     expect(seeded.status).toBe(200);
     expect((await publish(revision.id, curator.token)).status).toBe(200);
@@ -280,7 +284,7 @@ describe("resolving an objective-raised request", () => {
     const beforeId = crypto.randomUUID();
     const requestNodeId = crypto.randomUUID();
     const goalId = crypto.randomUUID();
-    const { curator, revision } = await drawnDraft(goal.base.id, {
+    const { curator, revision } = await drawnDraft({
       nodes: [
         { id: beforeId, guide_base_id: before.base.id },
         { id: requestNodeId, ...request },
@@ -310,7 +314,7 @@ describe("resolving an objective-raised request", () => {
     const firstId = crypto.randomUUID();
     const secondId = crypto.randomUUID();
     const goalId = crypto.randomUUID();
-    const { curator, revision } = await drawnDraft(goal.base.id, {
+    const { curator, revision } = await drawnDraft({
       nodes: [
         { id: firstId, title: "First request", summary: "Comes first" },
         { id: secondId, title: "Second request", summary: "Comes second" },

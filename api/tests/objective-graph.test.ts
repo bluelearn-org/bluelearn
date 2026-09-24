@@ -17,7 +17,11 @@ type Snapshot = {
     title: string | null;
     summary: string | null;
     request_id: string | null;
+    is_target: boolean;
+    is_featured: boolean;
+    target_position: number | null;
   }>;
+  orders: Array<{ target_node_id: string; node_id: string; position: number }>;
   drawn_edges: Array<{ from_node_id: string; to_node_id: string }>;
 };
 
@@ -57,17 +61,48 @@ async function snapshotOf(revisionId: string, token: string) {
   return body.snapshot;
 }
 
-// A draft whose target guide was seeded by `targets`, so its node already has a
-// server id the client does not know.
+// A draft whose goal guide was placed by an earlier graph save, so its node
+// already has a server id the client does not know.
 async function draftWithTarget() {
   const { curator, revision } = await curatorDraft();
   const goal = await createPublishedGuide();
   const seeded = await patch(revision.id, curator.token, {
-    targets: [{ guide_base_id: goal.base.id }],
+    graph: {
+      nodes: [{ id: crypto.randomUUID(), guide_base_id: goal.base.id }],
+      edges: [],
+    },
   });
   expect(seeded.status).toBe(200);
   const [goalNode] = (await snapshotOf(revision.id, curator.token)).nodes;
   return { curator, revision, goal, goalNode };
+}
+
+// A guide-only graph body with fresh client ids; each edge is [from, to] as
+// indexes into `bases`.
+function guideGraph(
+  bases: string[],
+  edges: Array<[number, number]>
+): {
+  nodes: Array<{ id: string; guide_base_id: string }>;
+  edges: Array<{ from_node_id: string; to_node_id: string }>;
+} {
+  const nodes = bases.map((id) => ({
+    id: crypto.randomUUID(),
+    guide_base_id: id,
+  }));
+  return {
+    nodes,
+    edges: edges.map(([from, to]) => ({
+      from_node_id: nodes[from].id,
+      to_node_id: nodes[to].id,
+    })),
+  };
+}
+
+function targetBases(snapshot: Snapshot) {
+  return snapshot.nodes
+    .filter((n) => n.is_target)
+    .map((n) => n.guide_base_id ?? n.id);
 }
 
 describe("PATCH /objective-revisions/{id} graph", () => {
@@ -131,59 +166,127 @@ describe("PATCH /objective-revisions/{id} graph", () => {
     expect(snapshot.drawn_edges).toEqual([]);
   });
 
-  it("keeps a guide node placed by hand through a later targets save", async () => {
-    const { curator, revision, goal } = await draftWithTarget();
-    const placed = await createPublishedGuide();
-    const graph = (bases: string[]) => ({
-      graph: {
-        nodes: bases.map((id) => ({
-          id: crypto.randomUUID(),
-          guide_base_id: id,
-        })),
-        edges: [],
-      },
-    });
-
-    await patch(
-      revision.id,
-      curator.token,
-      graph([goal.base.id, placed.base.id])
-    );
-    const retargeted = await patch(revision.id, curator.token, {
-      targets: [{ guide_base_id: goal.base.id }],
-    });
-    expect(retargeted.status).toBe(200);
-
-    const kept = await snapshotOf(revision.id, curator.token);
-    expect(kept.nodes.map((n) => n.guide_base_id)).toContain(placed.base.id);
-
-    // The graph, not the closure, is what takes it out again.
-    await patch(revision.id, curator.token, graph([goal.base.id]));
-    const dropped = await snapshotOf(revision.id, curator.token);
-    expect(dropped.nodes.map((n) => n.guide_base_id)).toEqual([goal.base.id]);
-  });
-
   it("keeps the targets' prerequisites through a graph save that omits them", async () => {
     const { curator, revision } = await curatorDraft();
     const prereq = await createPublishedGuide();
     const goal = await createPublishedGuide();
     await createPrerequisite(prereq.base.id, goal.base.id);
     await patch(revision.id, curator.token, {
-      targets: [{ guide_base_id: goal.base.id }],
+      graph: guideGraph([prereq.base.id, goal.base.id], []),
     });
 
     const res = await patch(revision.id, curator.token, {
+      graph: guideGraph([goal.base.id], []),
+    });
+    expect(res.status).toBe(200);
+
+    const snapshot = await snapshotOf(revision.id, curator.token);
+    const bases = snapshot.nodes.map((n) => n.guide_base_id);
+    expect(bases.sort()).toEqual([goal.base.id, prereq.base.id].sort());
+    expect(targetBases(snapshot)).toEqual([goal.base.id]);
+  });
+
+  it("makes the end of a drawn edge the only target", async () => {
+    const { curator, revision } = await curatorDraft();
+    const a = await createPublishedGuide();
+    const b = await createPublishedGuide();
+
+    const res = await patch(revision.id, curator.token, {
+      graph: guideGraph([a.base.id, b.base.id], [[0, 1]]),
+    });
+    expect(res.status).toBe(200);
+
+    const snapshot = await snapshotOf(revision.id, curator.token);
+    expect(targetBases(snapshot)).toEqual([b.base.id]);
+  });
+
+  it("moves the target down a new edge and clears the old one's curation", async () => {
+    const { curator, revision } = await curatorDraft();
+    const a = await createPublishedGuide();
+    const b = await createPublishedGuide();
+    const c = await createPublishedGuide();
+
+    await patch(revision.id, curator.token, {
+      graph: guideGraph([a.base.id, b.base.id], [[0, 1]]),
+    });
+    const before = await snapshotOf(revision.id, curator.token);
+    const aNode = before.nodes.find((n) => n.guide_base_id === a.base.id)!;
+    const bNode = before.nodes.find((n) => n.guide_base_id === b.base.id)!;
+    const curated = await patch(revision.id, curator.token, {
+      targets: [
+        {
+          node_id: bNode.id,
+          is_featured: true,
+          sequence: [aNode.id, bNode.id],
+        },
+      ],
+    });
+    expect(curated.status).toBe(200);
+    const curatedSnap = await snapshotOf(revision.id, curator.token);
+    expect(curatedSnap.nodes.find((n) => n.id === bNode.id)).toEqual(
+      expect.objectContaining({ is_featured: true, target_position: 0 })
+    );
+    expect(curatedSnap.orders.map((o) => o.target_node_id)).toContain(bNode.id);
+
+    const res = await patch(revision.id, curator.token, {
+      graph: guideGraph(
+        [a.base.id, b.base.id, c.base.id],
+        [
+          [0, 1],
+          [1, 2],
+        ]
+      ),
+    });
+    expect(res.status).toBe(200);
+
+    const after = await snapshotOf(revision.id, curator.token);
+    expect(targetBases(after)).toEqual([c.base.id]);
+    expect(after.nodes.find((n) => n.id === bNode.id)).toEqual(
+      expect.objectContaining({
+        is_target: false,
+        is_featured: false,
+        target_position: null,
+      })
+    );
+    expect(after.orders.filter((o) => o.target_node_id === bNode.id)).toEqual(
+      []
+    );
+  });
+
+  it("makes a request node with no edge out a target", async () => {
+    const { curator, revision } = await curatorDraft();
+    const guide = await createPublishedGuide();
+    const guideId = crypto.randomUUID();
+    const requestId = crypto.randomUUID();
+
+    const res = await patch(revision.id, curator.token, {
       graph: {
-        nodes: [{ id: crypto.randomUUID(), guide_base_id: goal.base.id }],
-        edges: [],
+        nodes: [
+          { id: guideId, guide_base_id: guide.base.id },
+          { id: requestId, ...request },
+        ],
+        edges: [{ from_node_id: guideId, to_node_id: requestId }],
       },
     });
     expect(res.status).toBe(200);
 
-    const bases = (await snapshotOf(revision.id, curator.token)).nodes.map(
-      (n) => n.guide_base_id
-    );
-    expect(bases.sort()).toEqual([goal.base.id, prereq.base.id].sort());
+    const snapshot = await snapshotOf(revision.id, curator.token);
+    expect(targetBases(snapshot)).toEqual([requestId]);
+  });
+
+  it("does not make a guide whose prerequisite edge leads to another node a target", async () => {
+    const { curator, revision } = await curatorDraft();
+    const walkthrough = await createPublishedGuide();
+    const goal = await createPublishedGuide();
+    await createPrerequisite(walkthrough.base.id, goal.base.id);
+
+    const res = await patch(revision.id, curator.token, {
+      graph: guideGraph([walkthrough.base.id, goal.base.id], []),
+    });
+    expect(res.status).toBe(200);
+
+    const snapshot = await snapshotOf(revision.id, curator.token);
+    expect(targetBases(snapshot)).toEqual([goal.base.id]);
   });
 
   it("400s an edge naming a node outside the graph and writes nothing", async () => {
