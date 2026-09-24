@@ -217,7 +217,7 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     );
   });
 
-  it("400s a node that is not a target of this revision", async () => {
+  it("400s an unknown node and drops a node that is no longer a target", async () => {
     const before = await createPublishedGuide();
     const goal = await createPublishedGuide();
     const { curate, nodeIdOf } = await drawnDraft(
@@ -225,19 +225,34 @@ describe("PATCH /objective-revisions/{id} curation", () => {
       [[0, 1]]
     );
 
-    for (const nodeId of [
-      await nodeIdOf(before.base.id),
-      crypto.randomUUID(),
-    ]) {
-      const res = await curate([{ node_id: nodeId }]);
-      expect(res.status).toBe(400);
-      await expectToMatchSpec(res, "PATCH", "/objective-revisions/{id}");
-      const body = (await res.json()) as { error: string };
-      expect(body.error).toBe("Node is not a target of this revision");
-    }
+    const unknown = await curate([{ node_id: crypto.randomUUID() }]);
+    expect(unknown.status).toBe(400);
+    await expectToMatchSpec(unknown, "PATCH", "/objective-revisions/{id}");
+    const body = (await unknown.json()) as { error: string };
+    expect(body.error).toBe("Node is not a target of this revision");
 
-    const accepted = await curate([{ node_id: await nodeIdOf(goal.base.id) }]);
-    expect(accepted.status).toBe(200);
+    const beforeNode = await nodeIdOf(before.base.id);
+    const drifted = await curate([
+      { node_id: beforeNode, is_featured: true },
+      { node_id: await nodeIdOf(goal.base.id) },
+    ]);
+    expect(drifted.status).toBe(200);
+    await expectToMatchSpec(drifted, "PATCH", "/objective-revisions/{id}");
+    const { snapshot } = (await drifted.json()) as {
+      snapshot: CurationSnapshot;
+    };
+    const byBase = new Map(snapshot.nodes.map((n) => [n.guide_base_id, n]));
+    expect(byBase.get(before.base.id)).toEqual(
+      expect.objectContaining({
+        id: beforeNode,
+        is_target: false,
+        is_featured: false,
+        target_position: null,
+      })
+    );
+    expect(byBase.get(goal.base.id)).toEqual(
+      expect.objectContaining({ is_target: true, target_position: 0 })
+    );
   });
 
   it("403s for a non-curator author", async () => {
