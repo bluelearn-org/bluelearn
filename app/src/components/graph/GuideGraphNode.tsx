@@ -80,10 +80,10 @@ export function GuideGraphNode({
     >
       <Handle
         type="target"
-        position={handles?.target ?? Position.Top}
+        position={handles?.target ?? Position.Bottom}
         className={
           handles?.className ??
-          "-top-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+          "-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
         }
       />
 
@@ -135,10 +135,10 @@ export function GuideGraphNode({
 
       <Handle
         type="source"
-        position={handles?.source ?? Position.Bottom}
+        position={handles?.source ?? Position.Top}
         className={
           handles?.className ??
-          "-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+          "-top-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
         }
       />
     </div>

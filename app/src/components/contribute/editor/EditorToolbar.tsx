@@ -428,7 +428,7 @@ export default function EditorToolbar({
                 </TooltipTrigger>
               </PopoverTrigger>
 
-              <TooltipContent>Insert LaTeX Math Equation</TooltipContent>
+              <TooltipContent>Insert Element</TooltipContent>
             </Tooltip>
 
             <PopoverContent

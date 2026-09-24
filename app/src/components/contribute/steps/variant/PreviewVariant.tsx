@@ -24,6 +24,8 @@ type PropTypes = {
   onSaveDraft: () => void;
   onPublish: () => void;
   submitting: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
 };
 
 export const PreviewVariant = ({
@@ -34,6 +36,8 @@ export const PreviewVariant = ({
   onSaveDraft,
   onPublish,
   submitting,
+  isDirty,
+  isSynced,
 }: PropTypes) => {
   const [username, setUsername] = useState<string | null>(null);
 
@@ -85,6 +89,8 @@ export const PreviewVariant = ({
         onSaveDraft={onSaveDraft}
         onPublish={onPublish}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <div className="flex min-h-0 flex-1">
