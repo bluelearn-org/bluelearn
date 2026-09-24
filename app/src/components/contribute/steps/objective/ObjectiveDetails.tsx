@@ -58,7 +58,7 @@ export const ObjectiveDetails = ({
         isSynced={isSynced}
       />
 
-      <FieldGroup>
+      <FieldGroup className="gap-8 pt-6">
         {showChangeSummary && (
           <Field className="space-y-2">
             <div className="space-y-1">
