@@ -35,6 +35,7 @@ vi.mock("@xyflow/react", async () => {
       nodes,
       nodeTypes,
       onDelete,
+      onNodesChange,
       onNodeDragStop,
       onNodeMouseEnter,
       onNodeMouseLeave,
@@ -50,6 +51,7 @@ vi.mock("@xyflow/react", async () => {
         nodes: Array<unknown>;
         edges: Array<unknown>;
       }) => void;
+      onNodesChange: (changes: Array<unknown>) => void;
       onNodeDragStop: (
         event: unknown,
         node: unknown,
@@ -62,6 +64,18 @@ vi.mock("@xyflow/react", async () => {
         {nodes.map((node) => {
           const NodeComponent = nodeTypes[node.type];
           const dropped = { ...node, position: { x: 999, y: 999 } };
+          const moveBy = (dx: number, dy: number) =>
+            onNodesChange([
+              {
+                id: node.id,
+                type: "position",
+                dragging: true,
+                position: {
+                  x: node.position.x + dx,
+                  y: node.position.y + dy,
+                },
+              },
+            ]);
           return (
             <div
               key={node.id}
@@ -76,6 +90,12 @@ vi.mock("@xyflow/react", async () => {
               </button>
               <button onClick={() => onNodeDragStop({}, dropped, [dropped])}>
                 Drag {node.id}
+              </button>
+              <button onClick={() => moveBy(40, -400)}>
+                Pull {node.id} across
+              </button>
+              <button onClick={() => moveBy(40, 10)}>
+                Nudge {node.id} along
               </button>
             </div>
           );
@@ -163,6 +183,21 @@ function renderDesign(graph: ObjectiveGraphData) {
       objectiveGraph={graph}
     />
   );
+}
+
+const LOOPS: ObjectiveGraphNode = {
+  id: "n1",
+  type: "guide",
+  guideBaseId: "b1",
+  guideSlug: "loops",
+  title: "Loops",
+};
+
+// Added nodes get fresh ids, so cards are found by title.
+function positionOf(title: string) {
+  const card = screen.getByText(title).closest<HTMLElement>("[data-position]")!;
+  const [x, y] = card.dataset.position!.split(",").map(Number);
+  return { x, y };
 }
 
 describe("ObjectiveDesign", () => {
@@ -308,31 +343,59 @@ describe("ObjectiveDesign", () => {
     expect(screen.queryByText("Recursion")).toBeNull();
   });
 
-  it("keeps a dragged node where it was dropped when a guide is added", async () => {
+  it("returns a dropped node to its layout slot, below a target added later", async () => {
     vi.mocked(getGuideWalkthrough).mockResolvedValue({ nodes: [], edges: [] });
 
     render(
       <DesignWithState
-        initial={{
-          nodes: [
-            {
-              id: "n1",
-              type: "guide",
-              guideBaseId: "b1",
-              guideSlug: "loops",
-              title: "Loops",
-            },
-          ],
-          edges: [],
-        }}
+        initial={{ nodes: [LOOPS], edges: [] }}
         onTargetsChange={() => {}}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
-    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
+    const slot = positionOf("Loops");
 
+    fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
+    expect(positionOf("Loops")).toEqual(slot);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
     expect(await screen.findByText("Recursion")).toBeTruthy();
-    expect(screen.getByTestId("node-n1").dataset.position).toBe("999,999");
+
+    expect(positionOf("Loops")).not.toEqual({ x: 999, y: 999 });
+    expect(positionOf("Loops").y).toBeGreaterThan(positionOf("Recursion").y);
+  });
+
+  it("holds a node pulled toward another band inside its own, and returns it on release", () => {
+    render(
+      <DesignWithState
+        initial={{ nodes: [LOOPS], edges: [] }}
+        onTargetsChange={() => {}}
+      />
+    );
+    const slot = positionOf("Loops");
+
+    fireEvent.click(screen.getByRole("button", { name: "Pull n1 across" }));
+    const pulled = positionOf("Loops");
+    expect(pulled.x).toBe(slot.x + 40);
+    expect(Math.abs(pulled.y - slot.y)).toBeLessThan(100);
+
+    fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
+    expect(positionOf("Loops")).toEqual(slot);
+  });
+
+  it("follows a nudge inside the band while dragging, and returns it on release", () => {
+    render(
+      <DesignWithState
+        initial={{ nodes: [LOOPS], edges: [] }}
+        onTargetsChange={() => {}}
+      />
+    );
+    const slot = positionOf("Loops");
+
+    fireEvent.click(screen.getByRole("button", { name: "Nudge n1 along" }));
+    expect(positionOf("Loops")).toEqual({ x: slot.x + 40, y: slot.y + 10 });
+
+    fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
+    expect(positionOf("Loops")).toEqual(slot);
   });
 
   const guide = (id: string) => ({

@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Background,
   BaseEdge,
@@ -22,7 +22,7 @@ import type {
   EdgeProps,
   Node,
   OnNodeDrag,
-  XYPosition,
+  OnNodesChange,
 } from "@xyflow/react";
 
 import type {
@@ -60,7 +60,13 @@ const nodeTypes = {
 const edgeTypes = { drawn: DrawnEdge };
 
 const NODE_SPACING = 320;
-const LEVEL_SPACING = 200;
+const BAND_SPACING = 200;
+// How far a drag may pull a card off its band, short of the next band's cards.
+const BAND_SLACK = BAND_SPACING / 4;
+// xyflow tags the card being dragged with .dragging, which must follow the
+// pointer; every other move (a release, a relayout) glides.
+const GLIDE_TO_SLOT =
+  "transition-transform duration-300 ease-out [&.dragging]:transition-none";
 const EDGE_COLOR = "#94a3b8";
 const PREREQUISITE_EDGE_COLOR = "var(--brand-orange)";
 const FOLLOW_UP_EDGE_COLOR = "var(--brand-muted-green)";
@@ -189,14 +195,13 @@ const ObjectiveGraph = ({
   onTargetsChange,
 }: ObjectiveGraphProps) => {
   const { theme } = useTheme();
-  // ponytail: dragged positions live for the session; upgrade when the API stores node positions
-  const draggedPositions = useRef(new Map<string, XYPosition>());
 
-  const flowNodes = useMemo(
-    () => toFlowNodes(graph, draggedPositions.current),
-    [graph]
-  );
+  const flowNodes = useMemo(() => toFlowNodes(graph), [graph]);
   const flowEdges = useMemo(() => toFlowEdges(graph), [graph]);
+  const slotById = useMemo(
+    () => new Map(flowNodes.map((n) => [n.id, n.position])),
+    [flowNodes]
+  );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
@@ -262,9 +267,29 @@ const ObjectiveGraph = ({
     );
   }, [hoveredNodeId, graph, setNodes, setEdges]);
 
+  // Drag is a nudge along the card's band; the layout stays the resting state.
+  const handleNodesChange: OnNodesChange<Node<ObjectiveNodeData>> = (changes) =>
+    onNodesChange(
+      changes.map((change) => {
+        if (change.type !== "position" || !change.position) return change;
+        const slot = slotById.get(change.id);
+        if (!slot) return change;
+
+        const y = Math.min(
+          Math.max(change.position.y, slot.y - BAND_SLACK),
+          slot.y + BAND_SLACK
+        );
+        return { ...change, position: { ...change.position, y } };
+      })
+    );
+
   const handleNodeDragStop: OnNodeDrag = (_event, _node, dragged) => {
-    for (const node of dragged)
-      draggedPositions.current.set(node.id, node.position);
+    const draggedIds = new Set(dragged.map((node) => node.id));
+    setNodes((nds) =>
+      nds.map((n) =>
+        draggedIds.has(n.id) ? { ...n, position: slotById.get(n.id)! } : n
+      )
+    );
   };
 
   const handleConnect = ({ source, target }: Connection) =>
@@ -304,7 +329,7 @@ const ObjectiveGraph = ({
           edges={edges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
           onNodeMouseEnter={(_event, node) => setHoveredNodeId(node.id)}
@@ -331,24 +356,23 @@ const ObjectiveGraph = ({
 };
 
 function toFlowNodes(
-  graph: ObjectiveGraphData,
-  draggedPositions: Map<string, XYPosition>
+  graph: ObjectiveGraphData
 ): Array<Node<ObjectiveNodeData>> {
   const positionById = new Map(
     layoutObjectiveGraph(graph, {
       nodeWidth: OBJECTIVE_NODE_WIDTH,
       nodeSpacing: NODE_SPACING,
-      levelSpacing: LEVEL_SPACING,
+      bandSpacing: BAND_SPACING,
     }).map((n) => [n.id, n.position])
   );
-  const positionOf = (id: string) =>
-    draggedPositions.get(id) ?? positionById.get(id)!;
+  const positionOf = (id: string) => positionById.get(id)!;
 
   return graph.nodes.map((node) =>
     node.type === "guide_request"
       ? {
           id: node.id,
           type: "objectiveRequest",
+          className: GLIDE_TO_SLOT,
           position: positionOf(node.id),
           data: {
             title: node.title,
@@ -361,6 +385,7 @@ function toFlowNodes(
       : {
           id: node.id,
           type: "objectiveGuide",
+          className: GLIDE_TO_SLOT,
           position: positionOf(node.id),
           data: {
             title: node.title,

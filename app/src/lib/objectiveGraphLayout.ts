@@ -1,9 +1,12 @@
-import type { ObjectiveGraphData } from "@/types/contributions";
+import type {
+  ObjectiveGraphData,
+  ObjectiveGraphNode,
+} from "@/types/contributions";
 
 type LayoutOptions = {
   nodeWidth: number;
   nodeSpacing: number;
-  levelSpacing: number;
+  bandSpacing: number;
 };
 
 type NodePosition = {
@@ -11,31 +14,31 @@ type NodePosition = {
   position: { x: number; y: number };
 };
 
-// Prerequisites below dependents, matching the node handles (in at the bottom,
-// out at the top): flip both together. Rows centre on x = 0 like useGraphLayout.
+// Walkthroughs read bottom to top, matching the node handles (in at the bottom,
+// out at the top): flip both together.
+const BANDS_BOTTOM_UP: Array<ObjectiveGraphNode["type"]> = [
+  "guide",
+  "target",
+  "guide_request",
+];
+
+// One row per kind, centred on x = 0 like useGraphLayout. Inside a row,
+// prerequisites sit left of what they lead to.
 export function layoutObjectiveGraph(
   graph: ObjectiveGraphData,
-  { nodeWidth, nodeSpacing, levelSpacing }: LayoutOptions
+  { nodeWidth, nodeSpacing, bandSpacing }: LayoutOptions
 ): Array<NodePosition> {
-  const levelById = longestPathLevels(graph);
+  const depthById = longestPathLevels(graph);
 
-  const lastLevel = Math.max(0, ...levelById.values());
-  for (const node of graph.nodes) {
-    if (node.type === "target") levelById.set(node.id, lastLevel);
-  }
+  // An empty band leaves no gap.
+  const bands = BANDS_BOTTOM_UP.map((type) =>
+    graph.nodes
+      .filter((node) => node.type === type)
+      .sort((a, b) => depthById.get(a.id)! - depthById.get(b.id)!)
+      .map((node) => node.id)
+  ).filter((ids) => ids.length > 0);
 
-  const idsByLevel = new Map<number, Array<string>>();
-  for (const node of graph.nodes) {
-    const level = levelById.get(node.id)!;
-    idsByLevel.set(level, [...(idsByLevel.get(level) ?? []), node.id]);
-  }
-
-  // Rows are numbered by rank, so a level emptied by moving targets to the last
-  // level leaves no gap.
-  const levels = [...idsByLevel.keys()].sort((a, b) => a - b);
-
-  return levels.flatMap((level, row) => {
-    const ids = idsByLevel.get(level)!;
+  return bands.flatMap((ids, band) => {
     const startX = -(ids.length * nodeSpacing) / 2;
 
     return ids.map((id, index) => {
@@ -45,7 +48,7 @@ export function layoutObjectiveGraph(
         id,
         position: {
           x: cellCenterX - nodeWidth / 2,
-          y: (levels.length - 1 - row) * levelSpacing,
+          y: (bands.length - 1 - band) * bandSpacing,
         },
       };
     });
