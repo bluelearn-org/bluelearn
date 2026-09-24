@@ -324,11 +324,24 @@ export async function updateObjectiveRevision(
   }
   // The graph decides which nodes exist and which are targets; curation then
   // orders and features those targets, so it has to read the saved graph.
-  if (graph !== undefined) {
-    await syncDraftGraph(supabase, userId, revisionId, graph);
-  }
+  const storedIdByClientId =
+    graph !== undefined
+      ? await syncDraftGraph(supabase, userId, revisionId, graph)
+      : undefined;
   if (targets !== undefined) {
-    await syncDraftCuration(supabase, userId, revisionId, targets);
+    // The canvas may name a re-added guide by a fresh id the graph half just
+    // mapped to the stored one; curation checks stored ids, so translate.
+    const toStored = (id: string) => storedIdByClientId?.get(id) ?? id;
+    await syncDraftCuration(
+      supabase,
+      userId,
+      revisionId,
+      targets.map((t) => ({
+        ...t,
+        node_id: toStored(t.node_id),
+        sequence: t.sequence?.map(toStored),
+      }))
+    );
   }
 
   return getObjectiveRevision(supabase, revisionId);
@@ -889,6 +902,8 @@ export async function syncDraftGraph(
       throw new ServiceError("Unable to update targets", 400);
     }
   }
+
+  return storedIdByClientId;
 }
 
 // Publish the draft directly (no review gate): freeze its edge projection, point
