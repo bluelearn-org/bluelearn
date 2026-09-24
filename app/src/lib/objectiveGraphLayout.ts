@@ -22,70 +22,139 @@ const KIND_ORDER: Record<ObjectiveGraphNode["type"], number> = {
 };
 
 // Prerequisites below dependents, matching the node handles (in at the bottom,
-// out at the top): flip both together. Rows centre on x = 0 like useGraphLayout.
+// out at the top): flip both together. Each connected group of edges is an
+// island of its own rows; islands stand side by side, top rows aligned, and
+// the whole set centres on x = 0 like useGraphLayout.
 export function layoutObjectiveGraph(
   graph: ObjectiveGraphData,
   { nodeWidth, nodeSpacing, levelSpacing }: LayoutOptions
 ): Array<NodePosition> {
   const levelById = longestPathLevels(graph);
+  const islands = connectedIslands(graph);
+  const inIsland = new Set(islands.flat());
 
-  // Edges alone place a node. One with none falls back by kind: an existing
-  // guide to the bottom row, a target to the top, a request just below it.
-  const connected = new Set(
-    graph.edges
-      .filter((e) => levelById.has(e.source) && levelById.has(e.target))
-      .flatMap((e) => [e.source, e.target])
-  );
+  // A connected island numbers its rows by rank, so a level nothing landed on
+  // leaves no gap.
+  const rowSets = islands.map((ids) => {
+    const levels = [...new Set(ids.map((id) => levelById.get(id)!))].sort(
+      (a, b) => a - b
+    );
+    const rowByLevel = new Map(levels.map((level, rank) => [level, rank]));
+    const rowById = new Map(
+      ids.map((id) => [id, rowByLevel.get(levelById.get(id)!)!])
+    );
+    return { ids, rowById, rowCount: levels.length };
+  });
+
+  // Nodes with no edge fall back by kind in one last island: an existing guide
+  // to the bottom row, a target to the top, a request just below the top when
+  // a target holds it. Its height matches the deepest island, so rows line up.
   const loose = (type: ObjectiveGraphNode["type"]) =>
-    graph.nodes.filter((n) => n.type === type && !connected.has(n.id));
+    graph.nodes.filter((n) => n.type === type && !inIsland.has(n.id));
+  const looseGuides = loose("guide");
   const looseRequests = loose("guide_request");
   const looseTargets = loose("target");
+  const looseIds = graph.nodes
+    .filter((n) => !inIsland.has(n.id))
+    .map((n) => n.id);
 
-  const deepest = Math.max(
-    0,
-    ...[...connected].map((id) => levelById.get(id)!)
-  );
-  const fallbackRows = [loose("guide"), looseRequests, looseTargets].filter(
-    (nodes) => nodes.length > 0
-  ).length;
-  const top = Math.max(deepest, fallbackRows - 1);
-  const topTaken =
-    looseTargets.length > 0 ||
-    [...connected].some((id) => levelById.get(id) === top);
+  if (looseIds.length > 0) {
+    const deepestRows = Math.max(0, ...rowSets.map((s) => s.rowCount));
+    const fallbackRows = [looseGuides, looseRequests, looseTargets].filter(
+      (nodes) => nodes.length > 0
+    ).length;
+    const top = Math.max(deepestRows, fallbackRows) - 1;
+    const topTaken = looseTargets.length > 0;
 
-  for (const node of looseTargets) levelById.set(node.id, top);
-  for (const node of looseRequests)
-    levelById.set(node.id, topTaken ? top - 1 : top);
+    const rowById = new Map<string, number>();
+    for (const node of looseGuides) rowById.set(node.id, 0);
+    for (const node of looseTargets) rowById.set(node.id, top);
+    for (const node of looseRequests)
+      rowById.set(node.id, topTaken ? top - 1 : top);
+    rowSets.push({ ids: looseIds, rowById, rowCount: top + 1 });
+  }
 
   // sort is stable, so input order holds within a kind.
   const byKind = [...graph.nodes].sort(
     (a, b) => KIND_ORDER[a.type] - KIND_ORDER[b.type]
   );
-  const idsByLevel = new Map<number, Array<string>>();
-  for (const node of byKind) {
-    const level = levelById.get(node.id)!;
-    idsByLevel.set(level, [...(idsByLevel.get(level) ?? []), node.id]);
-  }
 
-  // Rows are numbered by rank, so a level nothing landed on leaves no gap.
-  const levels = [...idsByLevel.keys()].sort((a, b) => a - b);
+  const blocks = rowSets.map(({ ids, rowById, rowCount }) => {
+    const members = new Set(ids);
+    const idsByRow = new Map<number, Array<string>>();
+    for (const node of byKind) {
+      if (!members.has(node.id)) continue;
+      const row = rowById.get(node.id)!;
+      idsByRow.set(row, [...(idsByRow.get(row) ?? []), node.id]);
+    }
+    const width =
+      Math.max(...[...idsByRow.values()].map((row) => row.length)) *
+      nodeSpacing;
+    return { idsByRow, rowCount, width };
+  });
 
-  return levels.flatMap((level, row) => {
-    const ids = idsByLevel.get(level)!;
-    const startX = -(ids.length * nodeSpacing) / 2;
+  // One nodeSpacing between islands, beyond their own widths.
+  const totalWidth =
+    blocks.reduce((sum, block) => sum + block.width, 0) +
+    Math.max(0, blocks.length - 1) * nodeSpacing;
+  let blockLeft = -totalWidth / 2;
 
-    return ids.map((id, index) => {
-      const cellCenterX = startX + index * nodeSpacing + nodeSpacing / 2;
+  return blocks.flatMap(({ idsByRow, rowCount, width }) => {
+    const centerX = blockLeft + width / 2;
+    blockLeft += width + nodeSpacing;
 
-      return {
-        id,
-        position: {
-          x: cellCenterX - nodeWidth / 2,
-          y: (levels.length - 1 - row) * levelSpacing,
-        },
-      };
+    return [...idsByRow].flatMap(([row, ids]) => {
+      const startX = centerX - (ids.length * nodeSpacing) / 2;
+
+      return ids.map((id, index) => {
+        const cellCenterX = startX + index * nodeSpacing + nodeSpacing / 2;
+
+        return {
+          id,
+          position: {
+            x: cellCenterX - nodeWidth / 2,
+            y: (rowCount - 1 - row) * levelSpacing,
+          },
+        };
+      });
     });
   });
+}
+
+// Connected components of the edges, undirected, over edges whose ends are
+// both nodes. Ordered by each island's earliest node in graph.nodes, so an
+// edge added inside one island never reorders the others.
+function connectedIslands(graph: ObjectiveGraphData): Array<Array<string>> {
+  const neighbours = new Map<string, Array<string>>(
+    graph.nodes.map((n) => [n.id, []])
+  );
+  for (const edge of graph.edges) {
+    const fromSource = neighbours.get(edge.source);
+    const fromTarget = neighbours.get(edge.target);
+    if (!fromSource || !fromTarget) continue;
+    fromSource.push(edge.target);
+    fromTarget.push(edge.source);
+  }
+
+  const seen = new Set<string>();
+  const islands: Array<Array<string>> = [];
+  for (const node of graph.nodes) {
+    if (seen.has(node.id) || neighbours.get(node.id)!.length === 0) continue;
+    const island: Array<string> = [];
+    const queue = [node.id];
+    seen.add(node.id);
+    while (queue.length > 0) {
+      const id = queue.pop()!;
+      island.push(id);
+      for (const next of neighbours.get(id)!) {
+        if (seen.has(next)) continue;
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+    islands.push(island);
+  }
+  return islands;
 }
 
 function longestPathLevels(graph: ObjectiveGraphData) {

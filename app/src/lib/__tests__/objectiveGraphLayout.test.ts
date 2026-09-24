@@ -164,4 +164,50 @@ describe("layoutObjectiveGraph", () => {
 
     expect(positions.get("c")!.y).toBeLessThan(positions.get("b")!.y);
   });
+
+  it("stands two edge groups and a loose node side by side, top rows aligned, centred on x = 0", () => {
+    // Island a -> b -> c (three rows), island d -> e (two rows), loose target t.
+    const nodes = [
+      targetGuide("t"),
+      guide("d"),
+      guide("a"),
+      guide("e"),
+      guide("b"),
+      guide("c"),
+    ];
+    const edges = [edge("a", "b"), edge("b", "c"), edge("d", "e")];
+    const positions = positionsOf({ nodes, edges });
+    const at = (id: string) => positions.get(id)!;
+
+    // d comes first in the input, so its island stands leftmost; loose last.
+    // Each block is one card wide (300) with a 300 gap: centres -600, 0, 600.
+    expect(at("d").x).toBe(-600 - 100);
+    expect(at("a").x).toBe(-100);
+    expect(at("t").x).toBe(600 - 100);
+
+    expect([at("e").y, at("c").y, at("t").y]).toEqual([0, 0, 0]);
+    expect(at("d").y).toBe(150);
+    expect(at("a").y).toBe(300);
+
+    // An edge inside one island leaves the others in their places.
+    const grown = positionsOf({
+      nodes: [...nodes, guide("f")],
+      edges: [...edges, edge("c", "f")],
+    });
+    expect(grown.get("d")!.x).toBe(at("d").x);
+    expect(grown.get("a")!.x).toBe(at("a").x);
+    expect(grown.get("t")!.x).toBe(at("t").x);
+  });
+
+  it("lines a loose node's rows up with the deepest island", () => {
+    const positions = positionsOf({
+      nodes: [guide("a"), guide("b"), guide("c"), guide("g"), targetGuide("t")],
+      edges: [edge("a", "b"), edge("b", "c")],
+    });
+
+    expect(positions.get("g")!.y).toBe(positions.get("a")!.y);
+    expect(positions.get("t")!.y).toBe(positions.get("c")!.y);
+    expect(positions.get("g")!.x).toBe(positions.get("t")!.x);
+    expect(positions.get("g")!.x).toBeGreaterThan(positions.get("a")!.x);
+  });
 });
