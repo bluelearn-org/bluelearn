@@ -196,11 +196,6 @@ export const objectiveRevisionDetailResponseSchema = z.strictObject({
   subjects: z.array(subjectTagSchema),
 });
 
-export const objectiveRevisionUpdateResponseSchema = z.strictObject({
-  revision: objectiveRevisionSchema,
-  subjects: z.array(subjectTagSchema),
-});
-
 // updateObjectiveNode is keyed by guide base and returns a guide node only.
 export const objectiveNodeResponseSchema = z.strictObject({
   node: objectiveSnapshotNodeSchema.omit({ summary: true, request_id: true }),

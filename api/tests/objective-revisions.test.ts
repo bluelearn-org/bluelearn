@@ -159,10 +159,12 @@ describe("PATCH /objective-revisions/{id} curation", () => {
       other.base.id,
     ]);
 
+    const prereqNode = await nodeIdOf(prereq.base.id);
+    const goalNode = await nodeIdOf(goal.base.id);
     const res = await curate([
       {
-        node_id: await nodeIdOf(goal.base.id),
-        sequence: [prereq.base.id, goal.base.id],
+        node_id: goalNode,
+        sequence: [prereqNode, goalNode],
       },
       {
         node_id: await nodeIdOf(other.base.id),

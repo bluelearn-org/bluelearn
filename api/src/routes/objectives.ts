@@ -15,7 +15,6 @@ import {
   objectiveRevisionDetailResponseSchema,
   objectiveRevisionDiffSchema,
   objectiveRevisionListResponseSchema,
-  objectiveRevisionUpdateResponseSchema,
   objectiveSlugResponseSchema,
   paginationSchema,
   revisionIdResponseSchema,
@@ -261,8 +260,9 @@ export const objectiveRevisionsRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Overwrites a draft's metadata, tags, and/or target curation. Returns
-  // { revision, subjects }; 404 if not an editable draft.
+  // Overwrites a draft's metadata, tags, graph, and/or target curation. Returns
+  // the same { revision, objective, snapshot, subjects } as the GET; 404 if not
+  // an editable draft.
   .patch(
     "/:id",
     describeRoute({
@@ -271,8 +271,8 @@ export const objectiveRevisionsRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(
-          objectiveRevisionUpdateResponseSchema,
-          "The updated revision"
+          objectiveRevisionDetailResponseSchema,
+          "The updated revision snapshot"
         ),
         ...errorResponses(400, 401, 403, 404, 429),
       },
@@ -285,13 +285,14 @@ export const objectiveRevisionsRouter = new Hono<HonoEnv>()
     validate("param", idParamSchema),
     validate("json", updateObjectiveRevisionSchema),
     async (c) => {
-      const { revision, subjects } = await updateObjectiveRevision(
-        c.get("supabase"),
-        c.get("user").id,
-        c.req.valid("param").id,
-        c.req.valid("json")
-      );
-      return c.json({ revision, subjects });
+      const { revision, objective, snapshot, subjects } =
+        await updateObjectiveRevision(
+          c.get("supabase"),
+          c.get("user").id,
+          c.req.valid("param").id,
+          c.req.valid("json")
+        );
+      return c.json({ revision, objective, snapshot, subjects });
     }
   )
 

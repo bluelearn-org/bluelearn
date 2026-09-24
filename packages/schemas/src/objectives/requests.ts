@@ -16,8 +16,9 @@ export const createObjectiveSchema = z.object({
 // One goal in the objective's curation, named by its node. The server derives
 // which nodes are targets from the graph; this only orders and features them.
 // Position comes from the array index, so the client sends targets in the order
-// it wants them. `sequence` is the topics placed under this goal in reading
-// order; leaving it off every target means the curation under it did not change.
+// it wants them. `sequence` is the node ids of this revision (guides or
+// requests) placed under this goal in reading order; leaving it off every target
+// means the curation under it did not change.
 export const objectiveTargetSchema = z.object({
   node_id: z.uuid(),
   is_featured: z.boolean().default(false),

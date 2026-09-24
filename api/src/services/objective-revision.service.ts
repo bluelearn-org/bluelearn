@@ -285,7 +285,6 @@ export async function updateObjectiveRevision(
   };
 
   // Check if metadata changes are present.
-  let revision;
   if (Object.keys(patch).length > 0) {
     const { data, error } = await supabase
       .from("objective_revisions")
@@ -300,7 +299,6 @@ export async function updateObjectiveRevision(
         404
       );
     }
-    revision = data[0];
   } else {
     const { data, error } = await supabase
       .from("objective_revisions")
@@ -319,7 +317,6 @@ export async function updateObjectiveRevision(
         404
       );
     }
-    revision = data;
   }
 
   if (tags !== undefined) {
@@ -334,8 +331,7 @@ export async function updateObjectiveRevision(
     await syncDraftCuration(supabase, userId, revisionId, targets);
   }
 
-  const subjects = await loadRevisionTags(supabase, revisionId);
-  return { revision, subjects };
+  return getObjectiveRevision(supabase, revisionId);
 }
 
 // Edit one node of a draft revision: swap the pinned variant, skip it, or set a
@@ -511,48 +507,19 @@ export async function syncDraftCuration(
 
   if (targets.every((t) => t.sequence === undefined)) return;
 
-  const nodeIdByBase = new Map(
-    (nodes ?? [])
-      .filter((n) => n.guide_base_id !== null)
-      .map((n) => [n.guide_base_id as string, n.id])
-  );
   const sequenced = new Set(targets.flatMap((t) => t.sequence ?? []));
-  const unplaced = [...sequenced].find((id) => !nodeIdByBase.has(id));
-  if (unplaced) {
-    const { data: base } = await supabase
-      .from("guide_bases")
-      .select(
-        `slug,
-         canonical:guides!guide_bases_canonical_guide_id_fkey(
-           current:guide_revisions!guides_current_revision_id_fkey(title)
-         )`
-      )
-      .eq("id", unplaced)
-      .maybeSingle();
-
-    const name = base?.canonical?.current?.title ?? base?.slug;
+  if ([...sequenced].some((id) => !nodeById.has(id))) {
     throw new ServiceError(
-      name
-        ? `"${name}" is not in this objective's graph, so it cannot be ordered here`
-        : "A guide in the sequence is not in this objective's graph",
+      "A node in the sequence is not in this objective's graph",
       400
     );
   }
 
   const included = (nodes ?? [])
-    .filter(
-      (n) =>
-        n.is_target ||
-        (n.guide_base_id !== null && sequenced.has(n.guide_base_id))
-    )
+    .filter((n) => n.is_target || sequenced.has(n.id))
     .map((n) => n.id);
   const excluded = (nodes ?? [])
-    .filter(
-      (n) =>
-        n.guide_base_id !== null &&
-        !n.is_target &&
-        !sequenced.has(n.guide_base_id)
-    )
+    .filter((n) => !n.is_target && !sequenced.has(n.id))
     .map((n) => n.id);
 
   for (const [ids, value] of [
@@ -584,10 +551,10 @@ export async function syncDraftCuration(
   }
 
   const rows = targets.flatMap((t) =>
-    (t.sequence ?? []).map((baseId, position) => ({
+    (t.sequence ?? []).map((id, position) => ({
       revision_id: revisionId,
       target_node_id: t.node_id,
-      node_id: nodeIdByBase.get(baseId) as string,
+      node_id: id,
       position,
     }))
   );
@@ -770,6 +737,7 @@ export async function syncDraftGraph(
   if (guideNodes.length > 0) {
     const { error } = await supabase.from("objective_revision_nodes").upsert(
       guideNodes.map((n) => ({
+        id: n.id,
         revision_id: revisionId,
         guide_base_id: n.guide_base_id,
         guide_id: canonicalByBase.get(n.guide_base_id) as string,
@@ -810,8 +778,8 @@ export async function syncDraftGraph(
     throw new ServiceError("Failed to load revision nodes", 500);
   }
 
-  // A guide node already on the draft keeps its stored id, so the client's id
-  // for it is only a name the edges in this body use.
+  // A guide already on the draft keeps its stored id; a new one keeps the id
+  // the canvas gave it.
   const storedIdByBase = new Map(
     (stored ?? [])
       .filter((n) => n.guide_base_id !== null)

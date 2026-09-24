@@ -210,13 +210,14 @@ describe("PATCH /objective-revisions/{id} graph", () => {
       graph: guideGraph([a.base.id, b.base.id], [[0, 1]]),
     });
     const before = await snapshotOf(revision.id, curator.token);
+    const aNode = before.nodes.find((n) => n.guide_base_id === a.base.id)!;
     const bNode = before.nodes.find((n) => n.guide_base_id === b.base.id)!;
     const curated = await patch(revision.id, curator.token, {
       targets: [
         {
           node_id: bNode.id,
           is_featured: true,
-          sequence: [a.base.id, b.base.id],
+          sequence: [aNode.id, bNode.id],
         },
       ],
     });
