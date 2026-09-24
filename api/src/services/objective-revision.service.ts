@@ -421,12 +421,12 @@ export async function syncDraftCuration(
   supabase: DB,
   userId: string,
   revisionId: string,
-  targets: ObjectiveTargetInput[]
+  requested: ObjectiveTargetInput[]
 ) {
   await requireCurator(supabase, userId);
 
-  const targetIds = targets.map((t) => t.node_id);
-  if (new Set(targetIds).size !== targetIds.length) {
+  const requestedIds = requested.map((t) => t.node_id);
+  if (new Set(requestedIds).size !== requestedIds.length) {
     throw new ServiceError("Targets must be distinct", 400);
   }
 
@@ -441,9 +441,13 @@ export async function syncDraftCuration(
   }
 
   const nodeById = new Map((nodes ?? []).map((n) => [n.id, n]));
-  if (targetIds.some((id) => !nodeById.get(id)?.is_target)) {
+  // The client's target list is a guess made before the server derived; drift
+  // is expected, garbage is not. A node that is no longer a target is dropped.
+  if (requestedIds.some((id) => !nodeById.has(id))) {
     throw new ServiceError("Node is not a target of this revision", 400);
   }
+  const targets = requested.filter((t) => nodeById.get(t.node_id)?.is_target);
+  const targetIds = targets.map((t) => t.node_id);
 
   // A request target has no variant to publish yet; only a guide target needs one.
   const targetBases = targetIds
