@@ -105,25 +105,21 @@ export function addRequestNode(
   };
 }
 
-// source is the prerequisite
+// source is the prerequisite. The drawn edge wins over any path back from
+// target to source, imported prerequisites included.
 export function connectNodes(
   graph: ObjectiveGraphData,
   sourceId: string,
   targetId: string
 ): ObjectiveGraphData {
-  const nodeIds = new Set(graph.nodes.map((n) => n.id));
-  const known = nodeIds.has(sourceId) && nodeIds.has(targetId);
-  const duplicate = graph.edges.some(
-    (e) => e.source === sourceId && e.target === targetId
-  );
+  if (!canConnect(graph, sourceId, targetId)) return graph;
 
-  if (sourceId === targetId || !known || duplicate) return graph;
-  if (reaches(graph, targetId, sourceId)) return graph;
+  const cut = edgesCutByConnecting(graph, sourceId, targetId);
 
   return {
     ...graph,
     edges: [
-      ...graph.edges,
+      ...graph.edges.filter((e) => !cut.includes(e)),
       {
         id: drawnEdgeId(sourceId, targetId),
         source: sourceId,
@@ -131,6 +127,37 @@ export function connectNodes(
       },
     ],
   };
+}
+
+// Every edge on some path from target back to source; empty when connecting
+// closes no cycle or connectNodes would refuse the pair.
+export function edgesCutByConnecting(
+  graph: ObjectiveGraphData,
+  sourceId: string,
+  targetId: string
+): Array<ObjectiveGraphEdge> {
+  if (!canConnect(graph, sourceId, targetId)) return [];
+
+  const afterTarget = reachable(graph.edges, targetId, "downstream");
+  const beforeSource = reachable(graph.edges, sourceId, "upstream");
+
+  return graph.edges.filter(
+    (e) => afterTarget.has(e.source) && beforeSource.has(e.target)
+  );
+}
+
+function canConnect(
+  graph: ObjectiveGraphData,
+  sourceId: string,
+  targetId: string
+) {
+  const nodeIds = new Set(graph.nodes.map((n) => n.id));
+  const known = nodeIds.has(sourceId) && nodeIds.has(targetId);
+  const duplicate = graph.edges.some(
+    (e) => e.source === sourceId && e.target === targetId
+  );
+
+  return sourceId !== targetId && known && !duplicate;
 }
 
 export function removeNodes(
@@ -200,4 +227,29 @@ function reaches(
   }
 
   return null;
+}
+
+function reachable(
+  edges: Array<ObjectiveGraphEdge>,
+  startId: string,
+  direction: "upstream" | "downstream"
+): Set<string> {
+  const seen = new Set([startId]);
+  const pending = [startId];
+
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+
+    for (const edge of edges) {
+      const [from, to] =
+        direction === "downstream"
+          ? [edge.source, edge.target]
+          : [edge.target, edge.source];
+      if (from !== current || seen.has(to)) continue;
+      seen.add(to);
+      pending.push(to);
+    }
+  }
+
+  return seen;
 }

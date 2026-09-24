@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
+import { toast } from "sonner";
 import type { ComponentType, ReactNode } from "react";
 import type * as XyflowReact from "@xyflow/react";
 import type { Walkthrough } from "@bluelearn/schemas";
@@ -17,6 +18,7 @@ import type {
   ObjectiveGraphNode,
 } from "@/types/contributions";
 import { getGuideWalkthrough } from "@/lib/api/guides";
+import { drawnEdgeId } from "@/lib/objectiveGraphEdits";
 import {
   ObjectiveDesign,
   upstreamAndDownstream,
@@ -35,6 +37,8 @@ vi.mock("@xyflow/react", async () => {
       nodes,
       nodeTypes,
       onDelete,
+      onConnectStart,
+      onConnect,
       onNodesChange,
       onNodeDragStop,
       onNodeMouseEnter,
@@ -50,6 +54,16 @@ vi.mock("@xyflow/react", async () => {
       onDelete: (deleted: {
         nodes: Array<unknown>;
         edges: Array<unknown>;
+      }) => void;
+      onConnectStart: (
+        event: unknown,
+        params: { nodeId: string; handleId: null; handleType: string }
+      ) => void;
+      onConnect: (connection: {
+        source: string;
+        target: string;
+        sourceHandle: null;
+        targetHandle: null;
       }) => void;
       onNodesChange: (changes: Array<unknown>) => void;
       onNodeDragStop: (
@@ -97,6 +111,54 @@ vi.mock("@xyflow/react", async () => {
               <button onClick={() => moveBy(40, 10)}>
                 Nudge {node.id} along
               </button>
+              {nodes
+                .filter((other) => other.id !== node.id)
+                .map((other) => (
+                  <span key={other.id}>
+                    {/* xyflow's loose-mode Connection: a drag from a
+                        target-typed dot names its own node the target. */}
+                    <button
+                      onClick={() => {
+                        onConnectStart(
+                          {},
+                          {
+                            nodeId: node.id,
+                            handleId: null,
+                            handleType: "source",
+                          }
+                        );
+                        onConnect({
+                          source: node.id,
+                          target: other.id,
+                          sourceHandle: null,
+                          targetHandle: null,
+                        });
+                      }}
+                    >
+                      Draw {node.id} to {other.id} from the top dot
+                    </button>
+                    <button
+                      onClick={() => {
+                        onConnectStart(
+                          {},
+                          {
+                            nodeId: node.id,
+                            handleId: null,
+                            handleType: "target",
+                          }
+                        );
+                        onConnect({
+                          source: other.id,
+                          target: node.id,
+                          sourceHandle: null,
+                          targetHandle: null,
+                        });
+                      }}
+                    >
+                      Draw {node.id} to {other.id} from the bottom dot
+                    </button>
+                  </span>
+                ))}
             </div>
           );
         })}
@@ -110,6 +172,10 @@ vi.mock("@xyflow/react", async () => {
 
 vi.mock("@/lib/themeProvider", () => ({
   useTheme: () => ({ theme: "light" }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: { warning: vi.fn(), error: vi.fn() },
 }));
 
 const RECURSION_TARGET: ObjectiveGraphNode = {
@@ -396,6 +462,66 @@ describe("ObjectiveDesign", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
     expect(positionOf("Loops")).toEqual(slot);
+  });
+
+  const RECURSION_GUIDE: ObjectiveGraphNode = {
+    id: "n2",
+    type: "guide",
+    guideBaseId: "b2",
+    guideSlug: "recursion",
+    title: "Recursion",
+  };
+  const LOOPS_BEFORE_RECURSION = {
+    nodes: [LOOPS, RECURSION_GUIDE],
+    edges: [{ id: drawnEdgeId("n1", "n2"), source: "n1", target: "n2" }],
+  };
+
+  it.each(["top", "bottom"])(
+    "keeps a reversed edge drawn from the %s dot and names the edge it removed",
+    (dot) => {
+      render(
+        <DesignWithState
+          initial={LOOPS_BEFORE_RECURSION}
+          onTargetsChange={() => {}}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `Draw n2 to n1 from the ${dot} dot`,
+        })
+      );
+
+      expect(toast.warning).toHaveBeenCalledWith(
+        "Kept Recursion → Loops; removed Loops → Recursion."
+      );
+
+      // The reversed edge stuck: redrawing the original now cuts it back.
+      fireEvent.click(
+        screen.getByRole("button", { name: "Draw n1 to n2 from the top dot" })
+      );
+      expect(toast.warning).toHaveBeenLastCalledWith(
+        "Kept Loops → Recursion; removed Recursion → Loops."
+      );
+    }
+  );
+
+  it("says nothing when a drawn edge contradicts none", () => {
+    render(
+      <DesignWithState
+        initial={{ nodes: [LOOPS, RECURSION_GUIDE], edges: [] }}
+        onTargetsChange={() => {}}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Draw n2 to n1 from the bottom dot" })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Draw n2 to n1 from the top dot" })
+    );
+
+    expect(toast.warning).not.toHaveBeenCalled();
   });
 
   const guide = (id: string) => ({

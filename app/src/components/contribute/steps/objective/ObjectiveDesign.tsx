@@ -1,8 +1,9 @@
 import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BaseEdge,
+  ConnectionMode,
   Controls,
   EdgeLabelRenderer,
   MarkerType,
@@ -21,6 +22,7 @@ import type {
   Edge,
   EdgeProps,
   Node,
+  OnConnectStart,
   OnNodeDrag,
   OnNodesChange,
 } from "@xyflow/react";
@@ -39,6 +41,7 @@ import {
   addRequestNode,
   addWalkthrough,
   connectNodes,
+  edgesCutByConnecting,
   isDrawnEdge,
   removeEdges,
   removeNodes,
@@ -292,8 +295,33 @@ const ObjectiveGraph = ({
     );
   };
 
-  const handleConnect = ({ source, target }: Connection) =>
+  // Loose mode lets any dot meet any dot, and xyflow then names the node under
+  // a target-typed start dot as the target; the drag's start is the prerequisite
+  // whichever dot it left.
+  const connectFrom = useRef<string | null>(null);
+  const handleConnectStart: OnConnectStart = (_event, { nodeId }) => {
+    connectFrom.current = nodeId;
+  };
+
+  const handleConnect = (connection: Connection) => {
+    const startedOnTarget = connection.target === connectFrom.current;
+    const source = startedOnTarget ? connection.target : connection.source;
+    const target = startedOnTarget ? connection.source : connection.target;
+
+    const cut = edgesCutByConnecting(graph, source, target);
     onGraphChange?.(connectNodes(graph, source, target));
+    if (cut.length === 0) return;
+
+    const titleOf = (id: string) =>
+      graph.nodes.find((n) => n.id === id)?.title ?? id;
+    const arrow = (from: string, to: string) =>
+      `${titleOf(from)} → ${titleOf(to)}`;
+    toast.warning(
+      `Kept ${arrow(source, target)}; removed ${cut
+        .map((e) => arrow(e.source, e.target))
+        .join(", ")}.`
+    );
+  };
 
   // onNodesDelete and onEdgesDelete would each edit the same stale graph
   const handleDelete = (deleted: {
@@ -334,7 +362,9 @@ const ObjectiveGraph = ({
           onNodeDragStop={handleNodeDragStop}
           onNodeMouseEnter={(_event, node) => setHoveredNodeId(node.id)}
           onNodeMouseLeave={() => setHoveredNodeId(null)}
+          onConnectStart={handleConnectStart}
           onConnect={handleConnect}
+          connectionMode={ConnectionMode.Loose}
           onDelete={handleDelete}
           deleteKeyCode={["Backspace", "Delete"]}
           connectionRadius={40}

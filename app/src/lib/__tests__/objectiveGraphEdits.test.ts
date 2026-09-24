@@ -10,6 +10,7 @@ import {
   addWalkthrough,
   connectNodes,
   drawnEdgeId,
+  edgesCutByConnecting,
   graphToApi,
   guideEdgeId,
   removeEdges,
@@ -238,14 +239,18 @@ describe("connectNodes", () => {
     expect(pairs(connectNodes(graph, "a", "b"))).toEqual(["a>b"]);
   });
 
-  it("refuses a self-loop", () => {
-    expect(pairs(connectNodes(graph, "a", "a"))).toEqual([]);
+  it("refuses a self-loop, cutting nothing", () => {
+    const chain = connectNodes(graph, "a", "b");
+
+    expect(pairs(connectNodes(chain, "a", "a"))).toEqual(["a>b"]);
+    expect(edgesCutByConnecting(chain, "a", "a")).toEqual([]);
   });
 
-  it("refuses a duplicate", () => {
+  it("refuses a duplicate, cutting nothing", () => {
     const once = connectNodes(graph, "a", "b");
 
     expect(pairs(connectNodes(once, "a", "b"))).toEqual(["a>b"]);
+    expect(edgesCutByConnecting(once, "a", "b")).toEqual([]);
   });
 
   it("refuses an unknown id on either end", () => {
@@ -253,15 +258,42 @@ describe("connectNodes", () => {
     expect(pairs(connectNodes(graph, "ghost", "a"))).toEqual([]);
   });
 
-  it("refuses the edge that would close a cycle", () => {
-    const chain = connectNodes(connectNodes(graph, "a", "b"), "b", "c");
+  it("keeps the reversed edge and cuts the one it contradicts", () => {
+    const once = connectNodes(graph, "a", "b");
 
-    expect(pairs(connectNodes(chain, "c", "a"))).toEqual(["a>b", "b>c"]);
+    expect(edgesCutByConnecting(once, "b", "a")).toEqual([drawn("a", "b")]);
+    expect(pairs(connectNodes(once, "b", "a"))).toEqual(["b>a"]);
   });
 
-  it("allows a shortcut that closes no cycle", () => {
+  it("cuts every edge of a longer path back, keeping the node between", () => {
+    const chain: ObjectiveGraphData = {
+      nodes: [guide("a"), guide("x"), guide("b")],
+      edges: [drawn("a", "x"), drawn("x", "b")],
+    };
+
+    const connected = connectNodes(chain, "b", "a");
+
+    expect(edgesCutByConnecting(chain, "b", "a")).toEqual([
+      drawn("a", "x"),
+      drawn("x", "b"),
+    ]);
+    expect(pairs(connected)).toEqual(["b>a"]);
+    expect(connected.nodes.map((n) => n.id)).toEqual(["a", "x", "b"]);
+  });
+
+  it("cuts an imported prerequisite the drawn edge contradicts", () => {
+    const imported: ObjectiveGraphData = {
+      ...graph,
+      edges: [fromGuides("a", "b"), fromGuides("b", "c")],
+    };
+
+    expect(pairs(connectNodes(imported, "b", "a"))).toEqual(["b>c", "b>a"]);
+  });
+
+  it("cuts nothing when a shortcut closes no cycle", () => {
     const chain = connectNodes(connectNodes(graph, "a", "b"), "b", "c");
 
+    expect(edgesCutByConnecting(chain, "a", "c")).toEqual([]);
     expect(pairs(connectNodes(chain, "a", "c"))).toEqual(["a>b", "b>c", "a>c"]);
   });
 });
