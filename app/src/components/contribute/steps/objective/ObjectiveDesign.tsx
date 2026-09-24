@@ -60,9 +60,9 @@ const nodeTypes = {
 const edgeTypes = { drawn: DrawnEdge };
 
 const NODE_SPACING = 320;
-const BAND_SPACING = 200;
-// How far a drag may pull a card off its band, short of the next band's cards.
-const BAND_SLACK = BAND_SPACING / 4;
+const LEVEL_SPACING = 200;
+// How far a drag may pull a card off its row, short of the next row's cards.
+const ROW_SLACK = LEVEL_SPACING / 4;
 // xyflow tags the card being dragged with .dragging, which must follow the
 // pointer; every other move (a release, a relayout) glides.
 const GLIDE_TO_SLOT =
@@ -267,7 +267,7 @@ const ObjectiveGraph = ({
     );
   }, [hoveredNodeId, graph, setNodes, setEdges]);
 
-  // Drag is a nudge along the card's band; the layout stays the resting state.
+  // Drag is a nudge along the card's row; the layout stays the resting state.
   const handleNodesChange: OnNodesChange<Node<ObjectiveNodeData>> = (changes) =>
     onNodesChange(
       changes.map((change) => {
@@ -276,8 +276,8 @@ const ObjectiveGraph = ({
         if (!slot) return change;
 
         const y = Math.min(
-          Math.max(change.position.y, slot.y - BAND_SLACK),
-          slot.y + BAND_SLACK
+          Math.max(change.position.y, slot.y - ROW_SLACK),
+          slot.y + ROW_SLACK
         );
         return { ...change, position: { ...change.position, y } };
       })
@@ -362,7 +362,7 @@ function toFlowNodes(
     layoutObjectiveGraph(graph, {
       nodeWidth: OBJECTIVE_NODE_WIDTH,
       nodeSpacing: NODE_SPACING,
-      bandSpacing: BAND_SPACING,
+      levelSpacing: LEVEL_SPACING,
     }).map((n) => [n.id, n.position])
   );
   const positionOf = (id: string) => positionById.get(id)!;

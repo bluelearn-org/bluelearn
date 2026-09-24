@@ -364,7 +364,7 @@ describe("ObjectiveDesign", () => {
     expect(positionOf("Loops").y).toBeGreaterThan(positionOf("Recursion").y);
   });
 
-  it("holds a node pulled toward another band inside its own, and returns it on release", () => {
+  it("holds a node pulled toward another row inside its own, and returns it on release", () => {
     render(
       <DesignWithState
         initial={{ nodes: [LOOPS], edges: [] }}
@@ -382,7 +382,7 @@ describe("ObjectiveDesign", () => {
     expect(positionOf("Loops")).toEqual(slot);
   });
 
-  it("follows a nudge inside the band while dragging, and returns it on release", () => {
+  it("follows a nudge inside the row while dragging, and returns it on release", () => {
     render(
       <DesignWithState
         initial={{ nodes: [LOOPS], edges: [] }}

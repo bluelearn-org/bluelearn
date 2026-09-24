@@ -6,7 +6,7 @@ import type {
 type LayoutOptions = {
   nodeWidth: number;
   nodeSpacing: number;
-  bandSpacing: number;
+  levelSpacing: number;
 };
 
 type NodePosition = {
@@ -14,31 +14,64 @@ type NodePosition = {
   position: { x: number; y: number };
 };
 
-// Walkthroughs read bottom to top, matching the node handles (in at the bottom,
-// out at the top): flip both together.
-const BANDS_BOTTOM_UP: Array<ObjectiveGraphNode["type"]> = [
-  "guide",
-  "target",
-  "guide_request",
-];
+// Left to right inside a row.
+const KIND_ORDER: Record<ObjectiveGraphNode["type"], number> = {
+  guide: 0,
+  guide_request: 1,
+  target: 2,
+};
 
-// One row per kind, centred on x = 0 like useGraphLayout. Inside a row,
-// prerequisites sit left of what they lead to.
+// Prerequisites below dependents, matching the node handles (in at the bottom,
+// out at the top): flip both together. Rows centre on x = 0 like useGraphLayout.
 export function layoutObjectiveGraph(
   graph: ObjectiveGraphData,
-  { nodeWidth, nodeSpacing, bandSpacing }: LayoutOptions
+  { nodeWidth, nodeSpacing, levelSpacing }: LayoutOptions
 ): Array<NodePosition> {
-  const depthById = longestPathLevels(graph);
+  const levelById = longestPathLevels(graph);
 
-  // An empty band leaves no gap.
-  const bands = BANDS_BOTTOM_UP.map((type) =>
-    graph.nodes
-      .filter((node) => node.type === type)
-      .sort((a, b) => depthById.get(a.id)! - depthById.get(b.id)!)
-      .map((node) => node.id)
-  ).filter((ids) => ids.length > 0);
+  // Edges alone place a node. One with none falls back by kind: an existing
+  // guide to the bottom row, a target to the top, a request just below it.
+  const connected = new Set(
+    graph.edges
+      .filter((e) => levelById.has(e.source) && levelById.has(e.target))
+      .flatMap((e) => [e.source, e.target])
+  );
+  const loose = (type: ObjectiveGraphNode["type"]) =>
+    graph.nodes.filter((n) => n.type === type && !connected.has(n.id));
+  const looseRequests = loose("guide_request");
+  const looseTargets = loose("target");
 
-  return bands.flatMap((ids, band) => {
+  const deepest = Math.max(
+    0,
+    ...[...connected].map((id) => levelById.get(id)!)
+  );
+  const fallbackRows = [loose("guide"), looseRequests, looseTargets].filter(
+    (nodes) => nodes.length > 0
+  ).length;
+  const top = Math.max(deepest, fallbackRows - 1);
+  const topTaken =
+    looseTargets.length > 0 ||
+    [...connected].some((id) => levelById.get(id) === top);
+
+  for (const node of looseTargets) levelById.set(node.id, top);
+  for (const node of looseRequests)
+    levelById.set(node.id, topTaken ? top - 1 : top);
+
+  // sort is stable, so input order holds within a kind.
+  const byKind = [...graph.nodes].sort(
+    (a, b) => KIND_ORDER[a.type] - KIND_ORDER[b.type]
+  );
+  const idsByLevel = new Map<number, Array<string>>();
+  for (const node of byKind) {
+    const level = levelById.get(node.id)!;
+    idsByLevel.set(level, [...(idsByLevel.get(level) ?? []), node.id]);
+  }
+
+  // Rows are numbered by rank, so a level nothing landed on leaves no gap.
+  const levels = [...idsByLevel.keys()].sort((a, b) => a - b);
+
+  return levels.flatMap((level, row) => {
+    const ids = idsByLevel.get(level)!;
     const startX = -(ids.length * nodeSpacing) / 2;
 
     return ids.map((id, index) => {
@@ -48,7 +81,7 @@ export function layoutObjectiveGraph(
         id,
         position: {
           x: cellCenterX - nodeWidth / 2,
-          y: (bands.length - 1 - band) * bandSpacing,
+          y: (levels.length - 1 - row) * levelSpacing,
         },
       };
     });
