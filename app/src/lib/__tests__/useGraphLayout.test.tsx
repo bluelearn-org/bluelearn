@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
-import { render, renderHook, screen, waitFor } from "@testing-library/react";
+import {
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { Position } from "@xyflow/react";
 import type * as ReactType from "react";
 import type { Walkthrough } from "@bluelearn/schemas";
 import type { GraphNodeData } from "@/lib/useGraphLayout";
@@ -180,5 +187,60 @@ describe("walkthrough graph direction", () => {
 
     expect(screen.getByTestId("target-handle").dataset.position).toBe("bottom");
     expect(screen.getByTestId("source-handle").dataset.position).toBe("top");
+  });
+
+  // Handles and Card are both positioned with no z-index, so the later one in
+  // the DOM paints on top and takes the click.
+  it("paints both handles over the card, on the default sides and on an override", () => {
+    const data: GraphNodeData = {
+      title: "Target",
+      level: 2,
+      summary: null,
+      duration_minutes: 10,
+      tags: [],
+      isTarget: true,
+      isHovered: false,
+      isDimmed: false,
+      centerX: 0,
+    };
+    const paintsOverCard = (container: HTMLElement, handle: HTMLElement) =>
+      Boolean(
+        container
+          .querySelector('[data-slot="card"]')!
+          .compareDocumentPosition(handle) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+
+    const plain = render(<GuideGraphNode data={data} isSelected={false} />);
+    const plainTarget = within(plain.container).getByTestId("target-handle");
+    const plainSource = within(plain.container).getByTestId("source-handle");
+
+    expect(paintsOverCard(plain.container, plainTarget)).toBe(true);
+    expect(paintsOverCard(plain.container, plainSource)).toBe(true);
+    expect(plainTarget.dataset.position).toBe("bottom");
+    expect(plainSource.dataset.position).toBe("top");
+
+    const flipped = render(
+      <GuideGraphNode
+        data={data}
+        isSelected={false}
+        handles={{
+          target: Position.Top,
+          source: Position.Bottom,
+          className: "canvas-dot",
+        }}
+      />
+    );
+    const flippedTarget = within(flipped.container).getByTestId(
+      "target-handle"
+    );
+    const flippedSource = within(flipped.container).getByTestId(
+      "source-handle"
+    );
+
+    expect(paintsOverCard(flipped.container, flippedTarget)).toBe(true);
+    expect(paintsOverCard(flipped.container, flippedSource)).toBe(true);
+    expect(flippedTarget.dataset.position).toBe("top");
+    expect(flippedSource.dataset.position).toBe("bottom");
+    expect(flippedTarget.className).toBe("canvas-dot");
   });
 });

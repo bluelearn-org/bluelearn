@@ -78,15 +78,6 @@ export function GuideGraphNode({
         isDimmed ? "opacity-30" : ""
       }`}
     >
-      <Handle
-        type="target"
-        position={handles?.target ?? Position.Bottom}
-        className={
-          handles?.className ??
-          "-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
-        }
-      />
-
       <Card
         className={`group relative gap-0 rounded-md border py-0 ring-0 transition-colors ${
           isTarget
@@ -132,6 +123,16 @@ export function GuideGraphNode({
       </Card>
 
       {badge}
+
+      {/* After the Card, so the handles paint over it and stay clickable. */}
+      <Handle
+        type="target"
+        position={handles?.target ?? Position.Bottom}
+        className={
+          handles?.className ??
+          "-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+        }
+      />
 
       <Handle
         type="source"
