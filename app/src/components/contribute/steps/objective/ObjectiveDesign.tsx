@@ -1,18 +1,13 @@
-import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
-  BaseEdge,
   ConnectionMode,
   Controls,
-  EdgeLabelRenderer,
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
-  getBezierPath,
   useEdgesState,
   useNodesState,
-  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toast } from "sonner";
@@ -20,7 +15,6 @@ import type { Dispatch, SetStateAction } from "react";
 import type {
   Connection,
   Edge,
-  EdgeProps,
   Node,
   OnConnectEnd,
   OnNodeDrag,
@@ -59,8 +53,6 @@ const nodeTypes = {
   objectiveGuide: ObjectiveGuideNode,
   objectiveRequest: ObjectiveRequestNode,
 };
-
-const edgeTypes = { drawn: DrawnEdge };
 
 const NODE_SPACING = 320;
 const LEVEL_SPACING = 200;
@@ -295,9 +287,10 @@ const ObjectiveGraph = ({
     );
   };
 
-  const connect = (source: string, target: string) => {
-    const cut = edgesCutByConnecting(graph, source, target);
-    onGraphChange?.(connectNodes(graph, source, target));
+  // base lets a reconnect drop its old edge in the same graph write
+  const connect = (source: string, target: string, base = graph) => {
+    const cut = edgesCutByConnecting(base, source, target);
+    onGraphChange?.(connectNodes(base, source, target));
     if (cut.length === 0) return;
 
     const titleOf = (id: string) =>
@@ -311,10 +304,21 @@ const ObjectiveGraph = ({
     );
   };
 
+  // The drawn edge whose end is mid-drag. Any connect path that lands it clears
+  // this; whatever is still here at reconnect end is dropped on nothing.
+  const reconnecting = useRef<Edge | null>(null);
+
+  // A re-attach drops the old edge in the same graph write as the new one
+  const connectOrReattach = (source: string, target: string) => {
+    const oldEdge = reconnecting.current;
+    reconnecting.current = null;
+    connect(source, target, oldEdge ? removeEdges(graph, [oldEdge.id]) : graph);
+  };
+
   // In loose mode xyflow reads direction off the start dot: a top (source) dot
   // leads to the other node, a bottom (target) dot takes it as a prerequisite.
   const handleConnect = ({ source, target }: Connection) =>
-    connect(source, target);
+    connectOrReattach(source, target);
 
   // A drop on a card's body, off its dots, connects to that card by the same
   // start-dot rule.
@@ -332,8 +336,8 @@ const ObjectiveGraph = ({
     const cardId = card?.dataset.id;
     if (!cardId || cardId === fromNode.id) return;
 
-    if (fromHandle.type === "source") connect(fromNode.id, cardId);
-    else connect(cardId, fromNode.id);
+    if (fromHandle.type === "source") connectOrReattach(fromNode.id, cardId);
+    else connectOrReattach(cardId, fromNode.id);
   };
 
   // onNodesDelete and onEdgesDelete would each edit the same stale graph
@@ -356,6 +360,22 @@ const ObjectiveGraph = ({
       setHoveredNodeId(null);
   };
 
+  // xyflow fires onReconnect (dot drop), then onConnectEnd (body drop), then
+  // onReconnectEnd; a drop on neither deletes the edge.
+  const handleReconnectStart = (_event: unknown, edge: Edge) => {
+    reconnecting.current = edge;
+  };
+
+  const handleReconnect = (_oldEdge: Edge, { source, target }: Connection) =>
+    connectOrReattach(source, target);
+
+  const handleReconnectEnd = (_event: MouseEvent | TouchEvent, edge: Edge) => {
+    if (!reconnecting.current) return;
+
+    reconnecting.current = null;
+    handleDelete({ nodes: [], edges: [edge] });
+  };
+
   return (
     // xyflow sizes itself with height: 100%, which needs a definite height here;
     // a flex-1 item resolves that percentage to 0.
@@ -369,7 +389,6 @@ const ObjectiveGraph = ({
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
@@ -377,6 +396,10 @@ const ObjectiveGraph = ({
           onNodeMouseLeave={() => setHoveredNodeId(null)}
           onConnect={handleConnect}
           onConnectEnd={handleConnectEnd}
+          edgesReconnectable
+          onReconnectStart={handleReconnectStart}
+          onReconnect={handleReconnect}
+          onReconnectEnd={handleReconnectEnd}
           connectionMode={ConnectionMode.Loose}
           onDelete={handleDelete}
           deleteKeyCode={["Backspace", "Delete"]}
@@ -445,10 +468,10 @@ function toFlowEdges(graph: ObjectiveGraphData): Array<Edge> {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    type: isDrawnEdge(edge) ? "drawn" : undefined,
     style: { stroke: EDGE_COLOR, strokeWidth: 2 },
     interactionWidth: 24,
     deletable: isDrawnEdge(edge),
+    reconnectable: isDrawnEdge(edge),
     markerEnd: { type: MarkerType.ArrowClosed, color: EDGE_COLOR },
   }));
 }
@@ -477,63 +500,4 @@ export function upstreamAndDownstream(
     upstream: walk("target", "source"),
     downstream: walk("source", "target"),
   };
-}
-
-function DrawnEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  style,
-  markerEnd,
-  interactionWidth,
-  selected,
-}: EdgeProps) {
-  const { deleteElements } = useReactFlow();
-  const [hovered, setHovered] = useState(false);
-  const [path, midX, midY] = getBezierPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-  });
-
-  const hover = {
-    onMouseEnter: () => setHovered(true),
-    onMouseLeave: () => setHovered(false),
-  };
-
-  return (
-    <>
-      <g {...hover}>
-        <BaseEdge
-          path={path}
-          style={style}
-          markerEnd={markerEnd}
-          interactionWidth={interactionWidth}
-        />
-      </g>
-      {(hovered || selected) && (
-        <EdgeLabelRenderer>
-          <button
-            {...hover}
-            type="button"
-            aria-label="Remove connection"
-            onClick={() => deleteElements({ edges: [{ id }] })}
-            className="nodrag nopan pointer-events-auto absolute flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground hover:border-destructive hover:text-destructive"
-            style={{
-              transform: `translate(-50%, -50%) translate(${midX}px, ${midY}px)`,
-            }}
-          >
-            <X className="size-3" />
-          </button>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  );
 }
