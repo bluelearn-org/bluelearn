@@ -18,7 +18,10 @@ const guide = (id: string, title: string) =>
 const GUIDES = [guide("base-loops", "Loops"), guide("base-rec", "Recursion")];
 
 function renderModal(existingGuideBaseIds: Array<string> = []) {
-  const added: { nodes: Array<ObjectiveGraphNode> | null } = { nodes: null };
+  const added: {
+    nodes: Array<ObjectiveGraphNode> | null;
+    pullPrerequisitesFor?: Array<string>;
+  } = { nodes: null };
 
   const modal = ({ open }: { open: boolean }) => (
     <AddGuideNodeModal
@@ -26,8 +29,9 @@ function renderModal(existingGuideBaseIds: Array<string> = []) {
       onOpenChange={() => {}}
       guides={GUIDES}
       existingGuideBaseIds={existingGuideBaseIds}
-      onAdd={(nodes) => {
+      onAdd={(nodes, options) => {
         added.nodes = nodes;
+        added.pullPrerequisitesFor = options?.pullPrerequisitesFor;
       }}
     />
   );
@@ -153,9 +157,9 @@ describe("AddGuideNodeModal", () => {
     ]);
   });
 
-  it("adds the chosen guide as a target from the target tab, never one already on the canvas", async () => {
+  it("adds the chosen guide with its prerequisites pulled, never one already on the canvas", async () => {
     const { dialog, added } = renderModal(["base-rec"]);
-    openTab(dialog, /target guide/i);
+    openTab(dialog, /guide with prerequisites/i);
 
     fireEvent.click(within(dialog).getByRole("button", { name: /select/i }));
 
@@ -168,19 +172,20 @@ describe("AddGuideNodeModal", () => {
     expect(added.nodes).toEqual([
       {
         id: expect.any(String),
-        type: "target",
+        type: "guide",
         guideBaseId: "base-loops",
         guideSlug: "loops",
         title: "Loops",
       },
     ]);
+    expect(added.pullPrerequisitesFor).toEqual(["base-loops"]);
   });
 
   it("submits the picks from every tab together, each guide offered on one tab only", async () => {
     const { dialog, added } = renderModal();
 
     await pick(dialog, "Loops");
-    openTab(dialog, /target guide/i);
+    openTab(dialog, /guide with prerequisites/i);
 
     fireEvent.click(within(dialog).getByRole("button", { name: /select/i }));
     const targetOptions = await screen.findAllByRole("option");
@@ -211,7 +216,7 @@ describe("AddGuideNodeModal", () => {
       },
       {
         id: expect.any(String),
-        type: "target",
+        type: "guide",
         guideBaseId: "base-rec",
         guideSlug: "recursion",
         title: "Recursion",
@@ -223,6 +228,7 @@ describe("AddGuideNodeModal", () => {
         summary: "What a frame holds",
       },
     ]);
+    expect(added.pullPrerequisitesFor).toEqual(["base-rec"]);
   });
 
   it("blocks Add while a half-typed request rides with picked guides, and drops it once cleared", async () => {

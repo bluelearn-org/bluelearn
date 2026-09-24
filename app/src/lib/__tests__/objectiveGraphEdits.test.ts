@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Walkthrough } from "@bluelearn/schemas";
 
 import type {
+  ObjectiveContribution,
   ObjectiveGraphData,
   ObjectiveGraphNode,
 } from "@/types/contributions";
 import {
   addGuideNode,
   addWalkthrough,
+  adoptSavedSnapshot,
   connectNodes,
   drawnEdgeId,
   edgesCutByConnecting,
@@ -15,6 +17,8 @@ import {
   guideEdgeId,
   removeEdges,
   removeNodes,
+  targetNodeIds,
+  withLiveTargets,
 } from "@/lib/objectiveGraphEdits";
 
 const guide = (id: string): ObjectiveGraphNode => ({
@@ -50,7 +54,6 @@ const pairs = (graph: ObjectiveGraphData) =>
 describe("addGuideNode", () => {
   it("adds a guide once, however many times it is added", () => {
     const loops = {
-      type: "guide" as const,
       guideBaseId: "base-loops",
       guideSlug: "loops",
       title: "L",
@@ -66,20 +69,178 @@ describe("addGuideNode", () => {
   it("adds a second guide with a different base", () => {
     const graph = addGuideNode(
       { nodes: [guide("a")], edges: [] },
-      { type: "guide", guideBaseId: "base-b", guideSlug: "b", title: "b" }
+      { guideBaseId: "base-b", guideSlug: "b", title: "b" }
     );
 
-    expect(graph.nodes.map((n) => n.type)).toEqual(["guide", "guide"]);
     expect(new Set(graph.nodes.map((n) => n.id)).size).toBe(2);
   });
+});
 
-  it("keeps the target type it is given", () => {
-    const graph = addGuideNode(
-      { nodes: [guide("a")], edges: [] },
-      { type: "target", guideBaseId: "base-b", guideSlug: "b", title: "b" }
+describe("targetNodeIds", () => {
+  it("marks every node nothing leads out of, over drawn and guide edges", () => {
+    const graph: ObjectiveGraphData = {
+      nodes: [guide("a"), guide("b"), request("r"), guide("c")],
+      edges: [fromGuides("a", "b"), drawn("b", "r")],
+    };
+
+    expect([...targetNodeIds(graph)]).toEqual(["r", "c"]);
+  });
+
+  it("makes a request with no follow-up a target", () => {
+    const graph: ObjectiveGraphData = {
+      nodes: [guide("a"), request("r")],
+      edges: [drawn("a", "r")],
+    };
+
+    expect([...targetNodeIds(graph)]).toEqual(["r"]);
+  });
+});
+
+const draft = (
+  graph: ObjectiveGraphData,
+  curation: Partial<ObjectiveContribution> = {}
+): ObjectiveContribution => ({
+  title: "",
+  summary: "",
+  changeSummary: "",
+  targets: [],
+  featuredSubObjective: "",
+  subObjectives: [],
+  subjects: [],
+  graph,
+  ...curation,
+});
+
+describe("withLiveTargets", () => {
+  it("keeps the curator's order and appends a newcomer", () => {
+    const graph: ObjectiveGraphData = {
+      nodes: [guide("a"), guide("b"), request("r")],
+      edges: [],
+    };
+
+    const next = withLiveTargets(draft(graph, { targets: ["b", "a"] }), graph);
+
+    expect(next.targets).toEqual(["b", "a", "r"]);
+  });
+
+  it("drops a target that gains a follow-up, and its featured flag", () => {
+    const before: ObjectiveGraphData = {
+      nodes: [request("r"), guide("b")],
+      edges: [],
+    };
+    const after = connectNodes(before, "r", "b");
+
+    const next = withLiveTargets(
+      draft(before, { targets: ["r", "b"], featuredSubObjective: "r" }),
+      after
     );
 
-    expect(graph.nodes.map((n) => n.type)).toEqual(["guide", "target"]);
+    expect(next.targets).toEqual(["b"]);
+    expect(next.featuredSubObjective).toBe("");
+    expect(next.graph).toBe(after);
+  });
+});
+
+describe("adoptSavedSnapshot", () => {
+  const stored = (
+    id: string,
+    baseId: string | null,
+    target?: { position: number | null; featured?: boolean }
+  ) => ({
+    id,
+    guide_base_id: baseId,
+    is_target: target !== undefined,
+    is_featured: target?.featured ?? false,
+    target_position: target?.position ?? null,
+  });
+  const snapshot = (
+    nodes: Array<ReturnType<typeof stored>>,
+    rawEdges: Array<[string, string]> = []
+  ) => ({
+    nodes: nodes.map((n) => ({
+      guide_id: null,
+      slug: null,
+      title: null,
+      summary: null,
+      request_id: null,
+      is_included: true,
+      note: null,
+      ...n,
+    })),
+    raw_edges: rawEdges.map(([from, to]) => ({
+      from_id: `base-${from}`,
+      to_id: `base-${to}`,
+    })),
+  });
+
+  it("adopts the server's targets and the guides' own edges without moving nodes", () => {
+    const graph: ObjectiveGraphData = {
+      nodes: [guide("b"), guide("a")],
+      edges: [],
+    };
+
+    const next = adoptSavedSnapshot(
+      draft(graph, { targets: ["b", "a"], featuredSubObjective: "a" }),
+      snapshot(
+        [
+          stored("a", "base-a"),
+          stored("b", "base-b", { position: 0, featured: true }),
+        ],
+        [["a", "b"]]
+      )
+    );
+
+    expect(next.graph.nodes).toEqual(graph.nodes);
+    expect(next.graph.edges).toEqual([fromGuides("a", "b")]);
+    expect(next.targets).toEqual(["b"]);
+    expect(next.featuredSubObjective).toBe("b");
+  });
+
+  it("orders targets by the server's position, newcomers after", () => {
+    const graph: ObjectiveGraphData = {
+      nodes: [guide("a"), guide("b"), request("late")],
+      edges: [],
+    };
+
+    const next = adoptSavedSnapshot(
+      draft(graph, { targets: ["a", "b", "late"] }),
+      snapshot([
+        stored("a", "base-a", { position: 1 }),
+        stored("b", "base-b", { position: 0 }),
+      ])
+    );
+
+    expect(next.targets).toEqual(["b", "a", "late"]);
+  });
+
+  it("re-keys a re-added guide to its stored id everywhere it is named", () => {
+    const graph: ObjectiveGraphData = {
+      nodes: [guide("fresh"), request("r")],
+      edges: [drawn("fresh", "r")],
+    };
+    // guide("fresh") has base-fresh; the draft stored that base as "kept"
+    const next = adoptSavedSnapshot(
+      draft(graph, {
+        targets: ["r"],
+        featuredSubObjective: "r",
+        subObjectives: [
+          {
+            targetNodeId: "r",
+            selectedNodeIds: ["fresh"],
+            curatedSequence: ["fresh"],
+          },
+        ],
+      }),
+      snapshot([
+        stored("kept", "base-fresh"),
+        stored("r", null, { position: 0, featured: true }),
+      ])
+    );
+
+    expect(next.graph.nodes.map((n) => n.id)).toEqual(["kept", "r"]);
+    expect(next.graph.edges).toEqual([drawn("kept", "r")]);
+    expect(next.targets).toEqual(["r"]);
+    expect(next.subObjectives[0].curatedSequence).toEqual(["kept"]);
   });
 });
 
@@ -101,7 +262,7 @@ describe("addWalkthrough", () => {
 
   const target: ObjectiveGraphNode = {
     id: "t",
-    type: "target",
+    type: "guide",
     guideBaseId: "base-t",
     guideSlug: "t",
     title: "t",
@@ -132,11 +293,6 @@ describe("addWalkthrough", () => {
     );
 
     expect(slugs(graph)).toEqual(["t", "a", "b"]);
-    expect(graph.nodes.map((n) => n.type)).toEqual([
-      "target",
-      "guide",
-      "guide",
-    ]);
     expect(slugPairs(graph)).toEqual(["a>b", "b>t"]);
     expect(graph.edges.every((e) => e.id.startsWith("g:"))).toBe(true);
   });

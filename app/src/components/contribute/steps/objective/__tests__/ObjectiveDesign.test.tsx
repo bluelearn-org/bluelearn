@@ -5,6 +5,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
@@ -181,9 +182,9 @@ vi.mock("sonner", () => ({
   toast: { warning: vi.fn(), error: vi.fn() },
 }));
 
-const RECURSION_TARGET: ObjectiveGraphNode = {
+const RECURSION: ObjectiveGraphNode = {
   id: "picked",
-  type: "target",
+  type: "guide",
   guideBaseId: "base-rec",
   guideSlug: "recursion",
   title: "Recursion",
@@ -193,10 +194,17 @@ vi.mock("@/components/contribute/StepperActionHeader", () => ({
   StepperActionHeader: ({
     onAddGuideNodes,
   }: {
-    onAddGuideNodes?: (nodes: Array<ObjectiveGraphNode>) => void;
+    onAddGuideNodes?: (
+      nodes: Array<ObjectiveGraphNode>,
+      options?: { pullPrerequisitesFor: Array<string> }
+    ) => void;
   }) => (
-    <button onClick={() => onAddGuideNodes?.([RECURSION_TARGET])}>
-      Add target
+    <button
+      onClick={() =>
+        onAddGuideNodes?.([RECURSION], { pullPrerequisitesFor: ["base-rec"] })
+      }
+    >
+      Add with prerequisites
     </button>
   ),
 }));
@@ -219,16 +227,7 @@ const Stepper = {
   Content: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 };
 
-function DesignWithState({
-  initial,
-  onTargetsChange,
-}: {
-  initial: ObjectiveGraphData;
-  onTargetsChange: (change: {
-    added?: Array<string>;
-    removed?: Array<string>;
-  }) => void;
-}) {
+function DesignWithState({ initial }: { initial: ObjectiveGraphData }) {
   const [graph, setGraph] = useState(initial);
 
   return (
@@ -237,7 +236,6 @@ function DesignWithState({
       type="objective"
       objectiveGraph={graph}
       setObjectiveGraph={setGraph}
-      onTargetsChange={onTargetsChange}
     />
   );
 }
@@ -275,7 +273,7 @@ describe("ObjectiveDesign", () => {
     vi.clearAllMocks();
   });
 
-  it("renders guide, target and request cards from the draft graph", () => {
+  it("derives target cards from the draft graph, requests included", () => {
     renderDesign({
       nodes: [
         {
@@ -287,7 +285,7 @@ describe("ObjectiveDesign", () => {
         },
         {
           id: "n2",
-          type: "target",
+          type: "guide",
           guideBaseId: "b2",
           guideSlug: "recursion",
           title: "Recursion",
@@ -303,11 +301,12 @@ describe("ObjectiveDesign", () => {
     });
 
     expect(screen.getByText("Loops")).toBeTruthy();
+    expect(screen.getByText("Guide")).toBeTruthy();
     expect(screen.getByText("Recursion")).toBeTruthy();
-    expect(screen.getAllByText("Target Guide")).toHaveLength(1);
+    expect(screen.getAllByText("Target guide")).toHaveLength(1);
     expect(screen.getByText("Call stacks")).toBeTruthy();
     expect(screen.getByText("What a frame holds")).toBeTruthy();
-    expect(screen.getAllByText(/guide request/i)).toHaveLength(1);
+    expect(screen.getAllByText("Target request")).toHaveLength(1);
     expect(screen.queryByText(EMPTY_HINT)).toBeNull();
   });
 
@@ -319,7 +318,7 @@ describe("ObjectiveDesign", () => {
     expect(container.querySelector('[data-slot="card"]')).toBeNull();
   });
 
-  it("adds a target with its prerequisites and reports its slug up", async () => {
+  it("adds a guide with its prerequisites, and only the guide stays a target", async () => {
     const walkthrough: Walkthrough = {
       nodes: [
         walkthroughStep("base-loops", "Loops"),
@@ -328,21 +327,17 @@ describe("ObjectiveDesign", () => {
       edges: [{ from_id: "base-loops", to_id: "base-rec" }],
     };
     vi.mocked(getGuideWalkthrough).mockResolvedValue(walkthrough);
-    const onTargetsChange = vi.fn();
 
-    render(
-      <DesignWithState
-        initial={{ nodes: [], edges: [] }}
-        onTargetsChange={onTargetsChange}
-      />
+    render(<DesignWithState initial={{ nodes: [], edges: [] }} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add with prerequisites" })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
 
-    expect(onTargetsChange).toHaveBeenCalledWith({ added: ["recursion"] });
     expect(getGuideWalkthrough).toHaveBeenCalledWith("recursion");
     expect(await screen.findByText("Loops")).toBeTruthy();
     expect(screen.getAllByText("Recursion")).toHaveLength(1);
-    expect(screen.getAllByText("Target Guide")).toHaveLength(1);
+    expect(screen.getAllByText("Target guide")).toHaveLength(1);
+    expect(positionOf("Loops").y).toBeGreaterThan(positionOf("Recursion").y);
   });
 
   it("leaves no prerequisites behind for a target deleted before its walkthrough arrives", async () => {
@@ -353,13 +348,10 @@ describe("ObjectiveDesign", () => {
       })
     );
 
-    render(
-      <DesignWithState
-        initial={{ nodes: [], edges: [] }}
-        onTargetsChange={() => {}}
-      />
+    render(<DesignWithState initial={{ nodes: [], edges: [] }} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add with prerequisites" })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
     fireEvent.click(screen.getByRole("button", { name: /^delete /i }));
 
     await act(async () => {
@@ -376,70 +368,35 @@ describe("ObjectiveDesign", () => {
     expect(screen.getByText(EMPTY_HINT)).toBeTruthy();
   });
 
-  it("reports a deleted target as removed, and a deleted guide not at all", () => {
-    const onTargetsChange = vi.fn();
+  it("returns a dropped node to its layout slot, below a guide added later that needs it", async () => {
+    vi.mocked(getGuideWalkthrough).mockResolvedValue({
+      nodes: [
+        walkthroughStep("b1", "Loops"),
+        walkthroughStep("base-rec", "Recursion"),
+      ],
+      edges: [{ from_id: "b1", to_id: "base-rec" }],
+    });
 
-    render(
-      <DesignWithState
-        initial={{
-          nodes: [
-            {
-              id: "n1",
-              type: "guide",
-              guideBaseId: "b1",
-              guideSlug: "loops",
-              title: "Loops",
-            },
-            {
-              id: "n2",
-              type: "target",
-              guideBaseId: "b2",
-              guideSlug: "recursion",
-              title: "Recursion",
-            },
-          ],
-          edges: [],
-        }}
-        onTargetsChange={onTargetsChange}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete n1" }));
-    expect(onTargetsChange).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete n2" }));
-    expect(onTargetsChange).toHaveBeenCalledWith({ removed: ["recursion"] });
-    expect(screen.queryByText("Recursion")).toBeNull();
-  });
-
-  it("returns a dropped node to its layout slot, below a target added later", async () => {
-    vi.mocked(getGuideWalkthrough).mockResolvedValue({ nodes: [], edges: [] });
-
-    render(
-      <DesignWithState
-        initial={{ nodes: [LOOPS], edges: [] }}
-        onTargetsChange={() => {}}
-      />
-    );
+    render(<DesignWithState initial={{ nodes: [LOOPS], edges: [] }} />);
     const slot = positionOf("Loops");
 
     fireEvent.click(screen.getByRole("button", { name: "Drag n1" }));
     expect(positionOf("Loops")).toEqual(slot);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add target" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add with prerequisites" })
+    );
     expect(await screen.findByText("Recursion")).toBeTruthy();
+    await waitFor(() =>
+      expect(positionOf("Loops").y).toBeGreaterThan(positionOf("Recursion").y)
+    );
 
     expect(positionOf("Loops")).not.toEqual({ x: 999, y: 999 });
     expect(positionOf("Loops").y).toBeGreaterThan(positionOf("Recursion").y);
   });
 
   it("holds a node pulled toward another row inside its own, and returns it on release", () => {
-    render(
-      <DesignWithState
-        initial={{ nodes: [LOOPS], edges: [] }}
-        onTargetsChange={() => {}}
-      />
-    );
+    render(<DesignWithState initial={{ nodes: [LOOPS], edges: [] }} />);
     const slot = positionOf("Loops");
 
     fireEvent.click(screen.getByRole("button", { name: "Pull n1 across" }));
@@ -452,12 +409,7 @@ describe("ObjectiveDesign", () => {
   });
 
   it("follows a nudge inside the row while dragging, and returns it on release", () => {
-    render(
-      <DesignWithState
-        initial={{ nodes: [LOOPS], edges: [] }}
-        onTargetsChange={() => {}}
-      />
-    );
+    render(<DesignWithState initial={{ nodes: [LOOPS], edges: [] }} />);
     const slot = positionOf("Loops");
 
     fireEvent.click(screen.getByRole("button", { name: "Nudge n1 along" }));
@@ -490,12 +442,7 @@ describe("ObjectiveDesign", () => {
     ["top", "n1>n2"],
     ["bottom", "n2>n1"],
   ])("reads a drag from A's %s dot to B's dot as %s", (dot, edge) => {
-    render(
-      <DesignWithState
-        initial={LOOPS_AND_RECURSION}
-        onTargetsChange={() => {}}
-      />
-    );
+    render(<DesignWithState initial={LOOPS_AND_RECURSION} />);
 
     fireEvent.click(
       screen.getByRole("button", { name: `From n1 ${dot} dot to n2 dot` })
@@ -510,12 +457,7 @@ describe("ObjectiveDesign", () => {
   ])(
     "reads a drag from A's %s dot dropped on B's card body as %s",
     (dot, edge) => {
-      render(
-        <DesignWithState
-          initial={LOOPS_AND_RECURSION}
-          onTargetsChange={() => {}}
-        />
-      );
+      render(<DesignWithState initial={LOOPS_AND_RECURSION} />);
 
       pointAt(screen.getByText("Recursion"));
       fireEvent.click(
@@ -529,12 +471,7 @@ describe("ObjectiveDesign", () => {
   );
 
   it("draws nothing for a drop on the start card or on empty canvas", () => {
-    render(
-      <DesignWithState
-        initial={LOOPS_AND_RECURSION}
-        onTargetsChange={() => {}}
-      />
-    );
+    render(<DesignWithState initial={LOOPS_AND_RECURSION} />);
 
     for (const under of [
       screen.getByText("Loops"),
@@ -561,7 +498,6 @@ describe("ObjectiveDesign", () => {
           nodes: [LOOPS, RECURSION_GUIDE],
           edges: [{ id: drawnEdgeId("n1", "n2"), source: "n1", target: "n2" }],
         }}
-        onTargetsChange={() => {}}
       />
     );
 
@@ -615,7 +551,6 @@ describe("ObjectiveDesign", () => {
           nodes: ["a", "b"].map(guide),
           edges: [{ id: "a-b", source: "a", target: "b" }],
         }}
-        onTargetsChange={() => {}}
       />
     );
 

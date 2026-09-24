@@ -58,9 +58,8 @@ export function GuideGraphNode({
   const divider = isTarget ? "border-white/25" : "border-border";
   const label = isTarget ? "text-white/70" : "text-muted-foreground";
 
-  let kind = "Guide";
-  if (isTarget) kind = "Target Guide";
-  if (isRequest) kind = "Guide request";
+  let kind = isRequest ? "Guide request" : "Guide";
+  if (isTarget) kind = isRequest ? "Target request" : "Target guide";
 
   let border = isSelected ? "border-brand-bright-blue" : "border-foreground";
   if (isRequest) border = "border-dashed border-foreground/60";
@@ -100,7 +99,7 @@ export function GuideGraphNode({
                 {title}
               </h3>
               {isRequest && summary && (
-                <p className="text-sm text-muted-foreground">{summary}</p>
+                <p className={`text-sm ${label}`}>{summary}</p>
               )}
             </div>
           </div>

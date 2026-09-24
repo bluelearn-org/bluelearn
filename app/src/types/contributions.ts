@@ -42,18 +42,21 @@ export const variantContributionSchema = z.object({
   disclaimers: z.array(disclaimerSlugSchema),
 });
 
+// Keyed by node id: a target can be a guide or a request. The sequence is node
+// ids too, guides or requests.
 export const subObjectiveSchema = z.object({
-  targetSlug: z.string(),
-  selectedSlugs: z.array(z.string()),
+  targetNodeId: z.string(),
+  selectedNodeIds: z.array(z.string()),
   curatedSequence: z.array(z.string()),
 });
 
 // The design canvas draft. Positions are not stored: the layout computes them
 // from the edges, so an edge is always prerequisite (source) -> dependent (target).
+// Which nodes are targets is not stored either: targetNodeIds derives it.
 export const objectiveGraphNodeSchema = z.discriminatedUnion("type", [
   z.object({
     id: z.string(),
-    type: z.enum(["guide", "target"]),
+    type: z.literal("guide"),
     guideBaseId: z.string(),
     guideSlug: z.string(),
     title: z.string(),
@@ -81,6 +84,7 @@ export const objectiveContributionSchema = z.object({
   title: z.string(),
   summary: z.string(),
   changeSummary: z.string(),
+  // Node ids, in the curator's order.
   targets: z.array(z.string()),
   featuredSubObjective: z.string(),
   subObjectives: z.array(subObjectiveSchema),

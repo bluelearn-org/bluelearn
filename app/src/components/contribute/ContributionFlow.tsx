@@ -44,9 +44,11 @@ import {
   updateObjectiveRevision,
 } from "@/lib/api/objectiveRevisions";
 import {
+  adoptSavedSnapshot,
   drawnEdgeId,
   graphToApi,
   guideEdgeId,
+  withLiveTargets,
 } from "@/lib/objectiveGraphEdits";
 
 import {
@@ -141,7 +143,7 @@ const objectiveGraphFromSnapshot = (
     nodeIdByBaseId.set(n.guide_base_id, n.id);
     nodes.push({
       id: n.id,
-      type: n.is_target ? "target" : "guide",
+      type: "guide",
       guideBaseId: n.guide_base_id,
       guideSlug: n.slug ?? "",
       title: n.title ?? n.slug ?? "",
@@ -170,23 +172,24 @@ const objectiveGraphFromSnapshot = (
 const objectiveDataFromRevision = (
   data: ObjectiveRevisionData
 ): ObjectiveContribution => {
-  const slugByNodeId = new Map(data.snapshot.nodes.map((n) => [n.id, n.slug]));
-
   const targetNodes = data.snapshot.nodes
-    .filter((n): n is typeof n & { slug: string } => n.is_target && !!n.slug)
-    .sort((a, b) => (a.target_position ?? 0) - (b.target_position ?? 0));
+    .filter((n) => n.is_target)
+    .sort(
+      (a, b) =>
+        (a.target_position ?? Number.POSITIVE_INFINITY) -
+        (b.target_position ?? Number.POSITIVE_INFINITY)
+    );
 
   return {
     title: data.revision.title ?? "",
     summary: data.revision.summary ?? "",
     changeSummary: data.revision.change_summary ?? "",
-    targets: targetNodes.map((n) => n.slug),
-    featuredSubObjective: targetNodes.find((n) => n.is_featured)?.slug ?? "",
+    targets: targetNodes.map((n) => n.id),
+    featuredSubObjective: targetNodes.find((n) => n.is_featured)?.id ?? "",
     subObjectives: targetNodes.flatMap((n) => {
       const sequence = data.snapshot.orders
         .filter((o) => o.target_node_id === n.id)
-        .map((o) => slugByNodeId.get(o.node_id))
-        .filter((slug): slug is string => !!slug);
+        .map((o) => o.node_id);
 
       if (sequence.length === 0) {
         return [];
@@ -194,8 +197,8 @@ const objectiveDataFromRevision = (
 
       return [
         {
-          targetSlug: n.slug,
-          selectedSlugs: sequence,
+          targetNodeId: n.id,
+          selectedNodeIds: sequence,
           curatedSequence: sequence,
         },
       ];
@@ -849,50 +852,51 @@ function Inner({
     newSubjects: unsavedSubjects(variantContData.newSubjects),
   });
 
-  const baseIdForSlug = (slug: string) => {
-    const guide = guideOptions.find((g) => g.slug === slug);
+  const objectiveTargets = () => {
+    // a node deleted from the canvas since it was sequenced is not the graph's
+    const onCanvas = new Set(objectiveContData.graph.nodes.map((n) => n.id));
 
-    if (!guide) {
-      throw new Error(`Target guide not found: ${slug}`);
-    }
-
-    return guide.id;
-  };
-
-  const objectiveTargets = () =>
-    objectiveContData.targets.map((slug) => {
+    return objectiveContData.targets.map((nodeId) => {
       const sub = objectiveContData.subObjectives.find(
-        (s) => s.targetSlug === slug
+        (s) => s.targetNodeId === nodeId
       );
 
       return {
-        guide_base_id: baseIdForSlug(slug),
-        is_featured: objectiveContData.featuredSubObjective === slug,
+        node_id: nodeId,
+        is_featured: objectiveContData.featuredSubObjective === nodeId,
         ...(sub
-          ? {
-              sequence: sub.curatedSequence.map(baseIdForSlug),
-            }
+          ? { sequence: sub.curatedSequence.filter((id) => onCanvas.has(id)) }
           : {}),
       };
     });
+  };
 
-  const changeObjectiveTargets = ({
-    added = [],
-    removed = [],
-  }: {
-    added?: Array<string>;
-    removed?: Array<string>;
-  }) =>
-    setObjectiveContData((prev) => {
-      const targets = [...new Set([...prev.targets, ...added])].filter(
-        (slug) => !removed.includes(slug)
-      );
-      const featuredSubObjective = targets.includes(prev.featuredSubObjective)
-        ? prev.featuredSubObjective
-        : "";
+  // The save's answer is the truth for targets and the guides' own edges; it
+  // is merged into the latest draft, never replaces it.
+  const adoptedRef = useRef(false);
+  const adoptSaved = ({
+    snapshot,
+  }: Awaited<ReturnType<typeof updateObjectiveRevision>>) => {
+    adoptedRef.current = true;
+    setObjectiveContData((prev) => adoptSavedSnapshot(prev, snapshot));
+  };
 
-      return { ...prev, targets, featuredSubObjective };
-    });
+  // What was adopted is what the server holds: store it and show it saved.
+  // The autosave marks itself without a render, so one is asked for.
+  const [, rerenderAfterAdopt] = useState(0);
+  useEffect(() => {
+    if (!adoptedRef.current) return;
+    adoptedRef.current = false;
+    storeContributionDraft(
+      "objective",
+      objectiveContData,
+      objectiveLocalDraftId,
+      revisionId,
+      step
+    );
+    objectiveSave.cancel();
+    rerenderAfterAdopt((n) => n + 1);
+  });
 
   // prevent two simultaneous create requests
   const creatingRef = useRef<Promise<string> | null>(null);
@@ -926,16 +930,21 @@ function Inner({
   // server persistence - guide revisionId lives on the active guide itself
   const persistDraft = async () => {
     if (type === "objective") {
-      const target_ids = objectiveContData.targets.map(baseIdForSlug);
-
-      // an empty graph would delete the targets
-      const graphField =
-        objectiveContData.graph.nodes.length > 0
-          ? { graph: graphToApi(objectiveContData.graph) }
-          : {};
+      // An empty graph would delete every node, so it is not sent.
+      const sendsGraph = objectiveContData.graph.nodes.length > 0;
+      const graphField = sendsGraph
+        ? { graph: graphToApi(objectiveContData.graph) }
+        : {};
+      const saveRevision = async (
+        id: string,
+        body: Parameters<typeof updateObjectiveRevision>[1]
+      ) => {
+        const saved = await updateObjectiveRevision(id, body);
+        if (sendsGraph) adoptSaved(saved);
+      };
 
       if (revisionId) {
-        await updateObjectiveRevision(revisionId, {
+        await saveRevision(revisionId, {
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
           change_summary: objectiveContData.changeSummary || null,
@@ -951,7 +960,7 @@ function Inner({
         if (!creatingRef.current) {
           creatingRef.current = createObjectiveRevision(editSlug)
             .then(async (id) => {
-              await updateObjectiveRevision(id, {
+              await saveRevision(id, {
                 title: objectiveContData.title || undefined,
                 summary: objectiveContData.summary || undefined,
                 change_summary: objectiveContData.changeSummary || null,
@@ -976,11 +985,10 @@ function Inner({
         creatingRef.current = createObjective({
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
-          target_ids,
           tags: objectiveContData.subjects,
         })
           .then(async (id) => {
-            await updateObjectiveRevision(id, {
+            await saveRevision(id, {
               targets: objectiveTargets(),
               ...graphField,
             });
@@ -1100,7 +1108,9 @@ function Inner({
           step
         );
 
-        objectiveSave.markSynced();
+        // after a graph save the adopted answer marks itself synced
+        if (objectiveContData.graph.nodes.length === 0)
+          objectiveSave.markSynced();
       }
 
       toast.success("Draft saved");
@@ -1454,12 +1464,13 @@ function Inner({
           guides={guideOptions}
           objectiveGraph={objectiveContData.graph}
           setObjectiveGraph={(update) =>
-            setObjectiveContData((prev) => ({
-              ...prev,
-              graph: typeof update === "function" ? update(prev.graph) : update,
-            }))
+            setObjectiveContData((prev) =>
+              withLiveTargets(
+                prev,
+                typeof update === "function" ? update(prev.graph) : update
+              )
+            )
           }
-          onTargetsChange={changeObjectiveTargets}
         />
 
         <OrderObjectiveGuides

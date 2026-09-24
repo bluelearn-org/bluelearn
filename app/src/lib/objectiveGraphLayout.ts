@@ -1,7 +1,5 @@
-import type {
-  ObjectiveGraphData,
-  ObjectiveGraphNode,
-} from "@/types/contributions";
+import type { ObjectiveGraphData } from "@/types/contributions";
+import { targetNodeIds } from "@/lib/objectiveGraphEdits";
 
 type LayoutOptions = {
   nodeWidth: number;
@@ -14,8 +12,8 @@ type NodePosition = {
   position: { x: number; y: number };
 };
 
-// Left to right inside a row.
-const KIND_ORDER: Record<ObjectiveGraphNode["type"], number> = {
+// Left to right inside a row; a target of either type sorts last.
+const KIND_ORDER = {
   guide: 0,
   guide_request: 1,
   target: 2,
@@ -46,38 +44,23 @@ export function layoutObjectiveGraph(
     return { ids, rowById, rowCount: levels.length };
   });
 
-  // Nodes with no edge fall back by kind in one last island: an existing guide
-  // to the bottom row, a target to the top, a request just below the top when
-  // a target holds it. Its height matches the deepest island, so rows line up.
-  const loose = (type: ObjectiveGraphNode["type"]) =>
-    graph.nodes.filter((n) => n.type === type && !inIsland.has(n.id));
-  const looseGuides = loose("guide");
-  const looseRequests = loose("guide_request");
-  const looseTargets = loose("target");
+  // A node with no edge leads nowhere, so it is a target: the loose ones share
+  // one last island on the top row, level with the deepest island's targets.
   const looseIds = graph.nodes
     .filter((n) => !inIsland.has(n.id))
     .map((n) => n.id);
 
   if (looseIds.length > 0) {
-    const deepestRows = Math.max(0, ...rowSets.map((s) => s.rowCount));
-    const fallbackRows = [looseGuides, looseRequests, looseTargets].filter(
-      (nodes) => nodes.length > 0
-    ).length;
-    const top = Math.max(deepestRows, fallbackRows) - 1;
-    const topTaken = looseTargets.length > 0;
-
-    const rowById = new Map<string, number>();
-    for (const node of looseGuides) rowById.set(node.id, 0);
-    for (const node of looseTargets) rowById.set(node.id, top);
-    for (const node of looseRequests)
-      rowById.set(node.id, topTaken ? top - 1 : top);
+    const top = Math.max(1, ...rowSets.map((s) => s.rowCount)) - 1;
+    const rowById = new Map(looseIds.map((id) => [id, top]));
     rowSets.push({ ids: looseIds, rowById, rowCount: top + 1 });
   }
 
   // sort is stable, so input order holds within a kind.
-  const byKind = [...graph.nodes].sort(
-    (a, b) => KIND_ORDER[a.type] - KIND_ORDER[b.type]
-  );
+  const targets = targetNodeIds(graph);
+  const kindOf = (n: ObjectiveGraphData["nodes"][number]) =>
+    KIND_ORDER[targets.has(n.id) ? "target" : n.type];
+  const byKind = [...graph.nodes].sort((a, b) => kindOf(a) - kindOf(b));
 
   const blocks = rowSets.map(({ ids, rowById, rowCount }) => {
     const members = new Set(ids);

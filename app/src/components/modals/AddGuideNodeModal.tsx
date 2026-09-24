@@ -19,14 +19,18 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Button } from "@/components/ui/button";
 
-type Mode = "existing" | "target" | "request";
+type Mode = "existing" | "prerequisites" | "request";
 
 type PropTypes = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   guides: Array<GuideListItem>;
   existingGuideBaseIds: Array<string>;
-  onAdd: (nodes: Array<ObjectiveGraphNode>) => void;
+  // pullPrerequisitesFor names guide base ids whose prerequisites come along.
+  onAdd: (
+    nodes: Array<ObjectiveGraphNode>,
+    options?: { pullPrerequisitesFor: Array<string> }
+  ) => void;
 };
 
 export const AddGuideNodeModal = ({
@@ -38,7 +42,9 @@ export const AddGuideNodeModal = ({
 }: PropTypes) => {
   const [mode, setMode] = useState<Mode>("existing");
   const [selectedGuideIds, setSelectedGuideIds] = useState<Array<string>>([]);
-  const [selectedTargetIds, setSelectedTargetIds] = useState<Array<string>>([]);
+  const [selectedWithPrereqIds, setSelectedWithPrereqIds] = useState<
+    Array<string>
+  >([]);
   const [requestTitle, setRequestTitle] = useState("");
   const [requestSummary, setRequestSummary] = useState("");
 
@@ -46,7 +52,7 @@ export const AddGuideNodeModal = ({
     if (!open) return;
     setMode("existing");
     setSelectedGuideIds([]);
-    setSelectedTargetIds([]);
+    setSelectedWithPrereqIds([]);
     setRequestTitle("");
     setRequestSummary("");
   }, [open]);
@@ -72,28 +78,25 @@ export const AddGuideNodeModal = ({
 
   const requestStarted = title.length > 0 || summary.length > 0;
   const requestComplete = title.length > 0 && summary.length > 0;
-  const pickCount = selectedGuideIds.length + selectedTargetIds.length;
+  const pickCount = selectedGuideIds.length + selectedWithPrereqIds.length;
 
   // A half-typed request blocks Add rather than being dropped from the batch.
   const canAdd = requestStarted ? requestComplete : pickCount > 0;
 
-  const pickedNodes = (
-    baseIds: Array<string>,
-    type: "guide" | "target"
-  ): Array<ObjectiveGraphNode> =>
+  const pickedNodes = (baseIds: Array<string>): Array<ObjectiveGraphNode> =>
     availableGuides
       .filter((g) => baseIds.includes(g.id))
       .map((g) => ({
         id: crypto.randomUUID(),
-        type,
+        type: "guide" as const,
         guideBaseId: g.id,
         guideSlug: g.slug,
         title: g.title ?? g.slug,
       }));
 
   const chosenNodes = (): Array<ObjectiveGraphNode> => [
-    ...pickedNodes(selectedGuideIds, "guide"),
-    ...pickedNodes(selectedTargetIds, "target"),
+    ...pickedNodes(selectedGuideIds),
+    ...pickedNodes(selectedWithPrereqIds),
     ...(requestComplete
       ? [
           {
@@ -108,7 +111,7 @@ export const AddGuideNodeModal = ({
 
   const handleAdd = () => {
     if (!canAdd) return;
-    onAdd(chosenNodes());
+    onAdd(chosenNodes(), { pullPrerequisitesFor: selectedWithPrereqIds });
     onOpenChange(false);
   };
 
@@ -125,8 +128,8 @@ export const AddGuideNodeModal = ({
           </DialogTitle>
 
           <DialogDescription className="text-xs text-muted-foreground">
-            Add existing guides or target guides to the objective, or request
-            one that does not exist yet.
+            Add existing guides to the objective, with or without their
+            prerequisites, or request one that does not exist yet.
           </DialogDescription>
         </DialogHeader>
 
@@ -137,7 +140,9 @@ export const AddGuideNodeModal = ({
         >
           <TabsList>
             <TabsTrigger value="existing">Existing guide</TabsTrigger>
-            <TabsTrigger value="target">Target guide</TabsTrigger>
+            <TabsTrigger value="prerequisites">
+              Guide with prerequisites
+            </TabsTrigger>
             <TabsTrigger value="request">Request a guide</TabsTrigger>
           </TabsList>
 
@@ -145,23 +150,22 @@ export const AddGuideNodeModal = ({
             {/* ponytail: modal popover eats the first tab click while open; upgrade when ui/combobox scrolls without modal */}
             <Combobox
               multiple
-              items={guideItems(selectedTargetIds)}
+              items={guideItems(selectedWithPrereqIds)}
               value={selectedGuideIds}
               onValueChange={setSelectedGuideIds}
               modal
             />
           </TabsContent>
 
-          <TabsContent value="target" className="space-y-2 pt-4">
+          <TabsContent value="prerequisites" className="space-y-2 pt-4">
             <p className="text-xs text-muted-foreground">
-              A target is a guide the objective leads to. Its prerequisites are
-              added with it.
+              The guide's prerequisites are added with it.
             </p>
             <Combobox
               multiple
               items={guideItems(selectedGuideIds)}
-              value={selectedTargetIds}
-              onValueChange={setSelectedTargetIds}
+              value={selectedWithPrereqIds}
+              onValueChange={setSelectedWithPrereqIds}
               modal
             />
           </TabsContent>

@@ -16,14 +16,6 @@ const guide = (id: string): ObjectiveGraphNode => ({
   title: id,
 });
 
-const targetGuide = (id: string): ObjectiveGraphNode => ({
-  id,
-  type: "target",
-  guideBaseId: id,
-  guideSlug: id,
-  title: id,
-});
-
 const request = (id: string): ObjectiveGraphNode => ({
   id,
   type: "guide_request",
@@ -46,7 +38,7 @@ function positionsOf(graph: ObjectiveGraphData) {
 describe("layoutObjectiveGraph", () => {
   it("puts a request that a target needs below the target", () => {
     const positions = positionsOf({
-      nodes: [targetGuide("t"), request("r"), guide("g")],
+      nodes: [guide("t"), request("r"), guide("g")],
       edges: [edge("r", "t")],
     });
 
@@ -62,55 +54,51 @@ describe("layoutObjectiveGraph", () => {
     expect(positions.get("g")!.y).toBeLessThan(positions.get("r")!.y);
   });
 
-  it("falls back by kind without edges: existing at the bottom, then request, then target, whatever the input order", () => {
-    for (const nodes of [
-      [guide("g"), request("r"), targetGuide("t")],
-      [targetGuide("t"), request("r"), guide("g")],
-    ]) {
-      const positions = positionsOf({ nodes, edges: [] });
+  it("puts every node without edges on the top row: nothing leads out of it", () => {
+    const positions = positionsOf({
+      nodes: [guide("g"), request("r"), guide("t")],
+      edges: [],
+    });
 
-      expect(positions.get("g")!.y).toBe(300);
-      expect(positions.get("r")!.y).toBe(150);
-      expect(positions.get("t")!.y).toBe(0);
-    }
+    expect([...positions.values()].map((p) => p.y)).toEqual([0, 0, 0]);
   });
 
-  it("moves a node out of its fallback row once an edge places it", () => {
-    const nodes = [guide("g"), request("r"), targetGuide("t")];
+  it("moves a node off the top row once an edge leads out of it", () => {
+    const nodes = [guide("g"), request("r"), guide("t")];
     const loose = positionsOf({ nodes, edges: [] });
     const linked = positionsOf({ nodes, edges: [edge("t", "g")] });
 
-    expect(loose.get("t")!.y).toBeLessThan(loose.get("g")!.y);
+    expect(loose.get("t")!.y).toBe(loose.get("g")!.y);
     expect(linked.get("t")!.y).toBeGreaterThan(linked.get("g")!.y);
   });
 
-  it("orders a row existing, request, target, then by input order", () => {
+  it("orders a row guide, request, target, then by input order", () => {
+    // Row one holds x (a target), y and r (both lead on to z).
     const positions = positionsOf({
       nodes: [
-        targetGuide("t"),
-        request("r"),
-        guide("g2"),
-        guide("g1"),
         guide("x"),
+        request("r"),
+        guide("y2"),
+        guide("y1"),
+        guide("a"),
+        guide("z"),
       ],
-      edges: ["t", "r", "g2", "g1"].map((id) => edge(id, "x")),
+      edges: [
+        edge("a", "x"),
+        edge("a", "r"),
+        edge("a", "y2"),
+        edge("a", "y1"),
+        edge("r", "z"),
+        edge("y2", "z"),
+        edge("y1", "z"),
+      ],
     });
 
-    const row = ["g2", "g1", "r", "t"].map((id) => positions.get(id)!);
+    const row = ["y2", "y1", "r", "x"].map((id) => positions.get(id)!);
     expect(new Set(row.map((p) => p.y)).size).toBe(1);
     expect(row.map((p) => p.x)).toEqual(
       [...row.map((p) => p.x)].sort((a, b) => a - b)
     );
-  });
-
-  it("closes the gap an empty fallback row would leave", () => {
-    const positions = positionsOf({
-      nodes: [request("r"), guide("g")],
-      edges: [],
-    });
-
-    expect(positions.get("g")!.y).toBe(150);
-    expect(positions.get("r")!.y).toBe(0);
   });
 
   it("puts a dependent above its prerequisite", () => {
@@ -124,7 +112,7 @@ describe("layoutObjectiveGraph", () => {
 
   it("puts a target on the top row even when nothing leads to it", () => {
     const positions = positionsOf({
-      nodes: [targetGuide("t"), guide("a"), guide("b"), guide("c")],
+      nodes: [guide("t"), guide("a"), guide("b"), guide("c")],
       edges: [edge("a", "b"), edge("b", "c")],
     });
 
@@ -145,16 +133,6 @@ describe("layoutObjectiveGraph", () => {
     expect(positions.get("b")!.x).not.toBe(positions.get("c")!.x);
   });
 
-  it("keeps nodes without edges on one level", () => {
-    const positions = positionsOf({
-      nodes: [guide("a"), guide("b"), guide("c")],
-      edges: [],
-    });
-
-    const ys = new Set([...positions.values()].map((p) => p.y));
-    expect(ys.size).toBe(1);
-  });
-
   it("uses the longest path, not the shortest, to place a node", () => {
     // a -> b -> c and a -> c: c must sit above b, not beside it.
     const positions = positionsOf({
@@ -166,9 +144,9 @@ describe("layoutObjectiveGraph", () => {
   });
 
   it("stands two edge groups and a loose node side by side, top rows aligned, centred on x = 0", () => {
-    // Island a -> b -> c (three rows), island d -> e (two rows), loose target t.
+    // Island a -> b -> c (three rows), island d -> e (two rows), loose t.
     const nodes = [
-      targetGuide("t"),
+      guide("t"),
       guide("d"),
       guide("a"),
       guide("e"),
@@ -199,15 +177,14 @@ describe("layoutObjectiveGraph", () => {
     expect(grown.get("t")!.x).toBe(at("t").x);
   });
 
-  it("lines a loose node's rows up with the deepest island", () => {
+  it("lines loose nodes up with the deepest island's top row", () => {
     const positions = positionsOf({
-      nodes: [guide("a"), guide("b"), guide("c"), guide("g"), targetGuide("t")],
+      nodes: [guide("a"), guide("b"), guide("c"), guide("g"), request("r")],
       edges: [edge("a", "b"), edge("b", "c")],
     });
 
-    expect(positions.get("g")!.y).toBe(positions.get("a")!.y);
-    expect(positions.get("t")!.y).toBe(positions.get("c")!.y);
-    expect(positions.get("g")!.x).toBe(positions.get("t")!.x);
+    expect(positions.get("g")!.y).toBe(positions.get("c")!.y);
+    expect(positions.get("r")!.y).toBe(positions.get("c")!.y);
     expect(positions.get("g")!.x).toBeGreaterThan(positions.get("a")!.x);
   });
 });

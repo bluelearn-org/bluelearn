@@ -10,6 +10,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/cards/Footer";
+import { nodeCard } from "@/lib/objectiveGraphEdits";
 
 type PropTypes = {
   Stepper: any;
@@ -143,53 +144,47 @@ export const PreviewObjective = ({
   guideOptions,
   subjectOptions,
 }: PropTypes) => {
-  // Helpers to resolve slugs
-  const getGuideTitle = (slug: string) => {
-    const guide = guideOptions.find((g) => g.slug === slug);
-    return guide ? guide.title : slug;
-  };
+  // Targets and sequences are node ids: a guide or a request on the canvas.
+  const guidesBySlug = new Map(guideOptions.map((g) => [g.slug, g]));
+  const cardOf = (nodeId: string) =>
+    nodeCard(objectiveContData.graph, guidesBySlug, nodeId);
+
+  const getGuideTitle = (nodeId: string) => cardOf(nodeId)?.title ?? nodeId;
 
   const getSubjectName = (id: string) => {
     const subject = subjectOptions.find((s) => s.id === id);
     return subject ? subject.name : id;
   };
 
-  const getGuideDuration = (slug: string) => {
-    const guide = guideOptions.find((g) => g.slug === slug);
-    return guide?.duration_minutes || 0;
-  };
+  const getGuideDuration = (nodeId: string) =>
+    cardOf(nodeId)?.duration_minutes || 0;
 
-  const getGuideSummary = (slug: string) => {
-    const guide = guideOptions.find((g) => g.slug === slug);
-    return guide?.summary || null;
-  };
+  const getGuideSummary = (nodeId: string) => cardOf(nodeId)?.summary || null;
 
-  const getGuideTags = (slug: string): Array<any> => {
-    const guide = guideOptions.find((g) => g.slug === slug);
-    return guide?.tags || [];
-  };
+  const getGuideTags = (nodeId: string): Array<any> =>
+    cardOf(nodeId)?.tags || [];
 
-  const getTargetDuration = (targetSlug: string) => {
+  const getTargetDuration = (targetNodeId: string) => {
     const sub = objectiveContData.subObjectives.find(
-      (s) => s.targetSlug === targetSlug
+      (s) => s.targetNodeId === targetNodeId
     );
     if (sub?.curatedSequence && sub.curatedSequence.length > 0) {
       return sub.curatedSequence.reduce(
-        (acc, slug) => acc + getGuideDuration(slug),
+        (acc, nodeId) => acc + getGuideDuration(nodeId),
         0
       );
     }
-    return getGuideDuration(targetSlug);
+    return getGuideDuration(targetNodeId);
   };
 
   const totalDuration = objectiveContData.targets.reduce(
-    (acc, targetSlug) => acc + getTargetDuration(targetSlug),
+    (acc, targetNodeId) => acc + getTargetDuration(targetNodeId),
     0
   );
 
-  const totalGuides = objectiveContData.targets.reduce((acc, targetSlug) => {
+  const totalGuides = objectiveContData.targets.reduce((acc, targetNodeId) => {
     const sub = objectiveContData.subObjectives.find(
-      (s) => s.targetSlug === targetSlug
+      (s) => s.targetNodeId === targetNodeId
     );
     if (sub?.curatedSequence && sub.curatedSequence.length > 0) {
       return acc + sub.curatedSequence.length;
@@ -208,7 +203,7 @@ export const PreviewObjective = ({
 
   const featuredSub = featuredTargetSlug
     ? objectiveContData.subObjectives.find(
-        (s) => s.targetSlug === featuredTargetSlug
+        (s) => s.targetNodeId === featuredTargetSlug
       )
     : null;
 
@@ -308,9 +303,9 @@ export const PreviewObjective = ({
             </p>
           ) : (
             <ol className="m-0 flex w-full list-none flex-col gap-10 px-0 pb-8">
-              {objectiveContData.targets.map((targetSlug, idx) => {
+              {objectiveContData.targets.map((targetNodeId, idx) => {
                 const sub = objectiveContData.subObjectives.find(
-                  (s) => s.targetSlug === targetSlug
+                  (s) => s.targetNodeId === targetNodeId
                 );
 
                 return (
@@ -326,22 +321,22 @@ export const PreviewObjective = ({
                       <CardHeader className="p-4">
                         <div className="flex items-center justify-between gap-4">
                           <CardTitle className="text-base font-medium">
-                            {getGuideTitle(targetSlug)}
+                            {getGuideTitle(targetNodeId)}
                           </CardTitle>
-                          {getTargetDuration(targetSlug) > 0 && (
+                          {getTargetDuration(targetNodeId) > 0 && (
                             <span className="shrink-0 font-mono text-[10px] text-muted-foreground uppercase">
-                              {getTargetDuration(targetSlug)} min
+                              {getTargetDuration(targetNodeId)} min
                             </span>
                           )}
                         </div>
-                        {getGuideSummary(targetSlug) && (
+                        {getGuideSummary(targetNodeId) && (
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {getGuideSummary(targetSlug)}
+                            {getGuideSummary(targetNodeId)}
                           </p>
                         )}
-                        {getGuideTags(targetSlug).length > 0 && (
+                        {getGuideTags(targetNodeId).length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {getGuideTags(targetSlug).map((tag: any) => {
+                            {getGuideTags(targetNodeId).map((tag: any) => {
                               const tagSlug =
                                 typeof tag === "string" ? tag : tag.slug;
                               const tagName =

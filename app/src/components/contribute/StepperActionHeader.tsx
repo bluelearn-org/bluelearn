@@ -39,7 +39,10 @@ type PropTypes = {
   onPublish?: () => void;
   guides?: Array<GuideListItem>;
   existingGuideBaseIds?: Array<string>;
-  onAddGuideNodes?: (nodes: Array<ObjectiveGraphNode>) => void;
+  onAddGuideNodes?: (
+    nodes: Array<ObjectiveGraphNode>,
+    options?: { pullPrerequisitesFor: Array<string> }
+  ) => void;
 };
 
 type SaveStatus = "saving" | "unsaved" | "saved-locally" | "saved";

@@ -39,6 +39,7 @@ import {
   isDrawnEdge,
   removeEdges,
   removeNodes,
+  targetNodeIds,
 } from "@/lib/objectiveGraphEdits";
 import { useTheme } from "@/lib/themeProvider";
 
@@ -69,8 +70,6 @@ const DIMMED_EDGE_COLOR = "#94a3b833";
 
 type Guide = Awaited<ReturnType<typeof listGuides>>[number];
 
-type TargetsChange = { added?: Array<string>; removed?: Array<string> };
-
 type PropTypes = {
   Stepper: any;
   type: ContributionType | null;
@@ -81,7 +80,6 @@ type PropTypes = {
   guides?: Array<Guide>;
   objectiveGraph: ObjectiveGraphData;
   setObjectiveGraph?: Dispatch<SetStateAction<ObjectiveGraphData>>;
-  onTargetsChange?: (change: TargetsChange) => void;
 };
 
 export const ObjectiveDesign = ({
@@ -93,20 +91,21 @@ export const ObjectiveDesign = ({
   guides,
   objectiveGraph,
   setObjectiveGraph,
-  onTargetsChange,
 }: PropTypes) => {
   const guideBaseIdsOnCanvas = objectiveGraph.nodes.flatMap((n) =>
     n.type === "guide_request" ? [] : [n.guideBaseId]
   );
 
-  const addGuideNodes = (nodes: Array<ObjectiveGraphNode>) => {
+  const addGuideNodes = (
+    nodes: Array<ObjectiveGraphNode>,
+    { pullPrerequisitesFor = [] }: { pullPrerequisitesFor?: Array<string> } = {}
+  ) => {
     setObjectiveGraph?.((graph) =>
       nodes.reduce(
         (next, node) =>
           node.type === "guide_request"
             ? addRequestNode(next, { title: node.title, summary: node.summary })
             : addGuideNode(next, {
-                type: node.type,
                 guideBaseId: node.guideBaseId,
                 guideSlug: node.guideSlug,
                 title: node.title,
@@ -115,19 +114,20 @@ export const ObjectiveDesign = ({
       )
     );
 
-    const targets = nodes.flatMap((n) => (n.type === "target" ? [n] : []));
-    if (targets.length === 0) return;
+    const pulled = nodes.flatMap((n) =>
+      n.type === "guide" && pullPrerequisitesFor.includes(n.guideBaseId)
+        ? [n]
+        : []
+    );
 
-    onTargetsChange?.({ added: targets.map((t) => t.guideSlug) });
-
-    for (const target of targets) {
-      getGuideWalkthrough(target.guideSlug)
+    for (const guide of pulled) {
+      getGuideWalkthrough(guide.guideSlug)
         .then((walkthrough) =>
           setObjectiveGraph?.((graph) => {
-            const targetStillThere = graph.nodes.some(
-              (n) => n.type === "target" && n.guideBaseId === target.guideBaseId
+            const guideStillThere = graph.nodes.some(
+              (n) => n.type === "guide" && n.guideBaseId === guide.guideBaseId
             );
-            if (!targetStillThere) return graph;
+            if (!guideStillThere) return graph;
 
             const added = addWalkthrough(graph, walkthrough);
             const titleOf = (id: string) =>
@@ -146,7 +146,7 @@ export const ObjectiveDesign = ({
           })
         )
         .catch(() =>
-          toast.error(`Could not load the prerequisites of ${target.title}`)
+          toast.error(`Could not load the prerequisites of ${guide.title}`)
         );
     }
   };
@@ -170,7 +170,6 @@ export const ObjectiveDesign = ({
           <ObjectiveGraph
             graph={objectiveGraph}
             onGraphChange={setObjectiveGraph}
-            onTargetsChange={onTargetsChange}
           />
         </ReactFlowProvider>
       </div>
@@ -181,14 +180,9 @@ export const ObjectiveDesign = ({
 type ObjectiveGraphProps = {
   graph: ObjectiveGraphData;
   onGraphChange?: (graph: ObjectiveGraphData) => void;
-  onTargetsChange?: (change: TargetsChange) => void;
 };
 
-const ObjectiveGraph = ({
-  graph,
-  onGraphChange,
-  onTargetsChange,
-}: ObjectiveGraphProps) => {
+const ObjectiveGraph = ({ graph, onGraphChange }: ObjectiveGraphProps) => {
   const { theme } = useTheme();
 
   const flowNodes = useMemo(() => toFlowNodes(graph), [graph]);
@@ -347,13 +341,7 @@ const ObjectiveGraph = ({
   }) => {
     const nodeIds = deleted.nodes.map((n) => n.id);
     const edgeIds = deleted.edges.map((e) => e.id);
-    const removedTargets = graph.nodes.flatMap((n) =>
-      n.type === "target" && nodeIds.includes(n.id) ? [n.guideSlug] : []
-    );
-
     onGraphChange?.(removeEdges(removeNodes(graph, nodeIds), edgeIds));
-    if (removedTargets.length > 0)
-      onTargetsChange?.({ removed: removedTargets });
 
     // A deleted node never fires mouse leave, so its hover would dim the rest.
     if (hoveredNodeId && nodeIds.includes(hoveredNodeId))
@@ -432,6 +420,7 @@ function toFlowNodes(
     }).map((n) => [n.id, n.position])
   );
   const positionOf = (id: string) => positionById.get(id)!;
+  const targets = targetNodeIds(graph);
 
   return graph.nodes.map((node) =>
     node.type === "guide_request"
@@ -443,7 +432,7 @@ function toFlowNodes(
           data: {
             title: node.title,
             summary: node.summary,
-            isTarget: false,
+            isTarget: targets.has(node.id),
             isHovered: false,
             isDimmed: false,
           },
@@ -455,7 +444,7 @@ function toFlowNodes(
           position: positionOf(node.id),
           data: {
             title: node.title,
-            isTarget: node.type === "target",
+            isTarget: targets.has(node.id),
             isHovered: false,
             isDimmed: false,
           },

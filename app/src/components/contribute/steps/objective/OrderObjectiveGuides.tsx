@@ -22,6 +22,11 @@ import { StepperActionHeader } from "@/components/contribute/StepperActionHeader
 import { formatDuration } from "@/lib/guideUtils";
 import { getTargetPrerequisiteWalkthrough } from "@/lib/useGraphLayout";
 import {
+  nodeCard,
+  prerequisiteWalkthrough,
+  walkthroughOnCanvas,
+} from "@/lib/objectiveGraphEdits";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -61,7 +66,11 @@ export const OrderObjectiveGuides = ({
     () => new Map(guides.map((g) => [g.slug, g])),
     [guides]
   );
-  const [targetSlug, setTargetSlug] = useState<string>(
+  const graph = objectiveContData.graph;
+  const cardOf = (nodeId: string) => nodeCard(graph, guidesMap, nodeId);
+
+  // Everything below is keyed by node id: a target may be a request.
+  const [targetNodeId, setTargetNodeId] = useState<string>(
     objectiveContData.targets[0] || ""
   );
   const [curatedSequence, setCuratedSequence] = useState<Array<string>>([]);
@@ -69,44 +78,58 @@ export const OrderObjectiveGuides = ({
   const [hoveredGuide, setHoveredGuide] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"sequence" | "graph">("sequence");
 
-  const targetGuide = targetSlug ? guidesMap.get(targetSlug) : undefined;
+  const targetNode = graph.nodes.find((n) => n.id === targetNodeId);
+  const targetGuide = targetNodeId ? cardOf(targetNodeId) : undefined;
 
   const totalDuration = useMemo(() => {
     let mins = targetGuide?.duration_minutes || 0;
-    curatedSequence.forEach((slug) => {
-      const guide = guidesMap.get(slug);
+    curatedSequence.forEach((nodeId) => {
+      const guide = nodeCard(graph, guidesMap, nodeId);
       if (guide && guide.duration_minutes) {
         mins += guide.duration_minutes;
       }
     });
     return mins;
-  }, [curatedSequence, targetGuide, guidesMap]);
+  }, [curatedSequence, targetGuide, graph, guidesMap]);
 
   const formattedDuration = useMemo(() => {
     return formatDuration(totalDuration);
   }, [totalDuration]);
 
-  const [walkthroughData, setWalkthroughData] = useState<Walkthrough | null>(
-    null
-  );
-  const [walkthroughSlug, setWalkthroughSlug] = useState<string>("");
+  // A guide target keeps its walkthrough; a request has none to fetch.
+  const targetGuideSlug =
+    targetNode?.type === "guide" ? targetNode.guideSlug : "";
+  const [fetched, setFetched] = useState<{
+    slug: string;
+    walkthrough: Walkthrough;
+  } | null>(null);
 
   useEffect(() => {
-    setWalkthroughData(null);
-    if (!targetSlug) return;
+    setFetched(null);
+    if (!targetGuideSlug) return;
 
     const controller = new AbortController();
-    getGuideWalkthrough(targetSlug, { signal: controller.signal })
+    getGuideWalkthrough(targetGuideSlug, { signal: controller.signal })
       .then((data) => {
-        setWalkthroughData(getTargetPrerequisiteWalkthrough(data, targetSlug));
-        setWalkthroughSlug(targetSlug);
+        setFetched({
+          slug: targetGuideSlug,
+          walkthrough: getTargetPrerequisiteWalkthrough(data, targetGuideSlug),
+        });
       })
       .catch((err) => {
         if (!controller.signal.aborted) console.error(err);
       });
 
     return () => controller.abort();
-  }, [targetSlug]);
+  }, [targetGuideSlug]);
+
+  const walkthroughData = useMemo(() => {
+    if (!targetNode) return null;
+    if (targetNode.type === "guide_request")
+      return prerequisiteWalkthrough(graph, targetNode.id);
+    if (fetched?.slug !== targetNode.guideSlug) return null;
+    return walkthroughOnCanvas(graph, fetched.walkthrough);
+  }, [targetNode, graph, fetched]);
 
   const { directPrereqs, directDependents } = useMemo(() => {
     const prereqs = new Map<string, Set<string>>();
@@ -114,12 +137,7 @@ export const OrderObjectiveGuides = ({
     if (!walkthroughData)
       return { directPrereqs: prereqs, directDependents: dependents };
 
-    const slugById = new Map(walkthroughData.nodes.map((n) => [n.id, n.slug]));
-    walkthroughData.edges.forEach((edge) => {
-      const from = slugById.get(edge.from_id);
-      const to = slugById.get(edge.to_id);
-      if (!from || !to) return;
-
+    walkthroughData.edges.forEach(({ from_id: from, to_id: to }) => {
       if (!prereqs.has(to)) prereqs.set(to, new Set());
       prereqs.get(to)!.add(from);
       if (!dependents.has(from)) dependents.set(from, new Set());
@@ -140,20 +158,20 @@ export const OrderObjectiveGuides = ({
     });
   };
 
-  const updateSubObjective = (slug: string, newSeq: Array<string>) => {
+  const updateSubObjective = (nodeId: string, newSeq: Array<string>) => {
     setObjectiveContData((prev) => {
-      const exists = prev.subObjectives.some((s) => s.targetSlug === slug);
+      const exists = prev.subObjectives.some((s) => s.targetNodeId === nodeId);
       const updatedSubs = exists
         ? prev.subObjectives.map((s) =>
-            s.targetSlug === slug
-              ? { ...s, curatedSequence: newSeq, selectedSlugs: newSeq }
+            s.targetNodeId === nodeId
+              ? { ...s, curatedSequence: newSeq, selectedNodeIds: newSeq }
               : s
           )
         : [
             ...prev.subObjectives,
             {
-              targetSlug: slug,
-              selectedSlugs: newSeq,
+              targetNodeId: nodeId,
+              selectedNodeIds: newSeq,
               curatedSequence: newSeq,
             },
           ];
@@ -164,66 +182,82 @@ export const OrderObjectiveGuides = ({
     });
   };
 
-  // Sync targetSlug if the list of targets changes and targetSlug becomes invalid
+  // Sync targetNodeId if the list of targets changes and it becomes invalid
   useEffect(() => {
     if (objectiveContData.targets.length > 0) {
-      if (!objectiveContData.targets.includes(targetSlug)) {
-        setTargetSlug(objectiveContData.targets[0] || "");
+      if (!objectiveContData.targets.includes(targetNodeId)) {
+        setTargetNodeId(objectiveContData.targets[0] || "");
       }
     } else {
-      setTargetSlug("");
+      setTargetNodeId("");
     }
-  }, [objectiveContData.targets, targetSlug]);
+  }, [objectiveContData.targets, targetNodeId]);
 
   // Reordering targets in the previous step needs new load on order guides page.
   const firstTarget = objectiveContData.targets[0] || "";
   useEffect(() => {
-    setTargetSlug(firstTarget);
+    setTargetNodeId(firstTarget);
   }, [firstTarget]);
 
-  // Sync initial curated sequence when target guide changes and walkthrough is ready
+  // The seed this session wrote per target. A sequence still equal to it is
+  // untouched and follows the canvas: a target's prerequisites usually land on
+  // the canvas after it became a target.
+  const seededRef = useRef(new Map<string, string>());
+
+  // Sync initial curated sequence when the target changes and its walkthrough is ready
   useEffect(() => {
-    if (!targetSlug) return;
+    if (!targetNodeId) return;
 
     const existingSub = objectiveContData.subObjectives.find(
-      (s) => s.targetSlug === targetSlug
+      (s) => s.targetNodeId === targetNodeId
     );
+    const previousSeed = seededRef.current.get(targetNodeId);
+    const untouched =
+      existingSub &&
+      JSON.stringify(existingSub.curatedSequence) === previousSeed;
 
-    if (existingSub) {
+    if (existingSub && (!untouched || !walkthroughData)) {
       setCuratedSequence(existingSub.curatedSequence);
       return;
     }
 
-    if (!walkthroughData || walkthroughSlug !== targetSlug) {
+    if (!walkthroughData) {
       setCuratedSequence([]);
       return;
     }
 
-    // Seed with all prerequisites (excluding the target guide itself) sorted by levels
+    // Seed with all prerequisites (excluding the target itself) sorted by levels
     const initialPrereqs = walkthroughData.nodes
-      .filter((n) => n.slug !== targetSlug)
+      .filter((n) => n.id !== targetNodeId)
       .sort((a, b) => a.level - b.level)
-      .map((n) => n.slug);
+      .map((n) => n.id);
+    const seed = JSON.stringify(initialPrereqs);
+    seededRef.current.set(targetNodeId, seed);
 
     setCuratedSequence(initialPrereqs);
 
     setObjectiveContData((prev) => {
-      if (prev.subObjectives.some((s) => s.targetSlug === targetSlug)) {
-        return prev;
-      }
+      const sub = prev.subObjectives.find(
+        (s) => s.targetNodeId === targetNodeId
+      );
+      const current = sub && JSON.stringify(sub.curatedSequence);
+      if (sub && (current === seed || current !== previousSeed)) return prev;
+
+      const seeded = {
+        targetNodeId,
+        selectedNodeIds: initialPrereqs,
+        curatedSequence: initialPrereqs,
+      };
       return {
         ...prev,
-        subObjectives: [
-          ...prev.subObjectives,
-          {
-            targetSlug,
-            selectedSlugs: initialPrereqs,
-            curatedSequence: initialPrereqs,
-          },
-        ],
+        subObjectives: sub
+          ? prev.subObjectives.map((s) =>
+              s.targetNodeId === targetNodeId ? seeded : s
+            )
+          : [...prev.subObjectives, seeded],
       };
     });
-  }, [targetSlug, walkthroughData, walkthroughSlug]);
+  }, [targetNodeId, walkthroughData]);
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const draggedIndexRef = useRef<number | null>(null);
@@ -260,7 +294,7 @@ export const OrderObjectiveGuides = ({
     if (!canPlaceAt(newSeq, draggedItem, index)) return;
 
     setCuratedSequence(newSeq);
-    updateSubObjective(targetSlug, newSeq);
+    updateSubObjective(targetNodeId, newSeq);
 
     draggedIndexRef.current = index;
     setDraggedIndex(index);
@@ -290,7 +324,7 @@ export const OrderObjectiveGuides = ({
       newSeq = curatedSequence.filter((s) => s !== slug);
     }
     setCuratedSequence(newSeq);
-    updateSubObjective(targetSlug, newSeq);
+    updateSubObjective(targetNodeId, newSeq);
   };
 
   return (
@@ -321,18 +355,18 @@ export const OrderObjectiveGuides = ({
             </FieldDescription>
           </div>
           <div className="flex scrollbar-thin [scrollbar-color:var(--border)_transparent] items-center gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
-            {objectiveContData.targets.map((slug, index) => {
-              const guide = guidesMap.get(slug);
+            {objectiveContData.targets.map((nodeId, index) => {
+              const guide = cardOf(nodeId);
               if (!guide) return null;
 
-              const isActive = slug === targetSlug;
+              const isActive = nodeId === targetNodeId;
 
               return (
-                <div key={slug} className="flex shrink-0 items-center gap-2">
+                <div key={nodeId} className="flex shrink-0 items-center gap-2">
                   {index > 0 && <div className="h-px w-4 bg-border/60" />}
                   <button
                     type="button"
-                    onClick={() => setTargetSlug(slug)}
+                    onClick={() => setTargetNodeId(nodeId)}
                     className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                       isActive
                         ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/20"
@@ -434,7 +468,7 @@ export const OrderObjectiveGuides = ({
 
                 <div className="space-y-3">
                   {curatedSequence.map((slug, index) => {
-                    const guide = guidesMap.get(slug);
+                    const guide = cardOf(slug);
                     if (!guide) return null;
 
                     const isDragging = index === draggedIndex;
@@ -484,13 +518,13 @@ export const OrderObjectiveGuides = ({
                   {targetGuide && (
                     <div
                       className={`flex items-start gap-3 rounded-lg border border-primary bg-primary/5 p-3 shadow-sm transition-all duration-150 ${
-                        hoveredGuide === targetGuide.slug
+                        hoveredGuide === targetNodeId
                           ? "shadow-md ring-2 ring-primary/40"
                           : "hover:shadow-md hover:ring-2 hover:ring-primary/40"
                       }`}
                       onMouseEnter={() => {
                         if (draggedIndex === null)
-                          setHoveredGuide(targetGuide.slug);
+                          setHoveredGuide(targetNodeId);
                       }}
                       onMouseLeave={() => {
                         if (draggedIndex === null) setHoveredGuide(null);
@@ -611,7 +645,7 @@ export const OrderObjectiveGuides = ({
                 <CurationGraph
                   walkthroughData={walkthroughData}
                   curatedSequence={curatedSequence}
-                  targetSlug={targetSlug}
+                  targetSlug={targetNodeId}
                   onToggleGuide={handleToggleGuide}
                   hoveredGuide={hoveredGuide}
                   onHoverGuide={setHoveredGuide}

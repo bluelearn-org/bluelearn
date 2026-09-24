@@ -6,6 +6,7 @@ import { StepperActionHeader } from "@/components/contribute/StepperActionHeader
 import { FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
+import { nodeCard } from "@/lib/objectiveGraphEdits";
 
 type PropTypes = {
   Stepper: any;
@@ -88,14 +89,14 @@ export const OrderTargetGuides = ({
         </p>
 
         <div className="min-h-0 flex-1 scrollbar-thin [scrollbar-color:var(--border)_transparent] space-y-3 overflow-y-auto pt-2 pr-4 pb-4 pl-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
-          {targets.map((slug, index) => {
-            const guide = guidesMap.get(slug);
+          {targets.map((nodeId, index) => {
+            const guide = nodeCard(objectiveContData.graph, guidesMap, nodeId);
             if (!guide) return null;
 
             const isDragging = index === draggedIndex;
 
             return (
-              <div key={slug} className="mr-auto">
+              <div key={nodeId} className="mr-auto">
                 <DraggableGuideCard
                   guide={guide}
                   index={index}
