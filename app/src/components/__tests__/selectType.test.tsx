@@ -40,6 +40,7 @@ describe("SelectType suspension choices", () => {
 
     expect(screen.getByRole("button", { name: "Objective" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Guide" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Guide Request" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Variant" })).toBeNull();
   });
 
@@ -49,6 +50,7 @@ describe("SelectType suspension choices", () => {
     renderSelectType();
 
     expect(screen.getByRole("button", { name: "Guide" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Guide Request" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Variant" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Objective" })).toBeTruthy();
   });

@@ -78,14 +78,14 @@ export const prerequisitesRouter = new Hono<HonoEnv>()
   );
 
 export const todosRouter = new Hono<HonoEnv>()
-  // Returns open todo prerequisites as { todos }.
+  // Returns open guide requests as { todos }.
   .get(
     "/",
     describeRoute({
       tags: ["graph"],
-      summary: "List open todo prerequisites",
+      summary: "List open guide requests",
       responses: {
-        200: jsonContent(todoListResponseSchema, "Open todo prerequisites"),
+        200: jsonContent(todoListResponseSchema, "Open guide requests"),
       },
     }),
     async (c) => {
@@ -99,10 +99,10 @@ export const todosRouter = new Hono<HonoEnv>()
     "/",
     describeRoute({
       tags: ["graph"],
-      summary: "Declare a todo prerequisite",
+      summary: "Create a guide request",
       security: [{ bearerAuth: [] }],
       responses: {
-        201: jsonContent(todoResponseSchema, "The created todo prerequisite"),
+        201: jsonContent(todoResponseSchema, "The created guide request"),
         ...errorResponses(400, 401, 403, 404, 429),
       },
     }),

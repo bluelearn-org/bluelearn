@@ -36,7 +36,7 @@ export const TodoCard = ({ todo }: PropTypes) => {
         <CardHeader className="min-w-0 p-6">
           <div className="flex items-center justify-between">
             <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-              Todo
+              Request
             </p>
             <Badge
               variant="default"
@@ -85,14 +85,14 @@ export const TodoCard = ({ todo }: PropTypes) => {
                   </li>
                 )}
               </ul>
-
-              {todo.claimCount > 0 && (
-                <p className="pt-2 text-sm text-muted-foreground">
-                  {claimNotice(todo.claimCount)} You can still create one if you
-                  think yours will be different.
-                </p>
-              )}
             </div>
+          )}
+
+          {todo.claimCount > 0 && (
+            <p className="pt-2 text-sm text-muted-foreground">
+              {claimNotice(todo.claimCount)} You can still create one if you
+              think yours will be different.
+            </p>
           )}
         </CardContent>
       </Card>

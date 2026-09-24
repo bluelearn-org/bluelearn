@@ -32,6 +32,7 @@ type PropTypes = {
   isSynced?: boolean;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
+  confirmBeforePublish?: boolean;
 };
 
 type SaveStatus = "saving" | "unsaved" | "saved-locally" | "saved";
@@ -113,6 +114,7 @@ export const StepperActionHeader = ({
   hideGuidelines,
   onSaveDraft,
   onPublish,
+  confirmBeforePublish = true,
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -123,6 +125,14 @@ export const StepperActionHeader = ({
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
+  const submit = () => {
+    if (confirmBeforePublish) {
+      handleSubmit();
+      return;
+    }
+
+    onPublish?.();
+  };
 
   // batch submit feedback so it's more obvious for the user
   const submitLabel = guideCount > 1 ? `Submit All for Review` : publishLabel;
@@ -195,7 +205,7 @@ export const StepperActionHeader = ({
               type="button"
               className="btn-pri disabled:pointer-events-none disabled:opacity-50"
               disabled={submitting}
-              onClick={handleSubmit}
+              onClick={submit}
             >
               {submitLabel}
             </button>
@@ -260,7 +270,7 @@ export const StepperActionHeader = ({
                 type="button"
                 className="btn-pri inline-flex items-center px-3 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 disabled={submitting}
-                onClick={handleSubmit}
+                onClick={submit}
               >
                 {publishLabel.toLowerCase().startsWith("submit")
                   ? compactSubmitLabel
