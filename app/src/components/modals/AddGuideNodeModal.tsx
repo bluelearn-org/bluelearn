@@ -57,40 +57,54 @@ export const AddGuideNodeModal = ({
       !!g.slug && !existingGuideBaseIds.includes(g.id)
   );
 
-  const guideItems = availableGuides.map((g) => ({
-    value: g.id,
-    label: g.title ?? g.slug,
-    description: g.summary ?? undefined,
-  }));
+  // A guide picked on one tab leaves the other's list, so it lands once.
+  const guideItems = (pickedOnOtherTab: Array<string>) =>
+    availableGuides
+      .filter((g) => !pickedOnOtherTab.includes(g.id))
+      .map((g) => ({
+        value: g.id,
+        label: g.title ?? g.slug,
+        description: g.summary ?? undefined,
+      }));
 
   const title = requestTitle.trim();
   const summary = requestSummary.trim();
 
-  const selectedBaseIds =
-    mode === "target" ? selectedTargetIds : selectedGuideIds;
+  const requestStarted = title.length > 0 || summary.length > 0;
+  const requestComplete = title.length > 0 && summary.length > 0;
+  const pickCount = selectedGuideIds.length + selectedTargetIds.length;
 
-  const canAdd =
-    mode === "request"
-      ? title.length > 0 && summary.length > 0
-      : selectedBaseIds.length > 0;
+  // A half-typed request blocks Add rather than being dropped from the batch.
+  const canAdd = requestStarted ? requestComplete : pickCount > 0;
 
-  const chosenNodes = (): Array<ObjectiveGraphNode> => {
-    if (mode === "request") {
-      return [
-        { id: crypto.randomUUID(), type: "guide_request", title, summary },
-      ];
-    }
-
-    return availableGuides
-      .filter((g) => selectedBaseIds.includes(g.id))
+  const pickedNodes = (
+    baseIds: Array<string>,
+    type: "guide" | "target"
+  ): Array<ObjectiveGraphNode> =>
+    availableGuides
+      .filter((g) => baseIds.includes(g.id))
       .map((g) => ({
         id: crypto.randomUUID(),
-        type: mode === "target" ? "target" : "guide",
+        type,
         guideBaseId: g.id,
         guideSlug: g.slug,
         title: g.title ?? g.slug,
       }));
-  };
+
+  const chosenNodes = (): Array<ObjectiveGraphNode> => [
+    ...pickedNodes(selectedGuideIds, "guide"),
+    ...pickedNodes(selectedTargetIds, "target"),
+    ...(requestComplete
+      ? [
+          {
+            id: crypto.randomUUID(),
+            type: "guide_request" as const,
+            title,
+            summary,
+          },
+        ]
+      : []),
+  ];
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -131,7 +145,7 @@ export const AddGuideNodeModal = ({
             {/* ponytail: modal popover eats the first tab click while open; upgrade when ui/combobox scrolls without modal */}
             <Combobox
               multiple
-              items={guideItems}
+              items={guideItems(selectedTargetIds)}
               value={selectedGuideIds}
               onValueChange={setSelectedGuideIds}
               modal
@@ -145,7 +159,7 @@ export const AddGuideNodeModal = ({
             </p>
             <Combobox
               multiple
-              items={guideItems}
+              items={guideItems(selectedGuideIds)}
               value={selectedTargetIds}
               onValueChange={setSelectedTargetIds}
               modal
