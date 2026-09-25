@@ -21,11 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 import { formatDuration } from "@/lib/guideUtils";
 import { getTargetPrerequisiteWalkthrough } from "@/lib/useGraphLayout";
-import {
-  nodeCard,
-  prerequisiteWalkthrough,
-  walkthroughOnCanvas,
-} from "@/lib/objectiveGraphEdits";
+import { nodeCard, prerequisiteWalkthrough } from "@/lib/objectiveGraphEdits";
 import {
   Card,
   CardContent,
@@ -128,7 +124,7 @@ export const OrderObjectiveGuides = ({
     if (targetNode.type === "guide_request")
       return prerequisiteWalkthrough(graph, targetNode.id);
     if (fetched?.slug !== targetNode.guideSlug) return null;
-    return walkthroughOnCanvas(graph, fetched.walkthrough);
+    return prerequisiteWalkthrough(graph, targetNode.id, fetched.walkthrough);
   }, [targetNode, graph, fetched]);
 
   const { directPrereqs, directDependents } = useMemo(() => {

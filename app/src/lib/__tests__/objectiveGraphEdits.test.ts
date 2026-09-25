@@ -15,6 +15,7 @@ import {
   edgesCutByConnecting,
   graphToApi,
   guideEdgeId,
+  prerequisiteWalkthrough,
   removeEdges,
   removeNodes,
   targetNodeIds,
@@ -502,5 +503,108 @@ describe("graphToApi", () => {
       ],
       edges: [{ from_node_id: "a", to_node_id: "r" }],
     });
+  });
+});
+
+describe("prerequisiteWalkthrough", () => {
+  const step = (id: string): Walkthrough["nodes"][number] => ({
+    id: `base-${id}`,
+    slug: id,
+    title: `${id} from the guide`,
+    summary: `${id} summary`,
+    level: 7,
+    duration_minutes: 5,
+    tags: [{ slug: "math", name: "Math" }],
+  });
+
+  const prerequisite = (from: string, to: string) => ({
+    from_id: `base-${from}`,
+    to_id: `base-${to}`,
+  });
+
+  const levels = (walkthrough: Walkthrough) =>
+    Object.fromEntries(walkthrough.nodes.map((n) => [n.id, n.level]));
+
+  it("lists a guide target's own prerequisites and the arrows drawn into it", () => {
+    const walkthrough = prerequisiteWalkthrough(
+      {
+        nodes: [guide("arithmetic"), guide("fractions"), guide("algebra")],
+        edges: [drawn("fractions", "algebra")],
+      },
+      "algebra",
+      {
+        nodes: [step("arithmetic"), step("algebra")],
+        edges: [prerequisite("arithmetic", "algebra")],
+      }
+    );
+
+    expect(levels(walkthrough)).toEqual({
+      arithmetic: 0,
+      fractions: 0,
+      algebra: 1,
+    });
+    expect(walkthrough.edges).toEqual([
+      { from_id: "fractions", to_id: "algebra" },
+      { from_id: "arithmetic", to_id: "algebra" },
+    ]);
+    expect(walkthrough.nodes.find((n) => n.id === "arithmetic")).toEqual({
+      ...step("arithmetic"),
+      id: "arithmetic",
+      slug: "arithmetic",
+      level: 0,
+    });
+  });
+
+  it("lists an edge held by both the canvas and the walkthrough once", () => {
+    const walkthrough = prerequisiteWalkthrough(
+      {
+        nodes: [guide("arithmetic"), guide("algebra")],
+        edges: [fromGuides("arithmetic", "algebra")],
+      },
+      "algebra",
+      {
+        nodes: [step("arithmetic"), step("algebra")],
+        edges: [prerequisite("arithmetic", "algebra")],
+      }
+    );
+
+    expect(walkthrough.edges).toEqual([
+      { from_id: "arithmetic", to_id: "algebra" },
+    ]);
+  });
+
+  it("leaves out a walkthrough prerequisite the canvas does not hold", () => {
+    const walkthrough = prerequisiteWalkthrough(
+      { nodes: [guide("arithmetic"), guide("algebra")], edges: [] },
+      "algebra",
+      {
+        nodes: [step("geometry"), step("arithmetic"), step("algebra")],
+        edges: [
+          prerequisite("geometry", "algebra"),
+          prerequisite("arithmetic", "algebra"),
+        ],
+      }
+    );
+
+    expect(levels(walkthrough)).toEqual({ arithmetic: 0, algebra: 1 });
+    expect(walkthrough.edges).toEqual([
+      { from_id: "arithmetic", to_id: "algebra" },
+    ]);
+  });
+
+  it("keeps a real prerequisite whose chain to the target lost a card", () => {
+    const walkthrough = prerequisiteWalkthrough(
+      { nodes: [guide("counting"), guide("algebra")], edges: [] },
+      "algebra",
+      {
+        nodes: [step("counting"), step("arithmetic"), step("algebra")],
+        edges: [
+          prerequisite("counting", "arithmetic"),
+          prerequisite("arithmetic", "algebra"),
+        ],
+      }
+    );
+
+    expect(levels(walkthrough)).toEqual({ counting: 0, algebra: 0 });
   });
 });

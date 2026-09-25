@@ -169,73 +169,79 @@ export function nodeCard<TGuide>(
   );
 }
 
-// A target's drawn prerequisites, walked backward over the canvas edges, as a
-// walkthrough keyed by node id: a request target has no guide to fetch one for.
+// A target's prerequisites walked backward over the canvas edges and, for a
+// guide target, its fetched walkthrough rekeyed onto canvas node ids; a guide
+// the canvas does not hold cannot be sequenced, so it is left out.
 export function prerequisiteWalkthrough(
   graph: ObjectiveGraphData,
-  targetId: string
-): Walkthrough {
-  const reached = new Set([targetId]);
-  const pending = [targetId];
-  while (pending.length > 0) {
-    const current = pending.pop()!;
-    for (const e of graph.edges) {
-      if (e.target !== current || reached.has(e.source)) continue;
-      reached.add(e.source);
-      pending.push(e.source);
-    }
-  }
-
-  const edges = graph.edges.filter(
-    (e) => reached.has(e.source) && reached.has(e.target)
-  );
-  // longest path from a root, so a prerequisite always sits below
-  const level = new Map([...reached].map((id) => [id, 0]));
-  for (let pass = 0; pass < reached.size; pass++)
-    for (const e of edges)
-      level.set(
-        e.target,
-        Math.max(level.get(e.target)!, level.get(e.source)! + 1)
-      );
-
-  return {
-    nodes: graph.nodes
-      .filter((n) => reached.has(n.id))
-      .map((n) => ({
-        id: n.id,
-        slug: n.id,
-        title: n.title,
-        summary: n.type === "guide_request" ? n.summary : null,
-        level: level.get(n.id)!,
-        duration_minutes: 0,
-        tags: [],
-      })),
-    edges: edges.map((e) => ({ from_id: e.source, to_id: e.target })),
-  };
-}
-
-// A fetched guide walkthrough rekeyed onto the canvas's node ids; a guide the
-// canvas does not hold cannot be sequenced, so it is left out.
-export function walkthroughOnCanvas(
-  graph: ObjectiveGraphData,
-  walkthrough: Walkthrough
+  targetId: string,
+  walkthrough?: Walkthrough
 ): Walkthrough {
   const nodeIdByBase = new Map(
     graph.nodes.flatMap((n) =>
       n.type === "guide" ? [[n.guideBaseId, n.id] as const] : []
     )
   );
+  const fetchedById = new Map(
+    (walkthrough?.nodes ?? []).flatMap((n) => {
+      const id = nodeIdByBase.get(n.id);
+      return id ? [[id, n] as const] : [];
+    })
+  );
+
+  const merged = new Map<string, { from_id: string; to_id: string }>();
+  const merge = (from_id: string, to_id: string) =>
+    merged.set(JSON.stringify([from_id, to_id]), { from_id, to_id });
+  for (const e of graph.edges) merge(e.source, e.target);
+  for (const e of walkthrough?.edges ?? []) {
+    const from_id = nodeIdByBase.get(e.from_id);
+    const to_id = nodeIdByBase.get(e.to_id);
+    if (from_id && to_id) merge(from_id, to_id);
+  }
+
+  // The fetched walkthrough is already the target's whole closure, so its
+  // guides stay in even when a guide between them was removed from the canvas.
+  const reached = new Set([targetId, ...fetchedById.keys()]);
+  const pending = [...reached];
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    for (const e of merged.values()) {
+      if (e.to_id !== current || reached.has(e.from_id)) continue;
+      reached.add(e.from_id);
+      pending.push(e.from_id);
+    }
+  }
+
+  const edges = [...merged.values()].filter(
+    (e) => reached.has(e.from_id) && reached.has(e.to_id)
+  );
+  // longest path from a root, so a prerequisite always sits below
+  const level = new Map([...reached].map((id) => [id, 0]));
+  for (let pass = 0; pass < reached.size; pass++)
+    for (const e of edges)
+      level.set(
+        e.to_id,
+        Math.max(level.get(e.to_id)!, level.get(e.from_id)! + 1)
+      );
 
   return {
-    nodes: walkthrough.nodes.flatMap((n) => {
-      const id = nodeIdByBase.get(n.id);
-      return id ? [{ ...n, id, slug: id }] : [];
-    }),
-    edges: walkthrough.edges.flatMap((e) => {
-      const from_id = nodeIdByBase.get(e.from_id);
-      const to_id = nodeIdByBase.get(e.to_id);
-      return from_id && to_id ? [{ from_id, to_id }] : [];
-    }),
+    nodes: graph.nodes
+      .filter((n) => reached.has(n.id))
+      .map((n) => {
+        const fetched = fetchedById.get(n.id);
+        if (fetched)
+          return { ...fetched, id: n.id, slug: n.id, level: level.get(n.id)! };
+        return {
+          id: n.id,
+          slug: n.id,
+          title: n.title,
+          summary: n.type === "guide_request" ? n.summary : null,
+          level: level.get(n.id)!,
+          duration_minutes: 0,
+          tags: [],
+        };
+      }),
+    edges,
   };
 }
 
