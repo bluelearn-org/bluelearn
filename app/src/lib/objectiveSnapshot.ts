@@ -8,7 +8,7 @@ import { formatDate, formatDuration } from "@/lib/guideUtils";
 export function nodeLabel(
   node: Pick<ObjectiveSnapshotNode, "guide_base_id" | "slug" | "title">
 ) {
-  return node.title ?? node.slug ?? node.guide_base_id.slice(0, 8);
+  return node.title ?? node.slug ?? node.guide_base_id?.slice(0, 8) ?? "";
 }
 
 export function stepLabel(node: ObjectiveSnapshotNode) {

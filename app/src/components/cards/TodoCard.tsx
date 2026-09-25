@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import type { TodoGroup } from "@/lib/groupTodos";
 import { Route as GuideRoute } from "@/routes/guides/$slug/index";
+import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +14,15 @@ type PropTypes = {
 const requestLabel = (count: number) =>
   count === 1 ? "1 request" : `${count} requests`;
 
-const requestedByLabel = (count: number) =>
-  count === 1 ? "Requested by 1 guide:" : `Requested by ${count} guides:`;
+const requestedByLabel = (requestedBy: TodoGroup["requestedBy"]) => {
+  if (requestedBy.some((requester) => requester.kind === "objective")) {
+    return "Requested by:";
+  }
+
+  return requestedBy.length === 1
+    ? "Requested by 1 guide:"
+    : `Requested by ${requestedBy.length} guides:`;
+};
 
 const claimNotice = (count: number) =>
   count === 1
@@ -60,21 +68,23 @@ export const TodoCard = ({ todo }: PropTypes) => {
         <CardContent className="border-t p-6">
           {todo.requestedBy.length > 0 && (
             <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-sm">
-                {requestedByLabel(todo.requestedBy.length)}
-              </p>
+              <p className="text-sm">{requestedByLabel(todo.requestedBy)}</p>
               <ul className="flex list-disc flex-col gap-1 pl-5">
-                {todo.requestedBy.slice(0, 3).map((guide) => (
+                {todo.requestedBy.slice(0, 3).map((requester) => (
                   <li
-                    key={guide.slug}
+                    key={`${requester.kind}:${requester.slug}`}
                     className="min-w-0 marker:text-muted-foreground"
                   >
                     <Link
-                      to={GuideRoute.to}
-                      params={{ slug: guide.slug }}
+                      to={
+                        requester.kind === "guide"
+                          ? GuideRoute.to
+                          : ObjectiveRoute.to
+                      }
+                      params={{ slug: requester.slug }}
                       className="block max-w-full truncate text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      {guide.title ?? guide.slug}
+                      {requester.title ?? requester.slug}
                     </Link>
                   </li>
                 ))}

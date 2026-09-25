@@ -11,11 +11,15 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
     .select(
       `id, dependent_guide_base_id, title, summary, status, created_at,
        claims:request_claims(count),
-       base:guide_bases!requests_dependent_guide_base_id_fkey!inner(
+       base:guide_bases!requests_dependent_guide_base_id_fkey(
          slug,
          canonical:guides!guide_bases_canonical_guide_id_fkey(
            current:guide_revisions!guides_current_revision_id_fkey(title)
          )
+       ),
+       objective:objectives!requests_objective_id_fkey(
+         slug,
+         current:objective_revisions!objectives_current_revision_id_fkey(title)
        )`
     )
     .eq("status", "open")
@@ -26,17 +30,22 @@ export async function listOpenTodos(supabase: DB): Promise<TodoListItem[]> {
     throw new ServiceError("Failed to fetch todos", 500);
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    guide_base_id: row.dependent_guide_base_id,
-    guide_slug: row.base.slug,
-    guide_title: row.base.canonical?.current?.title ?? null,
-    title: row.title,
-    summary: row.summary,
-    status: row.status,
-    claim_count: row.claims[0]?.count ?? 0,
-    created_at: row.created_at,
-  }));
+  // base.status nulls the embed for an unpublished base; it keeps the row.
+  return (data ?? [])
+    .filter((row) => row.base !== null || row.dependent_guide_base_id === null)
+    .map((row) => ({
+      id: row.id,
+      guide_base_id: row.dependent_guide_base_id,
+      guide_slug: row.base?.slug ?? null,
+      guide_title: row.base?.canonical?.current?.title ?? null,
+      objective_slug: row.objective?.slug ?? null,
+      objective_title: row.objective?.current?.title ?? null,
+      title: row.title,
+      summary: row.summary,
+      status: row.status,
+      claim_count: row.claims[0]?.count ?? 0,
+      created_at: row.created_at,
+    }));
 }
 
 export async function createTodo(

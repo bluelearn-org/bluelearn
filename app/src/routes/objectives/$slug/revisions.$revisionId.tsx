@@ -113,7 +113,7 @@ function RouteComponent() {
       // The objective did not exist before, so every sub-objective and every
       // step of its sequence reads as an addition.
       targets: buildSubObjectives(detail.snapshot).map(({ target, steps }) => ({
-        guide_base_id: target.guide_base_id,
+        guide_base_id: target.guide_base_id!,
         slug: target.slug,
         title: target.title,
         status: "added" as const,
