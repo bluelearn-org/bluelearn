@@ -16,7 +16,7 @@ Be Helpful. Support fellow community members when you can. Share knowledge, answ
 3. **Prohibited Conduct**
 The following behaviors will result in moderation action:
 
-- Harassment:	targeted insults, threats, doxxing, stalking, unwanted DM solicitation
+- Harassment: targeted insults, threats, doxxing, stalking, unwanted DM solicitation
 - Spam: excessive self-promotion, repetitive messages, bot-like behavior, unsolicited invites, NSFW Content, - Sexual content, graphic violence, illegal activity
 - Trolling: Intentional disruption, sealioning, bad-faith arguments, misdirection, and false claims about the B.L.U.E. project
 - Impersonation: Pretending to be staff, pretending to be other members, or impersonating public figures
@@ -60,11 +60,11 @@ If you have Questions?
 The **Admins** and **Moderators** of the B.L.U.E. System project are the primary individuals who will be responsible for driving the overall direction of the project.  As such, they will have certain responsibilities and must meet certain standards to achieve the goals of the project effectively.  The purpose of this part of the document is to outline those basic standards and responsibilities, to eliminate confusion, and to give leads a clear idea of their role within the project.
 
 
-## **Admins** 
+## Admins
 - The highest role within the B.LU.E. System project, responsible for managing moderators and completing broad tasks, within their assigned sector of the project.
 
-### **Admins MUST**
-1. Be able and willing to act as a team
+### Admins MUST
+1. Be able and willing to act as a team.
 
 2. Understand the core values and current goals of the B.L.U.E. System Project, outlined by the project managers, and must act in accordance with those values, and goals.
 
@@ -76,7 +76,7 @@ The **Admins** and **Moderators** of the B.L.U.E. System project are the primary
 
 6. Admins must also have enough skill/experience to understand problems at a TECHNICAL level, in order to make more specific determinations.
 
-7. Admins must show sound judgment.  Admins who are (or who become) unfair, unreasonable, or unresponsive will be subject to peer review and possible demotion.
+7. Admins must show sound judgment. Admins who are (or who become) unfair, unreasonable, or unresponsive will be subject to peer review and possible demotion.
 
 8. Admins must be able to handle a potentially heavy workload.
 
@@ -84,7 +84,7 @@ The **Admins** and **Moderators** of the B.L.U.E. System project are the primary
 
 10. Admins should be spending most of their time designing/optimizing BLUE's structure & harnassing the talent within their assigned domains.
 
-11. Admins should delegate lower level tasks to moderators/contributors and prioritize high level management 
+11. Admins should delegate lower level tasks to moderators/contributors and prioritize high level management. 
 
 12. Admins must be able to effectively manage Moderators.  When Moderators come to Admins with a problem or issue, Admins must be able to understand those issues, assess their significance, and generate swift & effective solutions.
 
@@ -111,7 +111,7 @@ The **Admins** and **Moderators** of the B.L.U.E. System project are the primary
 - Solving technical problems in unassigned sectors.
 
 
-### **Admin Suitability Assessment**
+### Admin Suitability Assessment
 
 When assessing the suitability of an applicant for the role of Admin, the following factors must be considered:
 - **Ability & willingness to work as team, and meet the above conditions.**
@@ -129,13 +129,13 @@ When assessing the suitability of an applicant for the role of Admin, the follow
 - **Sensitivity to feedback** (how responsive is this individual to feedback & changing conditions).
 
 
-## **Moderators**
+## Moderators
 - The next highest role within the B.LU.E. System project, responsible for managing contributors and completing more specific tasks, within their assigned sector of the project.
 
-### **Moderators MUST:**
-1. be able and willing to act as a team, and must regularly communicate with other moderators and admins, to coordinate actions.
+### Moderators MUST:
+1. Be able and willing to act as a team, and must regularly communicate with other moderators and admins, to coordinate actions.
 
-2. understand the core values and current goals of the B.L.U.E. System Project, outlined by the project managers, and must act in accordance with those values, and goals.
+2. Understand the core values and current goals of the B.L.U.E. System Project, outlined by the project managers, and must act in accordance with those values, and goals.
 
 3. Moderators will be assigned to a particular area of the B.L.U.E. project, must know the tasks which currently need completion within those areas (given to them by Admins), and must be able to move effectively and efficiently toward.
 
@@ -169,7 +169,7 @@ What Moderators are **NOT** responsible for:
 - **Solving problems in unassigned sectors**.
   
 
-### **Moderator Suitability Assessment**
+### Moderator Suitability Assessment
 
 When assessing the suitability of an applicant for the role of Moderator, the following factors must be considered:
 - **Ability & willingness to work as team, and meet the above conditions.**
