@@ -60,10 +60,10 @@ If you have Questions?
 The **Admins** and **Moderators** of the B.L.U.E. System project are the primary individuals who will be responsible for driving the overall direction of the project.  As such, they will have certain responsibilities and must meet certain standards to achieve the goals of the project effectively.  The purpose of this part of the document is to outline those basic standards and responsibilities, to eliminate confusion, and to give leads a clear idea of their role within the project.
 
 
-## **Admins** 
+## Admins
 - The highest role within the B.LU.E. System project, responsible for managing moderators and completing broad tasks, within their assigned sector of the project.
 
-### **Admins MUST**
+### Admins MUST
 1. Be able and willing to act as a team.
 
 2. Understand the core values and current goals of the B.L.U.E. System Project, outlined by the project managers, and must act in accordance with those values, and goals.
@@ -111,7 +111,7 @@ The **Admins** and **Moderators** of the B.L.U.E. System project are the primary
 - Solving technical problems in unassigned sectors.
 
 
-### **Admin Suitability Assessment**
+### Admin Suitability Assessment
 
 When assessing the suitability of an applicant for the role of Admin, the following factors must be considered:
 - **Ability & willingness to work as team, and meet the above conditions.**
@@ -129,10 +129,10 @@ When assessing the suitability of an applicant for the role of Admin, the follow
 - **Sensitivity to feedback** (how responsive is this individual to feedback & changing conditions).
 
 
-## **Moderators**
+## Moderators
 - The next highest role within the B.LU.E. System project, responsible for managing contributors and completing more specific tasks, within their assigned sector of the project.
 
-### **Moderators MUST:**
+### Moderators MUST:
 1. Be able and willing to act as a team, and must regularly communicate with other moderators and admins, to coordinate actions.
 
 2. Understand the core values and current goals of the B.L.U.E. System Project, outlined by the project managers, and must act in accordance with those values, and goals.
@@ -169,7 +169,7 @@ What Moderators are **NOT** responsible for:
 - **Solving problems in unassigned sectors**.
   
 
-### **Moderator Suitability Assessment**
+### Moderator Suitability Assessment
 
 When assessing the suitability of an applicant for the role of Moderator, the following factors must be considered:
 - **Ability & willingness to work as team, and meet the above conditions.**
