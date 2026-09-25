@@ -1,9 +1,23 @@
 import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { ShieldMinus, ShieldPlus, SquareArrowRightExit } from "lucide-react";
+import {
+  ChevronDown,
+  ShieldMinus,
+  ShieldPlus,
+  SquareArrowRightExit,
+} from "lucide-react";
 import { toast } from "sonner";
+import { userRoleSchema } from "@bluelearn/schemas";
 import type { UserRole, UserStatus } from "@/lib/api/dashboard";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { RolesTable } from "@/components/tables/RolesTable";
 import {
   addRole,
@@ -11,6 +25,10 @@ import {
   removeRole,
   toggleAFK,
 } from "@/lib/api/dashboard";
+
+// same enum as `:roleName`
+// so you can't offer a role the server rejects (hopefully)
+const ROLE_OPTIONS: ReadonlyArray<UserRole> = userRoleSchema.options;
 
 export const Route = createFileRoute("/dashboard/roles")({
   loader: async ({ abortController }) => {
@@ -26,8 +44,7 @@ function RouteComponent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [submittingChange, setSubmittingChange] = useState(false);
 
-  // setChangeRole is unused right now but will be used for role dropdown
-  // @ts-expect-error
+  // Role for "add role"/"remove role"
   const [changeRole, setChangeRole] = useState<UserRole>("verifier");
 
   const handleToggleAFK = async () => {
@@ -80,7 +97,7 @@ function RouteComponent() {
       );
     } catch (err) {
       toast.error(
-        'Could remove add role "' + changeRole + '" from one or more users.'
+        'Could not remove role "' + changeRole + '" from one or more users.'
       );
     } finally {
       setSubmittingChange(false);
@@ -97,6 +114,38 @@ function RouteComponent() {
         </div>
 
         <div className="flex gap-2">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex items-center justify-start capitalize"
+                disabled={submittingChange}
+                aria-label="Select role"
+              >
+                {changeRole}
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" className="w-40 font-mono">
+              <DropdownMenuLabel className="text-xs">Role</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={changeRole}
+                onValueChange={(v) => setChangeRole(v as UserRole)}
+              >
+                {ROLE_OPTIONS.map((role) => (
+                  <DropdownMenuRadioItem
+                    key={role}
+                    value={role}
+                    className="text-xs capitalize"
+                  >
+                    {role}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button
             variant="outline"
             className="flex items-center justify-start"

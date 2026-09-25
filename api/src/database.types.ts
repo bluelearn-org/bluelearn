@@ -1255,7 +1255,10 @@ export type Database = {
         Returns: Json
       }
       close_review_panel: { Args: { p_case_id: string }; Returns: undefined }
-      compute_walkthrough: { Args: { p_guide_base_id: string }; Returns: Json }
+      compute_walkthrough: {
+        Args: { p_follow_up_depth?: number; p_guide_base_id: string }
+        Returns: Json
+      }
       create_guide: {
         Args: {
           p_body?: string

@@ -20,6 +20,7 @@ import { DraggableGuideCard } from "@/components/contribute/DraggableGuideCard";
 import { Badge } from "@/components/ui/badge";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 import { formatDuration } from "@/lib/guideUtils";
+import { getTargetPrerequisiteWalkthrough } from "@/lib/useGraphLayout";
 import {
   Card,
   CardContent,
@@ -41,6 +42,8 @@ type PropTypes = {
   setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
   onSaveDraft?: () => void;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   guides: Array<any>;
 };
 
@@ -50,6 +53,8 @@ export const OrderObjectiveGuides = ({
   setObjectiveContData,
   onSaveDraft,
   submitting,
+  isDirty,
+  isSynced,
   guides,
 }: PropTypes) => {
   const guidesMap = useMemo(
@@ -93,7 +98,7 @@ export const OrderObjectiveGuides = ({
     const controller = new AbortController();
     getGuideWalkthrough(targetSlug, { signal: controller.signal })
       .then((data) => {
-        setWalkthroughData(data);
+        setWalkthroughData(getTargetPrerequisiteWalkthrough(data, targetSlug));
         setWalkthroughSlug(targetSlug);
       })
       .catch((err) => {
@@ -299,6 +304,8 @@ export const OrderObjectiveGuides = ({
         type="objective"
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <FieldGroup className="mt-0 flex min-h-0 flex-1 flex-col">
