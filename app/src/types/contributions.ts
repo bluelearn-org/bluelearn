@@ -50,9 +50,8 @@ export const subObjectiveSchema = z.object({
   curatedSequence: z.array(z.string()),
 });
 
-// The design canvas draft. Positions are not stored: the layout computes them
-// from the edges, so an edge is always prerequisite (source) -> dependent (target).
-// Which nodes are targets is not stored either: targetNodeIds derives it.
+// Positions and targets are derived (layoutObjectiveGraph, targetNodeIds), never
+// stored. An edge always runs prerequisite (source) -> dependent (target).
 export const objectiveGraphNodeSchema = z.discriminatedUnion("type", [
   z.object({
     id: z.string(),

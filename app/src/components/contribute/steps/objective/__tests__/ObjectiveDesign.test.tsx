@@ -124,7 +124,6 @@ vi.mock("@xyflow/react", async () => {
                 Nudge {node.id} along
               </button>
               {(["top", "bottom"] as const).map((dot) => {
-                // The top dot is a source handle, the bottom one a target.
                 const fromHandle = {
                   type:
                     dot === "top" ? ("source" as const) : ("target" as const),

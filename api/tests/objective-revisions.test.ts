@@ -100,8 +100,6 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     }>;
   };
 
-  // A draft whose guides were placed by a graph save; the targets are derived
-  // from it, and curation names them by node id.
   async function drawnDraft(
     bases: string[],
     edges: Array<[number, number]> = []

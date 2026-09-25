@@ -219,7 +219,6 @@ describe("adoptSavedSnapshot", () => {
       nodes: [guide("fresh"), request("r")],
       edges: [drawn("fresh", "r")],
     };
-    // guide("fresh") has base-fresh; the draft stored that base as "kept"
     const next = adoptSavedSnapshot(
       draft(graph, {
         targets: ["r"],

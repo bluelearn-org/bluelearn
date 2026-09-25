@@ -147,7 +147,7 @@ export const AddGuideNodeModal = ({
           </TabsList>
 
           <TabsContent value="existing" className="pt-4">
-            {/* ponytail: modal popover eats the first tab click while open; upgrade when ui/combobox scrolls without modal */}
+            {/* enough: modal popover eats the first tab click while open; upgrade when ui/combobox scrolls without modal */}
             <Combobox
               multiple
               items={guideItems(selectedWithPrereqIds)}

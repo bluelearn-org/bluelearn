@@ -853,7 +853,7 @@ function Inner({
   });
 
   const objectiveTargets = () => {
-    // a node deleted from the canvas since it was sequenced is not the graph's
+    // A sequence can still name a card deleted from the canvas since.
     const onCanvas = new Set(objectiveContData.graph.nodes.map((n) => n.id));
 
     return objectiveContData.targets.map((nodeId) => {
@@ -871,8 +871,6 @@ function Inner({
     });
   };
 
-  // The save's answer is the truth for targets and the guides' own edges; it
-  // is merged into the latest draft, never replaces it.
   const adoptedRef = useRef(false);
   const adoptSaved = ({
     snapshot,
@@ -881,8 +879,7 @@ function Inner({
     setObjectiveContData((prev) => adoptSavedSnapshot(prev, snapshot));
   };
 
-  // What was adopted is what the server holds: store it and show it saved.
-  // The autosave marks itself without a render, so one is asked for.
+  // objectiveSave marks itself synced without a render, so ask for one.
   const [, rerenderAfterAdopt] = useState(0);
   useEffect(() => {
     if (!adoptedRef.current) return;

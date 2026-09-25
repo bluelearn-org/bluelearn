@@ -19,10 +19,9 @@ const KIND_ORDER = {
   target: 2,
 };
 
-// Prerequisites below dependents, matching the node handles (in at the bottom,
-// out at the top): flip both together. Each connected group of edges is an
-// island of its own rows; islands stand side by side, top rows aligned, and
-// the whole set centres on x = 0 like useGraphLayout.
+// Prerequisites sit below dependents, matching the node handles (in at the
+// bottom, out at the top): flip both together. The whole graph centres on
+// x = 0, like useGraphLayout.
 export function layoutObjectiveGraph(
   graph: ObjectiveGraphData,
   { nodeWidth, nodeSpacing, levelSpacing }: LayoutOptions
@@ -31,8 +30,6 @@ export function layoutObjectiveGraph(
   const islands = connectedIslands(graph);
   const inIsland = new Set(islands.flat());
 
-  // A connected island numbers its rows by rank, so a level nothing landed on
-  // leaves no gap.
   const rowSets = islands.map((ids) => {
     const levels = [...new Set(ids.map((id) => levelById.get(id)!))].sort(
       (a, b) => a - b
@@ -44,8 +41,7 @@ export function layoutObjectiveGraph(
     return { ids, rowById, rowCount: levels.length };
   });
 
-  // A node with no edge leads nowhere, so it is a target: the loose ones share
-  // one last island on the top row, level with the deepest island's targets.
+  // A node with no edge is a target (see targetNodeIds), so it sits on the top row.
   const looseIds = graph.nodes
     .filter((n) => !inIsland.has(n.id))
     .map((n) => n.id);
@@ -76,7 +72,6 @@ export function layoutObjectiveGraph(
     return { idsByRow, rowCount, width };
   });
 
-  // One nodeSpacing between islands, beyond their own widths.
   const totalWidth =
     blocks.reduce((sum, block) => sum + block.width, 0) +
     Math.max(0, blocks.length - 1) * nodeSpacing;
@@ -104,9 +99,8 @@ export function layoutObjectiveGraph(
   });
 }
 
-// Connected components of the edges, undirected, over edges whose ends are
-// both nodes. Ordered by each island's earliest node in graph.nodes, so an
-// edge added inside one island never reorders the others.
+// Ordered by each island's earliest node, so an edge added inside one island
+// never reorders the others.
 function connectedIslands(graph: ObjectiveGraphData): Array<Array<string>> {
   const neighbours = new Map<string, Array<string>>(
     graph.nodes.map((n) => [n.id, []])
@@ -143,7 +137,8 @@ function connectedIslands(graph: ObjectiveGraphData): Array<Array<string>> {
 function longestPathLevels(graph: ObjectiveGraphData) {
   const levelById = new Map(graph.nodes.map((n) => [n.id, 0]));
 
-  // ponytail: a cycle lands on wrong rows, never errors; upgrade when one can reach the canvas
+  // enough: a cycle lands on wrong rows, never errors. Once a cycle can reach
+  // the canvas, detect it with a topological sort.
   for (let pass = 0; pass < graph.nodes.length; pass++) {
     let changed = false;
 

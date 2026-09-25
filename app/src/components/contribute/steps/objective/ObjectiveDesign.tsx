@@ -308,7 +308,6 @@ const ObjectiveGraph = ({ graph, onGraphChange }: ObjectiveGraphProps) => {
   // this; whatever is still here at reconnect end is dropped on nothing.
   const reconnecting = useRef<Edge | null>(null);
 
-  // A re-attach drops the old edge in the same graph write as the new one
   const connectOrReattach = (source: string, target: string) => {
     const oldEdge = reconnecting.current;
     reconnecting.current = null;
@@ -370,9 +369,9 @@ const ObjectiveGraph = ({ graph, onGraphChange }: ObjectiveGraphProps) => {
     handleDelete({ nodes: [], edges: [edge] });
   };
 
+  // xyflow sizes itself with height: 100%, which needs a definite height here;
+  // a flex-1 item resolves that percentage to 0.
   return (
-    // xyflow sizes itself with height: 100%, which needs a definite height here;
-    // a flex-1 item resolves that percentage to 0.
     <div className="h-[calc(100vh-250px)] min-h-[600px] overflow-hidden rounded-lg border">
       {graph.nodes.length === 0 ? (
         <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">

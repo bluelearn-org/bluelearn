@@ -73,7 +73,6 @@ describe("layoutObjectiveGraph", () => {
   });
 
   it("orders a row guide, request, target, then by input order", () => {
-    // Row one holds x (a target), y and r (both lead on to z).
     const positions = positionsOf({
       nodes: [
         guide("x"),
@@ -134,7 +133,6 @@ describe("layoutObjectiveGraph", () => {
   });
 
   it("uses the longest path, not the shortest, to place a node", () => {
-    // a -> b -> c and a -> c: c must sit above b, not beside it.
     const positions = positionsOf({
       nodes: [guide("a"), guide("b"), guide("c")],
       edges: [edge("a", "c"), edge("a", "b"), edge("b", "c")],
@@ -144,7 +142,6 @@ describe("layoutObjectiveGraph", () => {
   });
 
   it("stands two edge groups and a loose node side by side, top rows aligned, centred on x = 0", () => {
-    // Island a -> b -> c (three rows), island d -> e (two rows), loose t.
     const nodes = [
       guide("t"),
       guide("d"),
@@ -157,8 +154,7 @@ describe("layoutObjectiveGraph", () => {
     const positions = positionsOf({ nodes, edges });
     const at = (id: string) => positions.get(id)!;
 
-    // d comes first in the input, so its island stands leftmost; loose last.
-    // Each block is one card wide (300) with a 300 gap: centres -600, 0, 600.
+    // Each block is one nodeSpacing (300) wide, with a 300 gap: centres -600, 0, 600.
     expect(at("d").x).toBe(-600 - 100);
     expect(at("a").x).toBe(-100);
     expect(at("t").x).toBe(600 - 100);
@@ -167,7 +163,6 @@ describe("layoutObjectiveGraph", () => {
     expect(at("d").y).toBe(150);
     expect(at("a").y).toBe(300);
 
-    // An edge inside one island leaves the others in their places.
     const grown = positionsOf({
       nodes: [...nodes, guide("f")],
       edges: [...edges, edge("c", "f")],

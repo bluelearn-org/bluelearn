@@ -189,8 +189,8 @@ describe("walkthrough graph direction", () => {
     expect(screen.getByTestId("source-handle").dataset.position).toBe("top");
   });
 
-  // Handles and Card are both positioned with no z-index, so the later one in
-  // the DOM paints on top and takes the click.
+  // Handles and Card are both positioned with no z-index. The later one in the
+  // DOM paints on top and takes the click.
   it("paints both handles over the card, on the default sides and on an override", () => {
     const data: GraphNodeData = {
       title: "Target",

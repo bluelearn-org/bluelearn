@@ -23,9 +23,8 @@ export const guideEdgeId = (source: string, target: string) =>
 export const isDrawnEdge = (edge: ObjectiveGraphEdge) =>
   edge.id.startsWith(DRAWN_EDGE_PREFIX);
 
-// A target is the end of a sub-objective: a node with no edge out to another
-// node. The live rule between saves; the server derives the same and its answer
-// wins after each save (adoptSavedSnapshot).
+// The server derives targets by the same rule on save; this keeps the canvas
+// live between saves.
 export function targetNodeIds(graph: ObjectiveGraphData): Set<string> {
   const ids = new Set(graph.nodes.map((n) => n.id));
   const leadsOn = new Set(
@@ -39,8 +38,6 @@ export function targetNodeIds(graph: ObjectiveGraphData): Set<string> {
   );
 }
 
-// Keeps the curator's order for targets that still hold, appends newcomers in
-// canvas order, and clears featured when its node left.
 export function withLiveTargets(
   data: ObjectiveContribution,
   graph: ObjectiveGraphData
@@ -62,14 +59,12 @@ export function withLiveTargets(
   };
 }
 
-// Merges a save's answer into the draft without replacing it: positions and
-// whatever the curator changed while the save was in flight stay.
+// Merge, not replace: the curator may keep editing while a save is in flight.
 export function adoptSavedSnapshot(
   data: ObjectiveContribution,
   snapshot: Pick<ObjectiveSnapshot, "nodes" | "raw_edges">
 ): ObjectiveContribution {
-  // A guide re-added under a fresh id comes back under the id the draft
-  // already stored for its base; requests keep the canvas's id.
+  // The server keeps the stored id of a guide that was deleted and re-added.
   const storedIdByBase = new Map(
     snapshot.nodes.flatMap((n) =>
       n.guide_base_id === null ? [] : [[n.guide_base_id, n.id] as const]
@@ -94,7 +89,7 @@ export function adoptSavedSnapshot(
     return { id, source, target };
   });
 
-  // The guides' own prerequisites between guides on the canvas, as addWalkthrough draws them.
+  // Published prerequisites between these guides, which the canvas never saw.
   const nodeIdByBase = new Map(
     nodes.flatMap((n) =>
       n.type === "guide" ? [[n.guideBaseId, n.id] as const] : []
@@ -110,7 +105,6 @@ export function adoptSavedSnapshot(
   }
   const graph = { nodes, edges };
 
-  // The server's targets in its order; a node it dropped leaves.
   const serverTargets = snapshot.nodes
     .filter((n) => n.is_target)
     .sort(
@@ -148,8 +142,6 @@ export function adoptSavedSnapshot(
   };
 }
 
-// What a step card shows for a canvas node: its listed guide, or the request
-// itself, which has no guide yet.
 export function nodeCard<TGuide>(
   graph: ObjectiveGraphData,
   guidesBySlug: Map<string, TGuide>,
@@ -169,9 +161,8 @@ export function nodeCard<TGuide>(
   );
 }
 
-// A target's prerequisites walked backward over the canvas edges and, for a
-// guide target, its fetched walkthrough rekeyed onto canvas node ids; a guide
-// the canvas does not hold cannot be sequenced, so it is left out.
+// Step 5's list for one target. A guide the canvas doesn't hold can't be
+// ordered, so it stays out.
 export function prerequisiteWalkthrough(
   graph: ObjectiveGraphData,
   targetId: string,
@@ -199,8 +190,8 @@ export function prerequisiteWalkthrough(
     if (from_id && to_id) merge(from_id, to_id);
   }
 
-  // The fetched walkthrough is already the target's whole closure, so its
-  // guides stay in even when a guide between them was removed from the canvas.
+  // A walkthrough is already the target's whole closure: keep its guides even
+  // when a card between them was deleted.
   const reached = new Set([targetId, ...fetchedById.keys()]);
   const pending = [...reached];
   while (pending.length > 0) {
@@ -215,7 +206,6 @@ export function prerequisiteWalkthrough(
   const edges = [...merged.values()].filter(
     (e) => reached.has(e.from_id) && reached.has(e.to_id)
   );
-  // longest path from a root, so a prerequisite always sits below
   const level = new Map([...reached].map((id) => [id, 0]));
   for (let pass = 0; pass < reached.size; pass++)
     for (const e of edges)
@@ -333,8 +323,8 @@ export function addRequestNode(
   };
 }
 
-// source is the prerequisite. The drawn edge wins over any path back from
-// target to source, imported prerequisites included.
+// source is the prerequisite. A drawn edge cuts any path that contradicts it,
+// guide edges included.
 export function connectNodes(
   graph: ObjectiveGraphData,
   sourceId: string,
@@ -357,8 +347,6 @@ export function connectNodes(
   };
 }
 
-// Every edge on some path from target back to source; empty when connecting
-// closes no cycle or connectNodes would refuse the pair.
 export function edgesCutByConnecting(
   graph: ObjectiveGraphData,
   sourceId: string,
@@ -414,7 +402,8 @@ export function removeEdges(
   };
 }
 
-// ponytail: the server keeps its own id for a guide node it already holds
+// The server may answer with its own id for a guide it already holds;
+// adoptSavedSnapshot maps it back.
 export function graphToApi(graph: ObjectiveGraphData): ObjectiveGraphInput {
   return {
     nodes: graph.nodes.map((n) =>

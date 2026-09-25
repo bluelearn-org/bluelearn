@@ -144,7 +144,6 @@ export const PreviewObjective = ({
   guideOptions,
   subjectOptions,
 }: PropTypes) => {
-  // Targets and sequences are node ids: a guide or a request on the canvas.
   const guidesBySlug = new Map(guideOptions.map((g) => [g.slug, g]));
   const cardOf = (nodeId: string) =>
     nodeCard(objectiveContData.graph, guidesBySlug, nodeId);

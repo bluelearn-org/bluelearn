@@ -92,7 +92,6 @@ export const OrderObjectiveGuides = ({
     return formatDuration(totalDuration);
   }, [totalDuration]);
 
-  // A guide target keeps its walkthrough; a request has none to fetch.
   const targetGuideSlug =
     targetNode?.type === "guide" ? targetNode.guideSlug : "";
   const [fetched, setFetched] = useState<{
@@ -178,7 +177,6 @@ export const OrderObjectiveGuides = ({
     });
   };
 
-  // Sync targetNodeId if the list of targets changes and it becomes invalid
   useEffect(() => {
     if (objectiveContData.targets.length > 0) {
       if (!objectiveContData.targets.includes(targetNodeId)) {
@@ -200,7 +198,6 @@ export const OrderObjectiveGuides = ({
   // the canvas after it became a target.
   const seededRef = useRef(new Map<string, string>());
 
-  // Sync initial curated sequence when the target changes and its walkthrough is ready
   useEffect(() => {
     if (!targetNodeId) return;
 
@@ -222,7 +219,6 @@ export const OrderObjectiveGuides = ({
       return;
     }
 
-    // Seed with all prerequisites (excluding the target itself) sorted by levels
     const initialPrereqs = walkthroughData.nodes
       .filter((n) => n.id !== targetNodeId)
       .sort((a, b) => a.level - b.level)

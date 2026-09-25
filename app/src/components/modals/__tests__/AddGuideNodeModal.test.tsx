@@ -50,7 +50,6 @@ const closePopover = () =>
     key: "Escape",
   });
 
-// Picks on whichever guide tab is open.
 async function pick(dialog: HTMLElement, title: string) {
   fireEvent.click(within(dialog).getByRole("button", { name: /select/i }));
   fireEvent.click(await screen.findByRole("option", { name: title }));
