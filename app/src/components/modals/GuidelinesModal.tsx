@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import {
   Dialog,
@@ -33,7 +34,17 @@ export const GuidelinesModal = ({ open, onOpenChange }: PropsTypes) => {
         </DialogHeader>
 
         <article className="markdown min-h-0 flex-1 scrollbar-thin [scrollbar-color:var(--border)_transparent] overflow-y-auto px-6 pt-2 pb-8 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
-          <ReactMarkdown>{guidelines}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Ignore newlines between blocks so bullets stay beside the text.
+              li: ({ children }) => (
+                <li className="whitespace-normal">{children}</li>
+              ),
+            }}
+          >
+            {guidelines}
+          </ReactMarkdown>
         </article>
       </DialogContent>
     </Dialog>

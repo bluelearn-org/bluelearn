@@ -42,20 +42,54 @@ export const variantContributionSchema = z.object({
   disclaimers: z.array(disclaimerSlugSchema),
 });
 
+// Keyed by node id: a target can be a guide or a request. The sequence is node
+// ids too, guides or requests.
 export const subObjectiveSchema = z.object({
-  targetSlug: z.string(),
-  selectedSlugs: z.array(z.string()),
+  targetNodeId: z.string(),
+  selectedNodeIds: z.array(z.string()),
   curatedSequence: z.array(z.string()),
+});
+
+// Positions and targets are derived (layoutObjectiveGraph, targetNodeIds), never
+// stored. An edge always runs prerequisite (source) -> dependent (target).
+export const objectiveGraphNodeSchema = z.discriminatedUnion("type", [
+  z.object({
+    id: z.string(),
+    type: z.literal("guide"),
+    guideBaseId: z.string(),
+    guideSlug: z.string(),
+    title: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    type: z.literal("guide_request"),
+    title: z.string(),
+    summary: z.string(),
+  }),
+]);
+
+export const objectiveGraphEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+});
+
+export const objectiveGraphSchema = z.object({
+  nodes: z.array(objectiveGraphNodeSchema),
+  edges: z.array(objectiveGraphEdgeSchema),
 });
 
 export const objectiveContributionSchema = z.object({
   title: z.string(),
   summary: z.string(),
   changeSummary: z.string(),
+  // Node ids, in the curator's order.
   targets: z.array(z.string()),
   featuredSubObjective: z.string(),
   subObjectives: z.array(subObjectiveSchema),
   subjects: z.array(z.string()),
+  // Drafts stored before the canvas existed have no graph.
+  graph: objectiveGraphSchema.default({ nodes: [], edges: [] }),
 });
 
 export type ContributionType = z.infer<typeof contributionTypeSchema>;
@@ -64,3 +98,6 @@ export type GuideContribution = z.infer<typeof guideContributionSchema>;
 export type VariantContribution = z.infer<typeof variantContributionSchema>;
 export type SubObjective = z.infer<typeof subObjectiveSchema>;
 export type ObjectiveContribution = z.infer<typeof objectiveContributionSchema>;
+export type ObjectiveGraphNode = z.infer<typeof objectiveGraphNodeSchema>;
+export type ObjectiveGraphEdge = z.infer<typeof objectiveGraphEdgeSchema>;
+export type ObjectiveGraphData = z.infer<typeof objectiveGraphSchema>;
