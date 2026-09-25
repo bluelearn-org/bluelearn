@@ -1463,6 +1463,10 @@ function Inner({
           type={type}
           guides={guideOptions}
           objectiveGraph={objectiveContData.graph}
+          onSaveDraft={saveDraft}
+          submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
           setObjectiveGraph={(update) =>
             setObjectiveContData((prev) =>
               withLiveTargets(

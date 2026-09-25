@@ -77,6 +77,8 @@ type PropTypes = {
   hideBackBtn?: boolean;
   onSaveDraft?: () => void;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   guides?: Array<Guide>;
   objectiveGraph: ObjectiveGraphData;
   setObjectiveGraph?: Dispatch<SetStateAction<ObjectiveGraphData>>;
@@ -88,6 +90,8 @@ export const ObjectiveDesign = ({
   hideBackBtn,
   onSaveDraft,
   submitting,
+  isDirty,
+  isSynced,
   guides,
   objectiveGraph,
   setObjectiveGraph,
@@ -160,6 +164,8 @@ export const ObjectiveDesign = ({
         hideBackBtn={hideBackBtn}
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
         guides={guides}
         existingGuideBaseIds={guideBaseIdsOnCanvas}
         onAddGuideNodes={setObjectiveGraph && addGuideNodes}

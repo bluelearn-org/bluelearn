@@ -193,19 +193,26 @@ const RECURSION: ObjectiveGraphNode = {
 vi.mock("@/components/contribute/StepperActionHeader", () => ({
   StepperActionHeader: ({
     onAddGuideNodes,
+    onSaveDraft,
   }: {
     onAddGuideNodes?: (
       nodes: Array<ObjectiveGraphNode>,
       options?: { pullPrerequisitesFor: Array<string> }
     ) => void;
+    onSaveDraft?: () => void;
   }) => (
-    <button
-      onClick={() =>
-        onAddGuideNodes?.([RECURSION], { pullPrerequisitesFor: ["base-rec"] })
-      }
-    >
-      Add with prerequisites
-    </button>
+    <>
+      <button
+        onClick={() =>
+          onAddGuideNodes?.([RECURSION], {
+            pullPrerequisitesFor: ["base-rec"],
+          })
+        }
+      >
+        Add with prerequisites
+      </button>
+      {onSaveDraft && <button onClick={onSaveDraft}>Save Draft</button>}
+    </>
   ),
 }));
 
@@ -308,6 +315,22 @@ describe("ObjectiveDesign", () => {
     expect(screen.getByText("What a frame holds")).toBeTruthy();
     expect(screen.getAllByText("Target request")).toHaveLength(1);
     expect(screen.queryByText(EMPTY_HINT)).toBeNull();
+  });
+
+  it("hands the header onSaveDraft so Save Draft saves the draft", () => {
+    const onSaveDraft = vi.fn();
+    render(
+      <ObjectiveDesign
+        Stepper={Stepper}
+        type="objective"
+        objectiveGraph={{ nodes: [], edges: [] }}
+        onSaveDraft={onSaveDraft}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Draft" }));
+
+    expect(onSaveDraft).toHaveBeenCalledTimes(1);
   });
 
   it("shows the empty hint and no card when the graph is empty", () => {
