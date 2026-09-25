@@ -27,8 +27,8 @@
   <a href="#-what-is-bluelearn"><b>What is it</b></a> ·
   <a href="#-watch-the-overview"><b>Overview</b></a> ·
   <a href="#-quick-start"><b>Quick start</b></a> ·
-  <a href="#%EF%B8%8F-project-layout"><b>Layout</b></a> ·
-  <a href="#%EF%B8%8F-tech-stack"><b>Stack</b></a> ·
+  <a href="#-project-layout"><b>Layout</b></a> ·
+  <a href="#-tech-stack"><b>Stack</b></a> ·
   <a href="#-roadmap"><b>Roadmap</b></a> ·
   <a href="#-contributing"><b>Contributing</b></a> ·
   <a href="#-support-the-project"><b>Sponsor</b></a>
@@ -172,10 +172,10 @@ guide.
 
 The shortest path:
 
-1. Find a [`good first issue`](https://github.com/bluelearn-org/bluelearn/labels/good%20first%20issue) or open one.
+1. Find a [`good first issue`](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aissue+state%3Aopen+label%3Atag%3Agood-first-issue) or open one.
 2. Comment that you'd like to take it.
 3. [Set up locally](#-quick-start) and open a draft PR early.
-4. Ping `#contributing` on [Discord](https://discord.gg/bluelearnorg) anytime.
+4. Ping `#open-development` on [Discord](https://discord.gg/bluelearnorg) anytime.
 
 ### What we're hiring for (the contribution profile)
 
