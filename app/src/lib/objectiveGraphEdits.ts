@@ -191,7 +191,7 @@ export function prerequisiteWalkthrough(
 
   const merged = new Map<string, { from_id: string; to_id: string }>();
   const merge = (from_id: string, to_id: string) =>
-    merged.set(JSON.stringify([from_id, to_id]), { from_id, to_id });
+    merged.set(`${from_id}->${to_id}`, { from_id, to_id });
   for (const e of graph.edges) merge(e.source, e.target);
   for (const e of walkthrough?.edges ?? []) {
     const from_id = nodeIdByBase.get(e.from_id);
