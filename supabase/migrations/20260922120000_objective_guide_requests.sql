@@ -1,5 +1,3 @@
--- requests --------------------------------------------------------------------
-
 alter table public.requests
   alter column dependent_guide_base_id drop not null;
 
@@ -8,10 +6,9 @@ alter table public.requests
 
 create index requests_objective_idx on public.requests (objective_id);
 
--- A resolved request becomes prerequisite edges from the guide that resolved it;
--- without them the requester's page drops the entry (the API lists open todos
--- and guide_edges, nothing else). A guide-raised request names its one dependent;
--- an objective-raised one has its arrows on the current revision's frozen canvas.
+-- Without these edges the requester's page loses a resolved request: the API
+-- lists only open todos and guide_edges. A guide-raised request names one
+-- dependent. An objective-raised one takes its arrows from the current revision.
 create or replace function public.link_resolved_todo()
 returns trigger
 language plpgsql
@@ -55,8 +52,6 @@ begin
 end;
 $$;
 
--- objective_revision_nodes ----------------------------------------------------
-
 alter table public.objective_revision_nodes
   alter column guide_base_id drop not null,
   alter column guide_id drop not null;
@@ -66,9 +61,8 @@ alter table public.objective_revision_nodes
   add column title text,
   add column summary text;
 
--- A node is a guide or a request, never both and never neither.
--- A request node carries its own text because there is no guide revision
--- to read it from.
+-- A request node has no guide revision to read its text from, so it carries
+-- its own.
 alter table public.objective_revision_nodes
   add constraint objective_revision_nodes_guide_or_request
   check (
@@ -87,8 +81,7 @@ alter table public.objective_revision_nodes
     )
   );
 
--- A target is what the objective aims the learner at, and the closure is walked
--- from its guide base. A request has none.
+-- objective_closure walks from a target's guide base, and a request has none.
 alter table public.objective_revision_nodes
   add constraint objective_revision_nodes_target_is_guide
   check (not is_target or guide_base_id is not null);
@@ -96,8 +89,6 @@ alter table public.objective_revision_nodes
 alter table public.objective_revision_nodes
   add constraint objective_revision_nodes_revision_request_key
   unique (revision_id, request_id);
-
--- objective_revision_edges ----------------------------------------------------
 
 -- Re-keyed from guide base ids to node ids: an endpoint may now be a request
 -- node, which has no guide base to name it by.
@@ -143,8 +134,6 @@ alter table public.objective_revision_edges
   add constraint objective_revision_edges_no_self_loop
     check (from_node_id <> to_node_id);
 
--- objective_revisions ---------------------------------------------------------
-
 alter table public.objective_revisions
   add column based_on_revision_id uuid
     references public.objective_revisions (id) on delete set null;
@@ -189,8 +178,8 @@ begin
       using errcode = 'invalid_parameter_value';
   end if;
 
-  -- A draft written before this column existed carries null and publishes
-  -- unchecked; there is no recorded starting point to compare against.
+  -- Drafts from before this column carry null and publish unchecked, with
+  -- nothing to compare against.
   if v_based_on_revision_id is not null then
     select current_revision_id into v_current_revision_id
       from public.objectives
@@ -201,8 +190,8 @@ begin
     end if;
   end if;
 
-  -- On first publish the objective has no slug yet; derive and freeze it from
-  -- the title, which must be present by then.
+  -- The slug is frozen from the title on first publish, so the title must exist
+  -- by then.
   select slug into v_slug from public.objectives where id = v_objective_id;
   if v_slug is null and coalesce(trim(v_title), '') = '' then
     raise exception 'A title is required to publish an objective'
@@ -262,8 +251,8 @@ declare
   v_current_revision_id uuid;
   v_new_revision_id uuid := gen_random_uuid();
 begin
-  -- The anchor revision names the objective being rolled back. RLS hides
-  -- revisions the caller may not read, so an unseen one reads as missing.
+  -- RLS hides revisions the caller may not read, so an unseen one reads as
+  -- missing.
   select objective_id into v_objective_id
     from public.objective_revisions
     where id = p_revision_id;
@@ -272,8 +261,6 @@ begin
     raise exception 'Revision not found' using errcode = 'no_data_found';
   end if;
 
-  -- The source must belong to that same objective or there is nothing to
-  -- restore here.
   select title, summary, created_at
     into v_title, v_summary, v_created_at
     from public.objective_revisions

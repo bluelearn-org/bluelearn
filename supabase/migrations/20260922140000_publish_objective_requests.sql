@@ -40,8 +40,8 @@ begin
       using errcode = 'invalid_parameter_value';
   end if;
 
-  -- A draft written before this column existed carries null and publishes
-  -- unchecked; there is no recorded starting point to compare against.
+  -- Drafts from before this column carry null and publish unchecked, with
+  -- nothing to compare against.
   if v_based_on_revision_id is not null then
     select current_revision_id into v_current_revision_id
       from public.objectives
@@ -53,8 +53,8 @@ begin
     end if;
   end if;
 
-  -- On first publish the objective has no slug yet; derive and freeze it from
-  -- the title, which must be present by then.
+  -- The slug is frozen from the title on first publish, so the title must exist
+  -- by then.
   select slug into v_slug from public.objectives where id = v_objective_id;
   if v_slug is null and coalesce(trim(v_title), '') = '' then
     raise exception 'A title is required to publish an objective'
@@ -150,8 +150,8 @@ declare
   v_old_node_ids uuid[];
   v_new_node_ids uuid[];
 begin
-  -- The anchor revision names the objective being rolled back. RLS hides
-  -- revisions the caller may not read, so an unseen one reads as missing.
+  -- RLS hides revisions the caller may not read, so an unseen one reads as
+  -- missing.
   select objective_id into v_objective_id
     from public.objective_revisions
     where id = p_revision_id;
@@ -160,8 +160,6 @@ begin
     raise exception 'Revision not found' using errcode = 'no_data_found';
   end if;
 
-  -- The source must belong to that same objective or there is nothing to
-  -- restore here.
   select title, summary, created_at
     into v_title, v_summary, v_created_at
     from public.objective_revisions

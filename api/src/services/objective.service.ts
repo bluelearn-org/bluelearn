@@ -302,11 +302,8 @@ export async function listPublishedObjectives(
   };
 }
 
-// Create a objective: bundles the objective shell + revision 1 in one
-// transaction via the create_objective RPC (RLS still applies, SECURITY
-// INVOKER). It starts with no nodes; the graph's first save places them and
-// derives the targets. Returns the draft revision id so the client routes
-// straight to its editor.
+// create_objective is SECURITY INVOKER, so RLS still applies. The draft starts
+// empty until the first graph save places its nodes.
 export async function createObjective(
   supabase: DB,
   input: CreateObjectiveInput

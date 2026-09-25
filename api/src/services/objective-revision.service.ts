@@ -322,15 +322,14 @@ export async function updateObjectiveRevision(
   if (tags !== undefined) {
     await replaceRevisionTags(supabase, revisionId, tags);
   }
-  // The graph decides which nodes exist and which are targets; curation then
-  // orders and features those targets, so it has to read the saved graph.
+  // Graph first: curation orders the targets the saved graph derived.
   const storedIdByClientId =
     graph !== undefined
       ? await syncDraftGraph(supabase, userId, revisionId, graph)
       : undefined;
   if (targets !== undefined) {
-    // The canvas may name a re-added guide by a fresh id the graph half just
-    // mapped to the stored one; curation checks stored ids, so translate.
+    // The canvas may send a fresh id for a re-added guide.
+    // Curation checks stored ids, so map it back.
     const toStored = (id: string) => storedIdByClientId?.get(id) ?? id;
     await syncDraftCuration(
       supabase,
@@ -347,8 +346,7 @@ export async function updateObjectiveRevision(
   return getObjectiveRevision(supabase, revisionId);
 }
 
-// Edit one node of a draft revision: swap the pinned variant, skip it, or set a
-// note. Whether it is a target is the graph's to say, in syncDraftGraph.
+// Target flags are derived in syncDraftGraph, not set here.
 export async function updateObjectiveNode(
   supabase: DB,
   revisionId: string,
@@ -428,8 +426,6 @@ export async function requireCurator(supabase: DB, userId: string) {
   }
 }
 
-// Order and feature the targets the graph derived, and place the topics under
-// each. Which nodes exist and which are targets is not decided here.
 export async function syncDraftCuration(
   supabase: DB,
   userId: string,
@@ -454,8 +450,8 @@ export async function syncDraftCuration(
   }
 
   const nodeById = new Map((nodes ?? []).map((n) => [n.id, n]));
-  // The client's target list is a guess made before the server derived; drift
-  // is expected, garbage is not. A node that is no longer a target is dropped.
+  // The client picked targets before the server derived them. Drop nodes that
+  // are no longer targets, but reject unknown ids.
   if (requestedIds.some((id) => !nodeById.has(id))) {
     throw new ServiceError("Node is not a target of this revision", 400);
   }
@@ -592,8 +588,7 @@ type GraphNode = { id: string; guide_base_id: string | null };
 type NodeEdge = { from_node_id: string; to_node_id: string };
 type GuideEdge = { from_guide_base_id: string; to_guide_base_id: string };
 
-// Prerequisite edges among the given guide bases, walked the same way as
-// objective_closure: prerequisite -> dependent, suspended edges ignored.
+// Filters edges the same way objective_closure walks them.
 async function loadGuideEdges(
   supabase: DB,
   baseIds: string[]
@@ -616,9 +611,7 @@ async function loadGuideEdges(
   return (data ?? []).filter((e) => bases.has(e.to_guide_base_id));
 }
 
-// A target is the end of a sub-objective: a node with no edge out to another
-// node of the same set, drawn or between two of its guides. A request has no
-// base, so only drawn edges can lead out of it.
+// Must agree with targetNodeIds in the app, which shows targets between saves.
 function deriveTargets(
   nodes: GraphNode[],
   drawn: NodeEdge[],
@@ -652,8 +645,8 @@ function deriveTargets(
   );
 }
 
-// A node that stops being a target loses the curation hung on it: its position
-// and featured flag (the checks require it) and the order rows it heads.
+// The DB checks allow position and featured only on a target, so they go
+// with the flag.
 async function dropTargetCuration(
   supabase: DB,
   revisionId: string,
@@ -686,12 +679,8 @@ async function dropTargetCuration(
   }
 }
 
-// Replace a draft's node set and drawn edges with the graph the canvas sent,
-// then derive which nodes are targets from it: the flags belong to the graph.
-// Position, featured, inclusion, and notes are left to syncDraftCuration.
-// ponytail: a run of statements, no transaction, like syncDraftCuration. A
-// failed write leaves the save half done; the next save from the canvas repairs
-// it. The way up is one RPC that does all of it.
+// enough: no transaction, like syncDraftCuration. A failed write leaves the
+// save half done until the next canvas save repairs it. The way up is one RPC.
 export async function syncDraftGraph(
   supabase: DB,
   userId: string,
@@ -795,8 +784,8 @@ export async function syncDraftGraph(
     throw new ServiceError("Failed to load revision nodes", 500);
   }
 
-  // A guide already on the draft keeps its stored id; a new one keeps the id
-  // the canvas gave it.
+  // adoptSavedSnapshot in the app relies on this: a stored guide keeps its id,
+  // a new one keeps the canvas's.
   const storedIdByBase = new Map(
     (stored ?? [])
       .filter((n) => n.guide_base_id !== null)
@@ -874,7 +863,6 @@ export async function syncDraftGraph(
     }
   }
 
-  // Derive over what the revision holds now, the protected prerequisites too.
   const gone = new Set(removed);
   const remaining = (stored ?? []).filter((n) => !gone.has(n.id));
   const targets = deriveTargets(remaining, drawn, guideEdges);
@@ -937,10 +925,6 @@ export async function publishObjectiveRevision(
   return { slug };
 }
 
-// Roll an older revision forward as a new draft: clone its nodes, orders and
-// drawn edges into a fresh draft on the same objective in one transaction via
-// the rollback_objective_revision RPC. Returns the draft revision id, so the
-// client routes to its editor.
 export async function rollbackObjectiveRevision(
   supabase: DB,
   revisionId: string,

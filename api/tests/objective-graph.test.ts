@@ -77,8 +77,7 @@ async function draftWithTarget() {
   return { curator, revision, goal, goalNode };
 }
 
-// A guide-only graph body with fresh client ids; each edge is [from, to] as
-// indexes into `bases`.
+// Each edge is [from, to] as indexes into `bases`.
 function guideGraph(
   bases: string[],
   edges: Array<[number, number]>

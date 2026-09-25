@@ -19,9 +19,6 @@ begin
     (id, objective_id, title, summary, author_id, status)
     values (v_revision_id, v_objective_id, p_title, p_summary, auth.uid(), 'draft');
 
-  -- closure: the targets plus every transitive prerequisite, walking guide_edges
-  -- backward (from a known node to its prerequisites). Each node is seeded as a
-  -- membership row through its base's canonical variant; the targets are flagged.
   insert into public.objective_revision_nodes
     (revision_id, guide_base_id, guide_id, is_target)
   with recursive closure as (
