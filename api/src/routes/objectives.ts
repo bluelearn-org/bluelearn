@@ -260,9 +260,7 @@ export const objectiveRevisionsRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Overwrites a draft's metadata, tags, graph, and/or target curation. Returns
-  // the same { revision, objective, snapshot, subjects } as the GET; 404 if not
-  // an editable draft.
+  // 404 unless the revision is an editable draft.
   .patch(
     "/:id",
     describeRoute({

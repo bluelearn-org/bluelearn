@@ -87,7 +87,6 @@ async function statusOf(revisionId: string) {
   return data.status;
 }
 
-// The graph save alone places the nodes and derives the targets from it.
 async function drawnDraft(graph: {
   nodes: Array<Record<string, string>>;
   edges: Array<{ from_node_id: string; to_node_id: string }>;

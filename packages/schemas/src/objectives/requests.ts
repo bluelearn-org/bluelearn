@@ -5,20 +5,16 @@ import {
   objectiveTitleSchema,
 } from "./fields";
 
-// Create a draft objective. Title is optional at creation and only required to
-// publish; the targets come later, from the graph.
+// Title may be empty until publish. Targets come later, from the graph.
 export const createObjectiveSchema = z.object({
   title: objectiveTitleSchema.nullish(),
   summary: objectiveSummarySchema.nullish(),
   tags: z.array(z.uuid()).default([]),
 });
 
-// One goal in the objective's curation, named by its node. The server derives
-// which nodes are targets from the graph; this only orders and features them.
-// Position comes from the array index, so the client sends targets in the order
-// it wants them. `sequence` is the node ids of this revision (guides or
-// requests) placed under this goal in reading order; leaving it off every target
-// means the curation under it did not change.
+// Position is the array index. The server derives which nodes are targets.
+// `sequence` lists the node ids under this target in reading order. Omit it
+// on every target to leave the sequences unchanged.
 export const objectiveTargetSchema = z.object({
   node_id: z.uuid(),
   is_featured: z.boolean().default(false),
@@ -72,9 +68,7 @@ export const updateObjectiveRevisionSchema = z
     message: "at least one field is required",
   });
 
-// Edit one node of a draft revision: swap the pinned variant (guide_id),
-// skip/re-include it (is_included), or set a note. Whether it is a target is
-// derived from the graph. Partial; at least one field.
+// Targets are derived from the graph, so this cannot set one.
 export const updateObjectiveNodeSchema = z
   .object({
     guide_id: z.uuid(),
