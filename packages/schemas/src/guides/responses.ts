@@ -158,6 +158,21 @@ export const guideListResponseSchema = z.strictObject({
   total: totalSchema,
 });
 
+// Guide the caller can pick as prereq
+export const selectableGuideSchema = z.object({
+  base_id: z.uuid(),
+  slug: z.string().nullable(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
+  status: guideStatusSchema,
+});
+
+export const selectableGuideListResponseSchema = z.strictObject({
+  guides: z.array(selectableGuideSchema),
+  total: totalSchema,
+});
+export type SelectableGuide = z.infer<typeof selectableGuideSchema>;
+
 export const revisionIdResponseSchema = z.strictObject({
   revision_id: z.uuid(),
 });

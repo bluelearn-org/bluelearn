@@ -28,6 +28,7 @@ import {
   reviewCaseIdResponseSchema,
   revisionIdResponseSchema,
   rollbackRevisionSchema,
+  selectableGuideListResponseSchema,
   updateRevisionSchema,
   variantResponseSchema,
   voteResponseSchema,
@@ -44,6 +45,7 @@ import {
   listGuideVariants,
   listObjectivesForGuide,
   listPublishedGuides,
+  listSelectableGuides,
 } from "../services/guide.service";
 import {
   archiveVariant,
@@ -138,6 +140,36 @@ export const guidesRouter = new Hono<HonoEnv>()
         c.req.valid("json")
       );
       return c.json({ revision_id }, 201);
+    }
+  )
+
+  // Endpoint returns published guides and caller's drafts
+  // Rows keyed by base_id as they have no slugs yet.
+  // Route must stay above /:slug otherwise selectable will 404 due to being parsed as a guide slug.
+  .get(
+    "/selectable",
+    describeRoute({
+      tags: ["guides"],
+      summary: "List guides selectable as prerequisites",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          selectableGuideListResponseSchema,
+          "Published guides plus the caller's own guides"
+        ),
+        ...errorResponses(400, 401, 429),
+      },
+    }),
+    requireUser,
+    validate("query", paginationSchema),
+    async (c) => {
+      const { page, limit } = c.req.valid("query");
+      const { guides, total } = await listSelectableGuides(
+        c.get("supabase"),
+        c.get("user").id,
+        { page, limit }
+      );
+      return c.json({ guides, total });
     }
   )
 

@@ -25,7 +25,9 @@ type SubjectOption = {
   name: string;
 };
 
-type GuideOption = {
+export type GuideOption = {
+  id: string;
+  base_id?: string;
   slug: string | null;
   title: string | null;
   summary: string | null;
@@ -401,14 +403,21 @@ export const GuideDetails = ({
                 multiple
                 items={guides
                   .filter(
-                    (guide): guide is GuideOption & { slug: string } =>
-                      !!guide.slug
+                    (
+                      guide
+                    ): guide is GuideOption & {
+                      slug: string | null;
+                      base_id?: string;
+                    } => !!guide.slug || !!guide.base_id
                   )
-                  .map((guide) => ({
-                    value: guide.slug,
-                    label: guide.title ?? guide.slug,
-                    description: guide.summary ?? undefined,
-                  }))}
+                  .map((guide) => {
+                    const value = guide.slug ?? guide.base_id!;
+                    return {
+                      value,
+                      label: guide.title ?? value,
+                      description: guide.summary ?? undefined,
+                    };
+                  })}
                 value={guideContData.prereqs}
                 onValueChange={(prereqs) => onGuideChange({ prereqs })}
               />

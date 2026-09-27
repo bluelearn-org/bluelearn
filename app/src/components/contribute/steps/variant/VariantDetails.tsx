@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import type { VariantContribution } from "@/types/contributions";
-import type { listGuides } from "@/lib/api/guides";
+import type { GuideOption } from "@/components/contribute/steps/guide/GuideDetails";
 import type { listSubjects } from "@/lib/api/subjects";
 
 import {
@@ -20,7 +20,7 @@ type PropTypes = {
   variantContData: VariantContribution;
   onVariantChange: (update: Partial<VariantContribution>) => void;
 
-  guides: Awaited<ReturnType<typeof listGuides>>;
+  guides: Array<GuideOption & { is_official?: boolean }>;
   subjects: Awaited<ReturnType<typeof listSubjects>>;
 };
 

@@ -259,6 +259,57 @@ describe("PATCH /guide-revisions/{id}", () => {
     expect(created?.slug).toBeNull();
   });
 
+  it("accepts a prerequisite by base id for a slug-less own draft", async () => {
+    const author = await makeUser();
+    const { base, revision } = await createDraftRevision(author.userId);
+    const prereqBase = await createGuideBase();
+    await admin
+      .from("guide_bases")
+      .update({ slug: null })
+      .eq("id", prereqBase.id)
+      .throwOnError();
+    const prereqGuide = await createGuide(prereqBase.id, {
+      author_id: author.userId,
+    });
+    await createGuideRevision(prereqGuide.id, {
+      status: "draft",
+      author_id: author.userId,
+      title: "Prereq Draft",
+    });
+
+    const res = await app.request(
+      `/guide-revisions/${revision.id}`,
+      jsonAuth(author.token, "PATCH", { prerequisites: [prereqBase.id] }),
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "PATCH", "/guide-revisions/{id}");
+
+    const { data: edges } = await admin
+      .from("guide_edges")
+      .select("from_guide_base_id")
+      .eq("to_guide_base_id", base.id)
+      .eq("edge_type", "prerequisite");
+    expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereqBase.id]);
+  });
+
+  it("400s on an unknown prerequisite base id", async () => {
+    const author = await makeUser();
+    const { revision } = await createDraftRevision(author.userId);
+
+    const res = await app.request(
+      `/guide-revisions/${revision.id}`,
+      jsonAuth(author.token, "PATCH", {
+        prerequisites: [crypto.randomUUID()],
+      }),
+      env
+    );
+
+    expect(res.status).toBe(400);
+    await expectToMatchSpec(res, "PATCH", "/guide-revisions/{id}");
+  });
+
   it("keeps a subject that has no slug yet tagged across saves", async () => {
     const author = await makeUser();
     const { revision } = await createDraftRevision(author.userId);

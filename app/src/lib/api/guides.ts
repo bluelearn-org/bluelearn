@@ -30,6 +30,22 @@ export async function listGuidesPage(
   return res.json();
 }
 
+export async function listSelectableGuides({ signal }: FetchOptions = {}) {
+  return collectAll<{
+    base_id: string;
+    slug: string | null;
+    title: string | null;
+    summary: string | null;
+    status: string;
+  }>(async (query) => {
+    const res = await guides.selectable.$get({ query }, { init: { signal } });
+    if (!res.ok) return assertOk(res) as Promise<never>;
+
+    const { guides: items, total } = await res.json();
+    return { items, total };
+  });
+}
+
 export async function getGuide(slug: string, { signal }: FetchOptions = {}) {
   const res = await guides[":slug"].$get(
     { param: { slug } },

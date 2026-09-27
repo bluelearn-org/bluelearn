@@ -3,6 +3,7 @@ import type {
   GuideContribution,
 } from "@/types/contributions";
 
+import type { GuideOption } from "@/components/contribute/steps/guide/GuideDetails";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
 import { Content } from "@/components/contribute/steps/Content";
 import { CustomTabs } from "@/components/Tabs";
@@ -11,12 +12,6 @@ import { GuideDetails } from "@/components/contribute/steps/guide/GuideDetails";
 type SubjectOption = {
   id: string;
   name: string;
-};
-
-type GuideOption = {
-  slug: string | null;
-  title: string | null;
-  summary: string | null;
 };
 
 type PropTypes = {
