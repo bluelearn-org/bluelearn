@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import {
   Dialog,
@@ -32,7 +31,7 @@ export const AddGuideNodeModal = ({
   onOpenChange,
   guides,
   selectedExistingGuides,
-  setSelectedExistingGuides,
+  setSelectedExistingGuides: _setSelectedExistingGuides,
 }: PropTypes) => {
   const guideItems = guides
     .filter((g): g is GuideOption & { slug: string } => !!g.slug)

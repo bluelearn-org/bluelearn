@@ -39,13 +39,11 @@ describe("POST /objectives", () => {
   it("creates a draft objective for a curator", async () => {
     const curator = await makeUser();
     await grantRole(curator.userId, "curator");
-    const target = await createPublishedGuide();
 
     const res = await app.request(
       "/objectives",
       jsonAuth(curator.token, "POST", {
         title: `Objective ${crypto.randomUUID().slice(0, 8)}`,
-        target_ids: [target.base.id],
       }),
       env
     );
@@ -56,13 +54,44 @@ describe("POST /objectives", () => {
     expect(revision_id).toBeTruthy();
   });
 
+  it("creates a draft with no target", async () => {
+    const curator = await makeUser();
+    await grantRole(curator.userId, "curator");
+
+    const targetsOf = async () => {
+      const created = await app.request(
+        "/objectives",
+        jsonAuth(curator.token, "POST", {}),
+        env
+      );
+      expect(created.status).toBe(201);
+      const { revision_id } = (await created.json()) as {
+        revision_id: string;
+      };
+      const res = await app.request(
+        `/objective-revisions/${revision_id}`,
+        auth(curator.token),
+        env
+      );
+      const { snapshot } = (await res.json()) as {
+        snapshot: {
+          nodes: Array<{ guide_base_id: string; is_target: boolean }>;
+        };
+      };
+      return snapshot.nodes
+        .filter((n) => n.is_target)
+        .map((n) => n.guide_base_id);
+    };
+
+    expect(await targetsOf()).toEqual([]);
+  });
+
   it("403s for a non-curator", async () => {
     const user = await makeUser();
-    const target = await createPublishedGuide();
 
     const res = await app.request(
       "/objectives",
-      jsonAuth(user.token, "POST", { target_ids: [target.base.id] }),
+      jsonAuth(user.token, "POST", {}),
       env
     );
 

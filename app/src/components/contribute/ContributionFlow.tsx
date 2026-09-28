@@ -784,6 +784,32 @@ function Inner({
     return guide.id;
   };
 
+  // Until the design canvas (#473) lands, each guide's base id doubles as its
+  // canvas node id, and a curated guide is drawn as leading on to its target.
+  const objectiveGraph = () => {
+    const nodeIds = new Set<string>();
+    const edges: Array<{ from_node_id: string; to_node_id: string }> = [];
+
+    for (const slug of objectiveContData.targets) {
+      const targetId = baseIdForSlug(slug);
+      nodeIds.add(targetId);
+
+      const sub = objectiveContData.subObjectives.find(
+        (s) => s.targetSlug === slug
+      );
+      for (const guideId of (sub?.curatedSequence ?? []).map(baseIdForSlug)) {
+        if (guideId === targetId) continue;
+        nodeIds.add(guideId);
+        edges.push({ from_node_id: guideId, to_node_id: targetId });
+      }
+    }
+
+    return {
+      nodes: [...nodeIds].map((id) => ({ id, guide_base_id: id })),
+      edges,
+    };
+  };
+
   const objectiveTargets = () =>
     objectiveContData.targets.map((slug) => {
       const sub = objectiveContData.subObjectives.find(
@@ -791,7 +817,7 @@ function Inner({
       );
 
       return {
-        guide_base_id: baseIdForSlug(slug),
+        node_id: baseIdForSlug(slug),
         is_featured: objectiveContData.featuredSubObjective === slug,
         ...(sub
           ? {
@@ -833,9 +859,7 @@ function Inner({
   // server persistence - guide revisionId lives on the active guide itself
   const persistDraft = async () => {
     if (type === "objective") {
-      const target_ids = objectiveContData.targets.map(baseIdForSlug);
-
-      if (target_ids.length === 0) {
+      if (objectiveContData.targets.length === 0) {
         throw new Error(
           "Learning objectives require at least one target guide."
         );
@@ -847,6 +871,7 @@ function Inner({
           summary: objectiveContData.summary || undefined,
           change_summary: objectiveContData.changeSummary || null,
           tags: objectiveContData.subjects,
+          graph: objectiveGraph(),
           targets: objectiveTargets(),
         });
 
@@ -862,6 +887,7 @@ function Inner({
                 summary: objectiveContData.summary || undefined,
                 change_summary: objectiveContData.changeSummary || null,
                 tags: objectiveContData.subjects,
+                graph: objectiveGraph(),
                 targets: objectiveTargets(),
               });
 
@@ -881,11 +907,13 @@ function Inner({
         creatingRef.current = createObjective({
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
-          target_ids,
           tags: objectiveContData.subjects,
         })
           .then(async (id) => {
-            await updateObjectiveRevision(id, { targets: objectiveTargets() });
+            await updateObjectiveRevision(id, {
+              graph: objectiveGraph(),
+              targets: objectiveTargets(),
+            });
             setRevisionId(id);
             return id;
           })
