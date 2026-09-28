@@ -106,12 +106,12 @@ type ObjectiveGraphProps = {
   guides: Array<Guide>;
 };
 
-const ObjectiveGraph = ({ guides }: ObjectiveGraphProps) => {
+const ObjectiveGraph = (_props: ObjectiveGraphProps) => {
   const { theme } = useTheme();
 
-  const onNodesChange = useCallback((changes: Array<any>) => {}, []);
+  const onNodesChange = useCallback((_changes: Array<any>) => {}, []);
 
-  const onConnect = useCallback((connection: Connection) => {}, []);
+  const onConnect = useCallback((_connection: Connection) => {}, []);
 
   return (
     <div className="flex h-[calc(100vh-250px)] min-h-[600px] flex-col">
