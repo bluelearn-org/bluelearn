@@ -31,6 +31,14 @@ type GuideOption = {
   summary: string | null;
 };
 
+const DISCLAIMER_OPTIONS = [
+  { value: "medical", label: "Medical" },
+  { value: "financial", label: "Financial" },
+  { value: "legal", label: "Legal" },
+  { value: "mature", label: "Mature age-restricted 18+ content" },
+  { value: "profanity", label: "Profanity" },
+];
+
 /**
  * A guide being edited inside the contribution flow.
  *
@@ -124,7 +132,6 @@ export const GuideDetails = ({
             />
           </Field>
         )}
-
         {showBaseFields && (
           <>
             <div className="space-y-1">
@@ -172,6 +179,29 @@ export const GuideDetails = ({
             </Field>
           </>
         )}
+
+        <Field className="py-2">
+          <div className="space-y-1">
+            <FieldLabel className="font-mono text-[14px] tracking-[0.08em] uppercase">
+              Disclaimers
+            </FieldLabel>
+
+            <FieldDescription className="text-xs">
+              Select content-category disclaimers that apply to this guide.
+            </FieldDescription>
+          </div>
+
+          <Combobox
+            multiple
+            items={DISCLAIMER_OPTIONS}
+            value={guideContData.disclaimers}
+            onValueChange={(disclaimers) =>
+              onGuideChange({
+                disclaimers: disclaimers as GuideContribution["disclaimers"],
+              })
+            }
+          />
+        </Field>
 
         <Field className="space-y-2">
           <div className="space-y-1">

@@ -202,12 +202,14 @@ function CustomBlockTypeSelect() {
 interface EditorToolbarProps {
   editorRef: React.RefObject<MDXEditorMethods | null>;
   markdown: string;
+  onImportMarkdown: (markdown: string) => void;
   onH1Attempted: () => void;
 }
 
 export default function EditorToolbar({
   editorRef,
   markdown,
+  onImportMarkdown,
   onH1Attempted,
 }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -315,6 +317,9 @@ export default function EditorToolbar({
       const text = event.target?.result as string;
       if (typeof text === "string") {
         editorRef.current?.setMarkdown(text);
+        // setMarkdown() bypasses MDXEditor's onChange, so tell the parent
+        // ourselves - otherwise the import is lost on the next remount.
+        onImportMarkdown(text);
       }
     };
     reader.readAsText(file);
