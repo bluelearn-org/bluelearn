@@ -93,16 +93,17 @@ export function GuideMobileMenu({
               Prerequisites
             </DropdownMenuItem>
           )}
+
+          {followUps && (
+            <DropdownMenuItem
+              className="cursor-pointer text-xs"
+              onSelect={() => setActiveModal("followUps")}
+            >
+              <ListChecks className="h-4 w-4" />
+              Follow-Ups
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
-        {followUps && (
-          <DropdownMenuItem
-            className="cursor-pointer text-xs"
-            onSelect={() => setActiveModal("followUps")}
-          >
-            <ListChecks className="h-4 w-4" />
-            Follow-Ups
-          </DropdownMenuItem>
-        )}
       </DropdownMenu>
 
       <GuideActionModals
