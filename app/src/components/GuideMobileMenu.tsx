@@ -17,6 +17,7 @@ import {
   guideActions,
 } from "@/components/GuideActionModals";
 import { PrerequisitesModal } from "@/components/modals/PrerequisitesModal";
+import { FollowUpsModal } from "@/components/modals/FollowUpsModal";
 
 type GuideMobileMenuProps = {
   slug: string;
@@ -26,6 +27,7 @@ type GuideMobileMenuProps = {
   menuItems: Array<{ label: string; to: string; icon: React.ReactNode }>;
   prerequisites?: Array<GuideReference>;
   requests?: Array<RequestReference>;
+  followUps?: Array<GuideReference>;
   isOfficial?: boolean;
 };
 
@@ -37,10 +39,11 @@ export function GuideMobileMenu({
   menuItems,
   prerequisites,
   requests = [],
+  followUps,
   isOfficial = false,
 }: GuideMobileMenuProps) {
   const [activeModal, setActiveModal] = useState<
-    GuideModalType | "prerequisites" | null
+    GuideModalType | "prerequisites" | "followUps" | null
   >(null);
   const close = (open: boolean) => !open && setActiveModal(null);
 
@@ -91,10 +94,23 @@ export function GuideMobileMenu({
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
+        {followUps && (
+          <DropdownMenuItem
+            className="cursor-pointer text-xs"
+            onSelect={() => setActiveModal("followUps")}
+          >
+            <ListChecks className="h-4 w-4" />
+            Follow-Ups
+          </DropdownMenuItem>
+        )}
       </DropdownMenu>
 
       <GuideActionModals
-        active={activeModal === "prerequisites" ? null : activeModal}
+        active={
+          activeModal === "prerequisites" || activeModal === "followUps"
+            ? null
+            : activeModal
+        }
         onOpenChange={close}
         slug={slug}
         currentVariantSlug={currentVariantSlug}
@@ -108,6 +124,15 @@ export function GuideMobileMenu({
           onOpenChange={close}
           prerequisites={prerequisites}
           requests={requests}
+          guideTitle={guideTitle}
+          slug={slug}
+        />
+      )}
+      {followUps && (
+        <FollowUpsModal
+          open={activeModal === "followUps"}
+          onOpenChange={close}
+          followUps={followUps}
           guideTitle={guideTitle}
           slug={slug}
         />
