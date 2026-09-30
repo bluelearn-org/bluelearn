@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import type { Walkthrough } from "@bluelearn/schemas";
+import type { Objective, Walkthrough } from "@bluelearn/schemas";
 import type { BreadcrumbOrigin } from "@/lib/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 
@@ -9,6 +9,8 @@ type WalkthroughPanelProps = {
   targetSlug: string;
   targetTitle: string;
   breadcrumbOrigin?: BreadcrumbOrigin;
+  objective?: Pick<Objective, "slug" | "title">;
+  canOpenGuide?: boolean;
 };
 
 export function WalkthroughPanel({
@@ -16,13 +18,21 @@ export function WalkthroughPanel({
   targetSlug,
   targetTitle,
   breadcrumbOrigin,
+  objective,
+  canOpenGuide = true,
 }: WalkthroughPanelProps) {
-  const back = { label: targetTitle, path: `/guides/${targetSlug}` };
+  const back = objective
+    ? {
+        label: objective.title ?? "Untitled objective",
+        path: `/objectives/${objective.slug}`,
+      }
+    : { label: targetTitle, path: `/guides/${targetSlug}` };
 
   // Opening the target keeps the trail the user arrived by; opening a
   // prerequisite makes the target the origin, since that is what led here.
-  const openOrigin: BreadcrumbOrigin | undefined =
-    node.slug === targetSlug
+  const openOrigin: BreadcrumbOrigin | undefined = objective
+    ? { type: "objective", title: back.label, path: back.path }
+    : node.slug === targetSlug
       ? breadcrumbOrigin
       : { type: "guide", title: targetTitle, path: `/guides/${targetSlug}` };
 
@@ -75,14 +85,16 @@ export function WalkthroughPanel({
         </div>
       )}
 
-      <Link
-        to="/guides/$slug"
-        params={{ slug: node.slug }}
-        state={{ breadcrumbOrigin: openOrigin }}
-        className="btn-pri w-full"
-      >
-        Open Guide
-      </Link>
+      {canOpenGuide && (
+        <Link
+          to="/guides/$slug"
+          params={{ slug: node.slug }}
+          state={{ breadcrumbOrigin: openOrigin }}
+          className="btn-pri w-full"
+        >
+          Open Guide
+        </Link>
+      )}
     </aside>
   );
 }
