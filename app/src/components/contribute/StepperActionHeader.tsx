@@ -289,7 +289,10 @@ export const StepperActionHeader = ({
           onOpenChange={toggleSubmitModal}
           submitting={submitting}
           publishLabel={publishLabel}
-          onPublish={onPublish}
+          onPublish={() => {
+            setShowSubmitModal(false);
+            onPublish?.();
+          }}
         />
       ) : (
         <GuideSubmitModal
@@ -297,7 +300,10 @@ export const StepperActionHeader = ({
           onOpenChange={toggleSubmitModal}
           submitting={submitting}
           guideCount={guideCount}
-          onPublish={onPublish}
+          onPublish={() => {
+            setShowSubmitModal(false);
+            onPublish?.();
+          }}
         />
       )}
     </>
