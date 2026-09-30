@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { edgeTypeSchema, todoStatusSchema } from "./enums";
+import { subjectReferenceSchema } from "../subjects/references";
 
 export const todoListItemSchema = z.object({
   id: z.uuid(),
@@ -11,6 +12,9 @@ export const todoListItemSchema = z.object({
   status: todoStatusSchema,
   claim_count: z.number().int(),
   created_at: z.iso.datetime({ offset: true }),
+  // The requesting guide's associations, powering the todos page filters.
+  subjects: z.array(subjectReferenceSchema),
+  objectives: z.array(z.object({ slug: z.string(), title: z.string() })),
 });
 
 export const todoSchema = z.object({
