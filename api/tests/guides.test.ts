@@ -36,6 +36,65 @@ describe("GET /guides", () => {
   });
 });
 
+describe("GET /guides/selectable", () => {
+  it("401s without a token", async () => {
+    const res = await app.request("/guides/selectable", {}, env);
+    expect(res.status).toBe(401);
+    await expectToMatchSpec(res, "GET", "/guides/selectable");
+  });
+
+  it("lists published guides plus the caller's own drafts, omitting strangers' drafts", async () => {
+    const author = await makeUser();
+    const published = await createPublishedGuide({ summary: "Summary" });
+    const ownBase = await createGuideBase();
+    await admin
+      .from("guide_bases")
+      .update({ slug: null })
+      .eq("id", ownBase.id)
+      .throwOnError();
+    const ownGuide = await createGuide(ownBase.id, {
+      author_id: author.userId,
+    });
+    await createGuideRevision(ownGuide.id, {
+      status: "draft",
+      author_id: author.userId,
+      title: "My Draft",
+    });
+    const stranger = await makeUser();
+    const strangerBase = await createGuideBase();
+    await admin
+      .from("guide_bases")
+      .update({ slug: null })
+      .eq("id", strangerBase.id)
+      .throwOnError();
+    const strangerGuide = await createGuide(strangerBase.id, {
+      author_id: stranger.userId,
+    });
+    await createGuideRevision(strangerGuide.id, {
+      status: "draft",
+      author_id: stranger.userId,
+      title: "Stranger Draft",
+    });
+
+    const res = await app.request(
+      "/guides/selectable?limit=100",
+      auth(author.token),
+      env
+    );
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/guides/selectable");
+    const body = (await res.json()) as {
+      guides: Array<{ base_id: string; title: string | null }>;
+      total: number;
+    };
+    const ids = body.guides.map((g) => g.base_id);
+    expect(ids).toContain(published.base.id);
+    expect(ids).toContain(ownBase.id);
+    expect(ids).not.toContain(strangerBase.id);
+  });
+});
+
 describe("POST /guides", () => {
   it("401s without a token", async () => {
     const res = await app.request("/guides", { method: "POST" }, env);

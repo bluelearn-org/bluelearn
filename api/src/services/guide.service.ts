@@ -6,6 +6,7 @@ import type {
   GuideListItem,
   GuideReference,
   Pagination,
+  SelectableGuide,
   SubjectReference,
   RequestReference,
   Walkthrough,
@@ -192,6 +193,84 @@ export async function listPublishedGuides(
     data: await buildGuideListItems(supabase, data ?? []),
     total: count ?? 0,
   };
+}
+
+// returns callers own drafts/submitted guides and published guides
+// rows keyed by base_id
+export async function listSelectableGuides(
+  supabase: DB,
+  userId: string,
+  { page, limit }: Pagination = { page: 1, limit: 20 }
+): Promise<{ guides: SelectableGuide[]; total: number }> {
+  const fail = (error: unknown): never => {
+    console.error(error);
+    throw new ServiceError("Failed to load guides", 500);
+  };
+
+  const published = await supabase
+    .from("published_guides")
+    .select("id, base_slug, title, summary, status");
+  if (published.error) fail(published.error);
+
+  const ownGuides = await supabase
+    .from("guides")
+    .select(
+      "id, guide_base_id, base:guide_bases!guides_guide_base_id_fkey!inner(id, slug, status)"
+    )
+    .eq("author_id", userId);
+  if (ownGuides.error) fail(ownGuides.error);
+
+  const ownGuideIds = (ownGuides.data ?? []).map((g) => g.id);
+  const ownRevisions =
+    ownGuideIds.length > 0
+      ? await supabase
+          .from("guide_revisions")
+          .select("guide_id, title, summary, created_at")
+          .in("guide_id", ownGuideIds)
+          .eq("author_id", userId)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null };
+  if (ownRevisions.error) fail(ownRevisions.error);
+
+  const latestByGuide = new Map<
+    string,
+    { title: string | null; summary: string | null }
+  >();
+  for (const r of ownRevisions.data ?? []) {
+    if (!r.guide_id || latestByGuide.has(r.guide_id)) continue;
+    latestByGuide.set(r.guide_id, { title: r.title, summary: r.summary });
+  }
+
+  const byBase = new Map<string, SelectableGuide>();
+  for (const row of published.data ?? []) {
+    if (!row.id || !row.status) continue;
+    byBase.set(row.id, {
+      base_id: row.id,
+      slug: row.base_slug,
+      title: row.title,
+      summary: row.summary,
+      status: row.status,
+    });
+  }
+  for (const g of ownGuides.data ?? []) {
+    const base = g.base;
+    if (!base || base.status === "archived" || byBase.has(base.id)) continue;
+    const latest = latestByGuide.get(g.id);
+    if (!latest) continue;
+    byBase.set(base.id, {
+      base_id: base.id,
+      slug: base.slug,
+      title: latest.title,
+      summary: latest.summary,
+      status: base.status,
+    });
+  }
+
+  const all = [...byBase.values()].sort((a, b) =>
+    (a.title ?? "").localeCompare(b.title ?? "")
+  );
+  const from = (page - 1) * limit;
+  return { guides: all.slice(from, from + limit), total: all.length };
 }
 
 // Create a guide: the create_guide RPC bundles the guide_base + first guide +

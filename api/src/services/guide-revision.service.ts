@@ -128,29 +128,48 @@ export async function resolveRevisionBase(supabase: DB, revisionId: string) {
   };
 }
 
-// Wipe the base's prerequisite edges and re-add them from the given guide slugs.
-// Edge direction is prereq -> this base. An unknown slug fails the whole update.
+// Wipes existing prerequisite links for guide, then adds it back from given slugs/base ids.
+// link direction should be from prerequisite to the guide, unknown slugs or ids abort the update.
 async function replacePrerequisites(
   supabase: DB,
   baseId: string,
   slugs: string[]
 ) {
-  const unique = [...new Set(slugs.map((s) => s.toLowerCase()))];
+  const isUuid = (s: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+  const ids = [...new Set(slugs.filter(isUuid))];
+  const names = [
+    ...new Set(slugs.filter((s) => !isUuid(s)).map((s) => s.toLowerCase())),
+  ];
 
-  let prereqIds: string[] = [];
-  if (unique.length > 0) {
+  let prereqIds: string[] = ids;
+  if (ids.length > 0) {
     const { data, error } = await supabase
       .from("guide_bases")
-      .select("id, slug")
-      .in("slug", unique);
+      .select("id")
+      .in("id", ids);
     if (error) {
       console.error(error);
       throw new ServiceError("Failed to resolve prerequisites", 500);
     }
-    if ((data ?? []).length !== unique.length) {
+    if ((data ?? []).length !== ids.length) {
       throw new ServiceError("Unknown prerequisite guide", 400);
     }
-    prereqIds = (data ?? []).map((b) => b.id);
+  }
+
+  if (names.length > 0) {
+    const { data, error } = await supabase
+      .from("guide_bases")
+      .select("id, slug")
+      .in("slug", names);
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Failed to resolve prerequisites", 500);
+    }
+    if ((data ?? []).length !== names.length) {
+      throw new ServiceError("Unknown prerequisite guide", 400);
+    }
+    prereqIds = [...prereqIds, ...(data ?? []).map((b) => b.id)];
   }
 
   const { error: delError } = await supabase

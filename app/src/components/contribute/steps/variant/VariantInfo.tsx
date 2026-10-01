@@ -3,7 +3,7 @@ import type {
   VariantContribution,
 } from "@/types/contributions";
 
-import type { listGuides } from "@/lib/api/guides";
+import type { GuideOption } from "@/components/contribute/steps/guide/GuideDetails";
 import type { listSubjects } from "@/lib/api/subjects";
 
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
@@ -19,7 +19,7 @@ type PropTypes = {
   onVariantChange: (update: Partial<VariantContribution>) => void;
 
   subjects: Awaited<ReturnType<typeof listSubjects>>;
-  guides: Awaited<ReturnType<typeof listGuides>>;
+  guides: Array<GuideOption>;
 
   body: string;
   onBodyChange: (body: string) => void;

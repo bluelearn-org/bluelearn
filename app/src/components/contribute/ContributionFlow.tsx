@@ -11,6 +11,7 @@ import type {
   VariantContribution,
 } from "@/types/contributions";
 
+import type { GuideOption } from "@/components/contribute/steps/guide/GuideDetails";
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
 import { SelectType } from "@/components/contribute/steps/SelectType";
@@ -25,7 +26,12 @@ import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/Or
 import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
 
-import { addGuideVariant, createGuide, listGuides } from "@/lib/api/guides";
+import {
+  addGuideVariant,
+  createGuide,
+  listGuides,
+  listSelectableGuides,
+} from "@/lib/api/guides";
 import { listSubjects } from "@/lib/api/subjects";
 import { flows, typeStep } from "@/lib/contributionFlow";
 import { uploadMedia } from "@/lib/api/media";
@@ -751,9 +757,7 @@ function Inner({
   const [subjectOptions, setSubjectOptions] = useState<
     Awaited<ReturnType<typeof listSubjects>>
   >([]);
-  const [guideOptions, setGuideOptions] = useState<
-    Awaited<ReturnType<typeof listGuides>>
-  >([]);
+  const [guideOptions, setGuideOptions] = useState<Array<GuideOption>>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -763,9 +767,15 @@ function Inner({
       .then(setSubjectOptions)
       .catch(() => {});
 
-    listGuides(opts)
-      .then(setGuideOptions)
-      .catch(() => {});
+    listSelectableGuides(opts)
+      .then((items) =>
+        setGuideOptions(items.map((g) => ({ ...g, id: g.base_id })))
+      )
+      .catch(() =>
+        listGuides(opts)
+          .then(setGuideOptions)
+          .catch(() => {})
+      );
 
     return () => controller.abort();
   }, []);
