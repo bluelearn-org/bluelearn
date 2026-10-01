@@ -44,7 +44,7 @@ describe("POST /guides", () => {
   });
 
   it("creates a draft guide with its tags", async () => {
-    const { token } = await makeUser();
+    const { token, userId } = await makeUser();
     const subject = await createSubject();
 
     const res = await app.request(
@@ -65,10 +65,10 @@ describe("POST /guides", () => {
 
     const { data: revision } = await admin
       .from("guide_revisions")
-      .select("status")
+      .select("author_id, status")
       .eq("id", revision_id)
       .single();
-    expect(revision?.status).toBe("draft");
+    expect(revision).toMatchObject({ author_id: userId, status: "draft" });
 
     const { data: tags } = await admin
       .from("guide_revision_subjects")
@@ -90,7 +90,7 @@ describe("POST /guides", () => {
         body: "Body.",
         newSubjects: [{ name: newName, summary: "About it" }],
         prerequisites: [prereq.slug],
-        todoPrereqs: ["Learn limits"],
+        requests: [{ title: "Learn limits", summary: "About limits" }],
       }),
       env
     );
@@ -132,7 +132,7 @@ describe("POST /guides", () => {
     expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", baseId);
     expect(todos?.map((t) => t.title)).toEqual(["Learn limits"]);
@@ -153,12 +153,12 @@ describe("GET /guides/{slug}", () => {
       slug: string;
       body: string | null;
       tags: Array<{ slug: string }>;
-      todo_prerequisites: unknown[];
+      requests: unknown[];
     };
     expect(body.slug).toBe(base.slug);
     expect(body.body).toBe("Content");
     expect(body.tags.map((t) => t.slug)).toContain(subject.slug);
-    expect(body.todo_prerequisites).toEqual([]);
+    expect(body.requests).toEqual([]);
   });
 
   it("returns sorted open todos for this guide and omits resolved ones", async () => {
@@ -179,10 +179,10 @@ describe("GET /guides/{slug}", () => {
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "GET", "/guides/{slug}");
     const body = (await res.json()) as {
-      todo_prerequisites: Array<{ id: string; title: string; summary: string }>;
+      requests: Array<{ id: string; title: string; summary: string }>;
       prerequisites: Array<{ slug: string; title: string }>;
     };
-    expect(body.todo_prerequisites).toEqual([
+    expect(body.requests).toEqual([
       {
         id: earlier.id,
         title: "Learn algebra",
@@ -255,10 +255,22 @@ describe("DELETE /guides/{slug}", () => {
 });
 
 describe("GET /guides/{slug}/walkthrough", () => {
-  it("returns the transitive prerequisite DAG", async () => {
-    const prereq = await createPublishedGuide();
+  it("defaults to one follow-up level while preserving prerequisites", async () => {
+    const earlierPrerequisite = await createPublishedGuide();
+    const prerequisite = await createPublishedGuide();
     const target = await createPublishedGuide();
-    await createPrerequisite(prereq.base.id, target.base.id);
+    const followUp = await createPublishedGuide();
+    const otherFollowUp = await createPublishedGuide();
+    const laterFollowUp = await createPublishedGuide();
+    const suspendedFollowUp = await createPublishedGuide();
+    await createPrerequisite(earlierPrerequisite.base.id, prerequisite.base.id);
+    await createPrerequisite(prerequisite.base.id, target.base.id);
+    await createPrerequisite(target.base.id, followUp.base.id);
+    await createPrerequisite(target.base.id, otherFollowUp.base.id);
+    await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+    await createPrerequisite(target.base.id, suspendedFollowUp.base.id, {
+      is_suspended: true,
+    });
 
     const res = await app.request(
       `/guides/${target.base.slug}/walkthrough`,
@@ -272,18 +284,72 @@ describe("GET /guides/{slug}/walkthrough", () => {
       nodes: Array<{ id: string; level: number }>;
       edges: Array<{ from_id: string; to_id: string }>;
     };
-    const ids = body.nodes.map((n) => n.id);
-    expect(ids).toContain(target.base.id);
-    expect(ids).toContain(prereq.base.id);
-    expect(body.edges).toContainEqual({
-      from_id: prereq.base.id,
-      to_id: target.base.id,
-    });
+    const levels = new Map(body.nodes.map((node) => [node.id, node.level]));
 
-    const prereqNode = body.nodes.find((n) => n.id === prereq.base.id);
-    const targetNode = body.nodes.find((n) => n.id === target.base.id);
-    expect(prereqNode?.level).toBeLessThan(targetNode!.level);
+    expect([...levels.keys()]).toEqual(
+      expect.arrayContaining([
+        earlierPrerequisite.base.id,
+        prerequisite.base.id,
+        target.base.id,
+        followUp.base.id,
+        otherFollowUp.base.id,
+      ])
+    );
+    expect(levels.has(laterFollowUp.base.id)).toBe(false);
+    expect(levels.has(suspendedFollowUp.base.id)).toBe(false);
+    expect(
+      body.edges.some((edge) => edge.to_id === laterFollowUp.base.id)
+    ).toBe(false);
+    expect(body.edges).toEqual(
+      expect.arrayContaining([
+        {
+          from_id: prerequisite.base.id,
+          to_id: target.base.id,
+        },
+        {
+          from_id: target.base.id,
+          to_id: followUp.base.id,
+        },
+        {
+          from_id: target.base.id,
+          to_id: otherFollowUp.base.id,
+        },
+      ])
+    );
+    expect(levels.get(prerequisite.base.id)).toBeLessThan(
+      levels.get(target.base.id)!
+    );
+    expect(levels.get(target.base.id)).toBeLessThan(
+      levels.get(followUp.base.id)!
+    );
+    expect(levels.get(earlierPrerequisite.base.id)).toBeLessThan(
+      levels.get(prerequisite.base.id)!
+    );
   });
+
+  it.each([0, 2])(
+    "supports an explicit follow-up depth of %i",
+    async (depth) => {
+      const target = await createPublishedGuide();
+      const followUp = await createPublishedGuide();
+      const laterFollowUp = await createPublishedGuide();
+      await createPrerequisite(target.base.id, followUp.base.id);
+      await createPrerequisite(followUp.base.id, laterFollowUp.base.id);
+
+      const { data, error } = await admin.rpc("compute_walkthrough", {
+        p_guide_base_id: target.base.id,
+        p_follow_up_depth: depth,
+      });
+      expect(error).toBeNull();
+      const body = data as { nodes: Array<{ id: string }> };
+      expect(body.nodes.map((node) => node.id).sort()).toEqual(
+        (depth === 0
+          ? [target.base.id]
+          : [target.base.id, followUp.base.id, laterFollowUp.base.id]
+        ).sort()
+      );
+    }
+  );
 });
 
 // A second published variant under the same base, with a live revision.

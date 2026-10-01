@@ -16,10 +16,17 @@ import {
 import { listTodos } from "@/lib/api/todos";
 import { groupTodosByTitle } from "@/lib/groupTodos";
 import { usePagination } from "@/lib/usePagination";
+import { buildPageMeta } from "@/lib/seo";
 
 const PAGE_SIZE = 10;
 
 export const Route = createFileRoute("/todos")({
+  head: () => ({
+    meta: buildPageMeta(
+      "Guides Waiting to Be Written",
+      "Explore requested guides on Bluelearn and help fill gaps in the community's learning resources."
+    ),
+  }),
   validateSearch: paginationSchema.pick({ page: true }),
   loader: ({ abortController }) =>
     listTodos({ signal: abortController.signal }),

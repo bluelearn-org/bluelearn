@@ -14,6 +14,8 @@ type PropTypes = {
   onSaveDraft?: () => void;
   onPublish: () => void;
   submitting: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   guideOptions: Array<any>;
   subjectOptions: Array<any>;
 };
@@ -131,6 +133,8 @@ export const PreviewObjective = ({
   onSaveDraft,
   onPublish,
   submitting,
+  isDirty,
+  isSynced,
   guideOptions,
   subjectOptions,
 }: PropTypes) => {
@@ -246,6 +250,8 @@ export const PreviewObjective = ({
         onPublish={onPublish}
         publishLabel="Publish"
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <Separator className="mb-8 bg-border" />
@@ -254,15 +260,17 @@ export const PreviewObjective = ({
         <PreviewObjectiveCard objective={previewData} />
 
         <div className="space-y-6">
-          <h3 className="px-1 text-lg font-semibold tracking-tight">
+          <h3 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
             Sub-Objectives
           </h3>
+          <Separator className="mb-4 bg-border" />
+
           {objectiveContData.targets.length === 0 ? (
             <p className="px-1 text-sm text-muted-foreground">
               No sub-objectives configured.
             </p>
           ) : (
-            <ol className="m-0 flex w-full list-none flex-col gap-10 p-0">
+            <ol className="m-0 flex w-full list-none flex-col gap-10 px-0 pb-8">
               {objectiveContData.targets.map((targetSlug, idx) => {
                 const sub = objectiveContData.subObjectives.find(
                   (s) => s.targetSlug === targetSlug

@@ -15,9 +15,9 @@ export function createPrerequisite(
 
 export function createTodo(
   dependentGuideBaseId: string,
-  overrides: Partial<Insert<"todo_prerequisites">> = {}
+  overrides: Partial<Insert<"requests">> = {}
 ) {
-  return insert("todo_prerequisites", {
+  return insert("requests", {
     dependent_guide_base_id: dependentGuideBaseId,
     title: "Missing prerequisite",
     summary: "What the missing prerequisite should cover",

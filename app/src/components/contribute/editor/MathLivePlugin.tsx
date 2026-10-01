@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import "katex/dist/katex.min.css";
 import katex from "katex";
@@ -7,6 +13,7 @@ import { Trash2 } from "lucide-react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import {
+  activeEditor$,
   addComposerChild$,
   addExportVisitor$,
   addImportVisitor$,
@@ -21,10 +28,15 @@ import {
   realmPlugin,
   usePublisher,
 } from "@mdxeditor/editor";
+import { useCellValue } from "@mdxeditor/gurx";
 import { math } from "micromark-extension-math";
 import { mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
 import { MathExportVisitor, MathImportVisitor } from "./MathVisitors";
 import { $createMathNode, MathNode } from "./MathNode";
+import {
+  $insertBlockMathInQuote,
+  $replaceTextWithBlockMathInQuote,
+} from "./MathInsertion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -84,9 +96,18 @@ export const OPEN_MATH_EDITOR_COMMAND = createCommand<MathEditorPayload | null>(
   "OPEN_MATH_EDITOR_COMMAND"
 );
 
+const INSERT_BLOCK_MATH_COMMAND = createCommand<void>(
+  "INSERT_BLOCK_MATH_COMMAND"
+);
+
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false;
-  return window.innerWidth < 768;
+  const hasCoarsePointer =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches;
+  const hasTouchPoints =
+    typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+  return hasCoarsePointer || hasTouchPoints || window.innerWidth < 768;
 }
 
 export function SingletonMathEditor() {
@@ -192,24 +213,21 @@ export function SingletonMathEditor() {
     );
   }, [editor, closeEditor]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!payload) return;
     const mf = mfRef.current;
     if (!mf) return;
     mf.value = payload.latex;
     mf.mathVirtualKeyboardPolicy = isMobile ? "auto" : "manual";
-    const frame = requestAnimationFrame(() => {
-      mfRef.current?.focus();
-      const mvk = (window as any).mathVirtualKeyboard;
-      if (mvk) {
-        if (isMobile && typeof mvk.show === "function") {
-          mvk.show();
-        } else if (!isMobile && typeof mvk.hide === "function") {
-          mvk.hide();
-        }
+    mf.focus();
+    const mvk = (window as any).mathVirtualKeyboard;
+    if (mvk) {
+      if (isMobile && typeof mvk.show === "function") {
+        mvk.show();
+      } else if (!isMobile && typeof mvk.hide === "function") {
+        mvk.hide();
       }
-    });
-    return () => cancelAnimationFrame(frame);
+    }
   }, [payload, isMobile]);
 
   useEffect(() => {
@@ -348,6 +366,14 @@ export function SingletonMathEditor() {
           math-virtual-keyboard-policy={isMobile ? "auto" : "manual"}
           className="w-full text-lg text-foreground outline-none"
           style={{ backgroundColor: "transparent", color: "var(--foreground)" }}
+          // disallowing space key in block equations to prevent accidental exit from latex
+          onKeyDownCapture={(e: any) => {
+            if (e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+          }}
           onKeyDown={(e: any) => {
             if (e.key === "Enter" || e.key === "Escape") {
               e.preventDefault();
@@ -607,6 +633,22 @@ export function MathShortcutTypeListener() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
+    return editor.registerCommand(
+      INSERT_BLOCK_MATH_COMMAND,
+      () => {
+        const mathNode = $createMathNode("", false);
+        if (!$insertBlockMathInQuote(mathNode)) return false;
+
+        const nodeSelection = $createNodeSelection();
+        nodeSelection.add(mathNode.getKey());
+        $setSelection(nodeSelection);
+        return true;
+      },
+      COMMAND_PRIORITY_NORMAL
+    );
+  }, [editor]);
+
+  useEffect(() => {
     return editor.registerUpdateListener(
       ({ tags, dirtyLeaves, editorState }) => {
         if (tags.has("collaboration") || tags.has("historic")) return;
@@ -684,7 +726,18 @@ export function MathShortcutTypeListener() {
               scheduledInsert.equation,
               scheduledInsert.isInline
             );
-            $insertNodes([mathNode]);
+            const insertedInQuote =
+              !scheduledInsert.isInline &&
+              $replaceTextWithBlockMathInQuote(
+                node,
+                scheduledInsert.startIdx,
+                scheduledInsert.endIdx + 1,
+                mathNode
+              );
+
+            if (!insertedInQuote) {
+              $insertNodes([mathNode]);
+            }
 
             const nodeSelection = $createNodeSelection();
             nodeSelection.add(mathNode.getKey());
@@ -737,11 +790,18 @@ export function InsertInlineMath() {
 
 export function InsertBlockMath() {
   const insertDecoratorNode = usePublisher(insertDecoratorNode$);
+  const activeEditor = useCellValue(activeEditor$);
   return (
     <button
       type="button"
       onClick={() => {
-        insertDecoratorNode(() => $createMathNode("", false));
+        const insertedInQuote =
+          activeEditor?.dispatchCommand(INSERT_BLOCK_MATH_COMMAND, undefined) ??
+          false;
+
+        if (!insertedInQuote) {
+          insertDecoratorNode(() => $createMathNode("", false));
+        }
       }}
       className="flex min-h-7 min-w-7 items-center justify-center gap-1 rounded p-1.5 text-foreground transition-colors hover:bg-muted"
       title="Insert Block Math (e.g. $$f(x) = \\sin(x)$$)"

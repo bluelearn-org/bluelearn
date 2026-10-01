@@ -13,7 +13,7 @@ type DraftTagsAndEdges = {
   tags?: string[];
   prerequisites?: string[];
   newSubjects?: { name: string; summary?: string | null }[];
-  todoPrereqs?: { title: string; summary: string }[];
+  requests?: { title: string; summary: string }[];
 };
 
 // The full snapshot of a single revision. RLS exposes a revision once it is
@@ -126,67 +126,6 @@ export async function resolveRevisionBase(supabase: DB, revisionId: string) {
   };
 }
 
-// Wipe the base's prerequisite edges and re-add them from the given guide slugs.
-// Edge direction is prereq -> this base. An unknown slug fails the whole update.
-//  async function replacePrerequisites(
-//    supabase: DB,
-//    baseId: string,
-//    slugs: string[]
-//  ) {
-//    const unique = [...new Set(slugs.map((s) => s.toLowerCase()))];
-//
-//    let prereqIds: string[] = [];
-//    if (unique.length > 0) {
-//      const { data, error } = await supabase
-//        .from("guide_bases")
-//        .select("id, slug")
-//        .in("slug", unique);
-//      if (error) {
-//        console.error(error);
-//        throw new ServiceError("Failed to resolve prerequisites", 500);
-//      }
-//      if ((data ?? []).length !== unique.length) {
-//        throw new ServiceError("Unknown prerequisite guide", 400);
-//      }
-//      prereqIds = (data ?? []).map((b) => b.id);
-//    }
-//
-//    const { error: delError } = await supabase
-//      .from("guide_edges")
-//      .delete()
-//      .eq("to_guide_base_id", baseId)
-//      .eq("edge_type", "prerequisite");
-//    if (delError) {
-//      console.error(delError);
-//      throw new ServiceError("Unable to update prerequisites", 400);
-//    }
-//
-//    for (const fromId of prereqIds) {
-//      await createPrerequisite(supabase, fromId, baseId);
-//    }
-//  }
-
-// Replace a draft guide's open todos.
-//  async function replaceTodos(
-//    supabase: DB,
-//    baseId: string,
-//    todos: { title: string; summary: string }[]
-//  ) {
-//    const { error: delError } = await supabase
-//      .from("todo_prerequisites")
-//      .delete()
-//      .eq("dependent_guide_base_id", baseId)
-//      .eq("status", "open");
-//    if (delError) {
-//      console.error(delError);
-//      throw new ServiceError("Unable to update todos", 400);
-//    }
-//
-//    for (const todo of todos) {
-//      await createTodo(supabase, baseId, todo.title, todo.summary);
-//    }
-//  }
-
 // Fetches a list of slugs that are proposed as new edges for a revision
 // TODO: differentiate between prereqs and follow-ups.
 // Probably need a new column for this
@@ -278,13 +217,11 @@ async function createRevisionRequest(
   revisionId: string,
   request: { title: string; summary: string }
 ) {
-  const { error } = await supabase
-    .from("guide_revision_requests")
-    .insert({
-      guide_revision_id: revisionId,
-      title: request.title,
-      summary: request.summary,
-    });
+  const { error } = await supabase.from("guide_revision_requests").insert({
+    guide_revision_id: revisionId,
+    title: request.title,
+    summary: request.summary,
+  });
 
   if (error) {
     console.error(error);
@@ -319,7 +256,7 @@ export async function syncDraftTagsAndEdges(
   revisionId: string,
   input: DraftTagsAndEdges
 ) {
-  const { tags, prerequisites, newSubjects = [], todoPrereqs } = input;
+  const { tags, prerequisites, newSubjects = [], requests } = input;
 
   const createdIds: string[] = [];
   for (const s of newSubjects) {
@@ -341,8 +278,8 @@ export async function syncDraftTagsAndEdges(
   if (prerequisites !== undefined) {
     await replaceRevisionEdges(supabase, revisionId, prerequisites);
   }
-  if (todoPrereqs !== undefined) {
-    await replaceRevisionRequests(supabase, revisionId, todoPrereqs);
+  if (requests !== undefined) {
+    await replaceRevisionRequests(supabase, revisionId, requests);
   }
 }
 
@@ -407,7 +344,7 @@ async function loadRevisedFromCaseId(
   }
   return data?.case_id ?? null;
 }
-//
+
 // Includes revision with subject tags, and draft context (knowledge type,
 // prerequisites, todos).
 export async function getRevision(supabase: DB, id: string) {
@@ -477,14 +414,8 @@ export async function updateRevision(
   id: string,
   input: UpdateRevisionInput
 ) {
-  const {
-    tags,
-    prerequisites,
-    newSubjects,
-    todoPrereqs,
-    disclaimers,
-    ...fields
-  } = input;
+  const { tags, prerequisites, newSubjects, requests, disclaimers, ...fields } =
+    input;
 
   const patch = {
     ...fields,
@@ -537,7 +468,7 @@ export async function updateRevision(
     tags,
     prerequisites,
     newSubjects,
-    todoPrereqs,
+    requests,
   });
 
   if (disclaimers !== undefined) {
@@ -570,7 +501,7 @@ async function assertNoCompetingTodoClaim(supabase: DB, revisionId: string) {
   const baseId = rev.guides.guide_base_id;
 
   const { data: claims, error: claimsError } = await supabase
-    .from("todo_claims")
+    .from("request_claims")
     .select("todo_id")
     .eq("guide_base_id", baseId);
   if (claimsError) throw new ServiceError("Unable to submit revision", 400);
@@ -578,7 +509,7 @@ async function assertNoCompetingTodoClaim(supabase: DB, revisionId: string) {
   if (todoIds.length === 0) return;
 
   const { data: todos, error: todosError } = await supabase
-    .from("todo_prerequisites")
+    .from("requests")
     .select("status")
     .in("id", todoIds);
   if (todosError) throw new ServiceError("Unable to submit revision", 400);

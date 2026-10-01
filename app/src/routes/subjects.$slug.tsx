@@ -14,6 +14,7 @@ import {
   listSubjectObjectives,
 } from "@/lib/api/subjects";
 import { formatDuration } from "@/lib/guideUtils";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/subjects/$slug")({
   loader: async ({ params, abortController }) => {
@@ -26,6 +27,14 @@ export const Route = createFileRoute("/subjects/$slug")({
     ]);
     return { subject, objectives, guides };
   },
+  head: ({ loaderData }) => ({
+    meta: loaderData
+      ? buildPageMeta(
+          loaderData.subject.name,
+          `Explore free guides and learning objectives about ${loaderData.subject.name} on Bluelearn.`
+        )
+      : [],
+  }),
   errorComponent: SubjectError,
   component: SubjectPage,
 });

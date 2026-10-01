@@ -34,8 +34,8 @@ export function GuideGraphNode({
     >
       <Handle
         type="target"
-        position={Position.Top}
-        className="-top-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+        position={Position.Bottom}
+        className="-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
       />
 
       <Card
@@ -81,8 +81,8 @@ export function GuideGraphNode({
 
       <Handle
         type="source"
-        position={Position.Bottom}
-        className="-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+        position={Position.Top}
+        className="-top-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
       />
     </div>
   );

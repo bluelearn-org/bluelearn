@@ -1,8 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LoginForm } from "@/components/forms/LoginForm";
 import { useRedirectIfAuthed } from "@/lib/authContext";
+import { buildPageMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/login")({ component: RouteComponent });
+export const Route = createFileRoute("/login")({
+  head: () => ({
+    meta: buildPageMeta(
+      "Log In",
+      "Log in to Bluelearn to continue learning and contribute to free, community-written guides."
+    ),
+  }),
+  component: RouteComponent,
+});
 
 function RouteComponent() {
   useRedirectIfAuthed();

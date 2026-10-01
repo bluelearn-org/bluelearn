@@ -135,6 +135,7 @@ describe("POST /todos", () => {
       jsonAuth(token, "POST", {
         guide_base_id: from.id,
         title: "Needs intro to limits",
+        summary: "Explains limits before continuity is introduced",
       }),
       env
     );

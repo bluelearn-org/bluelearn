@@ -62,7 +62,6 @@ function Graph({
       nodeType,
       nodeWidth: NODE_WIDTH,
       nodeSpacing: NODE_SPACING,
-      targetAtBottom: true,
       getNodeState,
     });
 

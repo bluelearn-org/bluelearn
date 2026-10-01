@@ -26,7 +26,7 @@ export const newSubjectSchema = z.object({
   summary: subjectSummarySchema.nullish(),
 });
 
-export const todoPrereqSchema = z.object({
+export const requestSchema = z.object({
   title: z
     .string()
     .trim()
@@ -39,18 +39,27 @@ export const todoPrereqSchema = z.object({
     .max(500, "Summary must be 500 characters or less"),
 });
 
-export const createGuideSchema = z.object({
-  knowledge_type: knowledgeTypeSchema.default("theoretical"),
-  title: guideTitleSchema.nullish(),
-  summary: guideSummarySchema.nullish(),
-  body: guideBodySchema.nullish(),
-  tags: z.array(z.uuid()).default([]),
-  prerequisites: z.array(guideSlugSchema).default([]),
-  newSubjects: z.array(newSubjectSchema).default([]),
-  todoPrereqs: z.array(todoPrereqSchema).default([]),
-  todoClaims: z.array(z.uuid()).default([]),
-  disclaimers: z.array(disclaimerSchema).default([]),
-});
+export const createGuideSchema = z
+  .object({
+    knowledge_type: knowledgeTypeSchema.default("theoretical"),
+    title: guideTitleSchema.nullish(),
+    summary: guideSummarySchema.nullish(),
+    body: guideBodySchema.nullish(),
+    tags: z.array(z.uuid()).default([]),
+    prerequisites: z.array(guideSlugSchema).default([]),
+    newSubjects: z.array(newSubjectSchema).default([]),
+    requests: z.array(requestSchema).optional(),
+    requestClaims: z.array(z.uuid()).optional(),
+    // Older tabs still send these names. Keep accepting them during the rename.
+    todoPrereqs: z.array(requestSchema).optional(),
+    todoClaims: z.array(z.uuid()).optional(),
+    disclaimers: z.array(disclaimerSchema).default([]),
+  })
+  .transform(({ todoPrereqs, todoClaims, ...guide }) => ({
+    ...guide,
+    requests: guide.requests ?? todoPrereqs ?? [],
+    requestClaims: guide.requestClaims ?? todoClaims ?? [],
+  }));
 
 // A variant starts as a draft like a guide does, so every field here is optional
 // and completeness is checked at submit. Its own slug is assigned at publish.
@@ -69,10 +78,17 @@ export const updateRevisionSchema = revisionContentSchema
     tags: z.array(z.uuid()),
     prerequisites: z.array(guideSlugSchema),
     newSubjects: z.array(newSubjectSchema),
-    todoPrereqs: z.array(todoPrereqSchema),
+    requests: z.array(requestSchema),
+    todoPrereqs: z.array(requestSchema),
     disclaimers: z.array(disclaimerSchema),
   })
   .partial()
+  .transform(({ todoPrereqs, ...revision }) => ({
+    ...revision,
+    ...(revision.requests !== undefined || todoPrereqs !== undefined
+      ? { requests: revision.requests ?? todoPrereqs }
+      : {}),
+  }))
   .refine((v) => Object.keys(v).length > 0, {
     message: "at least one field is required",
   });
@@ -93,7 +109,7 @@ export const rollbackRevisionSchema = z.object({
   revision_id: z.uuid(),
 });
 
-export type TodoPrereqInput = z.infer<typeof todoPrereqSchema>;
+export type RequestInput = z.infer<typeof requestSchema>;
 export type CreateGuideInput = z.infer<typeof createGuideSchema>;
 export type CreateVariantInput = z.infer<typeof createVariantSchema>;
 export type UpdateRevisionInput = z.infer<typeof updateRevisionSchema>;

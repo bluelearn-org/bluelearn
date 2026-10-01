@@ -221,7 +221,7 @@ describe("PATCH /guide-revisions/{id}", () => {
         tags: [existing.id],
         prerequisites: [prereq.slug],
         newSubjects: [{ name: newName }],
-        todoPrereqs: ["Learn functions"],
+        requests: [{ title: "Learn functions", summary: "About functions" }],
       }),
       env
     );
@@ -243,7 +243,7 @@ describe("PATCH /guide-revisions/{id}", () => {
     expect(edges?.map((e) => e.from_guide_base_id)).toEqual([prereq.id]);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", base.id);
     expect(todos?.map((t) => t.title)).toEqual(["Learn functions"]);
@@ -344,14 +344,16 @@ describe("PATCH /guide-revisions/{id}", () => {
 
     const res = await app.request(
       `/guide-revisions/${draft.id}`,
-      jsonAuth(author.token, "PATCH", { todoPrereqs: ["Learn matrices"] }),
+      jsonAuth(author.token, "PATCH", {
+        requests: [{ title: "Learn matrices", summary: "About matrices" }],
+      }),
       env
     );
 
     expect(res.status).toBe(422);
 
     const { data: todos } = await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .select("title")
       .eq("dependent_guide_base_id", base.id);
     expect(todos?.map((t) => t.title)).toEqual(["Learn vectors"]);
@@ -441,7 +443,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
     );
     const todo = await createTodo(baseA.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseA.id })
       .throwOnError();
     const first = await app.request(
@@ -456,7 +458,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
       authorB.userId
     );
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseB.id })
       .throwOnError();
     const res = await app.request(
@@ -473,11 +475,11 @@ describe("POST /guide-revisions/{id}/submit", () => {
     const { revision, base } = await createCompleteDraft(author.userId);
     const todo = await createTodo(base.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: base.id })
       .throwOnError();
     await admin
-      .from("todo_prerequisites")
+      .from("requests")
       .update({ status: "resolved", resolved_guide_base_id: base.id })
       .eq("id", todo.id)
       .throwOnError();
@@ -497,7 +499,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
     );
     const todo = await createTodo(baseA.id);
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseA.id })
       .throwOnError();
     const first = await app.request(
@@ -520,7 +522,7 @@ describe("POST /guide-revisions/{id}/submit", () => {
       authorB.userId
     );
     await admin
-      .from("todo_claims")
+      .from("request_claims")
       .insert({ todo_id: todo.id, guide_base_id: baseB.id })
       .throwOnError();
     const res = await app.request(

@@ -5,7 +5,7 @@ export const createPrerequisiteSchema = z.object({
   to_guide_base_id: z.uuid(),
 });
 
-export const createTodoPrerequisiteSchema = z.object({
+export const createRequestSchema = z.object({
   guide_base_id: z.uuid(),
   title: z.string().min(1),
   summary: z.string(),

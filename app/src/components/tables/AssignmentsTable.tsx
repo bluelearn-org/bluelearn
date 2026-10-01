@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
-import { Checkbox } from "../ui/checkbox";
+import {
+  reviewCaseTypeSchema,
+  reviewSeatStatusSchema,
+  userStatusSchema,
+} from "@bluelearn/schemas";
+
 import type { AssignmentTable } from "@/lib/api/dashboard";
+import type { DashboardColumn } from "@/lib/dashboardFilters";
+import { useDashboardFilters } from "@/lib/dashboardFilters";
+import { formatDate } from "@/lib/guideUtils";
+import { deadlineTickMs, formatTimeRemaining } from "@/lib/reviewDeadline";
+
+import { ColumnFilter } from "@/components/tables/ColumnFilter";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -10,14 +22,75 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/guideUtils";
-import { deadlineTickMs, formatTimeRemaining } from "@/lib/reviewDeadline";
 
 type AssignmentsTableProps = {
   assignmentsData: AssignmentTable;
   selectedIds: Set<string>;
   setSelectedIds: (ids: Set<string>) => void;
 };
+
+const columns: Array<
+  DashboardColumn<AssignmentTable[number]> & { width: string }
+> = [
+  {
+    key: "username",
+    label: "Assignee",
+    width: "w-sm",
+    value: (row) => row.username,
+  },
+  {
+    key: "user_status",
+    label: "Assignee Status",
+    width: "w-xs",
+    kind: "choice",
+    options: [...userStatusSchema.options, "No status."],
+    value: (row) => row.user_status ?? "No status.",
+  },
+  {
+    key: "time_left",
+    label: "Time Left",
+    width: "w-sm",
+    kind: "duration",
+    value: (row) => row.time_left,
+  },
+  {
+    key: "status",
+    label: "Status",
+    width: "w-xs",
+    kind: "choice",
+    options: reviewSeatStatusSchema.options,
+    value: (row) => row.status,
+  },
+  {
+    key: "type",
+    label: "Type",
+    width: "w-xs",
+    kind: "choice",
+    options: reviewCaseTypeSchema.options,
+    value: (row) => row.type,
+  },
+  { key: "title", label: "Title", width: "w-lg", value: (row) => row.title },
+  {
+    key: "change_summary",
+    label: "Change Summary",
+    width: "w-lg",
+    value: (row) => row.change_summary,
+  },
+  {
+    key: "date_created",
+    label: "Date Created",
+    width: "w-sm",
+    kind: "date",
+    value: (row) => row.date_created,
+  },
+  {
+    key: "date_updated",
+    label: "Date Updated",
+    width: "w-sm",
+    kind: "date",
+    value: (row) => row.date_updated,
+  },
+];
 
 function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
   const [now, setNow] = useState(() => Date.now());
@@ -57,9 +130,17 @@ export const AssignmentsTable = ({
     return `${assignment.id}:${assignment.panel_id}`;
   }
 
+  const { filters, visibleRows, updateFilters } = useDashboardFilters(
+    assignmentsData,
+    columns,
+    selectedIds,
+    setSelectedIds,
+    getSelectionKey
+  );
+
   const allSelected =
-    assignmentsData.length > 0 &&
-    assignmentsData.every((assignment) =>
+    visibleRows.length > 0 &&
+    visibleRows.every((assignment) =>
       selectedIds.has(getSelectionKey(assignment))
     );
 
@@ -81,12 +162,12 @@ export const AssignmentsTable = ({
 
     if (allSelected) {
       // deselect every assignment currently displayed
-      assignmentsData.forEach((assignment) => {
+      visibleRows.forEach((assignment) => {
         next.delete(getSelectionKey(assignment));
       });
     } else {
       // select every assignment currently displayed
-      assignmentsData.forEach((assignment) => {
+      visibleRows.forEach((assignment) => {
         next.add(getSelectionKey(assignment));
       });
     }
@@ -107,46 +188,33 @@ export const AssignmentsTable = ({
               />
             </TableHead>
 
-            <TableHead className="w-sm px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Assignee
-            </TableHead>
-
-            <TableHead className="w-xs px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Assignee Status
-            </TableHead>
-
-            <TableHead className="w-sm px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Time Left
-            </TableHead>
-
-            <TableHead className="w-xs px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Status
-            </TableHead>
-
-            <TableHead className="w-xs px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Type
-            </TableHead>
-
-            <TableHead className="w-lg px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Title
-            </TableHead>
-
-            <TableHead className="w-lg px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Change Summary
-            </TableHead>
-
-            <TableHead className="w-sm px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Date Created
-            </TableHead>
-
-            <TableHead className="w-sm px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
-              Date Updated
-            </TableHead>
+            {columns.map((column) => (
+              <TableHead
+                key={column.key}
+                className={`${column.width} px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase`}
+              >
+                <ColumnFilter
+                  column={column}
+                  filters={filters}
+                  onChange={updateFilters}
+                />
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
 
         <TableBody>
-          {assignmentsData.map((assignment) => {
+          {visibleRows.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={10}
+                className="px-4 py-3 text-center text-muted-foreground"
+              >
+                No data matches these filters
+              </TableCell>
+            </TableRow>
+          )}
+          {visibleRows.map((assignment) => {
             const selectionKey = getSelectionKey(assignment);
 
             return (

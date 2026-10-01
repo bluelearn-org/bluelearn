@@ -1,11 +1,19 @@
-import { Check, Save, Scroll } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, HardDrive, Loader2, Save, Scroll } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { ContributionType } from "@/types/contributions";
+import type { AnyStoredDraft } from "@/lib/contributionStorage";
+
 import { Separator } from "@/components/ui/separator";
 import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
 import { GuideSubmitModal } from "@/components/modals/GuideSubmitModal";
 import { ObjectivePublishModal } from "@/components/modals/ObjectivePublishModal";
+import { getAllStoredDrafts } from "@/lib/contributionStorage";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type PropTypes = {
   title: string;
@@ -17,8 +25,77 @@ type PropTypes = {
   submitting?: boolean;
   saveDisabled?: boolean;
   publishLabel?: string;
+  guideCount?: number;
+  // whether the current draft has edits that haven't been saved yet
+  isDirty?: boolean;
+  // whether the locally saved content is confirmed saved to the server too
+  isSynced?: boolean;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
+};
+
+type SaveStatus = "saving" | "unsaved" | "saved-locally" | "saved";
+
+const SaveStatusIndicator = ({
+  status,
+  labelClassName = "",
+}: {
+  status: SaveStatus;
+  labelClassName?: string;
+}) => {
+  const label = (
+    <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-xs tracking-[0.08em] uppercase">
+      {status === "saving" && (
+        <>
+          <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+          <span className={`text-muted-foreground ${labelClassName}`}>
+            Saving
+          </span>
+        </>
+      )}
+
+      {status === "unsaved" && (
+        <>
+          <span className="size-1.5 shrink-0 rounded-full bg-amber-500" />
+          <span
+            className={`text-amber-700 dark:text-amber-400 ${labelClassName}`}
+          >
+            Unsaved
+          </span>
+        </>
+      )}
+
+      {(status === "saved" || status === "saved-locally") && (
+        <>
+          {status === "saved" ? (
+            <Check className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <HardDrive className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          )}
+          <span
+            className={`text-emerald-700 dark:text-emerald-400 ${labelClassName}`}
+          >
+            Saved
+          </span>
+        </>
+      )}
+    </span>
+  );
+
+  if (status !== "saved-locally") {
+    return label;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0}>{label}</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        Saved in this browser - Save Draft to sync to your account.
+      </TooltipContent>
+    </Tooltip>
+  );
 };
 
 export const StepperActionHeader = ({
@@ -29,6 +106,9 @@ export const StepperActionHeader = ({
   submitting,
   saveDisabled,
   publishLabel = "Submit for Review",
+  guideCount = 1,
+  isDirty,
+  isSynced,
   hideBackBtn,
   hideGuidelines,
   onSaveDraft,
@@ -36,17 +116,29 @@ export const StepperActionHeader = ({
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [allStoredDrafts, setAllStoredDrafts] = useState<Array<AnyStoredDraft>>(
+    []
+  );
 
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
 
+  // batch submit feedback so it's more obvious for the user
+  const submitLabel = guideCount > 1 ? `Submit All for Review` : publishLabel;
+  const compactSubmitLabel = guideCount > 1 ? `Submit All` : "Submit";
+
+  const saveStatus: SaveStatus = submitting
+    ? "saving"
+    : isDirty
+      ? "unsaved"
+      : isSynced === false
+        ? "saved-locally"
+        : "saved";
+
   useEffect(() => {
-    return () => {
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-    };
+    // get all drafts from localstorage
+    setAllStoredDrafts(getAllStoredDrafts());
   }, []);
 
   const saveDraft = async () => {
@@ -54,9 +146,8 @@ export const StepperActionHeader = ({
     const didSave = await onSaveDraft();
     if (didSave === false) return;
 
-    setSaved(true);
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-    resetTimer.current = setTimeout(() => setSaved(false), 2000);
+    // a new draft may now exist locally, refresh the count
+    setAllStoredDrafts(getAllStoredDrafts());
   };
 
   return (
@@ -78,7 +169,11 @@ export const StepperActionHeader = ({
           )}
         </div>
 
-        <div className="text-mono flex flex-wrap gap-2 sm:gap-4">
+        <div className="text-mono flex flex-wrap items-center gap-2 sm:gap-4">
+          {onSaveDraft && typeof isDirty === "boolean" && (
+            <SaveStatusIndicator status={saveStatus} />
+          )}
+
           {onSaveDraft && (
             <button
               type="button"
@@ -87,7 +182,7 @@ export const StepperActionHeader = ({
               onClick={saveDraft}
             >
               <Save className="size-4" />
-              Save Draft
+              {allStoredDrafts.length > 1 ? "Save Drafts" : "Save Draft"}
             </button>
           )}
 
@@ -102,7 +197,7 @@ export const StepperActionHeader = ({
               disabled={submitting}
               onClick={handleSubmit}
             >
-              {publishLabel}
+              {submitLabel}
             </button>
           ) : (
             <Stepper.Next className="btn-pri" disabled={nextDisabled}>
@@ -112,7 +207,7 @@ export const StepperActionHeader = ({
         </div>
       </div>
 
-      <Separator className="mb-8 hidden bg-border sm:block" />
+      <Separator className="hidden bg-border sm:block" />
 
       {(onSaveDraft || !hideBackBtn || onPublish) && (
         <div className="fixed inset-x-0 bottom-0 z-40 flex w-full items-center gap-1.5 overflow-hidden border-t bg-background/95 px-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
@@ -139,6 +234,13 @@ export const StepperActionHeader = ({
               </button>
             )}
 
+            {onSaveDraft && typeof isDirty === "boolean" && (
+              <SaveStatusIndicator
+                status={saveStatus}
+                labelClassName="hidden min-[400px]:inline"
+              />
+            )}
+
             {onSaveDraft && (
               <button
                 type="button"
@@ -146,17 +248,8 @@ export const StepperActionHeader = ({
                 disabled={submitting || saveDisabled}
                 onClick={saveDraft}
               >
-                {saved ? (
-                  <>
-                    <Check className="size-3.5 shrink-0" />
-                    Saved
-                  </>
-                ) : (
-                  <>
-                    <Save className="size-3.5 shrink-0" />
-                    Save draft
-                  </>
-                )}
+                <Save className="size-3.5 shrink-0" />
+                Save draft
               </button>
             )}
           </div>
@@ -170,7 +263,7 @@ export const StepperActionHeader = ({
                 onClick={handleSubmit}
               >
                 {publishLabel.toLowerCase().startsWith("submit")
-                  ? "Submit"
+                  ? compactSubmitLabel
                   : publishLabel}
               </button>
             ) : (
@@ -196,14 +289,21 @@ export const StepperActionHeader = ({
           onOpenChange={toggleSubmitModal}
           submitting={submitting}
           publishLabel={publishLabel}
-          onPublish={onPublish}
+          onPublish={() => {
+            setShowSubmitModal(false);
+            onPublish?.();
+          }}
         />
       ) : (
         <GuideSubmitModal
           open={showSubmitModal}
           onOpenChange={toggleSubmitModal}
           submitting={submitting}
-          onPublish={onPublish}
+          guideCount={guideCount}
+          onPublish={() => {
+            setShowSubmitModal(false);
+            onPublish?.();
+          }}
         />
       )}
     </>

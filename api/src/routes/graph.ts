@@ -1,13 +1,16 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { z } from "zod";
-import { requireUser } from "../middleware/auth.middleware";
+import {
+  requireUnsuspendedUser,
+  requireUser,
+} from "../middleware/auth.middleware";
 import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
 import { CONTRIBUTION } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
 import {
   createPrerequisiteSchema,
-  createTodoPrerequisiteSchema,
+  createRequestSchema,
   prerequisiteResponseSchema,
   todoListResponseSchema,
   todoResponseSchema,
@@ -31,10 +34,11 @@ export const prerequisitesRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(prerequisiteResponseSchema, "The created edge"),
-        ...errorResponses(400, 401, 404, 409, 422, 429),
+        ...errorResponses(400, 401, 403, 404, 409, 422, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "prerequisite-create" }),
     validate("json", createPrerequisiteSchema),
     async (c) => {
@@ -57,10 +61,11 @@ export const prerequisitesRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(prerequisiteResponseSchema, "The suspended edge"),
-        ...errorResponses(401, 404, 429),
+        ...errorResponses(401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "prerequisite-suspend" }),
     validate("param", idParamSchema),
     async (c) => {
@@ -98,12 +103,13 @@ export const todosRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(todoResponseSchema, "The created todo prerequisite"),
-        ...errorResponses(400, 401, 404, 429),
+        ...errorResponses(400, 401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...CONTRIBUTION, bucket: "todo-create" }),
-    validate("json", createTodoPrerequisiteSchema),
+    validate("json", createRequestSchema),
     async (c) => {
       const { guide_base_id, title, summary } = c.req.valid("json");
       const todo = await createTodo(

@@ -29,7 +29,6 @@ type UseGraphLayoutProps = {
   nodeType: string;
   nodeWidth: number;
   nodeSpacing: number;
-  targetAtBottom?: boolean;
   getNodeState?: (slug: string) => NodeState;
 };
 
@@ -57,6 +56,46 @@ function buildAdjacency(walkthroughData: Walkthrough) {
   return { prereqs, dependents };
 }
 
+export function getTargetPrerequisiteWalkthrough(
+  walkthroughData: Walkthrough,
+  targetSlug: string
+) {
+  const target = walkthroughData.nodes.find((node) => node.slug === targetSlug);
+  if (!target) return { nodes: [], edges: [] };
+
+  const incoming = new Map<string, Array<string>>();
+  for (const edge of walkthroughData.edges) {
+    const prerequisites = incoming.get(edge.to_id);
+    if (prerequisites) {
+      prerequisites.push(edge.from_id);
+    } else {
+      incoming.set(edge.to_id, [edge.from_id]);
+    }
+  }
+
+  const reachable = new Set([target.id]);
+  const pending = [target.id];
+  while (pending.length > 0) {
+    const nodeId = pending.pop()!;
+    for (const prerequisiteId of incoming.get(nodeId) ?? []) {
+      if (!reachable.has(prerequisiteId)) {
+        reachable.add(prerequisiteId);
+        pending.push(prerequisiteId);
+      }
+    }
+  }
+
+  const nodes = walkthroughData.nodes.filter((node) => reachable.has(node.id));
+  const nodeIds = new Set(nodes.map((node) => node.id));
+
+  return {
+    nodes,
+    edges: walkthroughData.edges.filter(
+      (edge) => nodeIds.has(edge.from_id) && nodeIds.has(edge.to_id)
+    ),
+  };
+}
+
 export function useGraphLayout({
   walkthroughData,
   targetSlug,
@@ -64,7 +103,6 @@ export function useGraphLayout({
   nodeType,
   nodeWidth,
   nodeSpacing,
-  targetAtBottom = false,
   getNodeState = NO_NODE_STATE,
 }: UseGraphLayoutProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -91,9 +129,7 @@ export function useGraphLayout({
     const newNodes: Array<Node> = [];
     levels.forEach((level, levelIdx) => {
       const nodesInLevel = grouped[level];
-      const levelY = targetAtBottom
-        ? levelIdx * LEVEL_SPACING
-        : (maxLevelIdx - levelIdx) * LEVEL_SPACING;
+      const levelY = (maxLevelIdx - levelIdx) * LEVEL_SPACING;
 
       const totalWidth = nodesInLevel.length * nodeSpacing;
       const startX = -totalWidth / 2;
@@ -157,7 +193,7 @@ export function useGraphLayout({
 
         if (!isTransient) {
           newEdges.push({
-            id: `e-${prereqSlug}-${node.slug}`,
+            id: JSON.stringify([prereqSlug, node.slug]),
             source: prereqSlug,
             target: node.slug,
             type: "default",
@@ -181,7 +217,6 @@ export function useGraphLayout({
     nodeType,
     nodeWidth,
     nodeSpacing,
-    targetAtBottom,
     setNodes,
     setEdges,
   ]);

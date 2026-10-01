@@ -65,6 +65,21 @@ export default function Editor({
     }, 1000);
   }, []);
 
+  // MDXEditor's imperative setMarkdown() does NOT fire the editor's onChange,
+  // so an imported file would otherwise never reach `markdown` or the parent's
+  // `body` - the content would render in Lexical but be dropped on the next
+  // remount (e.g. the Preview step round trip). Propagate it explicitly, and
+  // skip the debounce since an import is a single deliberate action.
+  const handleImportMarkdown = useCallback((newMarkdown: string) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setMarkdown(newMarkdown);
+    latestRef.current = newMarkdown;
+    onChangeRef.current?.(newMarkdown);
+  }, []);
+
   // If the user clicks away (e.g., clicking "Save Draft" or "Next"),
   // immediately flush any pending debounced state to the parent
   // so that the button click handlers see the freshest data.
@@ -163,6 +178,7 @@ export default function Editor({
           <EditorToolbar
             editorRef={editorRef}
             markdown={markdown}
+            onImportMarkdown={handleImportMarkdown}
             onH1Attempted={() => {
               toast.warning("Heading 1 is Reserved for the Guide's Title", {
                 description:

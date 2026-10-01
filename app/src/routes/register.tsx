@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RegisterForm } from "@/components/forms/RegisterForm";
 import { useRedirectIfAuthed } from "@/lib/authContext";
+import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/register")({
+  head: () => ({
+    meta: buildPageMeta(
+      "Register",
+      "Create a free Bluelearn account to learn, write guides, and help make knowledge accessible to everyone."
+    ),
+  }),
   component: RouteComponent,
 });
 

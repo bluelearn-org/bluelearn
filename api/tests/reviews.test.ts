@@ -649,6 +649,85 @@ describe("close_review_panel via cast decision", () => {
     expect(b?.canonical_guide_id).toBe(guide.id);
   });
 
+  it("links the new guide as a prerequisite where it resolved a todo", async () => {
+    const requester = await createPublishedGuide();
+    const claimed = await createTodo(requester.base.id, {
+      title: "Loop invariants",
+    });
+    const unclaimed = await createTodo(requester.base.id, {
+      title: "Recursion",
+    });
+    const base = await createGuideBase();
+    const guide = await createGuide(base.id);
+    const revision = await createGuideRevision(guide.id, {
+      title: "Loop invariants",
+    });
+    await admin
+      .from("request_claims")
+      .insert({ todo_id: claimed.id, guide_base_id: base.id })
+      .throwOnError();
+    const { reviewCase, panelists } = await seedSeatedReviewCase({
+      caseType: "guide_publish",
+      seats: 3,
+      revisionId: revision.id,
+    });
+
+    await castApprove(panelists[0].token, reviewCase.id);
+    await castApprove(panelists[1].token, reviewCase.id);
+
+    expect(await caseStatus(reviewCase.id)).toBe("approved");
+
+    const res = await app.request(`/guides/${requester.base.slug}`, {}, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      prerequisites: Array<{ slug: string }>;
+      requests: Array<{ id: string }>;
+    };
+    expect(body.prerequisites).toEqual([
+      expect.objectContaining({ slug: base.slug }),
+    ]);
+    expect(body.requests).toEqual([
+      expect.objectContaining({ id: unclaimed.id }),
+    ]);
+  });
+
+  it("still publishes when the requester is already a prerequisite of the new guide", async () => {
+    const requester = await createPublishedGuide();
+    const claimed = await createTodo(requester.base.id);
+    const base = await createGuideBase();
+    const guide = await createGuide(base.id);
+    const revision = await createGuideRevision(guide.id);
+    await createPrerequisite(requester.base.id, base.id);
+    await admin
+      .from("request_claims")
+      .insert({ todo_id: claimed.id, guide_base_id: base.id })
+      .throwOnError();
+    const { reviewCase, panelists } = await seedSeatedReviewCase({
+      caseType: "guide_publish",
+      seats: 3,
+      revisionId: revision.id,
+    });
+
+    await castApprove(panelists[0].token, reviewCase.id);
+    await castApprove(panelists[1].token, reviewCase.id);
+
+    expect(await caseStatus(reviewCase.id)).toBe("approved");
+
+    const { data: todo } = await admin
+      .from("requests")
+      .select("status")
+      .eq("id", claimed.id)
+      .single();
+    expect(todo?.status).toBe("resolved");
+
+    const { data: backEdge } = await admin
+      .from("guide_edges")
+      .select("id")
+      .eq("from_guide_base_id", base.id)
+      .eq("to_guide_base_id", requester.base.id);
+    expect(backEdge).toEqual([]);
+  });
+
   it("assigns a slug to the subjects the approved revision proposed", async () => {
     const base = await createGuideBase();
     const guide = await createGuide(base.id);

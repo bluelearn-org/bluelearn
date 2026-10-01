@@ -3,7 +3,7 @@
 Thanks for being here. This document is the whole
 contributor path, from "I want to help" to "my change is merged."
 
-> If you only read one thing: open an issue or ping `#contributing` on
+> If you only read one thing: open an issue or ping `#open-development` on
 > [Discord](https://discord.gg/bluelearnorg) **before** large changes. The
 > conversation saves you (and reviewers) a lot of time.
 
@@ -60,8 +60,8 @@ You don't need to ask permission for any of these. Just start.
 If you're new, the fastest path:
 
 1. Find an issue labelled
-   [`good first issue`](https://github.com/bluelearn-org/bluelearn/labels/good%20first%20issue)
-   or [`help wanted`](https://github.com/bluelearn-org/bluelearn/labels/help%20wanted).
+   [`good first issue`](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aissue+state%3Aopen+label%3Atag%3Agood-first-issue)
+   or [`help wanted`](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aissue+state%3Aopen+label%3Atag%3Ahelp-wanted).
 2. Comment on it: *"I'd like to take this"*. A maintainer will assign you
    within 48 hours (usually faster).
 3. Follow [Development setup](#development-setup) below.
@@ -264,7 +264,7 @@ If no, split it.
 
 - **Response time** — a maintainer will leave a first comment within
   **5 business days**. If 5 days pass with no response, ping
-  `#contributing` on Discord. We sometimes drop the ball; gentle nudges help.
+  `#open-development` on Discord. We sometimes drop the ball; gentle nudges help.
 - **Approvals** — one maintainer approval is enough for most changes. Two
   for: changes to `api/src/middleware/`, the database schema, RLS policies,
   CI workflows, or anything touching auth.
@@ -303,8 +303,8 @@ roadmap; until then, the issue is the proposal.
 
 ## Reporting bugs
 
-- **Search [open](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
-  and [closed](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aclosed+is%3Aissue+label%3Abug)
+- **Search [open](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aopen+is%3Aissue+label%3Atag%3Abug)
+  and [closed](https://github.com/bluelearn-org/bluelearn/issues?q=is%3Aclosed+is%3Aissue+label%3Atag%3Abug)
   issues first** — your bug may already be tracked or fixed.
 - Use the **Bug report** issue template. The template prompts you for what
   reviewers need to reproduce: steps, expected vs actual, environment.

@@ -24,6 +24,7 @@ import { filtersToParams, search } from "@/lib/api/search";
 import { listGuidesPage } from "@/lib/api/guides";
 import { listObjectives } from "@/lib/api/objectives";
 import { formatDate, formatDuration } from "@/lib/guideUtils";
+import { buildPageMeta } from "@/lib/seo";
 
 const PAGE_SIZE = 10;
 
@@ -103,6 +104,12 @@ async function fetchObjectives(
 }
 
 export const Route = createFileRoute("/browse")({
+  head: () => ({
+    meta: buildPageMeta(
+      "Browse",
+      "Find free guides and learning objectives on Bluelearn. Search by topic and explore what to learn next."
+    ),
+  }),
   validateSearch: (raw): BrowseSearch => {
     const q = typeof raw.q === "string" ? raw.q.trim() : "";
     const scope =

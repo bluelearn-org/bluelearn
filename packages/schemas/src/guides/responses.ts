@@ -13,10 +13,7 @@ import {
   revisionStatusSchema,
   voteDirectionSchema,
 } from "./enums";
-import {
-  guideReferenceSchema,
-  todoPrerequisiteReferenceSchema,
-} from "./references";
+import { guideReferenceSchema, requestReferenceSchema } from "./references";
 export const guideSchema = z.object({
   slug: z.string(),
   variant_id: z.string().nullable(),
@@ -30,8 +27,10 @@ export const guideSchema = z.object({
   created_at: z.iso.datetime({ offset: true }),
   tags: z.array(subjectReferenceSchema),
   prerequisites: z.array(guideReferenceSchema),
+  requests: z.array(requestReferenceSchema),
+  // Kept for older clients during the API field rename.
+  todo_prerequisites: z.array(requestReferenceSchema).optional(),
   follow_ups: z.array(guideReferenceSchema).optional(),
-  todo_prerequisites: z.array(todoPrerequisiteReferenceSchema),
   is_official: z.boolean(),
   disclaimers: z.array(disclaimerSchema),
 });

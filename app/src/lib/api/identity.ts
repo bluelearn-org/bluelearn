@@ -6,7 +6,7 @@ const me = client.me;
 type FetchOptions = { signal?: AbortSignal };
 
 export async function getMyIdentity({ signal }: FetchOptions = {}) {
-  const res = await me.$get(undefined, { init: { signal } });
+  const res = await me.$get(undefined, { init: { signal, cache: "no-store" } });
   await assertOk(res);
 
   return await res.json();
@@ -40,4 +40,14 @@ export async function getProfilePage(
   await assertOk(res);
 
   return await res.json();
+}
+
+export async function getGuideDrafts({ signal }: FetchOptions = {}) {
+  const res = await client.me.drafts.$get({}, { init: { signal } });
+
+  await assertOk(res);
+
+  const data = await res.json();
+
+  return data.guide_drafts;
 }

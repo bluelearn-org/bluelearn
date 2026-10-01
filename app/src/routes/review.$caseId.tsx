@@ -98,7 +98,7 @@ function RouteComponent() {
       tags: revision.tags,
       prerequisites: [],
       disclaimers: [],
-      todo_prerequisites: [],
+      requests: [],
     };
 
     return (

@@ -332,28 +332,12 @@ export async function fetchAssignmentsTable(supabase: DB) {
 
 // suspend a user
 export async function suspendUser(supabase: DB, userId: string) {
-  const [, profile] = await Promise.all([
-    markUserStatus(supabase, userId, "suspended"),
-    supabase.from("profiles").update({ is_suspended: true }).eq("id", userId),
-  ]);
-
-  if (profile.error || !profile) {
-    console.error(profile.error);
-    throw new ServiceError("Failed to mark user profile as suspended", 500);
-  }
+  await markUserStatus(supabase, userId, "suspended");
 }
 
 // unsuspend a user
 export async function unsuspendUser(supabase: DB, userId: string) {
-  const [, profile] = await Promise.all([
-    markUserStatus(supabase, userId, "active"),
-    supabase.from("profiles").update({ is_suspended: false }).eq("id", userId),
-  ]);
-
-  if (profile.error || !profile) {
-    console.error(profile.error);
-    throw new ServiceError("Failed to mark user profile as unsuspended", 500);
-  }
+  await markUserStatus(supabase, userId, "active");
 }
 
 // reassign a member of a panel

@@ -5,13 +5,16 @@ import {
   SlidersHorizontalIcon,
   XIcon,
 } from "lucide-react";
+
 import type {
   ActivityFilters,
   ActivitySort,
   ActivityStatusFilter,
   ActivityTypeFilter,
 } from "@bluelearn/schemas";
+
 import { cn } from "@/lib/utils";
+
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,26 +29,32 @@ type SetFilters = (next: Partial<ActivityFilters>) => void;
 
 function formatMDY(date: Date | undefined) {
   if (!date) return "";
+
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
+
   return `${month}/${day}/${date.getFullYear()}`;
 }
 
-// yyyy-mm-dd in local time, which is what the URL stores
+//  URL stores yyyy-mm-dd local time
 function toISODate(date: Date | undefined) {
   if (!date) return undefined;
+
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
+
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function parseISODate(value: string | undefined) {
   if (!value) return undefined;
+
   const [year, month, day] = value.split("-").map(Number);
+
   return new Date(year, month - 1, day);
 }
 
-function ColumnFilter({
+export function ColumnFilter({
   label,
   active,
   onClear,
@@ -64,6 +73,7 @@ function ColumnFilter({
         <PopoverTrigger asChild>
           <button
             type="button"
+            aria-label={`Filter ${label}`}
             className={cn(
               "flex cursor-pointer items-center gap-1.5 uppercase transition-colors",
               active ? "text-brand-bright-blue" : "hover:text-foreground/70"
@@ -73,8 +83,10 @@ function ColumnFilter({
             <SlidersHorizontalIcon className="size-3.5" />
           </button>
         </PopoverTrigger>
+
         <PopoverContent
           align="start"
+          aria-label={`Filter ${label}`}
           className={cn("w-56 gap-3 tracking-normal normal-case", className)}
         >
           <div className="text-xs font-medium">
@@ -83,6 +95,7 @@ function ColumnFilter({
           {children}
         </PopoverContent>
       </Popover>
+
       {active && (
         <button
           type="button"
@@ -97,7 +110,7 @@ function ColumnFilter({
   );
 }
 
-function SortRow({
+export function SortRow({
   active,
   ascending,
   label,
@@ -112,6 +125,7 @@ function SortRow({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
         "flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
         active ? "bg-accent text-foreground" : "hover:bg-muted"
@@ -140,8 +154,10 @@ export function TextColumnFilter({
 }) {
   const asc = `${field}_asc` as ActivitySort;
   const desc = `${field}_desc` as ActivitySort;
+
   const colSort =
     search.sort === asc ? "asc" : search.sort === desc ? "desc" : null;
+
   const active = Boolean(search[field]) || colSort !== null;
 
   return (
@@ -170,6 +186,7 @@ export function TextColumnFilter({
             setFilters({ sort: colSort === "asc" ? undefined : asc })
           }
         />
+
         <SortRow
           ascending={false}
           label="Sort Z - A"
@@ -203,8 +220,11 @@ export function ChoiceColumnFilter({
 
   function toggle(value: string) {
     const next = new Set(selected);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
+    if (next.has(value)) {
+      next.delete(value);
+    } else {
+      next.add(value);
+    }
     setFilters({ [field]: next.size ? [...next] : undefined });
   }
 
@@ -235,22 +255,34 @@ export function ChoiceColumnFilter({
 export function DateColumnFilter({
   search,
   setFilters,
+  label = "Date",
+  sortControl,
 }: {
   search: ActivityFilters;
   setFilters: SetFilters;
+  label?: string;
+  sortControl?: {
+    direction: "asc" | "desc" | null;
+    onChange: (direction: "asc" | "desc" | null) => void;
+    onClear: () => void;
+  };
 }) {
   const from = parseISODate(search.from);
   const to = parseISODate(search.to);
-  const colSort =
-    search.sort === "date_asc"
+
+  const colSort = sortControl
+    ? sortControl.direction
+    : search.sort === "date_asc"
       ? "asc"
       : search.sort === undefined
         ? "desc"
         : null;
-  const active =
-    Boolean(search.from || search.to) || search.sort === "date_asc";
 
-  // Which field the calendar popover is editing (null closes it).
+  const active =
+    Boolean(search.from || search.to) ||
+    (sortControl ? colSort !== null : search.sort === "date_asc");
+
+  // the field the calendar popover is editing (null closes it)
   const [activeField, setActiveField] = useState<"from" | "to" | null>(null);
   const [visibleMonth, setVisibleMonth] = useState<Date | undefined>(undefined);
 
@@ -260,7 +292,7 @@ export function DateColumnFilter({
     setActiveField(field);
   }
 
-  // Swap dates if end date is earlier than start date.
+  // Swap dates if end date is earlier than start date
   function commit(nextFrom: Date | undefined, nextTo: Date | undefined) {
     let start = nextFrom;
     let end = nextTo;
@@ -274,7 +306,7 @@ export function DateColumnFilter({
   }
 
   // Start date calendar click advances to the end date field, then
-  // closes on the end date click.
+  // closes on the end date click
   function onPickDay(date: Date | undefined) {
     onSetDate(date);
     if (activeField === "to") {
@@ -289,15 +321,19 @@ export function DateColumnFilter({
 
   return (
     <ColumnFilter
-      label="Date"
+      label={label}
       active={active}
-      onClear={() =>
+      onClear={() => {
+        if (sortControl) {
+          sortControl.onClear();
+          return;
+        }
         setFilters({
           from: undefined,
           to: undefined,
           sort: search.sort === "date_asc" ? undefined : search.sort,
-        })
-      }
+        });
+      }}
       className="w-auto"
     >
       <Popover
@@ -309,20 +345,25 @@ export function DateColumnFilter({
         <div className="flex items-center gap-2">
           <FieldAnchor active={activeField === "from"}>
             <DateField
+              label={`${label} from`}
               active={activeField === "from"}
               date={from}
               onClick={() => openField("from")}
             />
           </FieldAnchor>
+
           <span className="text-muted-foreground">and</span>
+
           <FieldAnchor active={activeField === "to"}>
             <DateField
+              label={`${label} to`}
               active={activeField === "to"}
               date={to}
               onClick={() => openField("to")}
             />
           </FieldAnchor>
         </div>
+
         <PopoverContent
           align="start"
           className="w-auto gap-3 tracking-normal normal-case"
@@ -332,6 +373,7 @@ export function DateColumnFilter({
             onChange={onSetDate}
             onNavigate={setVisibleMonth}
           />
+
           <Calendar
             mode="single"
             selected={activeDate}
@@ -347,14 +389,21 @@ export function DateColumnFilter({
           ascending={false}
           label="Sort Newest"
           active={colSort === "desc"}
-          onClick={() => setFilters({ sort: undefined })}
+          onClick={() =>
+            sortControl
+              ? sortControl.onChange(colSort === "desc" ? null : "desc")
+              : setFilters({ sort: undefined })
+          }
         />
+
         <SortRow
           ascending
           label="Sort Oldest"
           active={colSort === "asc"}
           onClick={() =>
-            setFilters({ sort: colSort === "asc" ? undefined : "date_asc" })
+            sortControl
+              ? sortControl.onChange(colSort === "asc" ? null : "asc")
+              : setFilters({ sort: colSort === "asc" ? undefined : "date_asc" })
           }
         />
       </div>
@@ -374,14 +423,15 @@ function SegmentedDateInput({
   const monthRef = useRef<HTMLInputElement>(null);
   const dayRef = useRef<HTMLInputElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
+
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
   const [year, setYear] = useState("");
-  // Time value we last emitted, so our own echo doesn't stomp typing.
+
   const lastEmitted = useRef<number | null>(null);
 
-  // Sync segments only on external changes (calendar, field switch, clear),
-  // not when value just echoes back what we typed.
+  // Sync segments only on external changes (calendar, field switch, clear)
+  // not when value just echoes back what was typed
   const valueTime = value ? value.getTime() : null;
   useEffect(() => {
     if (valueTime !== null && valueTime === lastEmitted.current) return;
@@ -392,6 +442,7 @@ function SegmentedDateInput({
       return;
     }
     const date = new Date(valueTime);
+
     setMonth(String(date.getMonth() + 1).padStart(2, "0"));
     setDay(String(date.getDate()).padStart(2, "0"));
     setYear(String(date.getFullYear()));
@@ -399,7 +450,9 @@ function SegmentedDateInput({
 
   function emit(m: string, d: string, y: string) {
     if (!m || !d || y.length !== 4) return;
+
     const date = new Date(Number(y), Number(m) - 1, Number(d));
+
     if (date.getMonth() === Number(m) - 1 && date.getDate() === Number(d)) {
       lastEmitted.current = date.getTime();
       onChange(date);
@@ -410,21 +463,27 @@ function SegmentedDateInput({
   // falling back to the current value for the segment left blank.
   function navigate(m: string, y: string) {
     const base = value ?? new Date();
+
     const monthNum = Number(m);
     const monthIdx =
       m && monthNum >= 1 && monthNum <= 12 ? monthNum - 1 : base.getMonth();
+
     const yearNum = Number(y);
     const yearVal = y.length === 4 ? yearNum : base.getFullYear();
+
     onNavigate(new Date(yearVal, monthIdx, 1));
   }
 
   function onMonth(raw: string) {
     const digits = raw.replace(/\D/g, "").slice(0, 2);
     const done = digits.length === 2 || Number(digits) > 1;
+
     const next = done ? digits.padStart(2, "0") : digits;
+
     setMonth(next);
     emit(next, day, year);
     navigate(next, year);
+
     if (done && digits) {
       dayRef.current?.focus();
       dayRef.current?.select();
@@ -433,10 +492,14 @@ function SegmentedDateInput({
 
   function onDay(raw: string) {
     const digits = raw.replace(/\D/g, "").slice(0, 2);
+
     const done = digits.length === 2 || Number(digits) > 3;
+
     const next = done ? digits.padStart(2, "0") : digits;
+
     setDay(next);
     emit(month, next, year);
+
     if (done && digits) {
       yearRef.current?.focus();
       yearRef.current?.select();
@@ -461,7 +524,9 @@ function SegmentedDateInput({
         placeholder="MM"
         className="w-7 bg-transparent text-center tabular-nums caret-transparent outline-none placeholder:font-light placeholder:text-muted-foreground focus:rounded-md focus:bg-brand-bright-blue/15"
       />
+
       <span className="px-1 text-muted-foreground">/</span>
+
       <input
         ref={dayRef}
         value={day}
@@ -474,7 +539,9 @@ function SegmentedDateInput({
         placeholder="DD"
         className="w-7 bg-transparent text-center tabular-nums caret-transparent outline-none placeholder:font-light placeholder:text-muted-foreground focus:rounded-md focus:bg-brand-bright-blue/15"
       />
+
       <span className="px-1 text-muted-foreground">/</span>
+
       <input
         ref={yearRef}
         value={year}
@@ -505,11 +572,17 @@ function FieldAnchor({
 
 const DateField = forwardRef<
   HTMLButtonElement,
-  { active: boolean; date: Date | undefined; onClick: () => void }
->(function DateFieldButton({ active, date, onClick }, ref) {
+  {
+    active: boolean;
+    date: Date | undefined;
+    onClick: () => void;
+    label: string;
+  }
+>(function DateFieldButton({ active, date, onClick, label }, ref) {
   return (
     <button
       ref={ref}
+      aria-label={label}
       type="button"
       onClick={onClick}
       className={cn(
