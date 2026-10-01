@@ -246,6 +246,86 @@ export type Database = {
           },
         ]
       }
+      guide_revision_edges: {
+        Row: {
+          guide_revision_id: string
+          new_edge_id: string
+        }
+        Insert: {
+          guide_revision_id: string
+          new_edge_id: string
+        }
+        Update: {
+          guide_revision_id?: string
+          new_edge_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_revision_edges_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_edges_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+          {
+            foreignKeyName: "guide_revision_edges_new_edge_id_fkey"
+            columns: ["new_edge_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_edges_new_edge_id_fkey"
+            columns: ["new_edge_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_revision_requests: {
+        Row: {
+          guide_revision_id: string
+          id: string
+          summary: string
+          title: string
+        }
+        Insert: {
+          guide_revision_id: string
+          id?: string
+          summary: string
+          title: string
+        }
+        Update: {
+          guide_revision_id?: string
+          id?: string
+          summary?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_revision_requests_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_requests_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+        ]
+      }
       guide_revision_subjects: {
         Row: {
           guide_revision_id: string
@@ -1241,6 +1321,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_revision_edges_and_requests: {
+        Args: { p_base_id: string; p_revision_id: string }
+        Returns: undefined
+      }
       assemble_review_panel: {
         Args: { p_case_id: string; p_policy_default: number }
         Returns: string
@@ -1345,11 +1429,11 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: string
       }
+      sweep_expired_review_seats: { Args: never; Returns: Json }
       todo_has_open_claim: {
-        Args: { p_todo_ids: string[]; p_exclude_base_id: string }
+        Args: { p_exclude_base_id: string; p_todo_ids: string[] }
         Returns: boolean
       }
-      sweep_expired_review_seats: { Args: never; Returns: Json }
       wilson_lower_bound: {
         Args: { downvotes: number; upvotes: number; z?: number }
         Returns: number
