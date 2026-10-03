@@ -25,7 +25,12 @@ import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/Or
 import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
 
-import { addGuideVariant, createGuide, listGuides } from "@/lib/api/guides";
+import {
+  addGuideVariant,
+  createGuide,
+  getGuide,
+  listGuides,
+} from "@/lib/api/guides";
 import { listSubjects } from "@/lib/api/subjects";
 import { flows, typeStep } from "@/lib/contributionFlow";
 import { uploadMedia } from "@/lib/api/media";
@@ -66,6 +71,7 @@ type PropTypes = {
   todoTitle?: string;
   todoSummary?: string;
   todoIds: Array<string>;
+  slug?: string;
 };
 
 type MultiGuide = GuideContribution & {
@@ -181,6 +187,7 @@ export default function ContributionFlow({
   todoTitle,
   todoSummary,
   todoIds,
+  slug,
 }: PropTypes) {
   const [guideContData, setGuideContData] = useState<Array<MultiGuide>>(() => {
     if (draftId || todoTitle) {
@@ -240,6 +247,14 @@ export default function ContributionFlow({
       return storedVariants[0]?.data ?? createVariantContData();
     }
   );
+
+  useEffect(() => {
+    if (slug && !variantContData.baseGuide) {
+      getGuide(slug).then((guide) =>
+        setVariantContData((prev) => ({ ...prev, baseGuide: guide.slug }))
+      );
+    }
+  });
 
   const [objectiveLocalDraftId] = useState<string>(() => createLocalDraftId());
 
