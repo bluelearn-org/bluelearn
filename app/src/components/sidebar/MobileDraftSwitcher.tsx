@@ -57,7 +57,7 @@ export const MobileDraftSwitcher = ({
       <SheetTrigger asChild>
         <button
           type="button"
-          className="mb-4 flex min-h-11 w-full items-center gap-3 rounded-md border px-3 text-left"
+          className="mb-4 flex min-h-11 w-full items-center gap-3 rounded-md border px-3 text-left md:hidden"
           aria-label={`Drafts: guide ${activeIndex + 1} of ${guides.length}, ${activeTitle}`}
         >
           <span className="data-label shrink-0 text-muted-foreground">
