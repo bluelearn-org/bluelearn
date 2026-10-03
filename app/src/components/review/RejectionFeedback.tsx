@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  MessageSquareText,
-  MessageSquareWarning,
-  PanelRightClose,
-  PanelRightOpen,
-} from "lucide-react";
+import { MessageSquareWarning, PanelRightClose } from "lucide-react";
 
 import type { PanelDecision } from "@/components/review/DecisionList";
 import { DecisionList } from "@/components/review/DecisionList";
@@ -71,13 +66,10 @@ const MobileRejectionFeedback = ({
 export const RejectionFeedback = ({ draftId }: { draftId: string }) => {
   const [caseId, setCaseId] = useState<string | null>(null);
   const [decisions, setDecisions] = useState<Array<PanelDecision>>([]);
+
   const [open, setOpen] = useState(true);
 
-  // Mobile open/close
-  const [sheetOpen, setSheetOpen] = useState(false);
-
   const isDesktop = useMediaQuery("(min-width: 60rem)");
-  const buttonHidden = isDesktop && open;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -103,57 +95,58 @@ export const RejectionFeedback = ({ draftId }: { draftId: string }) => {
       <MobileRejectionFeedback
         caseId={caseId}
         decisions={decisions}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        open={!isDesktop && open}
+        onOpenChange={setOpen}
       />
 
       <Button
         variant="ghost"
         size="icon"
         aria-label="Show panel feedback"
-        aria-hidden={buttonHidden}
-        tabIndex={buttonHidden ? -1 : 0}
+        aria-hidden={open}
         className={cn(
           "absolute top-[39px] right-7 transition-opacity",
-          buttonHidden
+          open
             ? "pointer-events-none opacity-0 duration-75"
             : "opacity-100 delay-250 duration-150"
         )}
-        onClick={() => (isDesktop ? setOpen(true) : setSheetOpen(true))}
+        onClick={() => setOpen(true)}
       >
-        <PanelRightOpen className="size-5" />
+        <MessageSquareWarning className="size-5" />
       </Button>
 
-      <div
-        className={cn(
-          "hidden:md -mt-8 -mr-8 -mb-8 shrink-0 transition-[width] duration-400 ease-out [clip-path:inset(0)] md:block lg:-mr-16",
-          open ? "w-[320px] border-l" : "w-0"
-        )}
-      >
-        <aside className="sticky top-[65px] max-h-[calc(100vh-65px)] w-[320px] space-y-4 overflow-y-auto px-6 pt-[39px] pb-8">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-mono text-[11px] font-bold tracking-[0.08em] uppercase">
-                Panel Feedback
-              </p>
+      {isDesktop && (
+        <div
+          className={cn(
+            "-mt-8 -mr-8 -mb-8 shrink-0 transition-[width] duration-400 ease-out [clip-path:inset(0)] lg:-mr-16",
+            open ? "w-[320px] border-l" : "w-0"
+          )}
+        >
+          <aside className="sticky top-[65px] max-h-[calc(100vh-65px)] w-[320px] space-y-4 overflow-y-auto px-6 pt-[39px] pb-8">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-mono text-[11px] font-bold tracking-[0.08em] uppercase">
+                  Panel Feedback
+                </p>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Hide panel feedback"
-                className="-mr-1"
-                onClick={() => setOpen(false)}
-              >
-                <PanelRightClose className="size-5" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Hide panel feedback"
+                  className="-mr-1"
+                  onClick={() => setOpen(false)}
+                >
+                  <PanelRightClose className="size-5" />
+                </Button>
+              </div>
+
+              <CaseLink caseId={caseId} />
             </div>
 
-            <CaseLink caseId={caseId} />
-          </div>
-
-          <DecisionList decisions={decisions} />
-        </aside>
-      </div>
+            <DecisionList decisions={decisions} />
+          </aside>
+        </div>
+      )}
     </>
   );
 };

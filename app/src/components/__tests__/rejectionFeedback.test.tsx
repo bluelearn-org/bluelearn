@@ -61,13 +61,17 @@ describe("RejectionFeedback", () => {
     stubScreen(false);
     render(<RejectionFeedback draftId="draft-1" />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Show panel feedback" })
-    );
-
-    const dialog = screen.getByRole("dialog");
+    const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("View the closed case")).toBeDefined();
     expect(within(dialog).getByText("Needs a worked example.")).toBeDefined();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show panel feedback" })
+    );
+    expect(screen.getByRole("dialog")).toBeDefined();
   });
 
   it("reopens the side column instead of a sheet on desktop", async () => {
@@ -77,6 +81,7 @@ describe("RejectionFeedback", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Hide panel feedback" })
     );
+    expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(
       screen.getByRole("button", { name: "Show panel feedback" })
     );
