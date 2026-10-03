@@ -1,18 +1,83 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import {
+  MessageSquareText,
+  MessageSquareWarning,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 
 import type { PanelDecision } from "@/components/review/DecisionList";
 import { DecisionList } from "@/components/review/DecisionList";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { getRevision } from "@/lib/api/guideRevisions";
 import { getReviewCase } from "@/lib/api/reviews";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+
+type MobileProps = {
+  caseId: string;
+  decisions: Array<PanelDecision>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+const CaseLink = ({ caseId }: { caseId: string }) => (
+  <Link
+    to="/review/$caseId"
+    params={{ caseId }}
+    className="mono-micro text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+  >
+    View the closed case
+  </Link>
+);
+
+/**
+ * mobile replacement for the feedback column
+ * panel feedback slides in from the right as Sheet
+ */
+const MobileRejectionFeedback = ({
+  caseId,
+  decisions,
+  open,
+  onOpenChange,
+}: MobileProps) => (
+  <Sheet open={open} onOpenChange={onOpenChange}>
+    <SheetContent side="right" className="gap-0">
+      <SheetHeader>
+        <SheetTitle className="font-mono tracking-[0.08em] uppercase">
+          Panel Feedback
+        </SheetTitle>
+        <SheetDescription className="sr-only">
+          Reviewer decisions from the case that sent this draft back.
+        </SheetDescription>
+      </SheetHeader>
+
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+        <CaseLink caseId={caseId} />
+        <DecisionList decisions={decisions} />
+      </div>
+    </SheetContent>
+  </Sheet>
+);
 
 export const RejectionFeedback = ({ draftId }: { draftId: string }) => {
   const [caseId, setCaseId] = useState<string | null>(null);
   const [decisions, setDecisions] = useState<Array<PanelDecision>>([]);
   const [open, setOpen] = useState(true);
+
+  // Mobile open/close
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const isDesktop = useMediaQuery("(min-width: 60rem)");
+  const buttonHidden = isDesktop && open;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -35,26 +100,33 @@ export const RejectionFeedback = ({ draftId }: { draftId: string }) => {
 
   return (
     <>
+      <MobileRejectionFeedback
+        caseId={caseId}
+        decisions={decisions}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
+
       <Button
         variant="ghost"
         size="icon"
         aria-label="Show panel feedback"
-        aria-hidden={open}
-        tabIndex={open ? -1 : 0}
+        aria-hidden={buttonHidden}
+        tabIndex={buttonHidden ? -1 : 0}
         className={cn(
           "absolute top-[39px] right-7 transition-opacity",
-          open
+          buttonHidden
             ? "pointer-events-none opacity-0 duration-75"
             : "opacity-100 delay-250 duration-150"
         )}
-        onClick={() => setOpen(true)}
+        onClick={() => (isDesktop ? setOpen(true) : setSheetOpen(true))}
       >
         <PanelRightOpen className="size-5" />
       </Button>
 
       <div
         className={cn(
-          "-mt-8 -mr-8 -mb-8 shrink-0 transition-[width] duration-400 ease-out [clip-path:inset(0)] lg:-mr-16",
+          "hidden:md -mt-8 -mr-8 -mb-8 shrink-0 transition-[width] duration-400 ease-out [clip-path:inset(0)] md:block lg:-mr-16",
           open ? "w-[320px] border-l" : "w-0"
         )}
       >
@@ -76,13 +148,7 @@ export const RejectionFeedback = ({ draftId }: { draftId: string }) => {
               </Button>
             </div>
 
-            <Link
-              to="/review/$caseId"
-              params={{ caseId }}
-              className="mono-micro text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-            >
-              View the closed case
-            </Link>
+            <CaseLink caseId={caseId} />
           </div>
 
           <DecisionList decisions={decisions} />
