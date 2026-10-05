@@ -80,7 +80,7 @@ function RouteComponent() {
   if (canAuthor && !guide.is_official) {
     guideMenuItems.push({
       label: "Create Variant",
-      to: "/contribute",
+      to: `/contribute?contributionType=variant&step=variant-details&slug=${slug}`,
       icon: <Plus className="h-4 w-4" />,
     });
   }
