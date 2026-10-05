@@ -96,7 +96,10 @@ export const OrderObjectiveGuides = ({
     if (!targetSlug) return;
 
     const controller = new AbortController();
-    getGuideWalkthrough(targetSlug, { signal: controller.signal })
+    getGuideWalkthrough(targetSlug, {
+      signal: controller.signal,
+      followUpDepth: 0,
+    })
       .then((data) => {
         setWalkthroughData(getTargetPrerequisiteWalkthrough(data, targetSlug));
         setWalkthroughSlug(targetSlug);

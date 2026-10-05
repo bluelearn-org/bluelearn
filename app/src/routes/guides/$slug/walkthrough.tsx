@@ -37,7 +37,10 @@ function RouteComponent() {
     setWalkthroughData(null);
     setSelectedGuide(null);
     setError(null);
-    getGuideWalkthrough(slug, { signal: controller.signal })
+    getGuideWalkthrough(slug, {
+      signal: controller.signal,
+      followUpDepth: 1,
+    })
       .then(setWalkthroughData)
       .catch((err) => {
         if (controller.signal.aborted) return;
