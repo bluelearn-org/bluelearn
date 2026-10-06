@@ -98,6 +98,8 @@ const createVariantContData = (): VariantContribution => ({
   baseGuide: "",
   subjects: [],
   newSubjects: [],
+  prereqs: [],
+  requests: [],
   body: "",
   disclaimers: [],
 });
@@ -646,6 +648,8 @@ function Inner({
             baseGuide: data.base_slug ?? "",
             subjects: tagged,
             newSubjects: pending,
+            prereqs: data.prerequisites,
+            requests: data.todos,
             disclaimers: data.disclaimers,
           };
 

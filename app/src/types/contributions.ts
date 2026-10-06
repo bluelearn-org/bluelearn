@@ -38,6 +38,8 @@ export const variantContributionSchema = z.object({
   baseGuide: z.string(),
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
+  prereqs: z.array(z.string()),
+  requests: z.array(z.object({ title: z.string(), summary: z.string() })),
   body: z.string(),
   disclaimers: z.array(disclaimerSlugSchema),
 });
