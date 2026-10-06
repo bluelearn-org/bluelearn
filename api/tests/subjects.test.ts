@@ -20,16 +20,41 @@ import { expectToMatchSpec } from "./openapi";
 // whitespace-separated words.
 const words = (n: number) => Array(n).fill("word").join(" ");
 
+type ListedSubject = {
+  id: string;
+  guides_total: number;
+  objectives_total: number;
+};
+
+async function listAllSubjects() {
+  const subjects: ListedSubject[] = [];
+  let total = 0;
+
+  for (let page = 1; page === 1 || page <= Math.ceil(total / 100); page += 1) {
+    const res = await app.request(`/subjects?limit=100&page=${page}`, {}, env);
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/subjects");
+    const body = (await res.json()) as {
+      subjects: ListedSubject[];
+      total: number;
+    };
+    subjects.push(...body.subjects);
+    total = body.total;
+    expect(body.subjects).toHaveLength(Math.min(100, total - (page - 1) * 100));
+  }
+
+  expect(new Set(subjects.map((subject) => subject.id)).size).toBe(total);
+
+  return subjects;
+}
+
 describe("GET /subjects", () => {
   it("lists subjects", async () => {
     const subject = await createSubject();
 
-    const res = await app.request("/subjects", {}, env);
+    const subjects = await listAllSubjects();
 
-    expect(res.status).toBe(200);
-    await expectToMatchSpec(res, "GET", "/subjects");
-    const body = (await res.json()) as { subjects: Array<{ id: string }> };
-    expect(body.subjects.map((s) => s.id)).toContain(subject.id);
+    expect(subjects.map((s) => s.id)).toContain(subject.id);
   });
 
   it("totals the guides and objectives tagged with each subject", async () => {
@@ -47,18 +72,9 @@ describe("GET /subjects", () => {
     await tagObjectiveRevision(objective.revision.id, subject.id);
     await createPublishedObjective(userId, target);
 
-    const res = await app.request("/subjects", {}, env);
+    const subjects = await listAllSubjects();
 
-    expect(res.status).toBe(200);
-    await expectToMatchSpec(res, "GET", "/subjects");
-    const body = (await res.json()) as {
-      subjects: Array<{
-        id: string;
-        guides_total: number;
-        objectives_total: number;
-      }>;
-    };
-    const found = body.subjects.find((s) => s.id === subject.id);
+    const found = subjects.find((s) => s.id === subject.id);
     expect(found?.guides_total).toBe(1);
     expect(found?.objectives_total).toBe(1);
   });
@@ -66,17 +82,9 @@ describe("GET /subjects", () => {
   it("reports zero totals for a subject with no tags", async () => {
     const subject = await createSubject();
 
-    const res = await app.request("/subjects", {}, env);
+    const subjects = await listAllSubjects();
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      subjects: Array<{
-        id: string;
-        guides_total: number;
-        objectives_total: number;
-      }>;
-    };
-    const found = body.subjects.find((s) => s.id === subject.id);
+    const found = subjects.find((s) => s.id === subject.id);
     expect(found?.guides_total).toBe(0);
     expect(found?.objectives_total).toBe(0);
   });
@@ -96,6 +104,33 @@ describe("GET /subjects/{slug}", () => {
 });
 
 describe("GET /subjects/{slug}/guides", () => {
+  it("paginates equal titles in stable ID order", async () => {
+    const subject = await createSubject();
+    const first = await createPublishedGuide();
+    const second = await createPublishedGuide();
+    await tagGuideRevision(first.revision.id, subject.id);
+    await tagGuideRevision(second.revision.id, subject.id);
+
+    const ids: string[] = [];
+    for (const page of [1, 2]) {
+      const res = await app.request(
+        `/subjects/${subject.slug}/guides?limit=1&page=${page}`,
+        {},
+        env
+      );
+      expect(res.status).toBe(200);
+      await expectToMatchSpec(res, "GET", "/subjects/{slug}/guides");
+      const body = (await res.json()) as {
+        guides: Array<{ id: string }>;
+        total: number;
+      };
+      expect(body.total).toBe(2);
+      expect(body.guides).toHaveLength(1);
+      ids.push(body.guides[0].id);
+    }
+    expect(ids).toEqual([first.base.id, second.base.id].sort());
+  });
+
   it("lists tagged guides only", async () => {
     const subject = await createSubject();
     const tagged = await createPublishedGuide({ summary: "Tagged" });
@@ -137,7 +172,7 @@ describe("GET /subjects/{slug}/guides", () => {
         id: string;
         duration_minutes: number;
         author: string | null;
-        tags: string[];
+        tags: Array<{ name: string; slug: string }>;
         created_at: string;
       }>;
     };
@@ -145,7 +180,10 @@ describe("GET /subjects/{slug}/guides", () => {
     expect(found?.duration_minutes).toBe(2); // 400 words / 200 wpm
     expect(found?.author).not.toBeNull();
     expect(found?.tags).toEqual(
-      expect.arrayContaining([subject.slug, other.slug])
+      expect.arrayContaining([
+        { name: subject.name, slug: subject.slug },
+        { name: other.name, slug: other.slug },
+      ])
     );
     expect(found?.created_at).toBeTruthy();
   });
