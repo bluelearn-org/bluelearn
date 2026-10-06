@@ -252,6 +252,7 @@ export async function listSubjectGuides(
     .select(PUBLISHED_GUIDE_SELECT, { count: "exact" })
     .contains("subject_ids", [subject.id])
     .order("title")
+    .order("id")
     .range(from, to);
 
   if (guideError) {
