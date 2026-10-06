@@ -21,7 +21,7 @@ describe("Database Layer: Review Case Time Limits & Sweep", () => {
     await suspendAllVerifiers();
   });
 
-  it("submit_guide_revision sets default 2-day time_limit on the created review case", async () => {
+  it("submit_guide_revision sets the default 1-day time_limit on the created review case", async () => {
     const author = await makeUser();
     const base = await createGuideBase();
     const guide = await createGuide(base.id);
@@ -51,8 +51,7 @@ describe("Database Layer: Review Case Time Limits & Sweep", () => {
 
     expect(caseErr).toBeNull();
     expect(reviewCase).toBeTruthy();
-    // PostgreSQL interval '2 days'
-    expect(reviewCase?.time_limit).toMatch(/2 days|48:00:00/);
+    expect(reviewCase?.time_limit).toMatch(/1 day|24:00:00/);
   });
 
   it("sweep_expired_review_seats replaces expired seats (>48h) and draws replacement verifier", async () => {
