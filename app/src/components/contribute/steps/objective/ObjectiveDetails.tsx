@@ -32,6 +32,8 @@ type PropTypes = {
   hideBackBtn?: boolean;
   onSaveDraft?: () => void;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
 };
 
 export const ObjectiveDetails = ({
@@ -45,6 +47,8 @@ export const ObjectiveDetails = ({
   hideBackBtn,
   onSaveDraft,
   submitting,
+  isDirty,
+  isSynced,
 }: PropTypes) => {
   const invalid = (field: string) => invalidFields?.has(field) || undefined;
   const invalidClass = "border-2 border-destructive aria-invalid:ring-0";
@@ -76,6 +80,8 @@ export const ObjectiveDetails = ({
         hideBackBtn={hideBackBtn}
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <FieldGroup>

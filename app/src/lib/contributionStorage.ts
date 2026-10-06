@@ -391,6 +391,12 @@ export function clearStoredDraftsByType(type: ContributionType): void {
 
 export interface ContributionSaveControls {
   cancel: () => void;
+  /** true when there are edits that haven't been flushed to localStorage yet */
+  isDirty: boolean;
+  /** true when the content last flushed to localStorage matches what was last confirmed saved to the server */
+  isSynced: boolean;
+  /** call after a successful server save to mark the current content as synced */
+  markSynced: () => void;
 }
 
 /**
@@ -450,6 +456,32 @@ export function useDebouncedContributionSave(
 
   const isPendingRef = useRef(false);
 
+  /*
+   * isDirty compares serialized content rather than object identity.
+   * Callers (e.g. a `{ ...guide }` spread) may pass a brand-new object
+   * on every render even when nothing actually changed - comparing by
+   * reference would flag those renders as edits and flicker the save
+   * status back to "unsaved" right after a save completes.
+   */
+  const dataSignature = localDraftId && type ? JSON.stringify(data) : null;
+  const lastSavedSignatureRef = useRef<string | null>(dataSignature);
+  const isDirty =
+    dataSignature !== null && dataSignature !== lastSavedSignatureRef.current;
+
+  /*
+   * isSynced tracks whether the content is confirmed saved to the server,
+   * as opposed to only autosaved to this browser's localStorage. It starts
+   * out false (never assume a resumed draft matches the server without an
+   * explicit save in this session) and only becomes true via markSynced().
+   */
+  const lastSyncedSignatureRef = useRef<string | null>(null);
+  const isSynced =
+    dataSignature === null || dataSignature === lastSyncedSignatureRef.current;
+
+  const markSynced = () => {
+    lastSyncedSignatureRef.current = dataSignature;
+  };
+
   // keep the latest contribution data available
   if (localDraftId && type) {
     pendingRef.current = {
@@ -483,6 +515,8 @@ export function useDebouncedContributionSave(
     if (!pending) {
       return;
     }
+
+    lastSavedSignatureRef.current = JSON.stringify(pending.data);
 
     switch (pending.type) {
       case "guide":
@@ -524,6 +558,8 @@ export function useDebouncedContributionSave(
   const cancel = () => {
     clearTimer();
     isPendingRef.current = false;
+    lastSavedSignatureRef.current = dataSignature;
+    lastSyncedSignatureRef.current = dataSignature;
   };
 
   const flushRef = useRef(flush);
@@ -531,6 +567,9 @@ export function useDebouncedContributionSave(
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
+
+  const markSyncedRef = useRef(markSynced);
+  markSyncedRef.current = markSynced;
 
   // start debounce timer whenever the contribution changes
   useEffect(() => {
@@ -549,7 +588,7 @@ export function useDebouncedContributionSave(
     }, delay);
 
     return clearTimer;
-  }, [localDraftId, type, data, revisionId, step, delay]);
+  }, [localDraftId, type, dataSignature, revisionId, step, delay]);
 
   // flush anything still waiting when the component unmounts.
   useEffect(() => {
@@ -560,5 +599,8 @@ export function useDebouncedContributionSave(
 
   return {
     cancel: () => cancelRef.current(),
+    isDirty,
+    isSynced,
+    markSynced: () => markSyncedRef.current(),
   };
 }

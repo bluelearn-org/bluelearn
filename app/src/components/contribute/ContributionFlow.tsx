@@ -25,7 +25,12 @@ import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/Or
 import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
 
-import { addGuideVariant, createGuide, listGuides } from "@/lib/api/guides";
+import {
+  addGuideVariant,
+  createGuide,
+  getGuide,
+  listGuides,
+} from "@/lib/api/guides";
 import { listSubjects } from "@/lib/api/subjects";
 import { flows, typeStep } from "@/lib/contributionFlow";
 import { uploadMedia } from "@/lib/api/media";
@@ -49,6 +54,8 @@ import {
   useDebouncedContributionSave,
 } from "@/lib/contributionStorage";
 
+import { getWordCount } from "@/lib/wordCount";
+
 const MAX_WORD_COUNT = 2500;
 
 type PropTypes = {
@@ -64,6 +71,7 @@ type PropTypes = {
   todoTitle?: string;
   todoSummary?: string;
   todoIds: Array<string>;
+  slug?: string;
 };
 
 type MultiGuide = GuideContribution & {
@@ -179,6 +187,7 @@ export default function ContributionFlow({
   todoTitle,
   todoSummary,
   todoIds,
+  slug,
 }: PropTypes) {
   const [guideContData, setGuideContData] = useState<Array<MultiGuide>>(() => {
     if (draftId || todoTitle) {
@@ -238,6 +247,14 @@ export default function ContributionFlow({
       return storedVariants[0]?.data ?? createVariantContData();
     }
   );
+
+  useEffect(() => {
+    if (slug && !variantContData.baseGuide) {
+      getGuide(slug).then((guide) =>
+        setVariantContData((prev) => ({ ...prev, baseGuide: guide.slug }))
+      );
+    }
+  });
 
   const [objectiveLocalDraftId] = useState<string>(() => createLocalDraftId());
 
@@ -461,7 +478,7 @@ function Inner({
 
   const {
     revisionId: removedRevisionId,
-    localDraftId,
+    localDraftId: removedLocalDraftId,
     ...savedGuide
   } = activeGuide;
 
@@ -488,6 +505,26 @@ function Inner({
     revisionId,
     step
   );
+
+  // whether the active contribution has edits that haven't been saved yet
+  const isDirty =
+    type === "guide"
+      ? guideSave.isDirty
+      : type === "variant"
+        ? variantSave.isDirty
+        : type === "objective"
+          ? objectiveSave.isDirty
+          : false;
+
+  // whether the locally saved content is confirmed saved to the server too
+  const isSynced =
+    type === "guide"
+      ? guideSave.isSynced
+      : type === "variant"
+        ? variantSave.isSynced
+        : type === "objective"
+          ? objectiveSave.isSynced
+          : true;
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -976,6 +1013,8 @@ function Inner({
             )
           );
         }
+
+        guideSave.markSynced();
       }
 
       if (type === "variant") {
@@ -986,6 +1025,8 @@ function Inner({
           id,
           step
         );
+
+        variantSave.markSynced();
       }
 
       if (type === "objective") {
@@ -996,6 +1037,8 @@ function Inner({
           id,
           step
         );
+
+        objectiveSave.markSynced();
       }
 
       toast.success("Draft saved");
@@ -1063,7 +1106,7 @@ function Inner({
 
   const wordLimitMessage = (guide: MultiGuide) => {
     const text = guide.body.trim();
-    const wordCount = text ? text.split(/\s+/).length : 0;
+    const wordCount = getWordCount(text);
 
     if (wordCount <= MAX_WORD_COUNT) {
       return null;
@@ -1272,6 +1315,8 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <PreviewGuide
@@ -1286,6 +1331,8 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <VariantInfo
@@ -1300,6 +1347,8 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <PreviewVariant
@@ -1310,6 +1359,8 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <ObjectiveDetails
@@ -1323,6 +1374,8 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
         />
 
         <OrderTargetGuides
@@ -1331,6 +1384,8 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
           guides={guideOptions}
         />
 
@@ -1340,6 +1395,8 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
           guides={guideOptions}
         />
 
@@ -1349,6 +1406,8 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
         />

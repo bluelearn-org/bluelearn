@@ -42,6 +42,8 @@ type PropTypes = {
   setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
   onSaveDraft?: () => void;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   guides: Array<any>;
 };
 
@@ -51,6 +53,8 @@ export const OrderObjectiveGuides = ({
   setObjectiveContData,
   onSaveDraft,
   submitting,
+  isDirty,
+  isSynced,
   guides,
 }: PropTypes) => {
   const guidesMap = useMemo(
@@ -92,7 +96,10 @@ export const OrderObjectiveGuides = ({
     if (!targetSlug) return;
 
     const controller = new AbortController();
-    getGuideWalkthrough(targetSlug, { signal: controller.signal })
+    getGuideWalkthrough(targetSlug, {
+      signal: controller.signal,
+      followUpDepth: 0,
+    })
       .then((data) => {
         setWalkthroughData(getTargetPrerequisiteWalkthrough(data, targetSlug));
         setWalkthroughSlug(targetSlug);
@@ -300,6 +307,8 @@ export const OrderObjectiveGuides = ({
         type="objective"
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <FieldGroup className="mt-0 flex min-h-0 flex-1 flex-col">

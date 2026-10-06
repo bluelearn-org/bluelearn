@@ -199,9 +199,6 @@ describe("ContributionFlow batch submit", () => {
       }
     );
 
-    fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Close" })
-    );
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: /Batch proof guide A/ })

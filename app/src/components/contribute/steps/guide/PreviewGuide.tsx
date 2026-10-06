@@ -37,6 +37,8 @@ type PropTypes = {
   onSaveDraft: () => void;
   onPublish: () => void;
   submitting: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
 };
 
 export const PreviewGuide = ({
@@ -51,6 +53,8 @@ export const PreviewGuide = ({
   onSaveDraft,
   onPublish,
   submitting,
+  isDirty,
+  isSynced,
 }: PropTypes) => {
   const [username, setUsername] = useState<string | null>(null);
 
@@ -117,6 +121,8 @@ export const PreviewGuide = ({
         onSaveDraft={onSaveDraft}
         onPublish={onPublish}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <div className="flex min-h-0 flex-1">
