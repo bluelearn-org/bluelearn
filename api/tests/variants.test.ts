@@ -23,10 +23,15 @@ describe("GET /variants/{id}", () => {
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "GET", "/variants/{id}");
     const body = (await res.json()) as {
-      variant: { id: string; votes: { up: number; down: number } };
+      variant: {
+        id: string;
+        votes: { up: number; down: number };
+        disclaimers: string[];
+      };
     };
     expect(body.variant.id).toBe(guide.id);
     expect(body.variant.votes).toEqual({ up: 0, down: 1 });
+    expect(body.variant.disclaimers).toEqual([]);
   });
 
   it("hides another author's draft variant", async () => {

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CastVoteInput, Pagination } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
+import { loadDisclaimers } from "./disclaimer.service";
 import { promoteCanonicalIfNeeded } from "./promotion.service";
 import { loadUsernames } from "./identity.service";
 
@@ -63,7 +64,12 @@ export async function getVariant(supabase: DB, id: string) {
   }
   if (!variant) throw new ServiceError("Variant not found", 404);
 
-  return { variant: await withVotes(supabase, variant) };
+  const [variantWithVotes, disclaimers] = await Promise.all([
+    withVotes(supabase, variant),
+    loadDisclaimers(supabase, variant.guide_base_id),
+  ]);
+
+  return { variant: { ...variantWithVotes, disclaimers } };
 }
 
 // Archive the variant. Per RLS only the author or a moderator may; a
