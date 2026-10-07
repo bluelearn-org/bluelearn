@@ -117,20 +117,31 @@ describe("Time Left range boundaries", () => {
   );
 });
 
+const seat = (
+  panel_id: string,
+  title: string,
+  status: AssignmentTable[number]["status"],
+  time_left: string | null
+): AssignmentTable[number] => ({
+  id: "alice",
+  panel_id,
+  username: "alice",
+  title,
+  change_summary: "Explain mass",
+  status,
+  user_status: "active",
+  type: "guide_publish",
+  time_left,
+  date_created: at(-24),
+  date_updated: at(-1),
+});
+
 const assignments: AssignmentTable = [
-  {
-    id: "alice",
-    panel_id: "one",
-    username: "alice",
-    title: "Gravity",
-    change_summary: "Explain mass",
-    status: "assigned",
-    user_status: "active",
-    type: "guide_publish",
-    time_left: at(0.5),
-    date_created: at(-24),
-    date_updated: at(-1),
-  },
+  seat("one", "Gravity", "assigned", at(0.5)),
+  seat("two", "Algebra", "assigned", at(-1)),
+  seat("three", "Vectors", "completed", at(-1)),
+  seat("four", "Matrices", "completed", at(2)),
+  seat("five", "Limits", "completed", null),
 ];
 
 function Dashboard() {
@@ -175,6 +186,24 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+function timeLeftCell(title: string) {
+  const row = screen
+    .getByRole("checkbox", { name: `Select alice - ${title}` })
+    .closest("tr");
+  if (!row) throw new Error(`No row for ${title}`);
+  return row.cells[3].textContent;
+}
+
+it("shows a dash instead of Expired once a completed seat's window passed", () => {
+  render(<Dashboard />);
+
+  expect(timeLeftCell("Gravity")).toBe("30m remaining");
+  expect(timeLeftCell("Algebra")).toBe("Expired");
+  expect(timeLeftCell("Vectors")).toBe("-");
+  expect(timeLeftCell("Matrices")).toBe("2h 0m remaining");
+  expect(timeLeftCell("Limits")).toBe("-");
 });
 
 it("clears deadline bounds when Any is selected", () => {

@@ -7,6 +7,9 @@ export type DashboardColumn = {
   options?: ReadonlyArray<string>;
   // The choice that means "no value" (no status, no roles). The API calls it "none".
   noneOption?: string;
+  // The order the table opens with while no column sort is picked. At most one
+  // column per table declares it; without one the API falls back to oldest first.
+  defaultSort?: "asc" | "desc";
 };
 
 export type DashboardFilters = Record<
@@ -164,9 +167,20 @@ export function dashboardQuery(
   if (sortable && (direction === "asc" || direction === "desc")) {
     query.sortBy = sortBy;
     query.sortDirection = direction;
+  } else {
+    const standing = defaultSort(columns);
+    if (standing) Object.assign(query, standing);
   }
 
   return query;
+}
+
+// The sort a table opens with when the URL names none.
+export function defaultSort(columns: ReadonlyArray<DashboardColumn>) {
+  const column = columns.find((candidate) => candidate.defaultSort);
+  return column?.defaultSort
+    ? { sortBy: column.key, sortDirection: column.defaultSort }
+    : null;
 }
 
 // Each URL update reloads the route; debounce typing to avoid a request per key.

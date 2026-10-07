@@ -28,7 +28,15 @@ export function ColumnFilter({
   const radioId = useId();
   const direction =
     filters.sortBy === key ? filterText(filters.sortDirection) : "";
-  const sort = direction === "asc" || direction === "desc" ? direction : null;
+  const pickedSort =
+    direction === "asc" || direction === "desc" ? direction : null;
+  // While no column sort is picked, the table is ordered by the column that
+  // declares a default. Show that as the standing sort, but never as a filter
+  // the user could clear.
+  const standingSort = filterText(filters.sortBy)
+    ? null
+    : (column.defaultSort ?? null);
+  const sort = pickedSort ?? standingSort;
   const clearSort =
     filters.sortBy === key
       ? { sortBy: undefined, sortDirection: undefined }
@@ -47,7 +55,7 @@ export function ColumnFilter({
     return (
       <FilterPopover
         label={label}
-        active={Boolean(mode) || sort !== null}
+        active={Boolean(mode) || pickedSort !== null}
         onClear={() =>
           onChange({
             [key]: undefined,
@@ -152,7 +160,8 @@ export function ColumnFilter({
           onChange({ [`${key}.from`]: next.from, [`${key}.to`]: next.to })
         }
         sortControl={{
-          direction: sort,
+          direction: pickedSort,
+          defaultDirection: standingSort ?? undefined,
           onChange: setSort,
           onClear: () =>
             onChange({
@@ -183,7 +192,7 @@ export function ColumnFilter({
   return (
     <FilterPopover
       label={label}
-      active={Boolean(value.trim()) || sort !== null}
+      active={Boolean(value.trim()) || pickedSort !== null}
       onClear={() => onChange({ [key]: undefined, ...clearSort })}
     >
       <Input

@@ -263,6 +263,9 @@ export function DateColumnFilter({
   label?: string;
   sortControl?: {
     direction: "asc" | "desc" | null;
+    // The order the table opens with while `direction` is null. Shown as the
+    // standing sort, but it is not a filter the user can clear.
+    defaultDirection?: "asc" | "desc";
     onChange: (direction: "asc" | "desc" | null) => void;
     onClear: () => void;
   };
@@ -271,7 +274,7 @@ export function DateColumnFilter({
   const to = parseISODate(search.to);
 
   const colSort = sortControl
-    ? sortControl.direction
+    ? (sortControl.direction ?? sortControl.defaultDirection ?? null)
     : search.sort === "date_asc"
       ? "asc"
       : search.sort === undefined
@@ -280,7 +283,7 @@ export function DateColumnFilter({
 
   const active =
     Boolean(search.from || search.to) ||
-    (sortControl ? colSort !== null : search.sort === "date_asc");
+    (sortControl ? sortControl.direction !== null : search.sort === "date_asc");
 
   // the field the calendar popover is editing (null closes it)
   const [activeField, setActiveField] = useState<"from" | "to" | null>(null);

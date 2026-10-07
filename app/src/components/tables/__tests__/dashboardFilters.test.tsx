@@ -346,6 +346,52 @@ it("keeps another column's sort when a text filter is cleared", () => {
   expect(readRenderedQuery()).not.toHaveProperty("sortBy");
 });
 
+it("opens the assignments table newest first until a column is sorted", () => {
+  render(<Dashboard table="assignments" />);
+  expect(readRenderedQuery()).toMatchObject({
+    sortBy: "date_created",
+    sortDirection: "desc",
+  });
+
+  // The standing sort shows in the popover but is not a filter to clear.
+  const popup = openFilter("Date Created");
+  expect(
+    within(popup).getByRole("button", { name: "Sort Newest" })
+  ).toHaveProperty("ariaPressed", "true");
+  expect(
+    screen.queryByRole("button", { name: "Clear Date Created filter" })
+  ).toBeNull();
+  closeFilter();
+
+  // Picking another column's sort replaces it.
+  const titlePopup = openFilter("Title");
+  fireEvent.click(
+    within(titlePopup).getByRole("button", { name: "Sort A - Z" })
+  );
+  expect(readRenderedQuery()).toMatchObject({
+    sortBy: "title",
+    sortDirection: "asc",
+  });
+  closeFilter();
+
+  // Clearing that sort falls back to newest first again.
+  fireEvent.click(screen.getByRole("button", { name: "Clear Title filter" }));
+  expect(readRenderedQuery()).toMatchObject({
+    sortBy: "date_created",
+    sortDirection: "desc",
+  });
+});
+
+it.each(["members", "roles"] as const)(
+  "leaves the %s table in the API's default order",
+  (table) => {
+    render(<Dashboard table={table} />);
+
+    expect(readRenderedQuery()).not.toHaveProperty("sortBy");
+    expect(readRenderedQuery()).not.toHaveProperty("sortDirection");
+  }
+);
+
 it("combines multiple choices within a column", () => {
   render(<Dashboard table="members" />);
 

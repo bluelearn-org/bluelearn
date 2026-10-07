@@ -57,11 +57,24 @@ export const assignmentColumns: Array<DashboardColumn & { width: string }> = [
   },
   { key: "title", label: "Title", width: "w-lg" },
   { key: "change_summary", label: "Change Summary", width: "w-lg" },
-  { key: "date_created", label: "Date Created", width: "w-sm", kind: "date" },
+  {
+    key: "date_created",
+    label: "Date Created",
+    width: "w-sm",
+    kind: "date",
+    // Newest assignments first until a column sort is picked.
+    defaultSort: "desc",
+  },
   { key: "date_updated", label: "Date Updated", width: "w-sm", kind: "date" },
 ];
 
-function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
+function ExpireCell({
+  expiresAt,
+  seatStatus,
+}: {
+  expiresAt: string | null;
+  seatStatus: string;
+}) {
   const [now, setNow] = useState(() => Date.now());
   const expiresMs = expiresAt ? new Date(expiresAt).getTime() : null;
 
@@ -84,6 +97,12 @@ function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
   const diffMs = expiresMs - now;
 
   if (diffMs < 0) {
+    // A completed seat has nothing left to do, so its window passing is not a
+    // missed deadline.
+    if (seatStatus === "completed") {
+      return <span className="text-muted-foreground">-</span>;
+    }
+
     return <span className="font-mono text-xs text-destructive">Expired</span>;
   }
 
@@ -204,7 +223,10 @@ export const AssignmentsTable = ({
                 </TableCell>
 
                 <TableCell className="mono-micro w-[120px] px-4 py-3 whitespace-pre-line">
-                  <ExpireCell expiresAt={assignment.time_left} />
+                  <ExpireCell
+                    expiresAt={assignment.time_left}
+                    seatStatus={assignment.status}
+                  />
                 </TableCell>
 
                 <TableCell className="w-[120px] px-4 py-3">
