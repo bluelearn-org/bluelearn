@@ -2,8 +2,7 @@ name: Guide / content proposal
 description: Propose a new educational guide, a new method inside an existing guide, or a hierarchy structure.
 title: "[Guide] "
 labels:
-  - "content"
-  - "needs-triage"
+  - "status:triage"
 body:
   - type: markdown
     attributes:

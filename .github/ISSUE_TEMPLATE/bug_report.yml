@@ -2,8 +2,8 @@ name: Bug report
 description: Something is broken or behaves unexpectedly.
 title: "[Bug] "
 labels:
-  - "bug"
-  - "needs-triage"
+  - "tag:bug"
+  - "status:triage"
 body:
   - type: markdown
     attributes:
@@ -32,7 +32,7 @@ body:
         reproduces the issue is ideal.
       placeholder: |
         1. Run `pnpm dev`
-        2. Open http://localhost:5173
+        2. Open http://localhost:3000
         3. Click "..."
         4. Observe ...
     validations:
