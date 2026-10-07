@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
+import { replaceDisclaimers } from "../src/services/disclaimer.service";
 import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
 import {
   createGuide,
@@ -42,6 +43,18 @@ describe("GET /variants/{id}", () => {
 
     expect(res.status).toBe(404);
     await expectToMatchSpec(res, "GET", "/variants/{id}");
+  });
+
+  it("includes the disclaimers attached to the variant's shared guide base", async () => {
+    const { base, guide } = await createPublishedGuide();
+    await replaceDisclaimers(admin, base.id, ["medical", "financial"]);
+
+    const res = await app.request(`/variants/${guide.id}`, {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/variants/{id}");
+    const body = (await res.json()) as { variant: { disclaimers: string[] } };
+    expect(body.variant.disclaimers.sort()).toEqual(["financial", "medical"]);
   });
 });
 
