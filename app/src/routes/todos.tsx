@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { paginationSchema } from "@bluelearn/schemas";
 
+import type { TodoFilters } from "@/lib/todoFilters";
 import { Separator } from "@/components/ui/separator";
 import { TodoCard } from "@/components/cards/TodoCard";
 import { Pagination } from "@/components/Pagination";
+import { TodoFilterMenu } from "@/components/TodoFilterMenu";
 import {
   Empty,
   EmptyDescription,
@@ -15,10 +16,22 @@ import {
 
 import { listTodos } from "@/lib/api/todos";
 import { groupTodosByTitle } from "@/lib/groupTodos";
+import {
+  filterTodos,
+  objectiveFilterItems,
+  subjectFilterItems,
+} from "@/lib/todoFilters";
 import { usePagination } from "@/lib/usePagination";
 import { buildPageMeta } from "@/lib/seo";
 
 const PAGE_SIZE = 10;
+
+type TodosSearch = TodoFilters & { page?: number };
+
+function pageParam(value: unknown) {
+  const page = Number(value);
+  return Number.isInteger(page) && page > 1 ? page : undefined;
+}
 
 export const Route = createFileRoute("/todos")({
   head: () => ({
@@ -27,7 +40,20 @@ export const Route = createFileRoute("/todos")({
       "Explore requested guides on Bluelearn and help fill gaps in the community's learning resources."
     ),
   }),
-  validateSearch: paginationSchema.pick({ page: true }),
+  // Drop empty filter values so the URL stays clean.
+  validateSearch: (raw: Record<string, unknown>): TodosSearch => {
+    const q = typeof raw.q === "string" ? raw.q.trim() : "";
+    const subject = typeof raw.subject === "string" ? raw.subject : undefined;
+    const objective =
+      typeof raw.objective === "string" ? raw.objective : undefined;
+    const page = pageParam(raw.page);
+    return {
+      ...(q ? { q } : {}),
+      ...(subject ? { subject } : {}),
+      ...(objective ? { objective } : {}),
+      ...(page ? { page } : {}),
+    };
+  },
   loader: ({ abortController }) =>
     listTodos({ signal: abortController.signal }),
   errorComponent: TodosLoadError,
@@ -46,9 +72,10 @@ function TodosLoadError() {
 
 type TodosPageProps = {
   children: React.ReactNode;
+  aside?: React.ReactNode;
 };
 
-const TodosPage = ({ children }: TodosPageProps) => {
+const TodosPage = ({ children, aside }: TodosPageProps) => {
   return (
     <div className="mx-auto max-w-[1280px] bg-background">
       <div className="px-8 py-8 lg:px-16">
@@ -56,6 +83,7 @@ const TodosPage = ({ children }: TodosPageProps) => {
           <h1 className="font-mono text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
             Guides Waiting To Be Written
           </h1>
+          {aside}
         </div>
 
         <Separator className="mb-4 bg-border" />
@@ -67,11 +95,41 @@ const TodosPage = ({ children }: TodosPageProps) => {
 };
 
 function RouteComponent() {
-  const { page } = Route.useSearch();
+  const { q, subject, objective, page = 1 } = Route.useSearch();
   const todos = Route.useLoaderData();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: Route.fullPath });
 
-  const groups = useMemo(() => groupTodosByTitle(todos), [todos]);
+  const filteredTodos = useMemo(
+    () => filterTodos(todos, { q, subject, objective }),
+    [todos, q, subject, objective]
+  );
+  const groups = useMemo(
+    () => groupTodosByTitle(filteredTodos),
+    [filteredTodos]
+  );
+
+  const subjectItems = useMemo(() => subjectFilterItems(todos), [todos]);
+  const objectiveItems = useMemo(() => objectiveFilterItems(todos), [todos]);
+
+  const setFilters = (filters: Partial<TodoFilters>) =>
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        ...filters,
+        page: undefined,
+      }),
+    });
+
+  const filterMenu = (
+    <TodoFilterMenu
+      q={q}
+      subject={subject}
+      objective={objective}
+      subjectItems={subjectItems}
+      objectiveItems={objectiveItems}
+      onChange={setFilters}
+    />
+  );
 
   const {
     page: activePage,
@@ -84,12 +142,12 @@ function RouteComponent() {
     toLast,
   } = usePagination(groups, PAGE_SIZE, {
     page,
-    onPageChange: (p) => navigate({ to: "/todos", search: { page: p } }),
+    onPageChange: (p) => navigate({ search: (prev) => ({ ...prev, page: p }) }),
   });
 
   if (groups.length === 0) {
     return (
-      <TodosPage>
+      <TodosPage aside={filterMenu}>
         <Empty>
           <EmptyHeader>
             <EmptyMedia>
@@ -113,12 +171,17 @@ function RouteComponent() {
   // showing the empty-state copy, which reads like there is nothing to browse.
   if (page > totalPages) {
     return (
-      <TodosPage>
+      <TodosPage aside={filterMenu}>
         <p className="text-sm text-muted-foreground">
           Page {page} is past the last page.{" "}
           <Link
             to="/todos"
-            search={{ page: 1 }}
+            search={{
+              page: 1,
+              ...(q ? { q } : {}),
+              ...(subject ? { subject } : {}),
+              ...(objective ? { objective } : {}),
+            }}
             className="underline underline-offset-4"
           >
             Back to page 1
@@ -129,7 +192,7 @@ function RouteComponent() {
   }
 
   return (
-    <TodosPage>
+    <TodosPage aside={filterMenu}>
       <section className="grid gap-6 py-4 md:grid-cols-2">
         {pageRows.map((group) => (
           <TodoCard key={group.key} todo={group} />
