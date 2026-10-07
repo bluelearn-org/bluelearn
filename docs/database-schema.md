@@ -268,6 +268,17 @@ Subject tags, such as Math, Physics, or Game Development. Subjects are not conta
 - `creator_id`: FK to `profiles.id` (the user who created the subject).
 - `created_at`: subject creation time.
 
+### `subject_prerequisite_floors`
+
+A subject's **prerequisite floor**: the guide bases a walkthrough scoped to that subject treats as assumed knowledge (`overall-system.md`: "physics floor = arithmetic + algebra"). A floor guide still appears in the scoped walkthrough, since that is where the climb starts, but nothing below it is expanded, so a subject view does not spiral into every low-level dependency.
+
+- `subject_id`: FK to `subjects.id`.
+- `guide_base_id`: FK to `guide_bases.id`, the floor guide.
+- `created_at`: when the guide joined the floor.
+- Primary key `(subject_id, guide_base_id)`.
+
+Anyone can read floors. Writes are governance-only (`admin`) and go through `set_subject_floor(subject_id, guide_base_ids[])`, which replaces the whole set in one transaction. `compute_walkthrough` takes an optional `p_subject_id`: with it, the prerequisite climb does not expand below a floor guide of that subject and every node reports `is_floor`. Unscoped walkthroughs ignore floors.
+
 ### `guide_revision_subjects`
 
 Many-to-many join table between guide revisions and subjects. Tagging is revision-scoped: each guide revision carries its own tag set, edited while the revision is a draft and frozen once submitted. A variant's live tags are its current revision's, and a guide base's live tags are its canonical variant's current revision's.
@@ -674,22 +685,6 @@ Most walkthroughs should be generated on demand by picking a target guide base a
 ### Not Yet Implemented
 
 These are required by `overall-system.md` but intentionally deferred. They are listed here so the gaps are explicit rather than forgotten. None block the first-pass schema.
-
-#### Subject prerequisite floor
-
-`overall-system.md` lets a subject declare a **prerequisite floor** (e.g. "physics floor = arithmetic + algebra") that applies to its tagged subgraph, keeping subject views from spiralling into low-level dependencies. Floors are assumed readable, but no table stores them yet.
-
-Planned shape: a join table, e.g.
-
-```text
-subject_prerequisite_floors (
-  subject_id     FK -> subjects,
-  guide_base_id  FK -> guide_bases,
-  primary key (subject_id, guide_base_id)
-)
-```
-
-Each row says "this guide base is part of subject S's floor." Walkthrough generation scoped to S can then stop descending past floor guide bases instead of chasing every transitive prerequisite. Writes are governance-only (see the `admin` role).
 
 #### Section pointer on votes and re-review
 

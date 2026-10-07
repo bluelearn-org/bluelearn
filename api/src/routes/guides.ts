@@ -95,6 +95,8 @@ const walkthroughQuerySchema = z.object({
     .refine((value) => Number(value) <= 2147483647)
     .transform(Number)
     .optional(),
+  // A subject slug. The prerequisite climb then stops at that subject's floor.
+  subject: z.string().min(1).optional(),
 });
 
 export const guidesRouter = new Hono<HonoEnv>()
@@ -204,7 +206,8 @@ export const guidesRouter = new Hono<HonoEnv>()
     "/:slug/walkthrough",
     describeRoute({
       tags: ["guides"],
-      summary: "Guide walkthrough with follow-up context",
+      summary:
+        "Guide walkthrough with follow-up context, optionally scoped to a subject",
       responses: {
         200: jsonContent(walkthroughSchema, "The walkthrough graph"),
         ...errorResponses(400, 404),
@@ -214,11 +217,12 @@ export const guidesRouter = new Hono<HonoEnv>()
     validate("query", walkthroughQuerySchema),
     async (c) => {
       const { slug } = c.req.valid("param");
-      const { followUpDepth } = c.req.valid("query");
+      const { followUpDepth, subject } = c.req.valid("query");
       const walkthrough = await getWalkthrough(
         c.get("supabase"),
         slug,
-        followUpDepth
+        followUpDepth,
+        subject
       );
       return c.json(walkthrough);
     }

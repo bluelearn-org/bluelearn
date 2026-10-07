@@ -40,18 +40,27 @@ export async function getGuide(slug: string, { signal }: FetchOptions = {}) {
   return res.json();
 }
 
+// `subject` scopes the prerequisite climb to that subject's floor.
 export async function getGuideWalkthrough(
   slug: string,
   {
     signal,
     followUpDepth,
-  }: FetchOptions & { followUpDepth?: number | null } = {}
+    subject,
+  }: FetchOptions & {
+    followUpDepth?: number | null;
+    subject?: string | null;
+  } = {}
 ) {
   const res = await guides[":slug"].walkthrough.$get(
     {
       param: { slug },
-      query:
-        followUpDepth == null ? {} : { followUpDepth: String(followUpDepth) },
+      query: {
+        ...(followUpDepth == null
+          ? {}
+          : { followUpDepth: String(followUpDepth) }),
+        ...(subject ? { subject } : {}),
+      },
     },
     { init: { signal } }
   );

@@ -147,6 +147,7 @@ export function useGraphLayout({
             level: node.level,
             duration_minutes: node.duration_minutes,
             tags: node.tags,
+            is_floor: node.is_floor,
             isTarget: node.slug === targetSlug,
             isHovered: false,
             isDimmed: false,

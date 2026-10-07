@@ -3,16 +3,29 @@ import { createFileRoute, useLocation } from "@tanstack/react-router";
 
 import type { Walkthrough } from "@bluelearn/schemas";
 
+import type { ScopeOption } from "@/lib/walkthroughScope";
 import { WalkthroughGraph } from "@/components/graph/WalkthroughGraph";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
+import { WalkthroughScope } from "@/components/graph/WalkthroughScope";
 import { getGuideWalkthrough } from "@/lib/api/guides";
+import {
+  floorCount,
+  parseSubjectSearch,
+  scopeOptions,
+} from "@/lib/walkthroughScope";
 
 export const Route = createFileRoute("/guides/$slug/walkthrough")({
+  validateSearch: parseSubjectSearch,
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const { slug } = Route.useParams();
+  // The subject scope lives in the URL; null climbs every prerequisite.
+  const { subject = null } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  // Kept across refetches so the chips do not blink out while a scope loads.
+  const [scopes, setScopes] = useState<Array<ScopeOption>>([]);
 
   // Carried in from the reader so going back restores the trail the user came by.
   const breadcrumbOrigin = useLocation({
@@ -40,15 +53,19 @@ function RouteComponent() {
     getGuideWalkthrough(slug, {
       signal: controller.signal,
       followUpDepth: 1,
+      subject,
     })
-      .then(setWalkthroughData)
+      .then((data) => {
+        setWalkthroughData(data);
+        setScopes(scopeOptions(data.nodes, slug));
+      })
       .catch((err) => {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Something went wrong");
       });
 
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, subject]);
 
   // Escape leaves fullscreen, since the toggle button is the only other way out.
   useEffect(() => {
@@ -66,6 +83,8 @@ function RouteComponent() {
   );
   const targetTitle =
     walkthroughData?.nodes.find((node) => node.slug === slug)?.title ?? "";
+  const scopeName =
+    scopes.find((option) => option.slug === subject)?.name ?? null;
 
   return (
     <div className="mx-auto max-w-7xl bg-background md:h-[calc(100vh-65px)]">
@@ -77,6 +96,7 @@ function RouteComponent() {
             targetSlug={slug}
             targetTitle={targetTitle}
             breadcrumbOrigin={breadcrumbOrigin}
+            scopeName={subject ? scopeName : null}
           />
         ) : (
           <aside className="hidden h-full border-r px-6 py-6 md:block" />
@@ -92,6 +112,18 @@ function RouteComponent() {
               Explore the recommended learning progression for this guide.
             </p>
           </div>
+
+          <WalkthroughScope
+            options={scopes}
+            value={subject}
+            onChange={(next) =>
+              navigate({
+                search: next ? { subject: next } : {},
+                replace: true,
+              })
+            }
+            floorCount={walkthroughData ? floorCount(walkthroughData.nodes) : 0}
+          />
 
           {/* Graph */}
           <div

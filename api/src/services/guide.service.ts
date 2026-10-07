@@ -415,16 +415,39 @@ export async function archiveGuide(supabase: DB, rawSlug: string) {
   return data[0];
 }
 
+// Resolve a subject slug to its id, or 404, for a walkthrough's subject scope.
+async function resolveSubjectId(supabase: DB, rawSlug: string) {
+  const { data, error } = await supabase
+    .from("subjects")
+    .select("id")
+    .eq("slug", rawSlug.toLowerCase())
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load subject", 500);
+  }
+  if (!data) throw new ServiceError("Subject not found", 404);
+  return data.id;
+}
+
+// Scoped to a subject, the prerequisite climb stops at that subject's floor
+// and each node says whether it is a floor guide.
 export async function getWalkthrough(
   supabase: DB,
   rawSlug: string,
-  followUpDepth?: number
+  followUpDepth?: number,
+  subjectSlug?: string
 ) {
   const baseId = await resolveBaseId(supabase, rawSlug);
+  const subjectId = subjectSlug
+    ? await resolveSubjectId(supabase, subjectSlug)
+    : undefined;
 
   const { data, error } = await supabase.rpc("compute_walkthrough", {
     p_guide_base_id: baseId,
     p_follow_up_depth: followUpDepth,
+    p_subject_id: subjectId,
   });
 
   if (error) {

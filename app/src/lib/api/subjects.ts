@@ -73,3 +73,33 @@ export async function listSubjectObjectives(
     return { items, total };
   });
 }
+
+// The guide bases a walkthrough scoped to this subject treats as assumed knowledge.
+export async function getSubjectFloor(
+  slug: string,
+  { signal }: FetchOptions = {}
+) {
+  const res = await subjects[":slug"].floor.$get(
+    { param: { slug } },
+    { init: { signal } }
+  );
+  await assertOk(res);
+
+  const { floor } = await res.json();
+  return floor;
+}
+
+// Replace the floor as a whole (admins only); returns the floor as saved.
+export async function setSubjectFloor(
+  slug: string,
+  guideBaseIds: Array<string>
+) {
+  const res = await subjects[":slug"].floor.$put({
+    param: { slug },
+    json: { guide_base_ids: guideBaseIds },
+  });
+  await assertOk(res);
+
+  const { floor } = await res.json();
+  return floor;
+}

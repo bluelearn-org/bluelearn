@@ -44,6 +44,9 @@ export const walkthroughSchema = z.object({
       level: z.number().int(),
       duration_minutes: z.number().int(),
       tags: z.array(subjectReferenceSchema),
+      // True when the walkthrough is scoped to a subject and this guide is in
+      // that subject's prerequisite floor: shown, but not expanded below.
+      is_floor: z.boolean().optional(),
     })
   ),
   edges: z.array(

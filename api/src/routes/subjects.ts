@@ -3,6 +3,8 @@ import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 import {
   paginationSchema,
+  setSubjectFloorSchema,
+  subjectFloorResponseSchema,
   subjectGroupsResponseSchema,
   subjectGuidesResponseSchema,
   subjectListResponseSchema,
@@ -10,13 +12,18 @@ import {
   subjectResponseSchema,
 } from "@bluelearn/schemas";
 import { errorResponses, jsonContent, validate } from "../lib/openapi";
+import { requireUser } from "../middleware/auth.middleware";
+import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
+import { MODERATION } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
 import {
   getSubjectBySlug,
+  getSubjectFloor,
   listGroupedSubjects,
   listSubjectGuides,
   listSubjectObjectives,
   listSubjects,
+  setSubjectFloor,
 } from "../services/subject.service";
 
 const slugParamSchema = z.object({ slug: z.string() });
@@ -126,5 +133,56 @@ export const subjectsRouter = new Hono<HonoEnv>()
         { page, limit }
       );
       return c.json({ objectives: data, total }, 200);
+    }
+  )
+
+  // The subject's prerequisite floor: the guides a walkthrough scoped to this
+  // subject treats as assumed knowledge and does not expand below.
+  .get(
+    "/:slug/floor",
+    describeRoute({
+      tags: ["subjects"],
+      summary: "Get the subject's prerequisite floor",
+      responses: {
+        200: jsonContent(
+          subjectFloorResponseSchema,
+          "Guide bases in the floor"
+        ),
+        ...errorResponses(404),
+      },
+    }),
+    validate("param", slugParamSchema),
+    async (c) => {
+      const floor = await getSubjectFloor(
+        c.get("supabase"),
+        c.req.valid("param").slug
+      );
+      return c.json({ floor }, 200);
+    }
+  )
+
+  // Replace the floor as a whole. Governance-only: anyone but an admin gets 403.
+  .put(
+    "/:slug/floor",
+    describeRoute({
+      tags: ["subjects"],
+      summary: "Set the subject's prerequisite floor",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(subjectFloorResponseSchema, "The floor as saved"),
+        ...errorResponses(400, 401, 403, 404, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...MODERATION, bucket: "subject-floor" }),
+    validate("param", slugParamSchema),
+    validate("json", setSubjectFloorSchema),
+    async (c) => {
+      const floor = await setSubjectFloor(
+        c.get("supabase"),
+        c.req.valid("param").slug,
+        c.req.valid("json").guide_base_ids
+      );
+      return c.json({ floor }, 200);
     }
   );

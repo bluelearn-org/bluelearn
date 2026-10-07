@@ -3,6 +3,7 @@ import type {
   GuideListItem,
   ObjectiveListItem,
   Pagination,
+  SubjectFloorGuide,
   SubjectGroup,
   SubjectListItem,
 } from "@bluelearn/schemas";
@@ -304,4 +305,66 @@ export async function listSubjectObjectives(
     data: items.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? "")),
     total: count ?? 0,
   };
+}
+
+// The guide bases in a subject's prerequisite floor, with each one's live
+// title (null until the base has a published canonical guide), by title.
+export async function getSubjectFloor(
+  supabase: DB,
+  rawSlug: string
+): Promise<SubjectFloorGuide[]> {
+  const subject = await resolveSubjectId(supabase, rawSlug);
+
+  const { data, error } = await supabase
+    .from("subject_prerequisite_floors")
+    .select(
+      `guide_bases!inner(
+         id,
+         slug,
+         canonical:guides!guide_bases_canonical_guide_id_fkey(
+           current:guide_revisions!guides_current_revision_id_fkey(title)
+         )
+       )`
+    )
+    .eq("subject_id", subject.id);
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load subject floor", 500);
+  }
+
+  const label = (guide: SubjectFloorGuide) => guide.title ?? guide.slug ?? "";
+  return (data ?? [])
+    .map((row) => ({
+      id: row.guide_bases.id,
+      slug: row.guide_bases.slug,
+      title: row.guide_bases.canonical?.current?.title ?? null,
+    }))
+    .sort((a, b) => label(a).localeCompare(label(b)));
+}
+
+// Replace a subject's floor. The RPC refuses non-admins (42501) and an unknown
+// guide base fails its foreign key (23503).
+export async function setSubjectFloor(
+  supabase: DB,
+  rawSlug: string,
+  guideBaseIds: string[]
+) {
+  const subject = await resolveSubjectId(supabase, rawSlug);
+
+  const { error } = await supabase.rpc("set_subject_floor", {
+    p_subject_id: subject.id,
+    p_guide_base_ids: guideBaseIds,
+  });
+
+  if (error) {
+    if (error.code === "42501")
+      throw new ServiceError("Only admins can change a subject floor", 403);
+    if (error.code === "23503")
+      throw new ServiceError("One of the guides does not exist", 404);
+    console.error(error);
+    throw new ServiceError("Failed to update subject floor", 500);
+  }
+
+  return getSubjectFloor(supabase, rawSlug);
 }

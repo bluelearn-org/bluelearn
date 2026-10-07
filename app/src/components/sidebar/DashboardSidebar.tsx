@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { FileCheckCorner, Shield, Users } from "lucide-react";
+import { FileCheckCorner, Layers, Shield, Users } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,12 @@ const items: Array<{
     to: "/dashboard/assignments",
     icon: FileCheckCorner,
     roles: ["lead-verifier", "admin"],
+  },
+  {
+    label: "Subject Floors",
+    to: "/dashboard/floors",
+    icon: Layers,
+    roles: ["admin"],
   },
 ];
 

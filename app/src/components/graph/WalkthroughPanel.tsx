@@ -9,6 +9,8 @@ type WalkthroughPanelProps = {
   targetSlug: string;
   targetTitle: string;
   breadcrumbOrigin?: BreadcrumbOrigin;
+  // The subject the walkthrough is scoped to, when it is.
+  scopeName?: string | null;
 };
 
 export function WalkthroughPanel({
@@ -16,6 +18,7 @@ export function WalkthroughPanel({
   targetSlug,
   targetTitle,
   breadcrumbOrigin,
+  scopeName = null,
 }: WalkthroughPanelProps) {
   const back = { label: targetTitle, path: `/guides/${targetSlug}` };
 
@@ -67,6 +70,19 @@ export function WalkthroughPanel({
           </p>
         </div>
       </div>
+
+      {node.is_floor && (
+        <div className="space-y-1 rounded-md border border-badge-border bg-badge px-4 py-3">
+          <h3 className="mono-micro text-badge-foreground">
+            Prerequisite floor
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {scopeName
+              ? `${scopeName} treats this guide as assumed knowledge, so its own prerequisites are left out of this walkthrough.`
+              : "This guide is assumed knowledge for the chosen subject, so its own prerequisites are left out of this walkthrough."}
+          </p>
+        </div>
+      )}
 
       {node.summary && (
         <div className="space-y-2">

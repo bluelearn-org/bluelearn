@@ -49,6 +49,19 @@ export const subjectObjectivesResponseSchema = z.strictObject({
   total: totalSchema,
 });
 
+// A guide base in a subject's prerequisite floor. slug and title are null
+// while the base has no published canonical guide.
+export const subjectFloorGuideSchema = z.object({
+  id: z.uuid(),
+  slug: z.string().nullable(),
+  title: z.string().nullable(),
+});
+
+export const subjectFloorResponseSchema = z.strictObject({
+  floor: z.array(subjectFloorGuideSchema),
+});
+
 export type Subject = z.infer<typeof subjectSchema>;
+export type SubjectFloorGuide = z.infer<typeof subjectFloorGuideSchema>;
 export type SubjectListItem = z.infer<typeof subjectListItemSchema>;
 export type SubjectGroup = z.infer<typeof subjectGroupSchema>;
