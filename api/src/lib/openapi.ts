@@ -134,7 +134,7 @@ export const openApiDocumentation: GenerateSpecOptions["documentation"] = {
     },
     {
       name: "dashboard",
-      description: "Information and actions prefermed on admin dashboard page.",
+      description: "Information and actions performed on admin dashboard page.",
     },
   ],
   components: {

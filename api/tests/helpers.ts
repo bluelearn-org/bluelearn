@@ -36,7 +36,7 @@ export const admin: DB = createClient<Database>(
 );
 
 // Unwrap a Supabase { data, error } result: throw on error so a bad insert
-// fails the test at the cause, and return deta as non-null so callers get a
+// fails the test at the cause, and return data as non-null so callers get a
 // clean row without null-checks.
 function unwrap<T>(result: { data: T | null; error: unknown }): T {
   if (result.error) throw result.error;

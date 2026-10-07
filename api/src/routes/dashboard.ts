@@ -38,11 +38,13 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "View user status",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(userStatusResponseSchema, "User's status"),
         ...errorResponses(400, 401, 404),
       },
     }),
+    requireUser,
     validate("param", idParamSchema),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -57,6 +59,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Change user status",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(updateStatusResponseSchema, "User's status"),
         ...errorResponses(400, 401),
@@ -79,13 +82,14 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Add role to user",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(successResponseSchema, "Successfully added role"),
         ...errorResponses(400, 401),
       },
     }),
-    validate("param", roleParamSchema),
     requireUser,
+    validate("param", roleParamSchema),
     async (c) => {
       const { id, roleName } = c.req.valid("param");
       await addRole(c.get("supabase"), id, roleName);
@@ -99,6 +103,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Remove role from user",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(successResponseSchema, "Successfully deleted role"),
         ...errorResponses(400, 401),
@@ -119,6 +124,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Fetch table of user roles",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(rolesTableResponseSchema, "Table of user role data"),
         ...errorResponses(400, 401),
@@ -141,6 +147,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Fetch table with information about members",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(membersTableResponseSchema, "Table of member data"),
         ...errorResponses(400, 401),
@@ -163,6 +170,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Fetch table with verifier assignments",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(
           assignmentsTableResponseSchema,
@@ -188,6 +196,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Suspend a user",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(successResponseSchema, "User suspended successfully"),
         ...errorResponses(400, 401, 404),
@@ -208,6 +217,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Unsuspend a user",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(
           successResponseSchema,
@@ -231,6 +241,7 @@ export const dashboardRouter = new Hono<HonoEnv>()
     describeRoute({
       tags: ["dashboard"],
       summary: "Reassign panel member",
+      security: [{ bearerAuth: [] }],
       responses: {
         200: jsonContent(
           successResponseSchema,

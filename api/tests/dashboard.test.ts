@@ -7,6 +7,7 @@ import {
   createReviewCase,
   createReviewPanel,
 } from "./factories/reviews";
+import { expectToMatchSpec } from "./openapi";
 
 // The old `.in(ids)` filter hit the gateway URL limit at 200-250 users (#482).
 const USERS_PAST_URL_LIMIT = 300;
@@ -100,6 +101,30 @@ describe("dashboard tables", () => {
       expect(res.status).toBe(200);
     }
   );
+});
+
+describe("dashboard routes without a token", () => {
+  it("401s a status lookup instead of answering from the anonymous RLS view", async () => {
+    const res = await app.request(
+      `/dashboard/${crypto.randomUUID()}/status`,
+      {},
+      env
+    );
+
+    expect(res.status).toBe(401);
+    await expectToMatchSpec(res, "GET", "/dashboard/{id}/status");
+  });
+
+  it("401s a role grant before validating its parameters", async () => {
+    const res = await app.request(
+      `/dashboard/${crypto.randomUUID()}/role/not-a-role`,
+      { method: "POST" },
+      env
+    );
+
+    expect(res.status).toBe(401);
+    await expectToMatchSpec(res, "POST", "/dashboard/{id}/role/{roleName}");
+  });
 });
 
 describe("GET /dashboard/members", () => {
