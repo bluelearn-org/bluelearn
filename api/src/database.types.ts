@@ -1205,6 +1205,7 @@ export type Database = {
           guide_id: string
           note: string | null
           reason: Database["public"]["Enums"]["downvote_reason"] | null
+          section_ref: string | null
           updated_at: string
           voter_id: string
         }
@@ -1214,6 +1215,7 @@ export type Database = {
           guide_id: string
           note?: string | null
           reason?: Database["public"]["Enums"]["downvote_reason"] | null
+          section_ref?: string | null
           updated_at?: string
           voter_id: string
         }
@@ -1223,6 +1225,7 @@ export type Database = {
           guide_id?: string
           note?: string | null
           reason?: Database["public"]["Enums"]["downvote_reason"] | null
+          section_ref?: string | null
           updated_at?: string
           voter_id?: string
         }
@@ -1425,6 +1428,7 @@ export type Database = {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      is_active_guide_author: { Args: never; Returns: boolean }
       list_guide_variants_by_score: {
         Args: { p_guide_base_id: string; p_z?: number }
         Returns: {
@@ -1448,6 +1452,15 @@ export type Database = {
         }[]
       }
       promote_canonical_guide: {
+        Args: {
+          p_guide_base_id: string
+          p_margin?: number
+          p_min_votes?: number
+          p_z?: number
+        }
+        Returns: string
+      }
+      promote_canonical_guide_with_thresholds: {
         Args: {
           p_guide_base_id: string
           p_margin?: number

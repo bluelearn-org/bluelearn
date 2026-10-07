@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Link,
   createFileRoute,
@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
 import { getGuide } from "@/lib/api/guides";
-import { buildGuideMeta } from "@/lib/guideUtils";
+import { buildGuideMeta, extractHeadings } from "@/lib/guideUtils";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
@@ -63,6 +63,12 @@ function RouteComponent() {
     guide.variant_id
   );
   const [downvoteOpen, setDownvoteOpen] = useState(false);
+
+  // The sections a downvote can point at, as the table of contents names them.
+  const sections = useMemo(
+    () => extractHeadings(guide.body ?? ""),
+    [guide.body]
+  );
 
   const breadcrumbOrigin = useLocation({
     select: (location) => location.state.breadcrumbOrigin,
@@ -186,11 +192,18 @@ function RouteComponent() {
                 submitting={submitting}
                 existing={
                   vote?.direction === "down"
-                    ? { reason: vote.reason, note: vote.note }
+                    ? {
+                        reason: vote.reason,
+                        note: vote.note,
+                        section_ref: vote.section_ref,
+                      }
                     : null
                 }
-                onSubmit={async (reason, note) => {
-                  await downvote(reason, note, () => setDownvoteOpen(false));
+                sections={sections}
+                onSubmit={async (reason, note, sectionRef) => {
+                  await downvote(reason, note, sectionRef, () =>
+                    setDownvoteOpen(false)
+                  );
                 }}
                 onRemove={async () => {
                   await removeVote(() => setDownvoteOpen(false));

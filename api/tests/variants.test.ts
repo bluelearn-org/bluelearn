@@ -118,6 +118,59 @@ describe("PUT /variants/{id}/vote", () => {
     expect(votes?.[0].direction).toBe("down");
   });
 
+  it("stores the section a downvote points at and clears it on an upvote", async () => {
+    const { guide } = await createPublishedGuide();
+    const voter = await makeUser();
+    type VoteBody = { vote: { section_ref: string | null } };
+
+    const down = await app.request(
+      `/variants/${guide.id}/vote`,
+      jsonAuth(voter.token, "PUT", {
+        direction: "down",
+        reason: "missing_step",
+        section_ref: "step-two",
+      }),
+      env
+    );
+    expect(down.status).toBe(200);
+    await expectToMatchSpec(down, "PUT", "/variants/{id}/vote");
+    expect(((await down.json()) as VoteBody).vote.section_ref).toBe("step-two");
+
+    const mine = await app.request(
+      `/variants/${guide.id}/vote`,
+      auth(voter.token),
+      env
+    );
+    expect(mine.status).toBe(200);
+    await expectToMatchSpec(mine, "GET", "/variants/{id}/vote");
+    expect(((await mine.json()) as VoteBody).vote.section_ref).toBe("step-two");
+
+    const up = await app.request(
+      `/variants/${guide.id}/vote`,
+      jsonAuth(voter.token, "PUT", { direction: "up" }),
+      env
+    );
+    expect(up.status).toBe(200);
+    expect(((await up.json()) as VoteBody).vote.section_ref).toBeNull();
+  });
+
+  it("400s a section pointer on an upvote", async () => {
+    const { guide } = await createPublishedGuide();
+    const voter = await makeUser();
+
+    const res = await app.request(
+      `/variants/${guide.id}/vote`,
+      jsonAuth(voter.token, "PUT", {
+        direction: "up",
+        section_ref: "step-two",
+      }),
+      env
+    );
+
+    expect(res.status).toBe(400);
+    await expectToMatchSpec(res, "PUT", "/variants/{id}/vote");
+  });
+
   it("400s when voting on an unpublished variant", async () => {
     // Archived is visible (so it passes the visibility check) but not published,
     // so the vote insert is refused by RLS and surfaces as 400, not 404.

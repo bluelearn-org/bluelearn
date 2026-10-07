@@ -133,6 +133,8 @@ export const voteSchema = z.object({
   direction: voteDirectionSchema,
   reason: downvoteReasonSchema.optional(),
   note: z.string().nullable(),
+  // The heading anchor a downvote points at; null for the whole guide.
+  section_ref: z.string().nullable(),
   updated_at: z.iso.datetime({ offset: true }),
 });
 

@@ -93,16 +93,22 @@ export const updateRevisionSchema = revisionContentSchema
     message: "at least one field is required",
   });
 
-// reason is required if the direction is down.
+// reason is required if the direction is down. A downvote may also point at
+// one section of the guide by its heading anchor; absent means the whole guide.
 export const castVoteSchema = z
   .object({
     direction: voteDirectionSchema,
     reason: downvoteReasonSchema.nullish(),
     note: z.string().trim().nullish(),
+    section_ref: z.string().trim().min(1).max(200).nullish(),
   })
   .refine((v) => (v.direction === "down") === (v.reason != null), {
     message: "reason is required on a downvote and forbidden otherwise",
     path: ["reason"],
+  })
+  .refine((v) => v.direction === "down" || v.section_ref == null, {
+    message: "section_ref is only allowed on a downvote",
+    path: ["section_ref"],
   });
 
 export const rollbackRevisionSchema = z.object({

@@ -90,8 +90,12 @@ type VoteRow = {
   direction: Database["public"]["Enums"]["vote_direction"];
   reason: Database["public"]["Enums"]["downvote_reason"] | null;
   note: string | null;
+  section_ref: string | null;
   updated_at: string;
 };
+
+const VOTE_DETAIL =
+  "guide_id, direction, reason, note, section_ref, updated_at";
 
 function withoutNullReason(row: VoteRow) {
   const { reason, ...rest } = row;
@@ -105,7 +109,7 @@ export async function getVote(supabase: DB, voterId: string, id: string) {
 
   const { data, error } = await supabase
     .from("votes")
-    .select("guide_id, direction, reason, note, updated_at")
+    .select(VOTE_DETAIL)
     .eq("voter_id", voterId)
     .eq("guide_id", id)
     .maybeSingle();
@@ -138,10 +142,13 @@ export async function castVote(
         direction: input.direction,
         reason: input.reason ?? null,
         note: input.note || null,
+        // A section pointer belongs to a downvote; an upvote clears it.
+        section_ref:
+          input.direction === "down" ? (input.section_ref ?? null) : null,
       },
       { onConflict: "voter_id,guide_id" }
     )
-    .select("guide_id, direction, reason, note, updated_at")
+    .select(VOTE_DETAIL)
     .single();
 
   if (error) throw new ServiceError("Unable to cast vote", 400);

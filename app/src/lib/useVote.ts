@@ -101,10 +101,17 @@ export function useVote(
   const downvote = (
     reason: DownvoteReason,
     note: string,
+    sectionRef: string | null,
     handleClose?: () => void
   ) =>
     mutate(
-      (id) => castVote(id, { direction: "down", reason, note: note || null }),
+      (id) =>
+        castVote(id, {
+          direction: "down",
+          reason,
+          note: note || null,
+          section_ref: sectionRef,
+        }),
       "Could not save your downvote.",
       handleClose
     );
