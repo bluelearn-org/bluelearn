@@ -39,6 +39,19 @@ describe("GET /me", () => {
     expect(body.profile.id).toBe(userId);
     expect(body.roles).toContain("verifier");
   });
+
+  it("reports every role the database can grant, not only the first three", async () => {
+    const { token, userId } = await makeUser();
+    await grantRole(userId, "curator");
+    await grantRole(userId, "official");
+
+    const res = await app.request("/me", auth(token), env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/me");
+    const body = (await res.json()) as { roles: string[] };
+    expect(body.roles).toEqual(expect.arrayContaining(["curator", "official"]));
+  });
 });
 
 describe("GET /me/drafts", () => {

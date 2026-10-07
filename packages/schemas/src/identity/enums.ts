@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-export const roleSchema = z.enum(["verifier", "moderator", "admin"]);
+// Mirrors the app_role enum in Postgres: every role /me and a profile page can
+// report. Dashboard role management reuses it as userRoleSchema.
+export const roleSchema = z.enum([
+  "verifier",
+  "moderator",
+  "curator",
+  "admin",
+  "official",
+]);
 
 export const activityContentKindSchema = z.enum([
   "guide",
