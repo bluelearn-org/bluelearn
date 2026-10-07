@@ -548,6 +548,7 @@ How a guide slug is decided:
 1. Default to `slugify(title)` of the guide's title (author may override).
 2. Resolve collisions against siblings under the **same base only** by appending a counter (`visual-method`, `visual-method-2`). This is a last resort, as it will only be used if the author decides to not change the guide's title to be unique. On guide submission, there will be a warning signaling the author that there is another guide with the same name, and they should change it unless they are okay with the numbered slug being used. Per-base scoping means a slug like `visual-method` can be reused under a different topic.
 3. Assign at **first publish**, once the title has settled through review; drafts are addressed by id until then. After that the slug is frozen, and later title edits never move it.
+4. Never take a word the router serves at the same position. `/{base-slug}/walkthrough`, `/{base-slug}/variants` and `/{base-slug}/objectives` are routes, so a title that slugifies to one of those words gets `-guide` appended (then the counter, if that is taken too) before it is stored. A trigger on `guides` enforces this for every write path.
 
 The base slug is decided the same way at the same moment (the first guide under it publishing), except collisions resolve against **every** base rather than siblings, since `/{base-slug}` is a site-wide handle.
 
