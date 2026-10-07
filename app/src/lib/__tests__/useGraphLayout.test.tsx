@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
-import { render, renderHook, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as ReactType from "react";
 import type { Walkthrough } from "@bluelearn/schemas";
+import type { GraphOrientation } from "@/lib/graphOrientation";
 import type { GraphNodeData } from "@/lib/useGraphLayout";
 import { GuideGraphNode } from "@/components/graph/GuideGraphNode";
 import {
@@ -34,11 +41,30 @@ vi.mock("@xyflow/react", async () => {
         className,
       }),
     MarkerType: { ArrowClosed: "arrow-closed" },
-    Position: { Bottom: "bottom", Top: "top" },
+    Position: { Bottom: "bottom", Top: "top", Left: "left", Right: "right" },
     useEdgesState: useCollectionState,
     useNodesState: useCollectionState,
   };
 });
+
+// Lays the three-node chain out and returns each node's position by slug.
+async function layoutPositions(orientation?: GraphOrientation) {
+  const { result } = renderHook(() =>
+    useGraphLayout({
+      walkthroughData,
+      targetSlug: "target",
+      hoveredGuide: null,
+      nodeType: "walkthroughNode",
+      nodeWidth: 320,
+      nodeSpacing: 560,
+      orientation,
+    })
+  );
+
+  await waitFor(() => expect(result.current.nodes).toHaveLength(3));
+
+  return new Map(result.current.nodes.map((node) => [node.id, node.position]));
+}
 
 const walkthroughData: Walkthrough = {
   nodes: [
@@ -76,6 +102,8 @@ const walkthroughData: Walkthrough = {
   ],
 };
 
+afterEach(cleanup);
+
 describe("walkthrough graph direction", () => {
   it("keeps objective curation on the target's prerequisite graph", () => {
     const prerequisiteWalkthrough = getTargetPrerequisiteWalkthrough(
@@ -101,27 +129,48 @@ describe("walkthrough graph direction", () => {
   });
 
   it("places prerequisites below the target and follow-ups above it", async () => {
-    const { result } = renderHook(() =>
-      useGraphLayout({
-        walkthroughData,
-        targetSlug: "target",
-        hoveredGuide: null,
-        nodeType: "walkthroughNode",
-        nodeWidth: 320,
-        nodeSpacing: 560,
-      })
-    );
+    const positions = await layoutPositions();
 
-    await waitFor(() => expect(result.current.nodes).toHaveLength(3));
+    expect(positions.get("prerequisite")!.y).toBeGreaterThan(
+      positions.get("target")!.y
+    );
+    expect(positions.get("target")!.y).toBeGreaterThan(
+      positions.get("follow-up")!.y
+    );
+  });
 
-    const positions = new Map(
-      result.current.nodes.map((node) => [node.id, node.position.y])
+  it("reads top-down with prerequisites above the target", async () => {
+    const positions = await layoutPositions("top-down");
+
+    expect(positions.get("prerequisite")!.y).toBeLessThan(
+      positions.get("target")!.y
     );
-    expect(positions.get("prerequisite")).toBeGreaterThan(
-      positions.get("target")!
+    expect(positions.get("target")!.y).toBeLessThan(
+      positions.get("follow-up")!.y
     );
-    expect(positions.get("target")).toBeGreaterThan(
-      positions.get("follow-up")!
+  });
+
+  it("runs left to right along the x axis, keeping a level's nodes in one column", async () => {
+    const positions = await layoutPositions("left-right");
+
+    expect(positions.get("prerequisite")!.x).toBeLessThan(
+      positions.get("target")!.x
+    );
+    expect(positions.get("target")!.x).toBeLessThan(
+      positions.get("follow-up")!.x
+    );
+    // One node per level, so every level centers on the same row.
+    expect(new Set([...positions.values()].map((p) => p.y)).size).toBe(1);
+  });
+
+  it("runs right to left with the target left of its prerequisites", async () => {
+    const positions = await layoutPositions("right-left");
+
+    expect(positions.get("prerequisite")!.x).toBeGreaterThan(
+      positions.get("target")!.x
+    );
+    expect(positions.get("target")!.x).toBeGreaterThan(
+      positions.get("follow-up")!.x
     );
   });
 
@@ -163,22 +212,43 @@ describe("walkthrough graph direction", () => {
     expect(new Set(result.current.edges.map((edge) => edge.id)).size).toBe(2);
   });
 
-  it("connects edges through the facing sides of each node", () => {
-    const data: GraphNodeData = {
-      title: "Target",
-      level: 2,
-      summary: null,
-      duration_minutes: 10,
-      tags: [],
-      isTarget: true,
-      isHovered: false,
-      isDimmed: false,
-      centerX: 0,
-    };
+  const nodeData: GraphNodeData = {
+    title: "Target",
+    level: 2,
+    summary: null,
+    duration_minutes: 10,
+    tags: [],
+    isTarget: true,
+    isHovered: false,
+    isDimmed: false,
+    orientation: "bottom-up",
+    centerX: 0,
+    centerY: null,
+  };
 
-    render(<GuideGraphNode data={data} isSelected={false} />);
+  it("connects edges through the facing sides of each node", () => {
+    render(<GuideGraphNode data={nodeData} isSelected={false} />);
 
     expect(screen.getByTestId("target-handle").dataset.position).toBe("bottom");
     expect(screen.getByTestId("source-handle").dataset.position).toBe("top");
   });
+
+  it.each([
+    { orientation: "top-down", target: "top", source: "bottom" },
+    { orientation: "left-right", target: "left", source: "right" },
+    { orientation: "right-left", target: "right", source: "left" },
+  ] as const)(
+    "turns the handles with a $orientation layout",
+    ({ orientation, target, source }) => {
+      render(
+        <GuideGraphNode
+          data={{ ...nodeData, orientation }}
+          isSelected={false}
+        />
+      );
+
+      expect(screen.getByTestId("target-handle").dataset.position).toBe(target);
+      expect(screen.getByTestId("source-handle").dataset.position).toBe(source);
+    }
+  );
 });

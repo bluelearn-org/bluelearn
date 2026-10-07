@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { GuideGraph } from "./GuideGraph";
 import { WalkthroughNode } from "./WalkthroughNode";
 import type { Walkthrough } from "@bluelearn/schemas";
+import type { GraphOrientation } from "@/lib/graphOrientation";
 import "@xyflow/react/dist/style.css";
 
 const nodeTypes = {
@@ -17,6 +18,8 @@ type WalkthroughGraphProps = {
   onSelectGuide: (slug: string) => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  orientation?: GraphOrientation;
+  onOrientationChange?: (orientation: GraphOrientation) => void;
 };
 
 export function WalkthroughGraph({

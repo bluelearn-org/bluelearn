@@ -184,6 +184,50 @@ describe("GuideGraph Controls & Fullscreen", () => {
     expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
   });
 
+  it("offers the orientation picker when the graph can be re-oriented", () => {
+    const onOrientationChange = vi.fn();
+
+    render(
+      <GuideGraph
+        walkthroughData={mockWalkthroughData}
+        targetSlug="calc-intro"
+        hoveredGuide={null}
+        onHoverGuide={vi.fn()}
+        nodeType="walkthroughNode"
+        nodeTypes={{}}
+        orientation="bottom-up"
+        onOrientationChange={onOrientationChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Graph orientation" }));
+    expect(screen.getByRole("radio", { name: "Bottom up" })).toHaveProperty(
+      "ariaChecked",
+      "true"
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Left to right" }));
+    expect(onOrientationChange).toHaveBeenCalledWith("left-right");
+  });
+
+  it("hides the orientation picker without a change handler", () => {
+    render(
+      <GuideGraph
+        walkthroughData={mockWalkthroughData}
+        targetSlug="calc-intro"
+        hoveredGuide={null}
+        onHoverGuide={vi.fn()}
+        nodeType="walkthroughNode"
+        nodeTypes={{}}
+        orientation="left-right"
+      />
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Graph orientation" })
+    ).toBeNull();
+  });
+
   it("does not render the top-right fullscreen button if onToggleFullscreen is not provided", () => {
     render(
       <GuideGraph

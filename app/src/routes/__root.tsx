@@ -14,6 +14,7 @@ import { NotFound } from "@/components/NotFound";
 import { ErrorFallback } from "@/components/ErrorFallback";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/authContext";
+import { GraphOrientationProvider } from "@/lib/graphOrientation";
 import { ThemeProvider } from "@/lib/themeProvider";
 
 export const Route = createRootRoute({
@@ -53,17 +54,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <SuspendedBanner />
-              <TooltipProvider>
-                <main className="flex-1">{children}</main>
-              </TooltipProvider>
-              <Footer />
-            </div>
-            <Toaster />
-          </AuthProvider>
+          <GraphOrientationProvider>
+            <AuthProvider>
+              <div className="flex min-h-screen flex-col">
+                <Navbar />
+                <SuspendedBanner />
+                <TooltipProvider>
+                  <main className="flex-1">{children}</main>
+                </TooltipProvider>
+                <Footer />
+              </div>
+              <Toaster />
+            </AuthProvider>
+          </GraphOrientationProvider>
         </ThemeProvider>
         <Scripts />
       </body>

@@ -1,5 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 import type { ReactNode } from "react";
+import type { GraphOrientation } from "@/lib/graphOrientation";
 import type { GraphNodeData } from "@/lib/useGraphLayout";
 import { Card, CardHeader } from "@/components/ui/card";
 
@@ -12,14 +13,45 @@ type GuideGraphNodeProps = {
   badge?: ReactNode;
 };
 
+// Edges run prerequisite -> dependent, so a node's source handle faces the
+// target's side of the layout and its target handle faces the prerequisites.
+function handlePositions(orientation: GraphOrientation) {
+  switch (orientation) {
+    case "bottom-up":
+      return { source: Position.Top, target: Position.Bottom };
+    case "top-down":
+      return { source: Position.Bottom, target: Position.Top };
+    case "left-right":
+      return { source: Position.Right, target: Position.Left };
+    case "right-left":
+      return { source: Position.Left, target: Position.Right };
+  }
+}
+
+// A handle is a short bar along the edge it sits on.
+const HANDLE_CLASS: Record<Position, string> = {
+  [Position.Top]: "-top-1 h-2 w-8",
+  [Position.Bottom]: "-bottom-1 h-2 w-8",
+  [Position.Left]: "-left-1 h-8 w-2",
+  [Position.Right]: "-right-1 h-8 w-2",
+};
+
 export function GuideGraphNode({
   data,
   isSelected,
   leading,
   badge,
 }: GuideGraphNodeProps) {
-  const { isTarget, title, duration_minutes, level, isHovered, isDimmed } =
-    data;
+  const {
+    isTarget,
+    title,
+    duration_minutes,
+    level,
+    isHovered,
+    isDimmed,
+    orientation,
+  } = data;
+  const handles = handlePositions(orientation);
 
   // The target inverts, so its dividers and labels ride on the fill instead of
   // the page.
@@ -34,8 +66,8 @@ export function GuideGraphNode({
     >
       <Handle
         type="target"
-        position={Position.Bottom}
-        className="-bottom-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+        position={handles.target}
+        className={`${HANDLE_CLASS[handles.target]} rounded-full !border-none !bg-primary/40`}
       />
 
       <Card
@@ -81,8 +113,8 @@ export function GuideGraphNode({
 
       <Handle
         type="source"
-        position={Position.Top}
-        className="-top-1 h-2 w-8 rounded-full !border-none !bg-primary/40"
+        position={handles.source}
+        className={`${HANDLE_CLASS[handles.source]} rounded-full !border-none !bg-primary/40`}
       />
     </div>
   );

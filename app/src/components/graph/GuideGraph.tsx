@@ -9,8 +9,11 @@ import {
 import { Fullscreen, Minimize } from "lucide-react";
 import type { Node, NodeTypes } from "@xyflow/react";
 import type { Walkthrough } from "@bluelearn/schemas";
+import type { GraphOrientation } from "@/lib/graphOrientation";
+import { DEFAULT_GRAPH_ORIENTATION } from "@/lib/graphOrientation";
 import { useGraphLayout } from "@/lib/useGraphLayout";
 import { Button } from "@/components/ui/button";
+import { GraphOrientationControl } from "@/components/graph/GraphOrientationControl";
 import { useTheme } from "@/lib/themeProvider";
 import "@xyflow/react/dist/style.css";
 
@@ -29,6 +32,9 @@ type GuideGraphProps = {
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
   showFitView?: boolean;
+  orientation?: GraphOrientation;
+  // Offers the in-graph orientation picker when given.
+  onOrientationChange?: (orientation: GraphOrientation) => void;
 };
 
 // The provider hoists the xyflow store above the graph, so fitView is callable
@@ -53,6 +59,8 @@ function Graph({
   isFullscreen,
   onToggleFullscreen,
   showFitView = true,
+  orientation = DEFAULT_GRAPH_ORIENTATION,
+  onOrientationChange,
 }: GuideGraphProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, isLayoutSettled } =
     useGraphLayout({
@@ -62,6 +70,7 @@ function Graph({
       nodeType,
       nodeWidth: NODE_WIDTH,
       nodeSpacing: NODE_SPACING,
+      orientation,
       getNodeState,
     });
 
@@ -92,7 +101,12 @@ function Graph({
   const { fitView } = useReactFlow();
   const { theme } = useTheme();
   const layoutSignature = isLayoutSettled
-    ? nodes.map((n) => `${n.id}:${n.position.x}:${n.measured?.width}`).join("|")
+    ? nodes
+        .map(
+          (n) =>
+            `${n.id}:${n.position.x}:${n.position.y}:${n.measured?.width}:${n.measured?.height}`
+        )
+        .join("|")
     : null;
 
   useEffect(() => {
@@ -135,17 +149,26 @@ function Graph({
         minZoom={0.2}
         maxZoom={1.5}
       >
-        {onToggleFullscreen && (
+        {(onToggleFullscreen || onOrientationChange) && (
           <Panel position="top-right" className="m-4 flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onToggleFullscreen}
-              className="h-8 w-8 border-border/50 bg-background/80 shadow-sm backdrop-blur-md"
-              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-            >
-              {isFullscreen ? <Minimize /> : <Fullscreen />}
-            </Button>
+            {onOrientationChange && (
+              <GraphOrientationControl
+                orientation={orientation}
+                onChange={onOrientationChange}
+              />
+            )}
+
+            {onToggleFullscreen && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onToggleFullscreen}
+                className="h-8 w-8 border-border/50 bg-background/80 shadow-sm backdrop-blur-md"
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? <Minimize /> : <Fullscreen />}
+              </Button>
+            )}
           </Panel>
         )}
 

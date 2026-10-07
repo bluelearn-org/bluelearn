@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 
 import type { Walkthrough } from "@bluelearn/schemas";
+import type { GraphOrientation } from "@/lib/graphOrientation";
 
 import { WalkthroughGraph } from "@/components/graph/WalkthroughGraph";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
 import { getGuideWalkthrough } from "@/lib/api/guides";
+import { useGraphOrientation } from "@/lib/graphOrientation";
 
 export const Route = createFileRoute("/guides/$slug/walkthrough")({
   component: RouteComponent,
@@ -21,6 +23,13 @@ function RouteComponent() {
 
   const [hoveredGuide, setHoveredGuide] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // The in-graph picker re-orients this walkthrough only; the reader's default
+  // from Settings → Appearance stays what every graph opens with.
+  const { orientation: defaultOrientation } = useGraphOrientation();
+  const [orientationOverride, setOrientationOverride] =
+    useState<GraphOrientation | null>(null);
+  const orientation = orientationOverride ?? defaultOrientation;
 
   // Panel never sits empty: no click yet means it describes the target.
   const [selectedGuide, setSelectedGuide] = useState<string | null>(null);
@@ -115,6 +124,8 @@ function RouteComponent() {
                 onSelectGuide={setSelectedGuide}
                 isFullscreen={isFullscreen}
                 onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+                orientation={orientation}
+                onOrientationChange={setOrientationOverride}
               />
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
