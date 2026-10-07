@@ -110,20 +110,24 @@ bluelearn/
 ├── app/             React 19 · TanStack Start · TanStack Router
 │                    shadcn/ui · Tailwind 4 · Vite
 ├── api/             Hono on Cloudflare Workers
-│                    Routes: guides · objectives · review · search · media
+│                    Routes: guides · variants · objectives · subjects
+│                    reviews · search · media · dashboard
+├── packages/
+│   └── schemas/     Zod request/response schemas shared by app and api
 ├── supabase/        Postgres · Auth · Storage: migrations + RLS policies
 ├── docs/
 │   ├── architecture.md      System overview + diagram
 │   ├── monorepo.md          Why one repo instead of three
 │   ├── overall-system.md    Editorial pipeline + verifier design
+│   ├── simplified-system.md The same system in plain terms
 │   ├── database-schema.md   ERD walkthrough
 │   └── open-questions.md    Active design debates
 └── .github/
-    ├── workflows/ci.yml     app + api in parallel
+    ├── workflows/           CI · PR template check · issue triage
     ├── ISSUE_TEMPLATE/      bug · feature · guide proposal
     ├── PULL_REQUEST_TEMPLATE.md
-    ├── CODEOWNERS
-    └── FUNDING.yml
+    ├── copilot-instructions.md
+    └── CODEOWNERS
 ```
 
 **Why a monorepo?** See [`docs/monorepo.md`](docs/monorepo.md). Short

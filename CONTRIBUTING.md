@@ -159,18 +159,20 @@ were consolidated.
 ## Working on the code
 
 ### PR naming
+
 ```
-<type>(<scope>):<short description>
+<type>(<scope>): <short description>
+```
+
 Where `<type>` is one of: `feat`, `fix`, `docs`, `refactor`, `chore`,
-`test`, `perf`, `ci` and short description matches the issue title where possible.
+`test`, `perf`, `ci`, and the short description matches the issue title
+where possible.
 
 Examples:
 
-- `feat(app):integrate search route`
-- `fix(api)auth redirect loop`
+- `feat(app): integrate search route`
+- `fix(api): auth redirect loop`
 - `docs: simplify overall system doc`
-
-```
 
 ### Branch naming
 
@@ -230,8 +232,11 @@ Less good:
 
 - New behaviour gets a test. New endpoint → at least one happy-path
   integration test. New component → at least a render test.
-- We use **Vitest** in `app/` and (eventually) in `api/`.
-- Run with `pnpm --filter app test`.
+- We use **Vitest** in both `app/` and `api/`. The `api/` suite is an
+  integration suite against the local Supabase: copy `api/.env.test.example`
+  to `api/.env.test`, fill it from `supabase status`, then run
+  `pnpm --filter api test`.
+- Run the frontend suite with `pnpm --filter app test`.
 - Manual verification in a browser is also expected — exercise the golden
   path and the obvious edge cases.
 

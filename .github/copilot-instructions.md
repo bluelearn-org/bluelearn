@@ -5,6 +5,7 @@ Bluelearn is an open‑source, prerequisite‑graph education platform built as 
 - **Frontend (app/)**: React 19, TanStack Start (SSR), TanStack Router, Tailwind CSS v4, shadcn/ui
 - **API (api/)**: Hono on Cloudflare Workers, TypeScript, Supabase for auth/data
 - **Database (supabase/)**: PostgreSQL with Row‑Level Security (RLS), migrations
+- **Shared schemas (packages/schemas/)**: zod request/response schemas imported by both `api/` and `app/`
 
 ## Development Workflow
 1. **Prerequisites**: Docker, Node.js ≥20, pnpm ≥10.33.1, Supabase CLI
@@ -20,7 +21,7 @@ Bluelearn is an open‑source, prerequisite‑graph education platform built as 
    - `pnpm typecheck` – TypeScript check across workspace
    - `pnpm lint` – ESLint
    - `pnpm format` – Prettier (with Tailwind plugin)
-   - `pnpm test` – Vitest tests (frontend only)
+   - `pnpm test` – Vitest tests for `app/` and `api/`; the `api/` suite is an integration suite that needs the local Supabase running and `api/.env.test` (copy `api/.env.test.example`)
    - `pnpm supabase:reset` – reset database
 
 ## Architectural Constraints
@@ -36,7 +37,7 @@ Bluelearn is an open‑source, prerequisite‑graph education platform built as 
 - **Components**: shadcn/ui primitives in `app/src/components/ui/`. Add via `npx shadcn@latest add`.
 - **API routes**: Each resource has its own Hono router in `api/src/routes/`. Use `@hono/zod‑validator` for validation.
 - **Migrations**: Timestamp‑prefixed `.sql` files in `supabase/migrations/`. Apply with `supabase db reset` or `supabase db push`.
-- **Type safety**: API exports `AppType` (from `api/src/index.ts`) for end‑to‑end type‑safe calls (not yet wired).
+- **Type safety**: API exports `AppType` (from `api/src/index.ts`); the app consumes it through `hc<AppType>` in `app/src/lib/api/apiClient.ts`, so request and response types flow end‑to‑end without codegen.
 
 ## Environment Variables
 - **Frontend** (`app/.env`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_BASE`
@@ -48,14 +49,14 @@ Bluelearn is an open‑source, prerequisite‑graph education platform built as 
 2. **API**: Add route with validation → mount in `index.ts`.
 3. **Frontend**: Create/update route → fetch data (typed client when available) → UI with shadcn.
 4. **Validation**: Run `pnpm typecheck`, `pnpm lint`, `pnpm format`.
-5. **Testing**: Add Vitest tests for frontend components.
+5. **Testing**: Add Vitest tests: at least one happy‑path integration test per new endpoint in `api/tests/`, and a render test per new component in `app/`.
 
 ## Gotchas
 - Docker must be running for `supabase start`.
 - Environment variables differ between app (VITE_ prefix) and API (plain).
 - CORS allows only `APP_URL` (set in `.dev.vars`).
-- `api/src/database.types.ts` is a stub; regenerate after schema changes.
-- Only `profiles` table exists currently; full schema described in `docs/database‑schema.md`.
+- `api/src/database.types.ts` is generated; regenerate it with `pnpm supabase:types` after schema changes and commit the result.
+- The live schema is the migrations in `supabase/migrations/`; `docs/database‑schema.md` explains the model behind them.
 
 ## Full Documentation
-See `AGENTS.md` for comprehensive agent‑focused guidance.
+See `CONTRIBUTING.md` for the contributor workflow and `docs/` for the architecture, system, and schema notes.

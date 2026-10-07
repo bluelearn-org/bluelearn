@@ -17,9 +17,12 @@
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  api/   Hono on Cloudflare Workers                                   │
-│         Routes: /subjects · /walkthroughs · /guides                  │
-│         Middleware: cors, supabaseMiddleware (auth), rateLimit (POST /guides) │
-│         Validation: @hono/zod-validator                              │
+│         Routes: /guides · /variants · /guide-revisions · /objectives │
+│                 /objective-revisions · /subjects · /reviews · /search│
+│                 /prerequisites · /todos · /media · /dashboard · /me  │
+│                 /profiles · /avatar                                  │
+│         Middleware: cors · supabaseMiddleware (auth) · rate limits   │
+│         Validation: zod schemas from packages/schemas (hono-openapi) │
 └───────────────────────────────┬──────────────────────────────────────┘
                                 │  PostgREST / RPC
                                 ▼
@@ -52,8 +55,9 @@
   so auth, validation, and rate limits stay in one place.
 - `api/` is mostly stateless. State lives in Postgres; cached state lives
   in Workers KV (when we add it).
-- Shared types between `app` and `api` — today, via Hono's `AppType`
-  export. As we accrete domain types, they'll move into `packages/types/`.
+- Shared types between `app` and `api`: Hono's `AppType` export types the
+  wire, and the zod schemas in `packages/schemas/` define the request and
+  response shapes both sides validate against.
 
 ## Authentication
 
@@ -72,16 +76,16 @@ storage). Bonus skill area for contributors interested — not on the
 critical path for Phase 1 or 2.
 
 ## Canonical promotion
-A guide base's canonical_guide_id points at the variant readers see bydefault. The first published variant becomes canonical (set inclose_review_panel), after that, the pointer will be able to move to a siblingvariant that beats the top guide on votes.
+A guide base's `canonical_guide_id` points at the variant readers see by default. The first published variant becomes canonical (set in `close_review_panel`); after that, the pointer can move to a sibling variant that beats the top guide on votes.
 
-Ranking uses the lower bound of a Wilson score interval (95% confidence by default) over each variant's up / down tally, (NOT THE RAW RATIO FOR VOTES), a variant with 2 up / 0 down should not outrank one with 50 up / 2 down for example. The Wilson lower bound is computed in SQL by the promote_canonical_guidefunction so the whole read-rank-write cycle will run in one transaction under a row lock on guide_bases.
+Ranking uses the lower bound of a Wilson score interval (95% confidence by default) over each variant's up / down tally, not the raw ratio: a variant with 2 up / 0 down should not outrank one with 50 up / 2 down. The Wilson lower bound is computed in SQL by the `promote_canonical_guide` function, so the whole read-rank-write cycle runs in one transaction under a row lock on `guide_bases`.
 
-Three guards prevent canonical flipping on each and every vote:
+Three guards prevent the canonical pointer from flipping on every vote:
 
-* A minimum vote floor of by default 5, challengers below this minimum floor will be ignored;
-* Must strictly be the leading guide, a challenging guide MUST have it's Wilson lower bound be higher than the current leader's, ties not included.
-A challenging guide must lead the current leader's by (by default) 0.05.
+* A minimum vote floor (5 by default): challengers below it are ignored;
+* A challenger must strictly lead: its Wilson lower bound must be higher than the current leader's, ties excluded;
+* A challenger must lead the current leader by a margin (0.05 by default).
 
-Promotion runs eagerly in castVote and retractVote ( with one extra RPC per vote) and lazily on the cron tick (promoteAllCanonicals), this to reconcile any missed eager calls. The cron path mirrors assemblePendingPanels: making it so one base failing does not stall the rest.
+Promotion runs eagerly in `castVote` and `retractVote` (one extra RPC per vote) and lazily on the cron tick (`promoteAllCanonicals`) to reconcile any missed eager calls. The cron path mirrors `assemblePendingPanels`: one base failing does not stall the rest.
 
 The Wilson lower bound ranks the variant list returned by GET /guides/{slug}/variants, without a margin or minimum votes guard, since those exist only to prevent canonical flip-flopping and don't apply to a read-only listing. The list_guide_variants_by_score SQL function does the join and the ranking in one query.
