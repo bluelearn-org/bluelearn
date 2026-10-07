@@ -1,0 +1,4 @@
+# Check text files out and commit them with LF on every platform, so the
+# repo matches Prettier's endOfLine=lf even where Git for Windows defaults to
+# core.autocrlf=true. Git still detects binary files itself under text=auto.
+* text=auto eol=lf
