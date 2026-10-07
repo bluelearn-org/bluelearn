@@ -145,6 +145,8 @@ export const guideRevisionSchema = z.object({
   change_summary: z.string().nullable(),
   status: revisionStatusSchema,
   created_at: z.iso.datetime({ offset: true }),
+  // When this revision went live; null for drafts and rejected submissions.
+  approved_at: z.iso.datetime({ offset: true }).nullable(),
 });
 
 export const archivedNodeSchema = z.object({

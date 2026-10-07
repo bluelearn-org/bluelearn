@@ -79,6 +79,19 @@ export function isRevisionDraftUnchanged(
   );
 }
 
+// True when the live revision went live after this draft was started, so the
+// draft no longer builds on what readers currently see.
+export function isDraftBehindLive(
+  draftCreatedAt: string,
+  liveApprovedAt: string | null
+): boolean {
+  if (liveApprovedAt === null) return false;
+
+  return (
+    new Date(liveApprovedAt).getTime() > new Date(draftCreatedAt).getTime()
+  );
+}
+
 const slugifyHeading = (text: string) =>
   text
     .toLowerCase()

@@ -21,7 +21,12 @@ const { useLoaderData } = vi.hoisted(() => ({
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => (options: object) => ({ options, useLoaderData }),
+  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+  createFileRoute: () => (options: object) => ({
+    options,
+    useLoaderData,
+    useParams: () => ({ slug: "binary-search", variantSlug: "official" }),
+  }),
   notFound: vi.fn(),
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
@@ -249,26 +254,38 @@ describe("GuideDetails when editing a guide", () => {
 });
 
 describe("Guide edit change summary initialization", () => {
+  const STALE_NOTICE = "This guide changed while your draft was open";
+
+  const snapshotOf = (
+    status: "draft" | "submitted",
+    approvedAt: string | null
+  ) => ({
+    knowledge_type: guide.type,
+    base_slug: "binary-search",
+    revision: {
+      ...guide,
+      status,
+      change_summary: "Clarify the example",
+      created_at: "2026-09-10T00:00:00Z",
+      approved_at: approvedAt,
+    },
+    subjects: [],
+    prerequisites: [],
+    todos: [],
+    disclaimers: [],
+  });
+
   const renderRevision = async (
     status: "draft" | "submitted",
-    draftId: string | null
+    draftId: string | null,
+    // When the live revision went live, relative to the 2026-09-10 draft.
+    liveApprovedAt = "2026-09-01T00:00:00Z"
   ) => {
     useLoaderData.mockReturnValue({
       variant: { id: "variant-id", slug: "official" },
       current: { created_at: "2026-09-16T00:00:00Z" },
-      snapshot: {
-        knowledge_type: guide.type,
-        base_slug: "binary-search",
-        revision: {
-          ...guide,
-          status,
-          change_summary: "Clarify the example",
-        },
-        subjects: [],
-        prerequisites: [],
-        todos: [],
-        disclaimers: [],
-      },
+      live: snapshotOf("submitted", liveApprovedAt),
+      snapshot: snapshotOf(status, null),
       draftId,
     });
 
@@ -283,6 +300,24 @@ describe("Guide edit change summary initialization", () => {
 
     return changeSummary;
   };
+
+  it("warns when a newer revision went live after the resumed draft was started", async () => {
+    await renderRevision("draft", "draft-id", "2026-09-15T00:00:00Z");
+
+    expect(screen.getByText(STALE_NOTICE)).toBeDefined();
+  });
+
+  it("stays quiet when the live revision predates the resumed draft", async () => {
+    await renderRevision("draft", "draft-id");
+
+    expect(screen.queryByText(STALE_NOTICE)).toBeNull();
+  });
+
+  it("stays quiet on a fresh edit, which starts from the live revision", async () => {
+    await renderRevision("submitted", null, "2026-09-15T00:00:00Z");
+
+    expect(screen.queryByText(STALE_NOTICE)).toBeNull();
+  });
 
   it("starts a fresh edit of an approved submitted revision with a blank change summary", async () => {
     const changeSummary = await renderRevision("submitted", null);

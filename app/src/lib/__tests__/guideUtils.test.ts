@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { RevisionDraft, RevisionDraftSnapshot } from "@/lib/guideUtils";
-import { buildGuideMeta, isRevisionDraftUnchanged } from "@/lib/guideUtils";
+import {
+  buildGuideMeta,
+  isDraftBehindLive,
+  isRevisionDraftUnchanged,
+} from "@/lib/guideUtils";
 
 const snapshot: RevisionDraftSnapshot = {
   title: "Binary Search",
@@ -77,6 +81,26 @@ describe("isRevisionDraftUnchanged", () => {
         newSubjects: [{ name: "Rust", summary: null }],
       })
     ).toBe(false);
+  });
+});
+
+describe("isDraftBehindLive", () => {
+  const draftStarted = "2026-09-01T12:00:00+00:00";
+
+  it("is false while nothing has gone live", () => {
+    expect(isDraftBehindLive(draftStarted, null)).toBe(false);
+  });
+
+  it("is false when the live revision predates the draft", () => {
+    expect(isDraftBehindLive(draftStarted, "2026-08-31T12:00:00+00:00")).toBe(
+      false
+    );
+  });
+
+  it("is true when a revision went live after the draft was started", () => {
+    expect(isDraftBehindLive(draftStarted, "2026-09-02T12:00:00+00:00")).toBe(
+      true
+    );
   });
 });
 

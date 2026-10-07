@@ -19,9 +19,10 @@ type DraftTagsAndEdges = {
 };
 
 // The full snapshot of a single revision. RLS exposes a revision once it is
-// submitted, or earlier to its own author.
+// submitted, or earlier to its own author. approved_at lets an editor tell
+// whether the live revision moved after a draft was started.
 const REVISION_DETAIL =
-  "id, guide_id, title, summary, body, change_summary, status, created_at";
+  "id, guide_id, title, summary, body, change_summary, status, created_at, approved_at";
 
 // Slimmer row used by diffRevisions: adds author_id for the RevisionRef
 // header and drops guide_id/status that the diff response does not surface.

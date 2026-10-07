@@ -174,6 +174,41 @@ describe("GET /guide-revisions/{id}", () => {
       "published"
     );
   });
+
+  it("carries approved_at so an editor can tell when the live revision moved", async () => {
+    const author = await makeUser();
+    const { guide, revision: live } = await createPublishedGuide({
+      authorId: author.userId,
+    });
+    const draft = await createGuideRevision(guide.id, {
+      status: "draft",
+      author_id: author.userId,
+    });
+
+    const liveRes = await app.request(
+      `/guide-revisions/${live.id}`,
+      auth(author.token),
+      env
+    );
+    const draftRes = await app.request(
+      `/guide-revisions/${draft.id}`,
+      auth(author.token),
+      env
+    );
+
+    expect(liveRes.status).toBe(200);
+    await expectToMatchSpec(liveRes, "GET", "/guide-revisions/{id}");
+    const liveBody = (await liveRes.json()) as {
+      revision: { approved_at: string | null };
+    };
+    expect(liveBody.revision.approved_at).toBe(live.approved_at);
+
+    expect(draftRes.status).toBe(200);
+    const draftBody = (await draftRes.json()) as {
+      revision: { approved_at: string | null };
+    };
+    expect(draftBody.revision.approved_at).toBeNull();
+  });
 });
 
 describe("PATCH /guide-revisions/{id}", () => {

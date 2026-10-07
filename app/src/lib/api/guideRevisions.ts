@@ -16,6 +16,7 @@ export type RemoteRevision = {
     change_summary: string | null;
     status: "draft" | "submitted";
     created_at: string;
+    approved_at: string | null;
   };
   subjects: Array<{
     id: string;

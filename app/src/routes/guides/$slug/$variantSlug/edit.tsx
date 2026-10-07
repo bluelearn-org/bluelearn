@@ -1,6 +1,11 @@
 import { defineStepper } from "@stepperize/react";
-import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import {
+  Link,
+  createFileRoute,
+  notFound,
+  useRouter,
+} from "@tanstack/react-router";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,11 +25,14 @@ import { createVariantRevision, getVariantBySlug } from "@/lib/api/variants";
 import { uploadMedia } from "@/lib/api/media";
 import {
   estimateReadMinutes,
+  formatDate,
+  isDraftBehindLive,
   isRevisionDraftUnchanged,
 } from "@/lib/guideUtils";
 import { requireSession } from "@/lib/auth";
 import { useSuspensionStatus } from "@/lib/authContext";
 import { AccountStatusNotice } from "@/components/AccountStatusNotice";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { EditGuideInfo } from "@/components/contribute/steps/guide/EditGuideInfo";
 import { Submit } from "@/components/contribute/steps/Submit";
@@ -51,13 +59,18 @@ export const Route = createFileRoute("/guides/$slug/$variantSlug/edit")({
       throw notFound();
     }
 
+    // The live revision is what a submission is measured against: it has to
+    // differ from what readers see now, not from the draft being resumed.
+    const live = await getRevision(variant.current.id);
+
     // if a draft ID is provided, resume that draft
     // otherwise - seed the editor from the currently published revision
-    const snapshot = await getRevision(deps.draft ?? variant.current.id);
+    const snapshot = deps.draft ? await getRevision(deps.draft) : live;
 
     return {
       variant,
       current: variant.current,
+      live,
       snapshot,
       draftId: deps.draft ?? null,
     };
@@ -94,10 +107,17 @@ function RouteComponent() {
 }
 
 function EditGuidePage() {
-  const { variant, current, snapshot, draftId } = Route.useLoaderData();
+  const { variant, current, live, snapshot, draftId } = Route.useLoaderData();
+  const { slug, variantSlug } = Route.useParams();
 
   const { Stepper } = StepperInstance;
   const router = useRouter();
+
+  // A resumed draft may predate the revision that is live now. Submitting it
+  // then proposes the draft over edits its author never saw, so say so.
+  const liveChangedSinceDraft =
+    draftId !== null &&
+    isDraftBehindLive(snapshot.revision.created_at, live.revision.approved_at);
 
   /*
    * Subjects are split into:
@@ -378,15 +398,16 @@ function EditGuidePage() {
     try {
       const fields = draftFields();
 
-      // Prevent submitting a revision that contains no actual changes
+      // Prevent submitting a revision that changes nothing about the live
+      // guide. Comparing with the draft itself would block every resumed draft.
       if (
         isRevisionDraftUnchanged(
           {
-            title: snapshot.revision.title,
-            summary: snapshot.revision.summary,
-            body: snapshot.revision.body,
-            change_summary: snapshot.revision.change_summary,
-            subjectIds: snapshot.subjects.map((subject) => subject.id),
+            title: live.revision.title,
+            summary: live.revision.summary,
+            body: live.revision.body,
+            change_summary: live.revision.change_summary,
+            subjectIds: live.subjects.map((subject) => subject.id),
           },
           fields
         )
@@ -434,6 +455,30 @@ function EditGuidePage() {
         >
           {() => (
             <>
+              {liveChangedSinceDraft && live.revision.approved_at && (
+                <Alert>
+                  <AlertTriangle />
+                  <AlertTitle>
+                    This guide changed while your draft was open
+                  </AlertTitle>
+                  <AlertDescription>
+                    A newer version went live on{" "}
+                    {formatDate(new Date(live.revision.approved_at))}, after
+                    this draft was started. Submitting proposes your draft in
+                    its place, so compare it with the{" "}
+                    <Link
+                      to="/guides/$slug/$variantSlug"
+                      params={{ slug, variantSlug }}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      current version
+                    </Link>{" "}
+                    first.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <MobileStepProgress steps={editSteps} activeStep={activeStep} />
 
               <Stepper.List className="hidden w-full items-center justify-center text-sm sm:flex">
