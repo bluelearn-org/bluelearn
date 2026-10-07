@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { FileCheckCorner, Shield, Users } from "lucide-react";
+import { ClipboardList, FileCheckCorner, Shield, Users } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,12 @@ const items: Array<{
     label: "Roles",
     to: "/dashboard/roles",
     icon: Shield,
+    roles: ["admin"],
+  },
+  {
+    label: "Applications",
+    to: "/dashboard/applications",
+    icon: ClipboardList,
     roles: ["admin"],
   },
   {

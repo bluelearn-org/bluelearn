@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { UpdateProfileInput } from "@bluelearn/schemas";
+import type {
+  CreateRoleApplicationInput,
+  UpdateProfileInput,
+} from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 
@@ -134,6 +137,64 @@ export async function getMyDrafts(
       updated_at: r.updated_at,
     })),
   };
+}
+
+const ROLE_APPLICATION_DETAIL =
+  "id, role, status, statement, created_at, decided_at";
+
+// The caller's role applications, newest first, so the settings page can show
+// each role as held, pending, or open to a (re)application.
+export async function listMyRoleApplications(supabase: DB, userId: string) {
+  const { data, error } = await supabase
+    .from("role_applications")
+    .select(ROLE_APPLICATION_DETAIL)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load role applications", 500);
+  }
+  return { applications: data };
+}
+
+// File an application for a role the caller does not hold. RLS refuses
+// suspended members; the partial unique index refuses a second open
+// application for the same role.
+export async function applyForRole(
+  supabase: DB,
+  userId: string,
+  input: CreateRoleApplicationInput
+) {
+  const roles = await fetchRoles(supabase, userId);
+  if (roles.includes(input.role)) {
+    throw new ServiceError(`You already hold the ${input.role} role`, 409);
+  }
+
+  const { data, error } = await supabase
+    .from("role_applications")
+    .insert({
+      user_id: userId,
+      role: input.role,
+      statement: input.statement ?? null,
+    })
+    .select(ROLE_APPLICATION_DETAIL)
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new ServiceError(
+        `You already have a pending ${input.role} application`,
+        409
+      );
+    }
+    if (error.code === "42501") {
+      throw new ServiceError("Suspended accounts cannot apply for roles", 403);
+    }
+    console.error(error);
+    throw new ServiceError("Failed to submit role application", 500);
+  }
+  return { application: data };
 }
 
 // Apply the caller's profile edits and return the updated row and roles.

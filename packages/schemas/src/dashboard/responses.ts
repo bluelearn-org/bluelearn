@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { userStatusSchema } from "./enums";
+import {
+  applicableRoleSchema,
+  roleApplicationStatusSchema,
+} from "../identity/enums";
 
 export const successResponseSchema = z.object({
   success: z.boolean(),
@@ -60,5 +64,23 @@ const assignmentRowSchema = z.object({
 });
 export const assignmentsTableResponseSchema = z.object({
   data: z.array(assignmentRowSchema),
+  total: z.number().int(),
+});
+
+const roleApplicationRowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  username: z.string(),
+  role: applicableRoleSchema,
+  status: roleApplicationStatusSchema,
+  statement: z.string().nullable(),
+  date_created: z.string(),
+  date_decided: z.string().nullable(),
+  // The deciding admin's username; null while pending or when the role was
+  // granted by the service role.
+  decided_by: z.string().nullable(),
+});
+export const roleApplicationsTableResponseSchema = z.object({
+  data: z.array(roleApplicationRowSchema),
   total: z.number().int(),
 });

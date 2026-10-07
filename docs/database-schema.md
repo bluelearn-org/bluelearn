@@ -37,7 +37,22 @@ The roles a user holds. A user may hold several at once (e.g. both `verifier` an
 - `role`: granted role enum `verifier | moderator | curator | admin | official`.
 - `granted_at`: when the role was granted.
 
-For now, roles are granted directly by an admin inserting the `user_roles` row. A self-service application flow is deferred for later; see [Role applications](#role-applications) under Not Yet Implemented.
+An admin grants roles from the dashboard, either directly or by approving a [role application](#role_applications); either way the grant is a `user_roles` row.
+
+### `role_applications`
+
+A member's request for a role an admin can grant: `verifier` or `moderator`. `admin`, `curator` and `official` are never self-applied and stay granted directly.
+
+- `id`: primary key.
+- `user_id`: FK to `profiles.id` (the applicant).
+- `role`: `app_role`, constrained to `verifier | moderator`.
+- `status`: lifecycle state `pending | approved | rejected`.
+- `statement`: optional note to the admins (1 to 2000 characters).
+- `decided_by`: FK to `profiles.id`, the admin who decided. Null while `pending`, and when the grant came from outside a session (the service role).
+- `decided_at`: when the application was approved or rejected. Null while `pending`.
+- `created_at`: when the application was filed.
+
+A partial unique index on `(user_id, role) where status = 'pending'` stops a member stacking open applications for one role; a rejected member may apply again. Members insert and read their own rows; RLS refuses suspended members and anyone applying for a role they already hold. Admins read every row through the `dashboard_role_applications` view (`security_invoker`, joined to the applicant's and decider's usernames). Decisions go through `decide_role_application`, which stamps `decided_at`/`decided_by` and, on approval, inserts the `user_roles` row in the same transaction. Granting a role straight from the Roles table settles any pending application for it, so the dashboard never lists a request for a role the member already holds.
 
 ### `guide_bases`
 
@@ -703,21 +718,9 @@ Planned shape: a nullable `section_ref` on `votes` holding the header anchor/slu
 
 Open question: **derive** it on demand from existing ground truth (contribution history, `review_decisions`, and `appeals` outcomes) or **store** a maintained `standing`/reputation column on `profiles`. Derivation avoids drift but must be cheap enough to evaluate at dispute-file time and panel-draw time; a stored column is faster to gate on but needs its own update path. Resolve before the dispute system ships.
 
-#### Role applications
+#### Credentialing for roles
 
-For now, `verifier`/`moderator`/`admin` roles are granted directly by an admin inserting a `user_roles` row. A self-service flow where users **apply** for a role and an admin (later, automated credentialing) reviews the request is deferred.
-
-Potential shape: a `role_applications` table.
-
-- `id`: primary key.
-- `user_id`: FK to `profiles.id` (the applicant).
-- `role`: role applied for, enum `verifier | moderator`. `admin` is never self-applied, as it stays granted directly.
-- `status`: lifecycle state `pending | approved | rejected`.
-- `statement`: optional applicant note / justification.
-- `decided_at`: when the application was approved/rejected. Null while `pending`.
-- `created_at`: when the application was filed.
-
-Approval inserts the matching `user_roles` row. A partial unique index on `(user_id, role) WHERE status = 'pending'` stops a user stacking duplicate open applications for the same role.
+Role applications exist (see `role_applications`), and every decision is an admin's. `overall-system.md` layers **subject-expert credentialing** for verifiers and moderators on top of these roles later, and the earlier sketch of the applications table anticipated automated review of applications in the same spirit. Neither has a home in the schema yet.
 
 #### Objective review gate
 

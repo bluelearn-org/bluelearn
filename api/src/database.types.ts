@@ -1102,6 +1102,68 @@ export type Database = {
           },
         ]
       }
+      role_applications: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          statement: string | null
+          status: Database["public"]["Enums"]["role_application_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          statement?: string | null
+          status?: Database["public"]["Enums"]["role_application_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          statement?: string | null
+          status?: Database["public"]["Enums"]["role_application_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_applications_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_applications_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           created_at: string
@@ -1310,6 +1372,35 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_role_applications: {
+        Row: {
+          created_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          statement: string | null
+          status: Database["public"]["Enums"]["role_application_status"] | null
+          user_id: string | null
+          username: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_vote_tallies: {
         Row: {
           downvotes: number | null
@@ -1409,6 +1500,28 @@ export type Database = {
         }
         Returns: string
       }
+      decide_role_application: {
+        Args: {
+          p_application_id: string
+          p_decision: Database["public"]["Enums"]["role_application_status"]
+        }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          statement: string | null
+          status: Database["public"]["Enums"]["role_application_status"]
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "role_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       eligible_panel_admins: {
         Args: { p_created_by: string; p_panel_id?: string }
         Returns: {
@@ -1425,6 +1538,7 @@ export type Database = {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      is_active_guide_author: { Args: never; Returns: boolean }
       list_guide_variants_by_score: {
         Args: { p_guide_base_id: string; p_z?: number }
         Returns: {
@@ -1448,6 +1562,15 @@ export type Database = {
         }[]
       }
       promote_canonical_guide: {
+        Args: {
+          p_guide_base_id: string
+          p_margin?: number
+          p_min_votes?: number
+          p_z?: number
+        }
+        Returns: string
+      }
+      promote_canonical_guide_with_thresholds: {
         Args: {
           p_guide_base_id: string
           p_margin?: number
@@ -1516,6 +1639,7 @@ export type Database = {
       objective_revision_status: "draft" | "published"
       review_outcome: "approved" | "rejected"
       revision_status: "draft" | "submitted"
+      role_application_status: "pending" | "approved" | "rejected"
       seat_status: "assigned" | "recused" | "replaced" | "completed"
       subject_status: "draft" | "published"
       todo_status: "open" | "resolved"
@@ -1683,6 +1807,7 @@ export const Constants = {
       objective_revision_status: ["draft", "published"],
       review_outcome: ["approved", "rejected"],
       revision_status: ["draft", "submitted"],
+      role_application_status: ["pending", "approved", "rejected"],
       seat_status: ["assigned", "recused", "replaced", "completed"],
       subject_status: ["draft", "published"],
       todo_status: ["open", "resolved"],

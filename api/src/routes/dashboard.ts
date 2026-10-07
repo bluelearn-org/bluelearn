@@ -13,6 +13,8 @@ import {
   fetchMembersTable,
   fetchAssignmentsTable,
   reassignPanelMember,
+  fetchRoleApplicationsTable,
+  decideRoleApplication,
 } from "../services/dashboard.service";
 import { jsonContent, errorResponses, validate } from "../lib/openapi";
 import {
@@ -29,6 +31,10 @@ import {
   rolesTableQuerySchema,
   membersTableQuerySchema,
   assignmentsTableQuerySchema,
+  roleApplicationsTableQuerySchema,
+  roleApplicationsTableResponseSchema,
+  decideRoleApplicationSchema,
+  roleApplicationResponseSchema,
 } from "@bluelearn/schemas";
 
 export const dashboardRouter = new Hono<HonoEnv>()
@@ -245,5 +251,61 @@ export const dashboardRouter = new Hono<HonoEnv>()
       const { id, panel_id } = c.req.valid("param");
       await reassignPanelMember(c.get("supabase"), id, panel_id);
       return c.json({ success: true }, 200);
+    }
+  )
+
+  // Fetch one page of the role applications table
+  .get(
+    "/role-applications",
+    describeRoute({
+      tags: ["dashboard"],
+      summary: "Fetch table of role applications",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          roleApplicationsTableResponseSchema,
+          "Table of role application data"
+        ),
+        ...errorResponses(400, 401),
+      },
+    }),
+    requireUser,
+    validate("query", roleApplicationsTableQuerySchema),
+    async (c) => {
+      const page = await fetchRoleApplicationsTable(
+        c.get("supabase"),
+        c.req.valid("query")
+      );
+      return c.json(page, 200);
+    }
+  )
+
+  // Approve or reject a pending role application. Approval grants the role.
+  .patch(
+    "/role-applications/:id",
+    describeRoute({
+      tags: ["dashboard"],
+      summary: "Decide a role application",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          roleApplicationResponseSchema,
+          "The decided application"
+        ),
+        ...errorResponses(400, 401, 403, 404),
+      },
+    }),
+    requireUser,
+    validate("param", idParamSchema),
+    validate("json", decideRoleApplicationSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { status } = c.req.valid("json");
+      const decided = await decideRoleApplication(
+        c.get("supabase"),
+        id,
+        status
+      );
+      return c.json(decided, 200);
     }
   );

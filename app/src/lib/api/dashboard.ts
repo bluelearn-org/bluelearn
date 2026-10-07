@@ -24,6 +24,13 @@ export type MemberRow = InferResponseType<
 export type AssignmentTable = InferResponseType<
   (typeof dashboard)["assignments"]["$get"]
 >["data"];
+export type RoleApplicationRow = InferResponseType<
+  (typeof dashboard)["role-applications"]["$get"],
+  200
+>["data"][number];
+export type RoleApplicationDecision = InferRequestType<
+  (typeof dashboard)["role-applications"][":id"]["$patch"]
+>["json"]["status"];
 
 // Get a user's current status
 export async function getUserStatus(id: string, { signal }: FetchOptions = {}) {
@@ -175,6 +182,34 @@ export async function reassignPanelMember(
 ) {
   const res = await dashboard[":id"].reassign[":panel_id"].$patch(
     { param: { id, panel_id } },
+    { init: { signal } }
+  );
+
+  await assertOk(res);
+}
+
+// Get one page of data for the role applications table
+export async function fetchRoleApplicationsTable(
+  query: TableQuery,
+  { signal }: FetchOptions = {}
+) {
+  const res = await dashboard["role-applications"].$get(
+    { query },
+    { init: { signal } }
+  );
+
+  await assertOk(res);
+  return res.json();
+}
+
+// Approve or reject a pending role application; approval grants the role
+export async function decideRoleApplication(
+  id: string,
+  status: RoleApplicationDecision,
+  { signal }: FetchOptions = {}
+) {
+  const res = await dashboard["role-applications"][":id"].$patch(
+    { param: { id }, json: { status } },
     { init: { signal } }
   );
 

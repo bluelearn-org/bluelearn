@@ -1,11 +1,21 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { Eye, EyeOff } from "lucide-react";
 import { signIn, signOut, updateEmail, updatePassword } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/authValidation";
-import { deleteMyAccount, getMyIdentity } from "@/lib/api/identity";
+import {
+  applyForRole,
+  deleteMyAccount,
+  getMyIdentity,
+  getMyRoleApplications,
+} from "@/lib/api/identity";
+import { RoleApplicationsSection } from "@/components/settings/RoleApplicationsSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/ui/field";
@@ -23,14 +33,25 @@ import {
 export const Route = createFileRoute("/settings/account")({
   component: RouteComponent,
   loader: async ({ abortController }) => {
-    return getMyIdentity({ signal: abortController.signal });
+    const { signal } = abortController;
+    const [identity, { applications }] = await Promise.all([
+      getMyIdentity({ signal }),
+      getMyRoleApplications({ signal }),
+    ]);
+    return { ...identity, applications };
   },
 });
 
 function RouteComponent() {
-  const { email: initialEmail, profile } = Route.useLoaderData();
+  const {
+    email: initialEmail,
+    profile,
+    roles,
+    applications,
+  } = Route.useLoaderData();
   const currentEmail = initialEmail || "";
   const username = profile.username;
+  const router = useRouter();
 
   const [email, setEmail] = useState<string>(currentEmail);
 
@@ -368,6 +389,15 @@ function RouteComponent() {
           </div>
         </div>
       </section>
+
+      <RoleApplicationsSection
+        roles={roles}
+        applications={applications}
+        onApply={async (role, statement) => {
+          await applyForRole(role, statement);
+          await router.invalidate();
+        }}
+      />
 
       <section className="space-y-3">
         <h2 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">

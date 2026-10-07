@@ -4,6 +4,7 @@ import {
   activitySortSchema,
   activityStatusFilterSchema,
   activityTypeFilterSchema,
+  applicableRoleSchema,
 } from "./enums";
 
 // Only the three grant-writable columns are accepted (username/display_name/
@@ -47,3 +48,13 @@ export const profileActivitySearchSchema = z.object({
 
 export type ProfileActivitySearch = z.infer<typeof profileActivitySearchSchema>;
 export type ActivityFilters = Omit<ProfileActivitySearch, "page">;
+
+export const createRoleApplicationSchema = z.object({
+  role: applicableRoleSchema,
+  // An optional note to the admins: why this member, why now.
+  statement: z.string().trim().min(1).max(2000).nullish(),
+});
+
+export type CreateRoleApplicationInput = z.infer<
+  typeof createRoleApplicationSchema
+>;

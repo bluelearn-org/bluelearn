@@ -41,6 +41,7 @@ import { Route as GuidesSlugRouteImport } from './routes/guides/$slug'
 import { Route as DashboardRolesRouteImport } from './routes/dashboard/roles'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard/members'
 import { Route as DashboardAssignmentsRouteImport } from './routes/dashboard/assignments'
+import { Route as DashboardApplicationsRouteImport } from './routes/dashboard/applications'
 import { Route as ObjectivesSlugIndexRouteImport } from './routes/objectives/$slug/index'
 import { Route as GuidesSlugIndexRouteImport } from './routes/guides/$slug/index'
 import { Route as GuidesSlugWalkthroughRouteImport } from './routes/guides/$slug/walkthrough'
@@ -209,6 +210,11 @@ const DashboardAssignmentsRoute = DashboardAssignmentsRouteImport.update({
   path: '/assignments',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardApplicationsRoute = DashboardApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ObjectivesSlugIndexRoute = ObjectivesSlugIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/subjects': typeof SubjectsRouteWithChildren
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard/applications': typeof DashboardApplicationsRoute
   '/dashboard/assignments': typeof DashboardAssignmentsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard/applications': typeof DashboardApplicationsRoute
   '/dashboard/assignments': typeof DashboardAssignmentsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -341,6 +349,7 @@ export interface FileRoutesById {
   '/subjects': typeof SubjectsRouteWithChildren
   '/todos': typeof TodosRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard/applications': typeof DashboardApplicationsRoute
   '/dashboard/assignments': typeof DashboardAssignmentsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/todos'
     | '/verify-email'
+    | '/dashboard/applications'
     | '/dashboard/assignments'
     | '/dashboard/members'
     | '/dashboard/roles'
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/todos'
     | '/verify-email'
+    | '/dashboard/applications'
     | '/dashboard/assignments'
     | '/dashboard/members'
     | '/dashboard/roles'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/todos'
     | '/verify-email'
+    | '/dashboard/applications'
     | '/dashboard/assignments'
     | '/dashboard/members'
     | '/dashboard/roles'
@@ -731,6 +743,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAssignmentsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/applications': {
+      id: '/dashboard/applications'
+      path: '/applications'
+      fullPath: '/dashboard/applications'
+      preLoaderRoute: typeof DashboardApplicationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/objectives/$slug/': {
       id: '/objectives/$slug/'
       path: '/'
@@ -784,6 +803,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
+  DashboardApplicationsRoute: typeof DashboardApplicationsRoute
   DashboardAssignmentsRoute: typeof DashboardAssignmentsRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
   DashboardRolesRoute: typeof DashboardRolesRoute
@@ -791,6 +811,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardApplicationsRoute: DashboardApplicationsRoute,
   DashboardAssignmentsRoute: DashboardAssignmentsRoute,
   DashboardMembersRoute: DashboardMembersRoute,
   DashboardRolesRoute: DashboardRolesRoute,

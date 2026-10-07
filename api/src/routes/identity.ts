@@ -2,9 +2,12 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 import {
+  createRoleApplicationSchema,
   meResponseSchema,
   myDraftsResponseSchema,
+  myRoleApplicationsResponseSchema,
   profilePageResponseSchema,
+  roleApplicationResponseSchema,
   updateProfileSchema,
 } from "@bluelearn/schemas";
 import { errorResponses, jsonContent, validate } from "../lib/openapi";
@@ -14,13 +17,15 @@ import {
   requireUser,
 } from "../middleware/auth.middleware";
 import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
-import { CONTRIBUTION, DESTRUCTIVE } from "../middleware/rateLimits";
+import { CONTRIBUTION, CREATE, DESTRUCTIVE } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
 import {
+  applyForRole,
   deleteMyAccount,
   getMyDrafts,
   getMyIdentity,
   getProfilePage,
+  listMyRoleApplications,
   updateMyProfile,
 } from "../services/identity.service";
 
@@ -72,6 +77,60 @@ export const meRouter = new Hono<HonoEnv>()
     async (c) => {
       const drafts = await getMyDrafts(c.get("supabase"), c.get("user").id);
       return c.json(drafts);
+    }
+  )
+
+  // The caller's role applications, newest first.
+  .get(
+    "/role-applications",
+    describeRoute({
+      tags: ["identity"],
+      summary: "The caller's role applications",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          myRoleApplicationsResponseSchema,
+          "Every application the caller has filed, newest first"
+        ),
+        ...errorResponses(401),
+      },
+    }),
+    requireUser,
+    async (c) => {
+      const applications = await listMyRoleApplications(
+        c.get("supabase"),
+        c.get("user").id
+      );
+      return c.json(applications);
+    }
+  )
+
+  // Applies for verifier or moderator. 409 when the caller already holds the
+  // role or has an open application for it; 403 for suspended accounts.
+  .post(
+    "/role-applications",
+    describeRoute({
+      tags: ["identity"],
+      summary: "Apply for a role",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        201: jsonContent(
+          roleApplicationResponseSchema,
+          "The pending application"
+        ),
+        ...errorResponses(400, 401, 403, 409, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CREATE, bucket: "role-application" }),
+    validate("json", createRoleApplicationSchema),
+    async (c) => {
+      const application = await applyForRole(
+        c.get("supabase"),
+        c.get("user").id,
+        c.req.valid("json")
+      );
+      return c.json(application, 201);
     }
   )
 

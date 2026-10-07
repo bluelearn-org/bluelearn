@@ -2,6 +2,8 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type {
   AssignmentsTableQuery,
   MembersTableQuery,
+  RoleApplicationDecision,
+  RoleApplicationsTableQuery,
   RolesTableQuery,
 } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
@@ -129,7 +131,20 @@ const assignmentColumns = {
   date_updated: { column: "updated_at", kind: "range" },
 } satisfies TableColumns;
 
-type TableQuery = MembersTableQuery | RolesTableQuery | AssignmentsTableQuery;
+const roleApplicationColumns = {
+  username: { column: "username", kind: "text" },
+  role: { column: "role", kind: "choice" },
+  status: { column: "status", kind: "choice" },
+  statement: { column: "statement", kind: "text" },
+  date_created: { column: "created_at", kind: "range" },
+  date_decided: { column: "decided_at", kind: "range" },
+} satisfies TableColumns;
+
+type TableQuery =
+  | MembersTableQuery
+  | RolesTableQuery
+  | AssignmentsTableQuery
+  | RoleApplicationsTableQuery;
 
 type TableRequest<B> = PromiseLike<{
   data: unknown;
@@ -359,4 +374,75 @@ export async function reassignPanelMember(
     console.error(error);
     throw new ServiceError("Failed to reassign panel member", 500);
   }
+}
+
+// One page of role applications. The view carries the table's RLS, so an
+// admin sees every application and anyone else only their own.
+export async function fetchRoleApplicationsTable(
+  supabase: DB,
+  query: RoleApplicationsTableQuery
+) {
+  const { rows, total } = await fetchTablePage(
+    ({ head }) =>
+      supabase
+        .from("dashboard_role_applications")
+        .select(
+          "id, user_id, username, role, status, statement, created_at, decided_at, decided_by",
+          { count: "exact", head }
+        ),
+    roleApplicationColumns,
+    query,
+    ["id"],
+    "Failed to load the role applications table."
+  );
+
+  const data = (rows ?? []).map((row) => ({
+    id: row.id!,
+    user_id: row.user_id!,
+    username: row.username!,
+    role: row.role!,
+    status: row.status!,
+    statement: row.statement,
+    date_created: row.created_at!,
+    date_decided: row.decided_at,
+    decided_by: row.decided_by,
+  }));
+
+  return { data, total };
+}
+
+// Approve or reject a pending application. Approval grants the role inside
+// the same transaction (decide_role_application).
+export async function decideRoleApplication(
+  supabase: DB,
+  applicationId: string,
+  decision: RoleApplicationDecision
+) {
+  const { data, error } = await supabase.rpc("decide_role_application", {
+    p_application_id: applicationId,
+    p_decision: decision,
+  });
+
+  if (error) {
+    if (error.code === "42501")
+      throw new ServiceError("Only admins can decide role applications", 403);
+    if (error.code === "P0002")
+      throw new ServiceError(
+        "Role application not found or already decided",
+        404
+      );
+    console.error(error);
+    throw new ServiceError("Failed to decide role application", 500);
+  }
+
+  return {
+    application: {
+      id: data.id,
+      role: data.role,
+      status: data.status,
+      statement: data.statement,
+      created_at: data.created_at,
+      decided_at: data.decided_at,
+    },
+  };
 }

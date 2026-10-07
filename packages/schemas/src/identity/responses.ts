@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   activityContentKindSchema,
   activityStatusSchema,
+  applicableRoleSchema,
+  roleApplicationStatusSchema,
   roleSchema,
 } from "./enums";
 
@@ -90,7 +92,25 @@ export const profilePageResponseSchema = z.strictObject({
   is_owner: z.boolean(),
 });
 
+export const roleApplicationSchema = z.object({
+  id: z.uuid(),
+  role: applicableRoleSchema,
+  status: roleApplicationStatusSchema,
+  statement: z.string().nullable(),
+  created_at: z.iso.datetime({ offset: true }),
+  decided_at: z.iso.datetime({ offset: true }).nullable(),
+});
+
+export const myRoleApplicationsResponseSchema = z.strictObject({
+  applications: z.array(roleApplicationSchema),
+});
+
+export const roleApplicationResponseSchema = z.strictObject({
+  application: roleApplicationSchema,
+});
+
 export type Profile = z.infer<typeof profileSchema>;
+export type RoleApplication = z.infer<typeof roleApplicationSchema>;
 export type PublicProfile = z.infer<typeof publicProfileSchema>;
 export type GuideDraft = z.infer<typeof guideDraftSchema>;
 export type ObjectiveDraft = z.infer<typeof objectiveDraftSchema>;

@@ -2,6 +2,11 @@ import { z } from "zod";
 import { paginationSchema } from "../pagination";
 import { reviewCaseTypeSchema, reviewSeatStatusSchema } from "../review/enums";
 import { userStatusSchema, userRoleSchema } from "./enums";
+import {
+  applicableRoleSchema,
+  roleApplicationDecisionSchema,
+  roleApplicationStatusSchema,
+} from "../identity/enums";
 
 export const updateStatusSchema = z.object({
   status: userStatusSchema,
@@ -104,6 +109,34 @@ export const assignmentsTableQuerySchema = tablePageSchema.extend({
   date_updated_to: instant,
 });
 
+export const roleApplicationsTableQuerySchema = tablePageSchema.extend({
+  sortBy: z
+    .enum([
+      "username",
+      "role",
+      "status",
+      "statement",
+      "date_created",
+      "date_decided",
+    ])
+    .optional(),
+  username: z.string().optional(),
+  role: oneOrMany(applicableRoleSchema),
+  status: oneOrMany(roleApplicationStatusSchema),
+  statement: z.string().optional(),
+  date_created_from: instant,
+  date_created_to: instant,
+  date_decided_from: instant,
+  date_decided_to: instant,
+});
+
+export const decideRoleApplicationSchema = z.object({
+  status: roleApplicationDecisionSchema,
+});
+
 export type MembersTableQuery = z.infer<typeof membersTableQuerySchema>;
 export type RolesTableQuery = z.infer<typeof rolesTableQuerySchema>;
 export type AssignmentsTableQuery = z.infer<typeof assignmentsTableQuerySchema>;
+export type RoleApplicationsTableQuery = z.infer<
+  typeof roleApplicationsTableQuerySchema
+>;
