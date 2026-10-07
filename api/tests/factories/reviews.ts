@@ -65,7 +65,8 @@ export async function suspendAllVerifiers() {
   const { data } = await admin
     .from("user_roles")
     .select("user_id")
-    .eq("role", "verifier");
+    .eq("role", "verifier")
+    .throwOnError();
   const ids = (data ?? []).map((r) => r.user_id);
   if (ids.length > 0) {
     await admin

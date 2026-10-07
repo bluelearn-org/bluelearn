@@ -520,11 +520,7 @@ export async function getReviewCase(
   const viewerSeat =
     viewerId === null
       ? null
-      : (members.find(
-          (pm) => pm.member_id === viewerId && pm.status === "assigned"
-        ) ??
-        members.find((pm) => pm.member_id === viewerId) ??
-        null);
+      : (members.find((pm) => pm.member_id === viewerId) ?? null);
 
   return {
     case: {
@@ -541,7 +537,7 @@ export async function getReviewCase(
       member_id: pm.member_id,
       status: pm.status,
       assigned_at: pm.assigned_at,
-      expires_at: pm.status === "assigned" ? pm.expires_at : null,
+      expires_at: pm.expires_at,
     })),
     decisions: members
       .filter((pm) => pm.review_decisions)
@@ -549,8 +545,7 @@ export async function getReviewCase(
     viewer_decision: viewerVote ? mapDecision(viewerVote, viewerId) : null,
     viewer_role: viewerRole,
     viewer_seat_status: viewerSeat?.status ?? null,
-    viewer_expires_at:
-      viewerSeat?.status === "assigned" ? viewerSeat.expires_at : null,
+    viewer_expires_at: viewerSeat?.expires_at ?? null,
     revise_draft_id: reviseDraft?.data?.id ?? null,
     revision: revision
       ? {
