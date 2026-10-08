@@ -120,9 +120,14 @@ export function getTargetPrerequisiteWalkthrough(
 function settledPosition(n: Node) {
   const { centerX, centerY } = n.data as GraphNodeData;
   const { width, height } = n.measured ?? {};
-  if (typeof centerX === "number" && !width) return null;
-  if (typeof centerY === "number" && !height) return null;
-  if (!width && !height) return null;
+  const unmeasured =
+    (typeof centerX === "number" && !width) ||
+    (typeof centerY === "number" && !height) ||
+    (!width && !height);
+
+  if (unmeasured) {
+    return null;
+  }
 
   return {
     x:
@@ -285,7 +290,9 @@ export function useGraphLayout({
     setNodes((nds) => {
       const next = nds.map((n) => {
         const target = settledPosition(n);
-        if (!target || isSettled(n, target)) return n;
+        if (!target || isSettled(n, target)) {
+          return n;
+        }
 
         return { ...n, position: target };
       });

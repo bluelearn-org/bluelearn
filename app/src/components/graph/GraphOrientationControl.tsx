@@ -54,7 +54,9 @@ export function GraphOrientationControl({
           className="flex flex-col gap-0.5"
           value={orientation}
           onValueChange={(value) => {
-            if (isGraphOrientation(value)) onChange(value);
+            if (isGraphOrientation(value)) {
+              onChange(value);
+            }
           }}
         >
           {GRAPH_ORIENTATION_OPTIONS.map((option) => (
