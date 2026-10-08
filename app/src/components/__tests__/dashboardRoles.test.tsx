@@ -39,10 +39,15 @@ const users = [
 
 vi.mock("sonner", () => ({ toast }));
 
+// Keep loader data stable across renders; a new object clears page selection.
+const page = { data: users, total: users.length };
+
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({
     options,
-    useLoaderData: () => ({ data: users }),
+    useLoaderData: () => page,
+    useSearch: () => ({}),
+    useNavigate: () => vi.fn(),
   }),
   useRouter: () => ({ invalidate }),
 }));
