@@ -23,6 +23,7 @@ export type ContributeSearch = {
   todoTitle?: string;
   todoSummary?: string;
   todos?: string;
+  slug?: string;
 };
 
 // True when the URL itself asks for guide or variant authoring: a picked type,
@@ -78,6 +79,7 @@ export const Route = createFileRoute("/contribute")({
     const todoSummary =
       typeof search.todoSummary === "string" ? search.todoSummary : undefined;
     const todos = typeof search.todos === "string" ? search.todos : undefined;
+    const slug = typeof search.slug === "string" ? search.slug : undefined;
 
     return {
       draft,
@@ -89,6 +91,7 @@ export const Route = createFileRoute("/contribute")({
       todoTitle,
       todoSummary,
       todos,
+      slug,
     };
   },
   errorComponent: ErrorFallback,
@@ -128,6 +131,7 @@ function ContributePage() {
     todoTitle,
     todoSummary,
     todos,
+    slug,
   } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const router = useRouter();
@@ -204,6 +208,7 @@ function ContributePage() {
             todoTitle={draft ? undefined : todoTitle}
             todoSummary={draft ? undefined : todoSummary}
             todoIds={todoIds}
+            slug={slug}
           />
         </div>
         {draft && <RejectionFeedback draftId={draft} />}

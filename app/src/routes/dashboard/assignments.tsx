@@ -3,26 +3,41 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { UserRoundArrowLeft } from "@/components/icons/UserRoundArrowLeft";
 import { Button } from "@/components/ui/button";
-import { AssignmentsTable } from "@/components/tables/AssignmentsTable";
+import {
+  AssignmentsTable,
+  assignmentColumns,
+} from "@/components/tables/AssignmentsTable";
+import { DashboardPagination } from "@/components/tables/DashboardPagination";
 import {
   fetchAssignmentsTable,
   reassignPanelMember,
 } from "@/lib/api/dashboard";
+import {
+  dashboardQuery,
+  parseDashboardSearch,
+  useDashboardSearch,
+  usePageSelection,
+} from "@/lib/dashboardFilters";
 
 export const Route = createFileRoute("/dashboard/assignments")({
-  loader: async ({ abortController }) => {
-    const data = await fetchAssignmentsTable({
+  validateSearch: parseDashboardSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps, abortController }) =>
+    fetchAssignmentsTable(dashboardQuery(assignmentColumns, deps), {
       signal: abortController.signal,
-    });
-    return { data };
-  },
+    }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const assignments = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const router = useRouter();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { filters, updateFilters } = useDashboardSearch(search, (next) =>
+    navigate({ search: next, replace: true })
+  );
+  const [selectedIds, setSelectedIds] = usePageSelection(assignments);
   const [isReassigning, setIsReassigning] = useState(false);
 
   const handleReassign = async () => {
@@ -85,10 +100,19 @@ function RouteComponent() {
           {/* AssignmentsTable */}
           <AssignmentsTable
             assignmentsData={assignments.data}
+            filters={filters}
+            onFiltersChange={updateFilters}
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
           />
         </div>
+        <DashboardPagination
+          page={search.page ?? 1}
+          total={assignments.total}
+          onPageChange={(page) =>
+            navigate({ search: (prev) => ({ ...prev, page }) })
+          }
+        />
       </section>
     </div>
   );

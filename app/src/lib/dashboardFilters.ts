@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export type DashboardColumn<T> = {
+export type DashboardColumn = {
   key: string;
   label: string;
   kind?: "text" | "choice" | "date" | "duration";
   options?: ReadonlyArray<string>;
-  value: (row: T) => string | Array<string> | null | undefined;
+  // The choice that means "no value" (no status, no roles). The API calls it "none".
+  noneOption?: string;
 };
 
 export type DashboardFilters = Record<
   string,
   string | Array<string> | undefined
 >;
+
+// The route loader reads filters from the URL; local-only edits would not reload rows.
+export type DashboardSearch = {
+  page?: number;
+  [key: string]: string | Array<string> | number | undefined;
+};
+
+export const DASHBOARD_PAGE_SIZE = 50;
 
 export function filterText(value: DashboardFilters[string]) {
   return typeof value === "string" ? value : "";
@@ -34,168 +43,184 @@ export function validHours(value: string) {
   );
 }
 
-function matchesTimeLeft(
-  value: unknown,
-  key: string,
-  filters: DashboardFilters,
-  now: number
-) {
+const HOUR = 3600000;
+
+// Presets exclude their upper bound; custom ranges include the selected maximum.
+type HoursLeft = { from?: number; before?: number; through?: number };
+
+const timeLeftPresets: Record<string, HoursLeft> = {
+  expired: { before: 0 },
+  under1: { from: 0, before: 1 },
+  "1to4": { from: 1, before: 4 },
+  "4to12": { from: 4, before: 12 },
+  "12to24": { from: 12, through: 24 },
+};
+
+// An empty range: an invalid custom range matches no rows, and ColumnFilter
+// shows the alert that says why.
+const NOTHING: HoursLeft = { from: 0, before: 0 };
+
+function hoursLeft(key: string, filters: DashboardFilters): HoursLeft | null {
   const mode = filterText(filters[key]);
+  if (mode !== "custom") return timeLeftPresets[mode] ?? null;
 
-  if (!mode) return true;
+  const min = filterText(filters[`${key}.min`]).trim();
+  const max = filterText(filters[`${key}.max`]).trim();
+  const reversed = min !== "" && max !== "" && Number(min) > Number(max);
 
-  const remaining =
-    (new Date(typeof value === "string" ? value : "").getTime() - now) /
-    3600000;
-
-  if (!Number.isFinite(remaining)) return false;
-  switch (mode) {
-    case "expired":
-      return remaining < 0;
-    case "under1":
-      return remaining >= 0 && remaining < 1;
-    case "1to4":
-      return remaining >= 1 && remaining < 4;
-    case "4to12":
-      return remaining >= 4 && remaining < 12;
-    case "12to24":
-      return remaining >= 12 && remaining <= 24;
-    case "custom": {
-      const min = filterText(filters[`${key}.min`]);
-      const max = filterText(filters[`${key}.max`]);
-
-      if (!validHours(min) || !validHours(max)) return false;
-      return (
-        remaining >= (min.trim() ? Number(min) : 0) &&
-        (!max.trim() || remaining <= Number(max))
-      );
-    }
-    default:
-      return true;
-  }
+  if (!validHours(min) || !validHours(max) || reversed) return NOTHING;
+  return {
+    from: min ? Number(min) : 0,
+    through: max ? Number(max) : undefined,
+  };
 }
 
-export function filterDashboardRows<T>(
-  rows: Array<T>,
-  columns: Array<DashboardColumn<T>>,
-  filters: DashboardFilters,
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function localDayStart(day: string, offset = 0) {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(year, month - 1, date + offset);
+}
+
+function searchFilters(search: DashboardSearch): DashboardFilters {
+  const filters: DashboardFilters = {};
+  for (const [key, value] of Object.entries(search)) {
+    if (key !== "page" && typeof value !== "number") filters[key] = value;
+  }
+  return filters;
+}
+
+// URL equality uses JSON keys; normalize empty values and key order before comparison.
+function cleanFilters(filters: DashboardFilters): DashboardFilters {
+  const clean: DashboardFilters = {};
+  for (const key of Object.keys(filters).sort()) {
+    const value = filters[key];
+    if (Array.isArray(value) ? value.length > 0 : value) clean[key] = value;
+  }
+  return clean;
+}
+
+export function parseDashboardSearch(
+  raw: Record<string, unknown>
+): DashboardSearch {
+  const search: DashboardSearch = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === "page") {
+      const page = Number(value);
+      if (Number.isInteger(page) && page > 1) search.page = page;
+    } else if (Array.isArray(value)) {
+      search[key] = value.map(String);
+    } else if (typeof value === "string" || typeof value === "number") {
+      search[key] = String(value);
+    }
+  }
+  return search;
+}
+
+// Only the browser knows the user's timezone; send date filters to the API as instants.
+export function dashboardQuery(
+  columns: ReadonlyArray<DashboardColumn>,
+  search: DashboardSearch,
   now = Date.now()
 ) {
-  const filtered = rows.filter((row) =>
-    columns.every((column) => {
-      const value = column.value(row);
-      if (column.kind === "duration") {
-        return matchesTimeLeft(value, column.key, filters, now);
+  const filters = searchFilters(search);
+  const query: Record<string, string | Array<string>> = {
+    page: String(search.page ?? 1),
+    limit: String(DASHBOARD_PAGE_SIZE),
+  };
+
+  for (const { key, kind, noneOption } of columns) {
+    if (kind === "date") {
+      const from = filterText(filters[`${key}.from`]);
+      const to = filterText(filters[`${key}.to`]);
+      if (DAY.test(from))
+        query[`${key}_from`] = localDayStart(from).toISOString();
+      if (DAY.test(to)) query[`${key}_to`] = localDayStart(to, 1).toISOString();
+    } else if (kind === "duration") {
+      const { from, before, through } = hoursLeft(key, filters) ?? {};
+      const at = (hours: number) => new Date(now + hours * HOUR);
+      if (from !== undefined) query[`${key}_from`] = at(from).toISOString();
+      if (before !== undefined) query[`${key}_to`] = at(before).toISOString();
+      // `_to` is exclusive, so one millisecond past an inclusive bound.
+      if (through !== undefined) {
+        query[`${key}_to`] = new Date(at(through).getTime() + 1).toISOString();
       }
-
-      if (column.kind === "date") {
-        const from = filterText(filters[`${column.key}.from`]);
-        const to = filterText(filters[`${column.key}.to`]);
-        if (!from && !to) return true;
-
-        const date = new Date(typeof value === "string" ? value : "");
-
-        if (Number.isNaN(date.getTime())) return false;
-
-        // Match the local calendar date shown in the table, including both ends.
-        const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-        return (!from || day >= from) && (!to || day <= to);
-      }
-
-      const values = Array.isArray(value) ? value : [value ?? ""];
-      if (column.kind === "choice") {
-        const selected = filters[column.key];
-        return (
-          !Array.isArray(selected) ||
-          selected.length === 0 ||
-          selected.some((choice) => values.includes(choice))
+    } else if (kind === "choice") {
+      const picked = filters[key];
+      if (Array.isArray(picked) && picked.length > 0) {
+        query[key] = picked.map((choice) =>
+          choice === noneOption ? "none" : choice
         );
       }
-
-      const query = filterText(filters[column.key]);
-
-      if (!query.trim()) return true;
-
-      return values.some((text) =>
-        text.toLowerCase().includes(query.trim().toLowerCase())
-      );
-    })
-  );
-
-  const column = columns.find((candidate) => candidate.key === filters.sortBy);
-
-  if (
-    !column ||
-    (filters.sortDirection !== "asc" && filters.sortDirection !== "desc")
-  ) {
-    return filtered;
+    } else {
+      const text = filterText(filters[key]).trim();
+      if (text) query[key] = text;
+    }
   }
 
-  const direction = filters.sortDirection === "asc" ? 1 : -1;
+  const sortBy = filterText(filters.sortBy);
+  const direction = filterText(filters.sortDirection);
+  const sortable = columns.some((column) => column.key === sortBy);
+  if (sortable && (direction === "asc" || direction === "desc")) {
+    query.sortBy = sortBy;
+    query.sortDirection = direction;
+  }
 
-  return filtered.sort((left, right) => {
-    const a = column.value(left);
-    const b = column.value(right);
-    if (column.kind === "date" || column.kind === "duration") {
-      const aTime = new Date(typeof a === "string" ? a : "").getTime();
-      const bTime = new Date(typeof b === "string" ? b : "").getTime();
-      if (Number.isNaN(aTime)) return Number.isNaN(bTime) ? 0 : 1;
-      if (Number.isNaN(bTime)) return -1;
-      return (aTime - bTime) * direction;
-    }
-
-    return (
-      String(a ?? "").localeCompare(String(b ?? ""), undefined, {
-        sensitivity: "base",
-      }) * direction
-    );
-  });
+  return query;
 }
 
-export function useDashboardFilters<T>(
-  rows: Array<T>,
-  columns: Array<DashboardColumn<T>>,
-  selectedIds: Set<string>,
-  setSelectedIds: (ids: Set<string>) => void,
-  getKey: (row: T) => string
+// Each URL update reloads the route; debounce typing to avoid a request per key.
+export function useDashboardSearch(
+  search: DashboardSearch,
+  commit: (filters: DashboardFilters) => void
 ) {
-  const [filters, setFilters] = useState<DashboardFilters>({});
-  const [now, setNow] = useState(Date.now);
-
-  const liveDeadlineFilter = columns.some(
-    (column) => column.kind === "duration" && Boolean(filters[column.key])
+  const urlKey = JSON.stringify(cleanFilters(searchFilters(search)));
+  const [filters, setFilters] = useState<DashboardFilters>(
+    () => JSON.parse(urlKey) as DashboardFilters
   );
+  const committedKey = useRef(urlKey);
+  const latestCommit = useRef(commit);
+  latestCommit.current = commit;
+
+  // An echoed local commit must not overwrite newer typing; only external search changes replace filters.
+  useEffect(() => {
+    if (urlKey === committedKey.current) return;
+    committedKey.current = urlKey;
+    setFilters(JSON.parse(urlKey) as DashboardFilters);
+  }, [urlKey]);
 
   useEffect(() => {
-    if (!liveDeadlineFilter) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [liveDeadlineFilter]);
+    const clean = cleanFilters(filters);
+    const key = JSON.stringify(clean);
+    if (key === committedKey.current) return;
 
-  const visibleRows = filterDashboardRows(rows, columns, filters, now);
-
-  useEffect(() => {
-    if (!liveDeadlineFilter) return;
-    const visibleIds = new Set(visibleRows.map(getKey));
-    const next = new Set([...selectedIds].filter((id) => visibleIds.has(id)));
-    if (next.size !== selectedIds.size) setSelectedIds(next);
-  }, [liveDeadlineFilter, visibleRows, getKey, selectedIds, setSelectedIds]);
+    const timer = setTimeout(() => {
+      committedKey.current = key;
+      latestCommit.current(clean);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   function updateFilters(changes: DashboardFilters) {
-    const nextFilters = { ...filters, ...changes };
-    const nextNow = Date.now();
-    setNow(nextNow);
-    setFilters(nextFilters);
-
-    const visibleIds = new Set(
-      filterDashboardRows(rows, columns, nextFilters, nextNow).map(getKey)
-    );
-
-    // Bulk dashboard actions must not include rows hidden by a new filter.
-    setSelectedIds(
-      new Set([...selectedIds].filter((id) => visibleIds.has(id)))
-    );
+    setFilters((current) => ({ ...current, ...changes }));
   }
 
-  return { filters, visibleRows, updateFilters };
+  return { filters, updateFilters };
+}
+
+// Bulk actions only touch rows on screen, so a new page, filter or sort
+// starts with nothing selected.
+export function usePageSelection(page: unknown) {
+  const [selection, setSelection] = useState({
+    page,
+    ids: new Set<string>(),
+  });
+  const selectedIds =
+    selection.page === page ? selection.ids : new Set<string>();
+
+  function setSelectedIds(ids: Set<string>) {
+    setSelection({ page, ids });
+  }
+
+  return [selectedIds, setSelectedIds] as const;
 }

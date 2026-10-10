@@ -2,30 +2,44 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Ban, UserRoundCheck } from "lucide-react";
 import { toast } from "sonner";
-import { MembersTable } from "@/components/tables/MembersTable";
+import { MembersTable, memberColumns } from "@/components/tables/MembersTable";
+import { DashboardPagination } from "@/components/tables/DashboardPagination";
 import { Button } from "@/components/ui/button";
 import {
   fetchMembersTable,
   suspendUser,
   unsuspendUser,
 } from "@/lib/api/dashboard";
+import {
+  dashboardQuery,
+  parseDashboardSearch,
+  useDashboardSearch,
+  usePageSelection,
+} from "@/lib/dashboardFilters";
 
 export const Route = createFileRoute("/dashboard/members")({
-  loader: async ({ abortController }) => {
-    const data = await fetchMembersTable({ signal: abortController.signal });
-    return { data };
-  },
+  validateSearch: parseDashboardSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps, abortController }) =>
+    fetchMembersTable(dashboardQuery(memberColumns, deps), {
+      signal: abortController.signal,
+    }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const members = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const router = useRouter();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [suspending, setSuspending] = useState(false); // used also for unsuspending
+  const { filters, updateFilters } = useDashboardSearch(search, (next) =>
+    navigate({ search: next, replace: true })
+  );
+  const [selectedIds, setSelectedIds] = usePageSelection(members);
+  const [updatingStatus, setUpdatingStatus] = useState(false); // used for suspending and unsuspending
 
   const handleSuspend = async () => {
-    setSuspending(true);
+    setUpdatingStatus(true);
     try {
       await Promise.all([...selectedIds].map((id) => suspendUser(id)));
       setSelectedIds(new Set()); // reset selected ids after suspension
@@ -34,21 +48,21 @@ function RouteComponent() {
     } catch (err) {
       toast.error("Could not suspend one or more users.");
     } finally {
-      setSuspending(false);
+      setUpdatingStatus(false);
     }
   };
 
   const handleUnsuspend = async () => {
-    setSuspending(true);
+    setUpdatingStatus(true);
     try {
       await Promise.all([...selectedIds].map((id) => unsuspendUser(id)));
-      setSelectedIds(new Set()); // reset selected ids after suspension
+      setSelectedIds(new Set()); // reset selected ids after unsuspension
       await router.invalidate();
       toast.info("Successfully unsuspended user(s)!");
     } catch (err) {
       toast.error("Could not unsuspend one or more users.");
     } finally {
-      setSuspending(false);
+      setUpdatingStatus(false);
     }
   };
 
@@ -64,7 +78,7 @@ function RouteComponent() {
         <div className="flex gap-2">
           <Button
             className="flex items-center justify-start"
-            disabled={selectedIds.size === 0 || suspending}
+            disabled={selectedIds.size === 0 || updatingStatus}
             onClick={handleUnsuspend}
           >
             <UserRoundCheck />
@@ -74,7 +88,7 @@ function RouteComponent() {
           <Button
             variant="destructive"
             className="flex items-center justify-start"
-            disabled={selectedIds.size === 0 || suspending}
+            disabled={selectedIds.size === 0 || updatingStatus}
             onClick={handleSuspend}
           >
             <Ban />
@@ -87,10 +101,19 @@ function RouteComponent() {
         <div className="overflow-x-auto">
           <MembersTable
             MemberData={members.data}
+            filters={filters}
+            onFiltersChange={updateFilters}
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
           />
         </div>
+        <DashboardPagination
+          page={search.page ?? 1}
+          total={members.total}
+          onPageChange={(page) =>
+            navigate({ search: (prev) => ({ ...prev, page }) })
+          }
+        />
       </section>
     </div>
   );

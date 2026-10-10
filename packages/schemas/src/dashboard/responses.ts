@@ -28,6 +28,7 @@ const roleRowSchema = z.object({
 });
 export const rolesTableResponseSchema = z.object({
   data: z.array(roleRowSchema),
+  total: z.number().int(),
 });
 
 const memberRowSchema = z.object({
@@ -41,6 +42,7 @@ const memberRowSchema = z.object({
 });
 export const membersTableResponseSchema = z.object({
   data: z.array(memberRowSchema),
+  total: z.number().int(),
 });
 
 const assignmentRowSchema = z.object({
@@ -58,4 +60,5 @@ const assignmentRowSchema = z.object({
 });
 export const assignmentsTableResponseSchema = z.object({
   data: z.array(assignmentRowSchema),
+  total: z.number().int(),
 });

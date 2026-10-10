@@ -1,93 +1,120 @@
 // @vitest-environment jsdom
 import { useState } from "react";
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssignmentTable } from "@/lib/api/dashboard";
 import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
-import { filterDashboardRows } from "@/lib/dashboardFilters";
-import { AssignmentsTable } from "@/components/tables/AssignmentsTable";
+import { dashboardQuery } from "@/lib/dashboardFilters";
+import {
+  AssignmentsTable,
+  assignmentColumns,
+} from "@/components/tables/AssignmentsTable";
 
 const now = Date.parse("2026-09-16T12:00:00Z");
-const deadline = (hours: number) =>
-  new Date(now + hours * 3600000).toISOString();
-const rows = [-1, 0, 0.5, 1, 4, 12, 24, 25].map((hours) => ({
-  id: String(hours),
-  deadline: deadline(hours),
-}));
-const columns: Array<DashboardColumn<{ id: string; deadline: string | null }>> =
-  [
-    {
-      key: "time_left",
-      label: "Time Left",
-      kind: "duration",
-      value: (row) => row.deadline,
-    },
-  ];
-const allRows = [
-  ...rows,
-  { id: "missing", deadline: null },
-  { id: "invalid", deadline: "invalid" },
+const at = (hours: number) => new Date(now + hours * 3600000).toISOString();
+const justAfter = (hours: number) =>
+  new Date(now + hours * 3600000 + 1).toISOString();
+
+const columns: Array<DashboardColumn> = [
+  { key: "time_left", label: "Time Left", kind: "duration" },
 ];
-const ids = (filters: DashboardFilters) =>
-  filterDashboardRows(allRows, columns, filters, now).map((row) => row.id);
+
+const range = (filters: DashboardFilters) => {
+  const params = dashboardQuery(columns, filters, now);
+  return [params.time_left_from, params.time_left_to];
+};
 
 describe("Time Left range boundaries", () => {
   it.each([
-    ["expired", ["-1"]],
-    ["under1", ["0", "0.5"]],
-    ["1to4", ["1"]],
-    ["4to12", ["4"]],
-    ["12to24", ["12", "24"]],
-  ])("matches %s without overlapping adjacent presets", (mode, expected) => {
-    expect(ids({ time_left: mode })).toEqual(expected);
+    {
+      label: "expired (no minimum, upper bound at now)",
+      mode: "expired",
+      bounds: [undefined, at(0)],
+    },
+    {
+      label: "under 1 hour (0 to 1 hour)",
+      mode: "under1",
+      bounds: [at(0), at(1)],
+    },
+    { label: "1 to 4 hours", mode: "1to4", bounds: [at(1), at(4)] },
+    { label: "4 to 12 hours", mode: "4to12", bounds: [at(4), at(12)] },
+    {
+      label: "12 to 24 hours (upper bound just after 24)",
+      mode: "12to24",
+      bounds: [at(12), justAfter(24)],
+    },
+  ])(
+    "converts the $label preset to API deadline bounds",
+    ({ mode, bounds }) => {
+      expect(range({ time_left: mode })).toEqual(bounds);
+    }
+  );
+
+  it("omits deadline bounds when no preset is selected", () => {
+    expect(range({})).toEqual([undefined, undefined]);
   });
-  it("Any includes missing deadlines and deadlines beyond 24 hours", () => {
-    expect(ids({})).toEqual(allRows.map((row) => row.id));
-  });
+
   it.each([
-    ["0.5", "4", ["0.5", "1", "4"]],
-    ["4", "4", ["4"]],
-    ["", "1", ["0", "0.5", "1"]],
-    ["24", "", ["24", "25"]],
-    ["", "", ["0", "0.5", "1", "4", "12", "24", "25"]],
-    ["4", "1", []],
-    ["-1", "4", []],
-    ["NaN", "4", []],
-    ["0", "Infinity", []],
-  ])("validates custom range %s to %s", (min, max, expected) => {
-    expect(
-      ids({ time_left: "custom", "time_left.min": min, "time_left.max": max })
-    ).toEqual(expected);
-  });
-  it("preserves deadline sorting without mutating source rows", () => {
-    const before = [...allRows];
-    const sorted = filterDashboardRows(
-      allRows,
-      columns,
-      { sortBy: "time_left", sortDirection: "desc" },
-      now
-    );
-    expect(sorted.map((row) => row.id)).toEqual([
-      "25",
-      "24",
-      "12",
-      "4",
-      "1",
-      "0.5",
-      "0",
-      "-1",
-      "missing",
-      "invalid",
-    ]);
-    expect(allRows).toEqual(before);
-  });
+    {
+      label: "0.5 to 4 hours",
+      min: "0.5",
+      max: "4",
+      bounds: [at(0.5), justAfter(4)],
+    },
+    {
+      label: "4 to 4 hours",
+      min: "4",
+      max: "4",
+      bounds: [at(4), justAfter(4)],
+    },
+    {
+      label: "no minimum to 1 hour",
+      min: "",
+      max: "1",
+      bounds: [at(0), justAfter(1)],
+    },
+    {
+      label: "24 hours with no maximum",
+      min: "24",
+      max: "",
+      bounds: [at(24), undefined],
+    },
+    {
+      label: "no minimum or maximum",
+      min: "",
+      max: "",
+      bounds: [at(0), undefined],
+    },
+  ])(
+    "converts custom range $label to API deadline bounds",
+    ({ min, max, bounds }) => {
+      expect(
+        range({
+          time_left: "custom",
+          "time_left.min": min,
+          "time_left.max": max,
+        })
+      ).toEqual(bounds);
+    }
+  );
+
+  it.each([
+    { label: "minimum exceeds maximum", min: "4", max: "1" },
+    { label: "negative minimum", min: "-1", max: "4" },
+    { label: "non-numeric minimum", min: "NaN", max: "4" },
+    { label: "infinite maximum", min: "0", max: "Infinity" },
+  ])(
+    "returns an empty range for an invalid custom range: $label",
+    ({ min, max }) => {
+      expect(
+        range({
+          time_left: "custom",
+          "time_left.min": min,
+          "time_left.max": max,
+        })
+      ).toEqual([at(0), at(0)]);
+    }
+  );
 });
 
 const assignments: AssignmentTable = [
@@ -100,67 +127,75 @@ const assignments: AssignmentTable = [
     status: "assigned",
     user_status: "active",
     type: "guide_publish",
-    time_left: deadline(0.5),
-    date_created: deadline(-24),
-    date_updated: deadline(-1),
-  },
-  {
-    id: "bob",
-    panel_id: "two",
-    username: "bob",
-    title: "Algebra",
-    change_summary: "Add examples",
-    status: "assigned",
-    user_status: "active",
-    type: "guide_publish",
-    time_left: deadline(2),
-    date_created: deadline(-24),
-    date_updated: deadline(-1),
+    time_left: at(0.5),
+    date_created: at(-24),
+    date_updated: at(-1),
   },
 ];
-function Dashboard({ data = assignments }: { data?: AssignmentTable }) {
+
+function Dashboard() {
   const [selectedIds, setSelectedIds] = useState(new Set<string>());
+  const [filters, setFilters] = useState<DashboardFilters>({});
   return (
     <>
-      <output aria-label="Selected rows">{[...selectedIds].join(",")}</output>
+      <output aria-label="Query">
+        {JSON.stringify(dashboardQuery(assignmentColumns, filters, now))}
+      </output>
       <AssignmentsTable
-        assignmentsData={data}
+        assignmentsData={assignments}
+        filters={filters}
+        onFiltersChange={(changes) =>
+          setFilters((current) => ({ ...current, ...changes }))
+        }
         selectedIds={selectedIds}
         setSelectedIds={setSelectedIds}
       />
     </>
   );
 }
+
+function readRenderedQuery(): Record<string, string | Array<string>> {
+  return JSON.parse(screen.getByLabelText("Query").textContent);
+}
+
 function openFilter() {
   fireEvent.click(screen.getByRole("button", { name: "Filter Time Left" }));
   return screen.getByRole("dialog", { name: "Filter Time Left" });
 }
+
 function closeFilter() {
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
 }
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now);
 });
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
 
-it("shows every preset and restores rows when Any is selected", () => {
-  render(<Dashboard />);
-  const popup = openFilter();
-  expect(within(popup).getAllByRole("radio")).toHaveLength(7);
-  fireEvent.click(screen.getByRole("radio", { name: "< 1 hr" }));
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  expect(document.querySelector("tbody")?.textContent).toContain("alice");
-  fireEvent.click(screen.getByRole("radio", { name: "Any" }));
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
-});
-
-it("filters custom decimal hours, validates reversed bounds and clears the range", () => {
+it("clears deadline bounds when Any is selected", () => {
   render(<Dashboard />);
   openFilter();
+
+  fireEvent.click(screen.getByRole("radio", { name: "< 1 hr" }));
+  expect(readRenderedQuery()).toMatchObject({
+    time_left_from: at(0),
+    time_left_to: at(1),
+  });
+
+  fireEvent.click(screen.getByRole("radio", { name: "Any" }));
+  expect(readRenderedQuery()).not.toHaveProperty("time_left_from");
+  expect(readRenderedQuery()).not.toHaveProperty("time_left_to");
+});
+
+it("sends custom decimal hours, alerts on reversed bounds and clears the range", () => {
+  render(<Dashboard />);
+  openFilter();
+
   fireEvent.click(screen.getByRole("radio", { name: "Custom range" }));
   fireEvent.change(screen.getByRole("spinbutton", { name: "Minimum hours" }), {
     target: { value: "0.5" },
@@ -168,18 +203,26 @@ it("filters custom decimal hours, validates reversed bounds and clears the range
   fireEvent.change(screen.getByRole("spinbutton", { name: "Maximum hours" }), {
     target: { value: "0.5" },
   });
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  expect(document.querySelector("tbody")?.textContent).toContain("alice");
+  expect(readRenderedQuery()).toMatchObject({
+    time_left_from: at(0.5),
+    time_left_to: justAfter(0.5),
+  });
+
   fireEvent.change(screen.getByRole("spinbutton", { name: "Minimum hours" }), {
     target: { value: "2" },
   });
   expect(screen.getByRole("alert")).toBeDefined();
-  expect(screen.getByText("No data matches these filters")).toBeDefined();
+  expect(readRenderedQuery()).toMatchObject({
+    time_left_from: at(0),
+    time_left_to: at(0),
+  });
+
   closeFilter();
   fireEvent.click(
     screen.getByRole("button", { name: "Clear Time Left filter" })
   );
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(2);
+  expect(readRenderedQuery()).not.toHaveProperty("time_left_from");
+
   openFilter();
   fireEvent.click(screen.getByRole("radio", { name: "Custom range" }));
   expect(
@@ -187,44 +230,20 @@ it("filters custom decimal hours, validates reversed bounds and clears the range
   ).toHaveProperty("value", "");
 });
 
-it("combines Time Left with another column and prunes hidden selections", () => {
+it("combines Time Left with another column", () => {
   render(<Dashboard />);
-  fireEvent.click(
-    screen.getByRole("checkbox", { name: "Select all assignments" })
-  );
+
   openFilter();
   fireEvent.click(screen.getByRole("radio", { name: "< 1 hr" }));
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice:one");
   closeFilter();
+
   fireEvent.click(screen.getByRole("button", { name: "Filter Title" }));
   fireEvent.change(screen.getByRole("searchbox"), {
     target: { value: "Algebra" },
   });
-  expect(screen.getByText("No data matches these filters")).toBeDefined();
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("");
-});
-
-it("updates active ranges as time passes and removes expired selections", () => {
-  render(
-    <Dashboard
-      data={[
-        { ...assignments[0], time_left: new Date(now + 500).toISOString() },
-      ]}
-    />
-  );
-  openFilter();
-  fireEvent.click(screen.getByRole("radio", { name: "< 1 hr" }));
-  closeFilter();
-  fireEvent.click(
-    screen.getByRole("checkbox", { name: "Select all assignments" })
-  );
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("alice:one");
-  act(() => {
-    vi.advanceTimersByTime(1000);
+  expect(readRenderedQuery()).toMatchObject({
+    title: "Algebra",
+    time_left_from: at(0),
+    time_left_to: at(1),
   });
-  expect(screen.getByText("No data matches these filters")).toBeDefined();
-  expect(screen.getByLabelText("Selected rows").textContent).toBe("");
-  openFilter();
-  fireEvent.click(screen.getByRole("radio", { name: "Expired" }));
-  expect(document.querySelector("tbody")?.textContent).toContain("alice");
 });

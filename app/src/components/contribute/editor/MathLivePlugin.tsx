@@ -37,6 +37,10 @@ import {
   $insertBlockMathInQuote,
   $replaceTextWithBlockMathInQuote,
 } from "./MathInsertion";
+import {
+  $insertParagraphAfterMathQuote,
+  $insertParagraphAfterSelectedMathQuote,
+} from "./MathQuoteNavigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +62,7 @@ const {
   $setSelection,
   createCommand,
   COMMAND_PRIORITY_NORMAL,
+  KEY_ENTER_COMMAND,
 } = lexical;
 
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -340,6 +345,18 @@ export function SingletonMathEditor() {
       });
   }, [payload, closeEditor]);
 
+  const finishEditing = (continueWriting: boolean) => {
+    const mf = mfRef.current;
+    if (mf && payload) commitLatex(mf.value, payload.onChange);
+    closeEditor();
+    if (continueWriting && payload) {
+      editor.update(() => {
+        $insertParagraphAfterMathQuote($getNodeByKey(payload.nodeKey));
+      });
+    }
+    editor.focus();
+  };
+
   const isVisible = !!payload;
   const portalNode = typeof document !== "undefined" ? document.body : null;
   if (!portalNode) return null;
@@ -377,12 +394,8 @@ export function SingletonMathEditor() {
           onKeyDown={(e: any) => {
             if (e.key === "Enter" || e.key === "Escape") {
               e.preventDefault();
-              const mf = mfRef.current;
-              if (mf && payload) {
-                commitLatex(mf.value, payload.onChange);
-              }
-              closeEditor();
-              editor.focus();
+              e.stopPropagation();
+              finishEditing(e.key === "Enter");
             }
           }}
         />
@@ -419,7 +432,7 @@ export function SingletonMathEditor() {
             variant="default"
             size="sm"
             className="h-7 rounded-md px-3 text-xs"
-            onClick={closeEditor}
+            onClick={() => finishEditing(true)}
           >
             Done
           </Button>
@@ -631,6 +644,19 @@ function findMathInText(text: string) {
 
 export function MathShortcutTypeListener() {
   const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      KEY_ENTER_COMMAND,
+      (event) => {
+        if (event?.shiftKey || editor.isComposing()) return false;
+        if (!$insertParagraphAfterSelectedMathQuote()) return false;
+        event?.preventDefault();
+        return true;
+      },
+      COMMAND_PRIORITY_NORMAL
+    );
+  }, [editor]);
 
   useEffect(() => {
     return editor.registerCommand(
