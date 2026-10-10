@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { guideSummarySchema, guideTodoTitleSchema } from "../guides/fields";
 
 export const createPrerequisiteSchema = z.object({
   from_guide_base_id: z.uuid(),
@@ -6,7 +7,7 @@ export const createPrerequisiteSchema = z.object({
 });
 
 export const createRequestSchema = z.object({
-  guide_base_id: z.uuid(),
-  title: z.string().min(1),
-  summary: z.string(),
+  guide_base_id: z.uuid().optional(),
+  title: guideTodoTitleSchema,
+  summary: guideSummarySchema,
 });
