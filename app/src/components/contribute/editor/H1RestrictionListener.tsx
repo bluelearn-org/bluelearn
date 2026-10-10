@@ -47,60 +47,40 @@ export default function H1RestrictionListener({
     const removeKeyboardListener = editor.registerCommand(
       KEY_DOWN_COMMAND,
       (event: KeyboardEvent) => {
-        if (event.key === " ") {
-          const state = { handled: false };
+        if (event.key !== " ") return false;
 
-          editor.update(() => {
-            const selection = $getSelection();
-            if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
-              return;
-            }
-
-            const anchorKey = selection.anchor.key;
-            const offset = selection.anchor.offset;
-            const anchorNode = $getNodeByKey(anchorKey);
-
-            if (!$isTextNode(anchorNode) || offset !== 1) {
-              return;
-            }
-
-            const textContent = anchorNode.getTextContent();
-            if (textContent.startsWith("#")) {
-              const parentNode = anchorNode.getParent();
-              if (
-                parentNode &&
-                parentNode.getType() === "paragraph" &&
-                parentNode.getFirstChild() === anchorNode
-              ) {
-                const headingNode = $createHeadingNode("h2");
-
-                if (textContent === "#") {
-                  // Paragraph is empty other than the "#" character.
-                  const textNode = lexical.$createTextNode("");
-                  headingNode.append(textNode);
-                  parentNode.replace(headingNode);
-                  textNode.select();
-                } else {
-                  // Paragraph has other content after the "#". Strip it and keep children.
-                  anchorNode.setTextContent(textContent.slice(1));
-                  parentNode.getChildren().forEach((child) => {
-                    headingNode.append(child);
-                  });
-                  parentNode.replace(headingNode);
-                  headingNode.select(0, 0);
-                }
-                onH1Attempted();
-                state.handled = true;
-              }
-            }
-          });
-
-          if (state.handled) {
-            event.preventDefault();
-            return true;
-          }
+        // Lexical command handlers already run inside an editor update.
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+          return false;
         }
-        return false;
+
+        const anchorNode = selection.anchor.getNode();
+        if (!$isTextNode(anchorNode) || selection.anchor.offset !== 1) {
+          return false;
+        }
+
+        const textContent = anchorNode.getTextContent();
+        const parentNode = anchorNode.getParent();
+        if (
+          !textContent.startsWith("#") ||
+          !parentNode ||
+          parentNode.getType() !== "paragraph" ||
+          parentNode.getFirstChild() !== anchorNode
+        ) {
+          return false;
+        }
+
+        // A lone hash can still have siblings, including a break and guide text.
+        // Strip only the shortcut marker and move every child to the heading.
+        const headingNode = $createHeadingNode("h2");
+        anchorNode.setTextContent(textContent.slice(1));
+        headingNode.append(...parentNode.getChildren());
+        parentNode.replace(headingNode);
+        headingNode.selectStart();
+        event.preventDefault();
+        onH1Attempted();
+        return true;
       },
       COMMAND_PRIORITY_LOW
     );
