@@ -111,9 +111,10 @@ describe("PATCH /objective-revisions/{id} curation", () => {
 
     const snapshot = await app.request(
       `/objective-revisions/${revision.id}`,
-      {},
+      auth(curator.token),
       env
     );
+    expect(snapshot.status).toBe(200);
     const { snapshot: snap } = (await snapshot.json()) as {
       snapshot: {
         nodes: Array<{
@@ -172,9 +173,10 @@ describe("PATCH /objective-revisions/{id} curation", () => {
 
     const res = await app.request(
       `/objective-revisions/${revision.id}`,
-      {},
+      auth(curator.token),
       env
     );
+    expect(res.status).toBe(200);
     const { snapshot } = (await res.json()) as {
       snapshot: { nodes: Array<{ guide_base_id: string }> };
     };

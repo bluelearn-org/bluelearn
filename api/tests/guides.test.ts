@@ -26,11 +26,23 @@ describe("GET /guides", () => {
       guides: Array<{ id: string; summary: string | null }>;
       total: number;
     };
-    expect(body.total).toBeLessThanOrEqual(100);
-    const ids = body.guides.map((g) => g.id);
+    expect(body.guides).toHaveLength(Math.min(body.total, 100));
+    const guides = [...body.guides];
+    for (let page = 2; page <= Math.ceil(body.total / 100); page += 1) {
+      const next = await app.request(`/guides?limit=100&page=${page}`, {}, env);
+      expect(next.status).toBe(200);
+      const pageBody = (await next.json()) as typeof body;
+      expect(pageBody.guides).toHaveLength(
+        Math.min(100, body.total - (page - 1) * 100)
+      );
+      guides.push(...pageBody.guides);
+    }
+
+    const ids = guides.map((g) => g.id);
+    expect(new Set(ids).size).toBe(body.total);
     expect(ids).toContain(published.base.id);
     expect(ids).not.toContain(draft.id);
-    expect(body.guides.find((g) => g.id === published.base.id)?.summary).toBe(
+    expect(guides.find((g) => g.id === published.base.id)?.summary).toBe(
       "Summary"
     );
   });
