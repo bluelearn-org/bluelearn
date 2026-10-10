@@ -1,4 +1,9 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type {
+  AssignmentsTableQuery,
+  MembersTableQuery,
+  RolesTableQuery,
+} from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import type { ProfileActivityRow } from "./identity.service";
 import { ServiceError } from "../lib/service-error";
@@ -26,33 +31,6 @@ export type RoleRow = {
   date_created: string;
   date_updated: string;
   status: string;
-};
-
-// everything fetched by fetchAllAssignments
-type AssignmentSourceRow = {
-  id: string;
-  member_id: string | null;
-  status: string;
-  assigned_at: string;
-  expires_at: string | null;
-  review_panels: {
-    id: string;
-    case_id: string;
-    review_cases: {
-      id: string;
-      case_type: string;
-      status: string;
-      created_at: string;
-      updated_at: string;
-      guide_review_cases: {
-        guide_revision_id: string;
-        guide_revisions: {
-          title: string | null;
-          change_summary: string | null;
-        } | null;
-      } | null;
-    };
-  };
 };
 
 // fetch status for specific user
@@ -119,215 +97,241 @@ export async function removeRole(supabase: DB, userId: string, role: UserRole) {
   }
 }
 
-// fetch all statuses and map them to id data
-async function fetchStatuses(
-  supabase: DB,
-  ids: string[]
-): Promise<Map<string, string>> {
-  const { data, error } = await supabase
-    .from("user_statuses")
-    .select("user_id, status")
-    .in("user_id", ids);
+type FilterKind = "text" | "choice" | "roles" | "range";
+type TableColumns = Record<string, { column: string; kind: FilterKind }>;
 
-  if (error) {
-    console.error(error);
-    throw new ServiceError("Failed to batch select user statuses.", 500);
-  }
-  if (!data) {
-    throw new ServiceError("User statuses not found.", 404);
-  }
+const memberColumns = {
+  username: { column: "username", kind: "text" },
+  display_name: { column: "display_name", kind: "text" },
+  bio: { column: "bio", kind: "text" },
+  date_created: { column: "created_at", kind: "range" },
+  date_updated: { column: "updated_at", kind: "range" },
+  status: { column: "status", kind: "choice" },
+} satisfies TableColumns;
 
-  const statusMap = new Map<string, string>();
-  for (const row of data ?? []) {
-    statusMap.set(row.user_id, row.status);
-  }
+const roleColumns = {
+  username: { column: "username", kind: "text" },
+  roles: { column: "roles", kind: "roles" },
+  date_created: { column: "created_at", kind: "range" },
+  date_updated: { column: "updated_at", kind: "range" },
+  status: { column: "status", kind: "choice" },
+} satisfies TableColumns;
 
-  return statusMap;
+const assignmentColumns = {
+  username: { column: "username", kind: "text" },
+  user_status: { column: "member_status", kind: "choice" },
+  time_left: { column: "expires_at", kind: "range" },
+  status: { column: "status", kind: "choice" },
+  type: { column: "case_type", kind: "choice" },
+  title: { column: "title", kind: "text" },
+  change_summary: { column: "change_summary", kind: "text" },
+  date_created: { column: "created_at", kind: "range" },
+  date_updated: { column: "updated_at", kind: "range" },
+} satisfies TableColumns;
+
+type TableQuery = MembersTableQuery | RolesTableQuery | AssignmentsTableQuery;
+
+type TableRequest<B> = PromiseLike<{
+  data: unknown;
+  count: number | null;
+  error: PostgrestError | null;
+}> & {
+  filter(column: string, operator: string, value: unknown): B;
+  or(filters: string): B;
+  order(
+    column: string,
+    options: { ascending: boolean; nullsFirst: boolean }
+  ): B;
+  range(from: number, to: number): B;
+};
+
+// Search inputs are literal text; % and _ must not widen member matches.
+function containsPattern(text: string) {
+  return `%${text.replace(/[\\%_]/g, "\\$&")}%`;
 }
 
-// fetch all roles (site-wide) and map to id data
-async function fetchAllRoles(
-  supabase: DB,
-  ids: string[]
-): Promise<Map<string, string[]>> {
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("*")
-    .in("user_id", ids);
+function filterTable<B extends TableRequest<B>>(
+  request: B,
+  columns: TableColumns,
+  query: TableQuery
+): B {
+  const params: Record<string, unknown> = query;
 
-  if (error) {
-    console.error(error);
-    throw new ServiceError("Failed to batch select user roles.", 500);
-  }
+  for (const [key, { column, kind }] of Object.entries(columns)) {
+    const value = params[key];
 
-  const roleMap = new Map<string, string[]>();
-  for (const row of data ?? []) {
-    if (!roleMap.has(row.user_id)) {
-      roleMap.set(row.user_id, [row.role]);
-    } else {
-      roleMap.get(row.user_id)!.push(row.role);
+    if (kind === "range") {
+      const from = params[`${key}_from`];
+      const to = params[`${key}_to`];
+      if (typeof from === "string")
+        request = request.filter(column, "gte", from);
+      if (typeof to === "string") request = request.filter(column, "lt", to);
+      continue;
     }
+
+    if (kind === "text") {
+      const text = typeof value === "string" ? value.trim() : "";
+      if (text)
+        request = request.filter(column, "ilike", containsPattern(text));
+      continue;
+    }
+
+    const picked: string[] = Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? [value]
+        : [];
+    if (picked.length === 0) continue;
+
+    // "none" means no status for a choice column and no roles for `roles`.
+    const known = picked.filter((choice) => choice !== "none").join(",");
+    const matches: string[] = [];
+    if (known) {
+      matches.push(
+        kind === "roles" ? `${column}.ov.{${known}}` : `${column}.in.(${known})`
+      );
+    }
+    if (picked.includes("none")) {
+      matches.push(kind === "roles" ? `${column}.eq.{}` : `${column}.is.null`);
+    }
+    request = request.or(matches.join(","));
   }
 
-  return roleMap;
+  return request;
 }
 
-// return map of all usernames
-async function getUsernames(
+// An out-of-range page still needs its filtered total so pagination can recover.
+async function fetchTablePage<B extends TableRequest<B>>(
+  select: (options: { head: boolean }) => B,
+  columns: TableColumns,
+  query: TableQuery,
+  tiebreakers: string[],
+  failure: string
+) {
+  const first = (query.page - 1) * query.limit;
+  const sortColumn = query.sortBy ? columns[query.sortBy].column : "created_at";
+  let request = filterTable(select({ head: false }), columns, query).order(
+    sortColumn,
+    { ascending: query.sortDirection === "asc", nullsFirst: false }
+  );
+  for (const column of tiebreakers) {
+    request = request.order(column, { ascending: true, nullsFirst: false });
+  }
+
+  const { data, count, error } = await request.range(
+    first,
+    first + query.limit - 1
+  );
+
+  // PostgREST answers 416 (PGRST103) when the offset is past the last row.
+  if (error?.code === "PGRST103") {
+    const counted = await filterTable(select({ head: true }), columns, query);
+    if (counted.error) {
+      console.error(counted.error);
+      throw new ServiceError(failure, 500);
+    }
+    return { rows: [] as Awaited<B>["data"], total: counted.count ?? 0 };
+  }
+  if (error) {
+    console.error(error);
+    throw new ServiceError(failure, 500);
+  }
+
+  return { rows: data as Awaited<B>["data"], total: count ?? 0 };
+}
+
+// select one page of data from the dashboard view for the roles table
+export async function fetchRolesTable(supabase: DB, query: RolesTableQuery) {
+  const { rows, total } = await fetchTablePage(
+    ({ head }) =>
+      supabase
+        .from("dashboard_members")
+        .select("id, username, roles, created_at, updated_at, status", {
+          count: "exact",
+          head,
+        }),
+    roleColumns,
+    query,
+    ["id"],
+    "Failed to load the roles table."
+  );
+
+  const data = (rows ?? []).map((row) => ({
+    id: row.id!,
+    username: row.username!,
+    roles: row.roles ?? [],
+    date_created: row.created_at!,
+    date_updated: row.updated_at!,
+    status: row.status ?? undefined,
+  }));
+
+  return { data, total };
+}
+
+// fetch one page of data for the members table
+export async function fetchMembersTable(
   supabase: DB,
-  ids: string[]
-): Promise<Map<string, string>> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, username")
-    .in("id", ids);
+  query: MembersTableQuery
+) {
+  const { rows, total } = await fetchTablePage(
+    ({ head }) =>
+      supabase
+        .from("dashboard_members")
+        .select(
+          "id, username, display_name, bio, created_at, updated_at, status",
+          { count: "exact", head }
+        ),
+    memberColumns,
+    query,
+    ["id"],
+    "Failed to load the members table."
+  );
 
-  if (error) {
-    console.error(error);
-    throw new ServiceError("Failed to fetch username list.", 500);
-  }
-
-  const usernameMap = new Map<string, string>();
-  for (const row of data ?? []) {
-    usernameMap.set(row.id, row.username);
-  }
-
-  return usernameMap;
-}
-
-// return full list of user assignments
-async function fetchAllAssignments(supabase: DB) {
-  const { data: raw, error } = await supabase
-    .from("panel_members")
-    .select(
-      `id, member_id, status, assigned_at, expires_at,
-       review_panels!inner(
-         id, case_id,
-         review_cases!inner(
-           id, case_type, status, created_at, updated_at,
-           guide_review_cases(
-             guide_revision_id,
-             guide_revisions(title, change_summary)
-           )
-         )
-       )`
-    )
-    .in("status", ["assigned", "completed"]);
-
-  if (error) {
-    console.error(error);
-    throw new ServiceError("Failed to load assignments", 500);
-  }
-
-  const rows = (raw ?? []) as unknown as AssignmentSourceRow[];
-
-  return rows.map((r) => {
-    const rc = r.review_panels.review_cases;
-    return {
-      user_id: r.member_id,
-      panel_id: r.review_panels.id,
-      date_created: rc.created_at,
-      date_updated: rc.updated_at,
-      type: rc.case_type,
-      title: rc.guide_review_cases?.guide_revisions?.title ?? null,
-      change_summary:
-        rc.guide_review_cases?.guide_revisions?.change_summary ?? null,
-      status: r.status,
-      expires_at: r.expires_at,
-    };
-  });
-}
-
-// fetch a list of all user ids for above global selection functions
-export async function getUserIds(supabase: DB) {
-  const { data, error } = await supabase.from("profiles").select("id");
-
-  if (error) {
-    console.error(error);
-    throw new ServiceError("Could not fetch user list.", 500);
-  }
-  if (!data) {
-    throw new ServiceError("Could not fetch user list.", 500);
-  }
-
-  return data.map((r) => {
-    return r.id;
-  });
-}
-
-// select all data from across different table for roles table
-export async function fetchRolesTable(supabase: DB) {
-  const ids = await getUserIds(supabase);
-
-  const [profiles, statuses, roles] = await Promise.all([
-    supabase.from("profiles").select("id, username, created_at, updated_at"),
-    fetchStatuses(supabase, ids),
-    fetchAllRoles(supabase, ids),
-  ]);
-
-  // quick check for profiles errors
-  if (profiles.error || !profiles.data) {
-    throw new ServiceError("Could not batch select profiles.", 500);
-  }
-
-  return profiles.data.map((profile) => ({
-    id: profile.id,
-    username: profile.username,
-    roles: roles.get(profile.id) ?? [],
-    date_created: profile.created_at,
-    date_updated: profile.updated_at,
-    status: statuses.get(profile.id),
+  const data = (rows ?? []).map((row) => ({
+    id: row.id!,
+    username: row.username!,
+    display_name: row.display_name,
+    bio: row.bio,
+    date_created: row.created_at!,
+    date_updated: row.updated_at!,
+    status: row.status ?? undefined,
   }));
+
+  return { data, total };
 }
 
-// fetch data for the members table
-export async function fetchMembersTable(supabase: DB) {
-  const ids = await getUserIds(supabase);
-  const [profiles, statuses] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, username, display_name, created_at, updated_at, bio"),
-    fetchStatuses(supabase, ids),
-  ]);
+// get one page of the assignments table
+export async function fetchAssignmentsTable(
+  supabase: DB,
+  query: AssignmentsTableQuery
+) {
+  const { rows, total } = await fetchTablePage(
+    ({ head }) =>
+      supabase.from("dashboard_assignments").select("*", {
+        count: "exact",
+        head,
+      }),
+    assignmentColumns,
+    query,
+    ["panel_id", "member_id"],
+    "Failed to load the assignments table."
+  );
 
-  // quick check for profiles errors
-  if (profiles.error || !profiles.data) {
-    throw new ServiceError("Could not batch select profiles.", 500);
-  }
-
-  return profiles.data.map((profile) => ({
-    id: profile.id,
-    username: profile.username,
-    display_name: profile.display_name,
-    bio: profile.bio,
-    date_created: profile.created_at,
-    date_updated: profile.updated_at,
-    status: statuses.get(profile.id),
+  const data = (rows ?? []).map((row) => ({
+    id: row.member_id,
+    panel_id: row.panel_id!,
+    username: row.username ?? undefined,
+    type: row.case_type!,
+    title: row.title!,
+    date_created: row.created_at!,
+    date_updated: row.updated_at!,
+    change_summary: row.change_summary!,
+    status: row.status!,
+    user_status: row.member_status ?? undefined,
+    time_left: row.expires_at,
   }));
-}
 
-// get assignments table
-export async function fetchAssignmentsTable(supabase: DB) {
-  const ids = await getUserIds(supabase);
-  const [profiles, statuses, assignments] = await Promise.all([
-    getUsernames(supabase, ids),
-    fetchStatuses(supabase, ids),
-    fetchAllAssignments(supabase),
-  ]);
-
-  return assignments.map((a) => ({
-    id: a.user_id,
-    panel_id: a.panel_id,
-    username: profiles.get(a.user_id!),
-    type: a.type,
-    title: a.title ?? "",
-    date_created: a.date_created,
-    date_updated: a.date_updated,
-    change_summary: a.change_summary ?? "",
-    status: a.status,
-    user_status: statuses.get(a.user_id!),
-    time_left: a.expires_at,
-  }));
+  return { data, total };
 }
 
 // suspend a user

@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { auth, env, jsonAuth, makeUser } from "./helpers";
+import { admin, auth, env, insert, jsonAuth, makeUser } from "./helpers";
 import { grantRole } from "./factories/identity";
 import { createGuideBase, createGuide } from "./factories/guides";
 import { createPrerequisite, createTodo } from "./factories/graph";
 import { expectToMatchSpec } from "./openapi";
+import { createRequestSchema } from "@bluelearn/schemas";
 
 // Two published bases where `userId` authors a guide under the first, which is
 // what the edge/todo insert policies key on.
@@ -117,9 +118,73 @@ describe("GET /todos", () => {
     expect(ids).toContain(open.id);
     expect(ids).not.toContain(resolved.id);
   });
+
+  it("lists standalone requests and hides requests for unpublished bases", async () => {
+    const standalone = await insert("requests", {
+      dependent_guide_base_id: null,
+      title: "Standalone guide request",
+      summary: "A guide that is useful without a parent topic",
+      status: "open",
+    });
+    const draftBase = await createGuideBase({ status: "draft" });
+    const unpublished = await createTodo(draftBase.id);
+
+    const res = await app.request("/todos", {}, env);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      todos: Array<{ id: string; guide_base_id: string | null }>;
+    };
+    const listed = body.todos.find((todo) => todo.id === standalone.id);
+    expect(listed?.guide_base_id).toBeNull();
+    expect(body.todos.map((todo) => todo.id)).not.toContain(unpublished.id);
+  });
+
+  it("resolves a claimed standalone request without creating an edge", async () => {
+    const source = await createGuideBase({ status: "published" });
+    const standalone = await insert("requests", {
+      dependent_guide_base_id: null,
+      title: "Standalone guide request",
+      summary: "A guide that is useful without a parent topic",
+      status: "open",
+    });
+    await insert("request_claims", {
+      todo_id: standalone.id,
+      guide_base_id: source.id,
+    });
+
+    const { error } = await admin
+      .from("requests")
+      .update({ status: "resolved", resolved_guide_base_id: source.id })
+      .eq("id", standalone.id);
+
+    expect(error).toBeNull();
+    const { data: edges, error: edgeError } = await admin
+      .from("guide_edges")
+      .select("id")
+      .eq("from_guide_base_id", source.id);
+    expect(edgeError).toBeNull();
+    expect(edges).toHaveLength(0);
+  });
 });
 
 describe("POST /todos", () => {
+  it.each([
+    { title: " \t\n", summary: "Summary" },
+    { title: "x".repeat(51), summary: "Summary" },
+    { title: "Title", summary: "x".repeat(501) },
+  ])(
+    "enforces standalone content constraints for direct inserts: %j",
+    async (content) => {
+      const { error } = await admin.from("requests").insert({
+        dependent_guide_base_id: null,
+        ...content,
+      });
+
+      expect(error?.code).toBe("23514");
+    }
+  );
+
   it("401s without a token", async () => {
     const res = await app.request("/todos", { method: "POST" }, env);
     expect(res.status).toBe(401);
@@ -147,5 +212,46 @@ describe("POST /todos", () => {
     };
     expect(body.todo.title).toBe("Needs intro to limits");
     expect(body.todo.status).toBe("open");
+  });
+
+  it("creates a standalone request when no guide base is supplied", async () => {
+    const { token } = await makeUser();
+
+    const res = await app.request(
+      "/todos",
+      jsonAuth(token, "POST", {
+        title: "Standalone guide request",
+        summary: "A guide that is useful without a parent topic",
+      }),
+      env
+    );
+
+    expect(res.status).toBe(201);
+    await expectToMatchSpec(res, "POST", "/todos");
+    const body = (await res.json()) as {
+      todo: { guide_base_id: string | null };
+    };
+    expect(body.todo.guide_base_id).toBeNull();
+  });
+
+  it("uses the shared request title and summary limits", () => {
+    expect(
+      createRequestSchema.safeParse({
+        title: "A valid request",
+        summary: "",
+      }).success
+    ).toBe(true);
+    expect(
+      createRequestSchema.safeParse({
+        title: "x".repeat(51),
+        summary: "summary",
+      }).success
+    ).toBe(false);
+    expect(
+      createRequestSchema.safeParse({
+        title: "Valid title",
+        summary: "x".repeat(501),
+      }).success
+    ).toBe(false);
   });
 });
