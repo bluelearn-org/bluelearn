@@ -4,12 +4,14 @@ import {
   objectiveSummarySchema,
   objectiveTitleSchema,
 } from "./fields";
+import { newSubjectSchema } from "../guides/requests";
 
 // Title may be empty until publish. Targets come later, from the graph.
 export const createObjectiveSchema = z.object({
   title: objectiveTitleSchema.nullish(),
   summary: objectiveSummarySchema.nullish(),
   tags: z.array(z.uuid()).default([]),
+  newSubjects: z.array(newSubjectSchema).default([]),
 });
 
 // Position is the array index. The server derives which nodes are targets.
@@ -60,6 +62,7 @@ export const updateObjectiveRevisionSchema = z
     summary: objectiveSummarySchema.nullish(),
     change_summary: objectiveChangeSummarySchema.nullish(),
     tags: z.array(z.uuid()),
+    newSubjects: z.array(newSubjectSchema),
     targets: z.array(objectiveTargetSchema),
     graph: objectiveGraphSchema,
   })

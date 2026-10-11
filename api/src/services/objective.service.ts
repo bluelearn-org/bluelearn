@@ -13,6 +13,8 @@ import {
   loadRevisionTags,
   replaceRevisionTags,
   requireCurator,
+  requireSubjectHandles,
+  resolveNewSubjects,
 } from "./objective-revision.service";
 import { selectInBatches } from "../lib/batch";
 import { loadUsernames } from "./identity.service";
@@ -306,8 +308,11 @@ export async function listPublishedObjectives(
 // empty until the first graph save places its nodes.
 export async function createObjective(
   supabase: DB,
+  userId: string,
   input: CreateObjectiveInput
 ) {
+  requireSubjectHandles(input.newSubjects);
+
   const { data: revision_id, error } = await supabase.rpc("create_objective", {
     p_targets: [],
     p_title: input.title ?? undefined,
@@ -322,8 +327,16 @@ export async function createObjective(
     throw new ServiceError("Failed to create objective", 500);
   }
 
-  if (input.tags && input.tags.length > 0) {
-    await replaceRevisionTags(supabase, revision_id, input.tags);
+  const proposedIds = await resolveNewSubjects(
+    supabase,
+    userId,
+    revision_id,
+    input.newSubjects
+  );
+
+  const tagIds = [...input.tags, ...proposedIds];
+  if (tagIds.length > 0) {
+    await replaceRevisionTags(supabase, revision_id, tagIds);
   }
 
   return { revision_id };

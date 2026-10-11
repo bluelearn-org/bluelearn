@@ -95,6 +95,7 @@ export const objectivesRouter = new Hono<HonoEnv>()
     async (c) => {
       const { revision_id } = await createObjective(
         c.get("supabase"),
+        c.get("user").id,
         c.req.valid("json")
       );
       return c.json({ revision_id }, 201);
