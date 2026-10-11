@@ -9,8 +9,12 @@ import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 import { selectInBatches } from "../lib/batch";
 import { diffField, diffSequences } from "../lib/diff";
+import { slugify } from "../lib/slug";
+import { createSubject } from "./subject.service";
 
 type DB = SupabaseClient<Database>;
+
+type NewSubject = { name: string; summary?: string | null };
 
 const REVISION_META =
   "id, title, summary, change_summary, status, created_at, published_at, updated_at";
@@ -239,6 +243,51 @@ export async function replaceRevisionTags(
   }
 }
 
+// Checked before the draft is written, so a proposal createSubject would refuse
+// cannot leave a half-saved draft behind.
+export function requireSubjectHandles(newSubjects: NewSubject[]) {
+  if (newSubjects.some((s) => !slugify(s.name))) {
+    throw new ServiceError(
+      "Subject must contain at least one letter or number",
+      400
+    );
+  }
+}
+
+// createSubject only finds published subjects, because a proposed one has no
+// slug until publish. An autosave resends the proposals it has not seen come
+// back, so a proposal already tagged on this draft is reused, not minted again.
+export async function resolveNewSubjects(
+  supabase: DB,
+  userId: string,
+  revisionId: string,
+  newSubjects: NewSubject[]
+) {
+  if (newSubjects.length === 0) return [];
+
+  const proposed = (await loadRevisionTags(supabase, revisionId))
+    .filter((s) => s.slug === null)
+    .map((s) => ({ id: s.id, handle: slugify(s.name) }));
+
+  const ids: string[] = [];
+  for (const s of newSubjects) {
+    const handle = slugify(s.name);
+    const tagged = proposed.find((p) => p.handle === handle);
+
+    if (tagged) {
+      ids.push(tagged.id);
+      continue;
+    }
+
+    const subject = await createSubject(supabase, userId, s.name, s.summary);
+
+    if (subject.slug === null) proposed.push({ id: subject.id, handle });
+    ids.push(subject.id);
+  }
+
+  return ids;
+}
+
 export async function getObjectiveRevision(supabase: DB, revisionId: string) {
   const { data: row, error } = await supabase
     .from("objective_revisions")
@@ -272,7 +321,9 @@ export async function updateObjectiveRevision(
   revisionId: string,
   input: UpdateObjectiveRevisionInput
 ) {
-  const { tags, targets, graph, ...fields } = input;
+  const { tags, newSubjects = [], targets, graph, ...fields } = input;
+
+  requireSubjectHandles(newSubjects);
 
   // Blank summary/change_summary are stored as NULL so a cleared field reads as
   // absent, matching the guide revision path.
@@ -319,9 +370,22 @@ export async function updateObjectiveRevision(
     }
   }
 
-  if (tags !== undefined) {
-    await replaceRevisionTags(supabase, revisionId, tags);
+  if (tags !== undefined || newSubjects.length > 0) {
+    const proposedIds = await resolveNewSubjects(
+      supabase,
+      userId,
+      revisionId,
+      newSubjects
+    );
+
+    const keptIds =
+      tags ?? (await loadRevisionTags(supabase, revisionId)).map((t) => t.id);
+    await replaceRevisionTags(supabase, revisionId, [
+      ...keptIds,
+      ...proposedIds,
+    ]);
   }
+
   // Graph first: curation orders the targets the saved graph derived.
   const storedIdByClientId =
     graph !== undefined
