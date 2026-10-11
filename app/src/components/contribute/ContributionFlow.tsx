@@ -118,6 +118,7 @@ const createObjectiveContData = (): ObjectiveContribution => ({
   featuredSubObjective: "",
   subObjectives: [],
   subjects: [],
+  newSubjects: [],
   graph: { nodes: [], edges: [] },
 });
 
@@ -203,7 +204,14 @@ const objectiveDataFromRevision = (
         },
       ];
     }),
-    subjects: data.subjects.map((s) => s.id),
+
+    subjects: data.subjects
+      .filter((s) => s.status === "published")
+      .map((s) => s.id),
+    newSubjects: data.subjects
+      .filter((s) => s.status !== "published")
+      .map((s) => ({ id: s.id, name: s.name, summary: s.summary ?? "" })),
+
     graph: objectiveGraphFromSnapshot(data.snapshot),
   };
 };
@@ -852,6 +860,14 @@ function Inner({
     newSubjects: unsavedSubjects(variantContData.newSubjects),
   });
 
+  const objectiveTagFields = () => ({
+    tags: [
+      ...objectiveContData.subjects,
+      ...existingTagIds(objectiveContData.newSubjects),
+    ],
+    newSubjects: unsavedSubjects(objectiveContData.newSubjects),
+  });
+
   const objectiveTargets = () => {
     // A sequence can still name a card deleted from the canvas since.
     const onCanvas = new Set(objectiveContData.graph.nodes.map((n) => n.id));
@@ -945,7 +961,7 @@ function Inner({
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
           change_summary: objectiveContData.changeSummary || null,
-          tags: objectiveContData.subjects,
+          ...objectiveTagFields(),
           targets: objectiveTargets(),
           ...graphField,
         });
@@ -961,7 +977,7 @@ function Inner({
                 title: objectiveContData.title || undefined,
                 summary: objectiveContData.summary || undefined,
                 change_summary: objectiveContData.changeSummary || null,
-                tags: objectiveContData.subjects,
+                ...objectiveTagFields(),
                 targets: objectiveTargets(),
                 ...graphField,
               });
@@ -982,14 +998,16 @@ function Inner({
         creatingRef.current = createObjective({
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
-          tags: objectiveContData.subjects,
+          ...objectiveTagFields(),
         })
           .then(async (id) => {
             await saveRevision(id, {
               targets: objectiveTargets(),
               ...graphField,
             });
+
             setRevisionId(id);
+
             return id;
           })
           .finally(() => {
@@ -1147,7 +1165,10 @@ function Inner({
       });
     }
 
-    if (objectiveContData.subjects.length === 0) {
+    if (
+      objectiveContData.subjects.length === 0 &&
+      objectiveContData.newSubjects.length === 0
+    ) {
       missing.push({
         field: "subjects",
         label: "a subject",

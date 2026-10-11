@@ -88,6 +88,8 @@ export const objectiveContributionSchema = z.object({
   featuredSubObjective: z.string(),
   subObjectives: z.array(subObjectiveSchema),
   subjects: z.array(z.string()),
+  // Drafts stored before inline subjects existed have none.
+  newSubjects: z.array(newSubjectSchema).default([]),
   // Drafts stored before the canvas existed have no graph.
   graph: objectiveGraphSchema.default({ nodes: [], edges: [] }),
 });

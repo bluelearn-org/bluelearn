@@ -108,6 +108,7 @@ const draft = (
   featuredSubObjective: "",
   subObjectives: [],
   subjects: [],
+  newSubjects: [],
   graph,
   ...curation,
 });
