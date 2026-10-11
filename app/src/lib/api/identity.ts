@@ -6,7 +6,7 @@ const me = client.me;
 type FetchOptions = { signal?: AbortSignal };
 
 export async function getMyIdentity({ signal }: FetchOptions = {}) {
-  const res = await me.$get(undefined, { init: { signal } });
+  const res = await me.$get(undefined, { init: { signal, cache: "no-store" } });
   await assertOk(res);
 
   return await res.json();

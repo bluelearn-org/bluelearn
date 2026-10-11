@@ -23,6 +23,8 @@ import {
   isRevisionDraftUnchanged,
 } from "@/lib/guideUtils";
 import { requireSession } from "@/lib/auth";
+import { useSuspensionStatus } from "@/lib/authContext";
+import { AccountStatusNotice } from "@/components/AccountStatusNotice";
 
 import { EditGuideInfo } from "@/components/contribute/steps/guide/EditGuideInfo";
 import { Submit } from "@/components/contribute/steps/Submit";
@@ -78,6 +80,20 @@ const editSteps = [
 const StepperInstance = defineStepper(editSteps);
 
 function RouteComponent() {
+  const status = useSuspensionStatus();
+
+  if (status === "pending") return null;
+  if (status === "unavailable") {
+    return <AccountStatusNotice status="unavailable" />;
+  }
+  if (status === "suspended") {
+    return <AccountStatusNotice status="suspended" />;
+  }
+
+  return <EditGuidePage />;
+}
+
+function EditGuidePage() {
   const { variant, current, snapshot, draftId } = Route.useLoaderData();
 
   const { Stepper } = StepperInstance;
@@ -116,13 +132,19 @@ function RouteComponent() {
     disclaimers: snapshot.disclaimers,
   }));
 
-  const [changeSummary, setChangeSummary] = useState(
-    snapshot.revision.change_summary ?? ""
-  );
+  const [changeSummary, setChangeSummary] = useState(() => {
+    if (snapshot.revision.status !== "draft") return "";
+    if (snapshot.revision.change_summary === null) return "";
+
+    return snapshot.revision.change_summary;
+  });
 
   const [revisionId, setRevisionId] = useState<string | null>(draftId);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // whether there are edits since the last time the draft was saved
+  const [isDirty, setIsDirty] = useState(false);
 
   // must match one of the IDs
   const [activeStep, setActiveStep] = useState("guide-details");
@@ -333,6 +355,8 @@ function RouteComponent() {
 
       await router.invalidate();
 
+      setIsDirty(false);
+
       toast.success("Draft saved");
 
       return true;
@@ -389,6 +413,8 @@ function RouteComponent() {
 
       await router.invalidate();
 
+      setIsDirty(false);
+
       toast.success("Submitted for review");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not submit");
@@ -435,27 +461,33 @@ function RouteComponent() {
                 Stepper={Stepper}
                 type="variant"
                 guideContData={guideContData}
-                onGuideChange={(update) =>
+                onGuideChange={(update) => {
                   setGuideContData((previous) => ({
                     ...previous,
                     ...update,
-                  }))
-                }
+                  }));
+                  setIsDirty(true);
+                }}
                 subjects={subjectOptions}
                 guides={guideOptions}
                 body={guideContData.body}
-                onBodyChange={(body) =>
+                onBodyChange={(body) => {
                   setGuideContData((previous) => ({
                     ...previous,
                     body,
-                  }))
-                }
+                  }));
+                  setIsDirty(true);
+                }}
                 onUploadImage={uploadGuideImage}
                 onSaveDraft={saveDraft}
                 submitting={submitting}
+                isDirty={isDirty}
                 hideBackBtn
                 changeSummary={changeSummary}
-                onChangeSummaryChange={setChangeSummary}
+                onChangeSummaryChange={(value) => {
+                  setChangeSummary(value);
+                  setIsDirty(true);
+                }}
               />
 
               <Submit
@@ -465,6 +497,7 @@ function RouteComponent() {
                 onSaveDraft={saveDraft}
                 onPublish={publish}
                 submitting={submitting}
+                isDirty={isDirty}
                 title="Preview"
                 publishLabel="Submit Guide Revision"
               />

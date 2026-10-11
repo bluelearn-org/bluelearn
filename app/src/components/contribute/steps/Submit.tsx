@@ -13,6 +13,7 @@ type PropTypes = {
   onSaveDraft: () => void;
   onPublish: () => void;
   submitting: boolean;
+  isDirty?: boolean;
   title?: string;
   publishLabel?: string;
 };
@@ -24,6 +25,7 @@ export const Submit = ({
   onSaveDraft,
   onPublish,
   submitting,
+  isDirty,
   title = "Preview",
   publishLabel = "Submit for Review",
 }: PropTypes) => {
@@ -35,6 +37,7 @@ export const Submit = ({
         onSaveDraft={onSaveDraft}
         onPublish={onPublish}
         submitting={submitting}
+        isDirty={isDirty}
         publishLabel={publishLabel}
       />
 

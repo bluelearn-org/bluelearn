@@ -9,9 +9,9 @@ type PropTypes = {
 };
 
 export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
-  const { roles } = useAuth();
+  const { roles, currentProfile } = useAuth();
   const isCurator = roles.includes("curator");
-
+  const suspended = currentProfile?.is_suspended === true;
   return (
     <Stepper.Content step="type">
       <StepperActionHeader
@@ -21,29 +21,33 @@ export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
         hideGuidelines={true}
       />
       <div
-        className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-2 ${isCurator ? "lg:grid-cols-3" : ""}`}
+        className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-2 ${isCurator && !suspended ? "lg:grid-cols-3" : ""}`}
       >
-        <button
-          className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
-          style={{
-            backgroundColor:
-              type == "guide" ? "var(--badge-bg)" : "var(--muted-bg)",
-          }}
-          onClick={() => pickType("guide")}
-        >
-          Guide
-        </button>
+        {!suspended && (
+          <button
+            className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
+            style={{
+              backgroundColor:
+                type == "guide" ? "var(--badge-bg)" : "var(--muted-bg)",
+            }}
+            onClick={() => pickType("guide")}
+          >
+            Guide
+          </button>
+        )}
 
-        <button
-          className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
-          style={{
-            backgroundColor:
-              type == "variant" ? "var(--badge-bg)" : "var(--muted-bg)",
-          }}
-          onClick={() => pickType("variant")}
-        >
-          Variant
-        </button>
+        {!suspended && (
+          <button
+            className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
+            style={{
+              backgroundColor:
+                type == "variant" ? "var(--badge-bg)" : "var(--muted-bg)",
+            }}
+            onClick={() => pickType("variant")}
+          >
+            Variant
+          </button>
+        )}
 
         {isCurator && (
           <button

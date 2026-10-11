@@ -6,6 +6,7 @@ import type { GuideVariantListItem } from "@bluelearn/schemas";
 import { Badge } from "@/components/ui/badge";
 import { getGuideVariants } from "@/lib/api/guides";
 import { formatDate } from "@/lib/guideUtils";
+import { useSuspensionStatus } from "@/lib/authContext";
 
 type PropsTypes = {
   open: boolean;
@@ -13,13 +14,13 @@ type PropsTypes = {
   slug: string;
   currentVariantSlug?: string | null;
 };
-
 export const VariantsModal = ({
   open,
   onOpenChange,
   slug,
   currentVariantSlug,
 }: PropsTypes) => {
+  const canAuthor = useSuspensionStatus() === "active";
   const [variants, setVariants] = useState<Array<GuideVariantListItem>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,13 +69,15 @@ export const VariantsModal = ({
       emptyTitle="No other variants available"
       emptyDescription="This guide currently only has its canonical version."
       emptyAction={
-        <Link
-          to="/contribute"
-          className="btn-outline text-xs"
-          onClick={() => onOpenChange(false)}
-        >
-          Create a variant
-        </Link>
+        canAuthor && (
+          <Link
+            to="/contribute"
+            className="btn-outline text-xs"
+            onClick={() => onOpenChange(false)}
+          >
+            Create a variant
+          </Link>
+        )
       }
     >
       {variants.map((variant) => {

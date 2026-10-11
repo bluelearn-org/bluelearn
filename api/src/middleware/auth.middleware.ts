@@ -56,6 +56,34 @@ export const requireUser: MiddlewareHandler<HonoEnv> = async (c, next) => {
   await next();
 };
 
+// Route guard for authoring mutations.
+// The middleware checks suspension through Supabase, then rejects the
+// request before the authoring mutation reaches the database.
+// Database RLS remains authoritative.
+export const requireUnsuspendedUser: MiddlewareHandler<HonoEnv> = async (
+  c,
+  next
+) => {
+  const { data, error } = await c
+    .get("supabase")
+    .from("profiles")
+    .select("is_suspended")
+    .eq("id", c.get("user").id)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error(error);
+    return c.json({ error: "Unable to verify account status" }, 500);
+  }
+  if (data.is_suspended) {
+    return c.json(
+      { error: "Suspended users cannot create or edit guides." },
+      403
+    );
+  }
+  await next();
+};
+
 // Bypasses RLS — use only in webhooks / admin routes
 export const getServiceSupabase = (c: Context<HonoEnv>) =>
   createClient<Database>(c.env.SUPABASE_URL, c.env.SUPABASE_SECRET_KEY, {

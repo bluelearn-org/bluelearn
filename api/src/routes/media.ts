@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
-import { requireUser } from "../middleware/auth.middleware";
+import {
+  requireUnsuspendedUser,
+  requireUser,
+} from "../middleware/auth.middleware";
 import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
 import { HEAVY } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
@@ -23,10 +26,11 @@ export const mediaRouter = new Hono<HonoEnv>()
       security: [{ bearerAuth: [] }],
       responses: {
         201: jsonContent(mediaUploadResponseSchema, "The stored asset"),
-        ...errorResponses(400, 401, 404, 429),
+        ...errorResponses(400, 401, 403, 404, 429),
       },
     }),
     requireUser,
+    requireUnsuspendedUser,
     rateLimitMiddleware({ ...HEAVY, bucket: "media-upload" }),
     validate("form", mediaUploadSchema),
     async (c) => {

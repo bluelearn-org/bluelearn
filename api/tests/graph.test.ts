@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest";
 import app from "../src/index";
-import { auth, env, jsonAuth, makeUser } from "./helpers";
+import { auth, env, insert, jsonAuth, makeUser } from "./helpers";
 import { grantRole } from "./factories/identity";
-import { createGuideBase, createGuide } from "./factories/guides";
+import {
+  createGuideBase,
+  createGuide,
+  createPublishedGuide,
+} from "./factories/guides";
+import { createPublishedObjective } from "./factories/objectives";
 import { createPrerequisite, createTodo } from "./factories/graph";
 import { expectToMatchSpec } from "./openapi";
 
@@ -116,6 +121,46 @@ describe("GET /todos", () => {
     const ids = body.todos.map((t) => t.id);
     expect(ids).toContain(open.id);
     expect(ids).not.toContain(resolved.id);
+  });
+
+  it("lists objective-raised requests beside guide-raised ones", async () => {
+    const { userId } = await makeUser();
+    const { from } = await seedAuthoredBases(userId);
+    const guideRaised = await createTodo(from.id);
+    const { objective } = await createPublishedObjective(
+      userId,
+      await createPublishedGuide(),
+      { title: "Algebra from scratch" }
+    );
+    const objectiveRaised = await insert("requests", {
+      objective_id: objective.id,
+      dependent_guide_base_id: null,
+      title: "Number line intuition",
+      summary: "What the objective needs before algebra",
+      status: "open",
+    });
+
+    const res = await app.request("/todos", {}, env);
+
+    expect(res.status).toBe(200);
+    await expectToMatchSpec(res, "GET", "/todos");
+    const body = (await res.json()) as {
+      todos: Array<{
+        id: string;
+        guide_slug: string | null;
+        objective_slug: string | null;
+        objective_title: string | null;
+      }>;
+    };
+    expect(body.todos.find((t) => t.id === objectiveRaised.id)).toMatchObject({
+      guide_slug: null,
+      objective_slug: objective.slug,
+      objective_title: "Algebra from scratch",
+    });
+    expect(body.todos.find((t) => t.id === guideRaised.id)).toMatchObject({
+      guide_slug: from.slug,
+      objective_slug: null,
+    });
   });
 });
 

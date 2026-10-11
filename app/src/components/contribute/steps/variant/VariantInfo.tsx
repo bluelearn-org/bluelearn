@@ -28,6 +28,8 @@ type PropTypes = {
 
   onSaveDraft: () => void;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   hideBackBtn?: boolean;
 
   title?: string;
@@ -45,6 +47,8 @@ export const VariantInfo = ({
   onUploadImage,
   onSaveDraft,
   submitting,
+  isDirty,
+  isSynced,
   hideBackBtn,
   title = "Variant Info",
 }: PropTypes) => {
@@ -83,6 +87,8 @@ export const VariantInfo = ({
         hideBackBtn={hideBackBtn}
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <div className="min-h-[calc(100vh-65px)] min-w-0 flex-1 pt-4 md:pl-5">

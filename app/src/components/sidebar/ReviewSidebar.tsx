@@ -18,6 +18,7 @@ import { validateReviewDecision } from "@/lib/reviewValidation";
 import { castDecision } from "@/lib/api/reviews";
 import { getRevision, reviseRevision } from "@/lib/api/guideRevisions";
 import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
+import { useSuspensionStatus } from "@/lib/authContext";
 
 export type Review = {
   decision: string;
@@ -145,7 +146,9 @@ export const ReviewSidebar = ({
 
   const canVote = revisionData.viewer_role === "panelist" && caseOpen;
 
+  const suspensionStatus = useSuspensionStatus();
   const canRevise =
+    suspensionStatus === "active" &&
     revisionData.viewer_role === "author" &&
     revisionData.case.status === "rejected" &&
     revision;

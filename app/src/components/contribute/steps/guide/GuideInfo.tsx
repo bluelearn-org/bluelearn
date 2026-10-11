@@ -56,6 +56,8 @@ type PropTypes = {
 
   onSaveDraft: () => void;
   submitting?: boolean;
+  isDirty?: boolean;
+  isSynced?: boolean;
   hideBackBtn?: boolean;
 
   title?: string;
@@ -78,6 +80,8 @@ export const GuideInfo = ({
   onUploadImage,
   onSaveDraft,
   submitting,
+  isDirty,
+  isSynced,
   hideBackBtn,
   title = "Guide Info",
 }: PropTypes) => {
@@ -120,6 +124,8 @@ export const GuideInfo = ({
         hideBackBtn={hideBackBtn}
         onSaveDraft={onSaveDraft}
         submitting={submitting}
+        isDirty={isDirty}
+        isSynced={isSynced}
       />
 
       <div className="flex min-h-0 flex-1">

@@ -1,43 +1,77 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import type { Walkthrough } from "@bluelearn/schemas";
+import type { Objective, Walkthrough } from "@bluelearn/schemas";
 import type { BreadcrumbOrigin } from "@/lib/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 
-type WalkthroughPanelProps = {
-  node: Walkthrough["nodes"][number];
+type GuideContext = {
   targetSlug: string;
   targetTitle: string;
-  breadcrumbOrigin?: BreadcrumbOrigin;
 };
 
-export function WalkthroughPanel({
-  node,
-  targetSlug,
-  targetTitle,
-  breadcrumbOrigin,
-}: WalkthroughPanelProps) {
-  const back = { label: targetTitle, path: `/guides/${targetSlug}` };
+// The objective page already sits around this panel, so it offers no way back.
+// A request has no guide to open, and a preview must not navigate away from
+// its unsaved draft.
+type ObjectiveContext = {
+  objective: Pick<Objective, "slug" | "title">;
+  guideSlug: string | null;
+  isRequest: boolean;
+  preview: boolean;
+};
 
-  // Opening the target keeps the trail the user arrived by; opening a
-  // prerequisite makes the target the origin, since that is what led here.
-  const openOrigin: BreadcrumbOrigin | undefined =
-    node.slug === targetSlug
-      ? breadcrumbOrigin
-      : { type: "guide", title: targetTitle, path: `/guides/${targetSlug}` };
+type WalkthroughPanelProps = {
+  node: Walkthrough["nodes"][number];
+  breadcrumbOrigin?: BreadcrumbOrigin;
+} & (GuideContext | ObjectiveContext);
+
+export function WalkthroughPanel(props: WalkthroughPanelProps) {
+  const { node, breadcrumbOrigin } = props;
+  const isRequest = "objective" in props && props.isRequest;
+
+  let back: { label: string; path: string } | null;
+  let openSlug: string | null;
+  let openOrigin: BreadcrumbOrigin | undefined;
+
+  if ("objective" in props) {
+    const title = props.objective.title ?? "Untitled objective";
+
+    back = null;
+    openSlug = props.preview ? null : props.guideSlug;
+    openOrigin = {
+      type: "objective",
+      title,
+      path: `/objectives/${props.objective.slug}`,
+    };
+  } else {
+    const { targetSlug, targetTitle } = props;
+
+    back = { label: targetTitle, path: `/guides/${targetSlug}` };
+    openSlug = node.slug;
+    // Opening the target keeps the trail the user arrived by; opening a
+    // prerequisite makes the target the origin, since that is what led here.
+    openOrigin =
+      node.slug === targetSlug
+        ? breadcrumbOrigin
+        : { type: "guide", title: targetTitle, path: back.path };
+  }
 
   return (
     <aside className="flex flex-col gap-6 overflow-y-auto border-t px-6 py-6 md:h-full md:border-t-0 md:border-r">
-      <Link
-        to={back.path}
-        state={{ breadcrumbOrigin }}
-        className="mono-micro flex items-center gap-2 text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">Back to {back.label}</span>
-      </Link>
+      {back && (
+        <Link
+          to={back.path}
+          state={{ breadcrumbOrigin }}
+          className="mono-micro flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Back to {back.label}</span>
+        </Link>
+      )}
 
       <div className="space-y-3">
+        {isRequest && (
+          <p className="mono-micro text-muted-foreground">Guide request</p>
+        )}
         <h2 className="text-2xl font-semibold tracking-tight">{node.title}</h2>
 
         {node.tags.length > 0 && (
@@ -70,19 +104,23 @@ export function WalkthroughPanel({
 
       {node.summary && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">About this guide</h3>
+          <h3 className="text-sm font-semibold">
+            {isRequest ? "About this request" : "About this guide"}
+          </h3>
           <p className="text-sm text-muted-foreground">{node.summary}</p>
         </div>
       )}
 
-      <Link
-        to="/guides/$slug"
-        params={{ slug: node.slug }}
-        state={{ breadcrumbOrigin: openOrigin }}
-        className="btn-pri w-full"
-      >
-        Open Guide
-      </Link>
+      {openSlug && (
+        <Link
+          to="/guides/$slug"
+          params={{ slug: openSlug }}
+          state={{ breadcrumbOrigin: openOrigin }}
+          className="btn-pri w-full"
+        >
+          Open Guide
+        </Link>
+      )}
     </aside>
   );
 }

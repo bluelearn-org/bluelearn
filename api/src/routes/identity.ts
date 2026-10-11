@@ -46,6 +46,7 @@ export const meRouter = new Hono<HonoEnv>()
         c.get("supabase"),
         user.id
       );
+      c.header("Cache-Control", "no-store");
       return c.json({ profile, email: user.email ?? null, roles });
     }
   )
