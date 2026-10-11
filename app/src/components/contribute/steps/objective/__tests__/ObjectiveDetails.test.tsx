@@ -78,7 +78,9 @@ describe("ObjectiveDetails new subjects", () => {
     ]);
     expect(state.current?.subjects).toEqual(["algebra-id"]);
 
-    expect(screen.getByPlaceholderText("Enter subject name.").value).toBe("");
+    expect(
+      screen.getByPlaceholderText<HTMLInputElement>("Enter subject name.").value
+    ).toBe("");
   });
 
   it("does not add a subject without a summary", () => {
