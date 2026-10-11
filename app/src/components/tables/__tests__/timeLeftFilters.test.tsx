@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { useState } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssignmentTable } from "@/lib/api/dashboard";
 import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
@@ -246,4 +252,48 @@ it("combines Time Left with another column", () => {
     time_left_from: at(0),
     time_left_to: at(1),
   });
+});
+
+describe("Time Left cell", () => {
+  const props = {
+    filters: {},
+    onFiltersChange: vi.fn(),
+    selectedIds: new Set<string>(),
+    setSelectedIds: vi.fn(),
+  };
+  const seat = (overrides: Partial<AssignmentTable[number]>) => [
+    { ...assignments[0], ...overrides },
+  ];
+  const timeLeftCell = () =>
+    within(screen.getByRole("row", { name: /Gravity/ })).getAllByRole(
+      "cell"
+    )[3];
+  const timeLeft = () => timeLeftCell().textContent.trim();
+
+  it.each([
+    { status: "assigned", time_left: at(0.5), expected: "30m remaining" },
+    { status: "assigned", time_left: at(3), expected: "3h 0m remaining" },
+    { status: "assigned", time_left: at(49), expected: "2d 1h remaining" },
+    {
+      status: "assigned",
+      time_left: at(30 / 3600),
+      expected: "< 1m remaining",
+    },
+    { status: "assigned", time_left: at(-1), expected: "Expired" },
+    { status: "assigned", time_left: null, expected: "-" },
+    { status: "completed", time_left: at(-1), expected: "-" },
+    { status: "completed", time_left: at(0.5), expected: "-" },
+    { status: "completed", time_left: null, expected: "-" },
+  ] as const)(
+    "shows $expected for a $status seat (deadline $time_left)",
+    ({ status, time_left, expected }) => {
+      render(
+        <AssignmentsTable
+          {...props}
+          assignmentsData={seat({ status, time_left })}
+        />
+      );
+      expect(timeLeft()).toBe(expected);
+    }
+  );
 });
