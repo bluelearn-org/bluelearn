@@ -12,6 +12,8 @@ function makeTodoItem(overrides: Partial<TodoListItem> = {}): TodoListItem {
     guide_base_id: crypto.randomUUID(),
     guide_slug: "intro-to-math",
     guide_title: "Intro to Math",
+    objective_slug: null,
+    objective_title: null,
     title: "Understanding Derivatives",
     summary: "Need a comprehensive introduction to derivatives.",
     status: "open",
@@ -41,7 +43,9 @@ describe("groupTodosByTitle", () => {
       title: "Linear Algebra",
       summary: "Vector spaces and matrices",
       todoIds: [todo.id],
-      requestedBy: [{ slug: "intro-to-math", title: "Intro to Math" }],
+      requestedBy: [
+        { kind: "guide", slug: "intro-to-math", title: "Intro to Math" },
+      ],
       claimCount: 2,
     });
   });
@@ -79,9 +83,9 @@ describe("groupTodosByTitle", () => {
     expect(group.todoIds).toEqual(["id-1", "id-2", "id-3"]);
     expect(group.claimCount).toBe(3); // maximum claim count
     expect(group.requestedBy).toEqual([
-      { slug: "guide-a", title: "Guide A" },
-      { slug: "guide-b", title: "Guide B" },
-      { slug: "guide-c", title: "Guide C" },
+      { kind: "guide", slug: "guide-a", title: "Guide A" },
+      { kind: "guide", slug: "guide-b", title: "Guide B" },
+      { kind: "guide", slug: "guide-c", title: "Guide C" },
     ]);
     // Keeps earliest created todo's title and summary
     expect(group.title).toBe("Linear Algebra Basics");
@@ -97,7 +101,27 @@ describe("groupTodosByTitle", () => {
     expect(groups[0].title).toBe("Valid Title");
   });
 
-  it("filters out items without guide_slug from requestedBy", () => {
+  it("groups an objective-raised row as an objective requester", () => {
+    const todo = makeTodoItem({
+      guide_base_id: null,
+      guide_slug: null,
+      guide_title: null,
+      objective_slug: "algebra-from-scratch",
+      objective_title: "Algebra from scratch",
+    });
+
+    const groups = groupTodosByTitle([todo]);
+
+    expect(groups[0].requestedBy).toEqual([
+      {
+        kind: "objective",
+        slug: "algebra-from-scratch",
+        title: "Algebra from scratch",
+      },
+    ]);
+  });
+
+  it("filters out items with neither guide_slug nor objective_slug from requestedBy", () => {
     const todoWithoutSlug = makeTodoItem({
       guide_slug: null,
       guide_title: null,

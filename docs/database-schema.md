@@ -220,7 +220,9 @@ Append-only version history plus the objective's editorial metadata, mirroring `
 - `updated_at`: last edit time, maintained by a trigger. A draft is edited in place, so this advances during the draft phase and freezes once the revision is published. 
 - `published_at`: when this revision went live, null until then.
 
-Submitting a revision is a direct publish: in one transaction it flips `status = draft → published`, stamps `published_at`, freezes the revision's projected edges and linear order, and points `objectives.current_revision_id` at it (setting `objectives.status = published`, and freezing the slug on first publish). Whether a revision is currently live is read from `objectives.current_revision_id`, not from its status.
+Curators publish revisions directly. One transaction publishes the revision, freezes its graph, and sets `objectives.current_revision_id`.
+The transaction also publishes attached draft subjects and assigns their slugs. A failed publish leaves those subjects as drafts.
+The objective slug becomes fixed at first publish. The current revision pointer identifies the live revision.
 
 ### `objective_revision_nodes`
 
@@ -228,28 +230,34 @@ The curriculum: every topic in this revision's target closure, which of them are
 
 - `id`: primary key for the node, so other tables (notably `objective_revision_node_orders`) can reference a node by a single id.
 - `revision_id`: FK to `objective_revisions`.
-- `guide_base_id`: the topic (FK to `guide_bases`).
-- `guide_id`: the guide variant the curator chose for this topic (FK to `guides`). The variant is pinned, but its content is read live through `guides.current_revision_id` (the objective shows the up-to-date guide, not a frozen body).
+- `guide_base_id`: the topic (FK to `guide_bases`). Request nodes have no guide base.
+- `guide_id`: the selected guide variant (FK to `guides`). Request nodes have no variant.
+- `request_id`: the associated guide request after publication.
+- `title`, `summary`: the stored text for a request node. Guide nodes get their text from the guide.
 - `is_target`: boolean, default `false`. `true` marks this node as one of the objective's goal topics (an endpoint the curriculum was built to reach). A revision may have several targets (an objective can climb toward Machine Learning *and* Statistics at once).
 - `is_included`: boolean, default `true`. `false` means the curator skipped this topic: the row stays as a re-includable candidate but the topic is dropped from the published curriculum and bridged over by edge projection. Skipping is a soft hide; only included rows reach the published objective.
 - `is_featured`: boolean, default `false`. `true` marks the one target whose sequence the objective's card surfaces. A published revision has exactly one featured node.
 - `note`: optional curator annotation for this node within the objective.
 - Primary key `id`. `(revision_id, guide_base_id)` is a unique constraint, so a topic still appears at most once per revision.
 
+The featured sequence ends with its target. Cards preserve request titles. The guide count includes each included node once.
+
 ### `objective_revision_edges`
 
 The projected prerequisite edges among included nodes, computed once at publish time and stored so the published objective never drifts when the global DAG later changes.
 
 - `revision_id`: FK to `objective_revisions`.
-- `from_guide_base_id`: source endpoint (FK to `guide_bases`), an included node of this revision.
-- `to_guide_base_id`: target endpoint (FK to `guide_bases`), an included node of this revision.
-- Primary key `(revision_id, from_guide_base_id, to_guide_base_id)`.
+- `from_node_id`: the prerequisite node (FK to `objective_revision_nodes`).
+- `to_node_id`: the dependent node (FK to `objective_revision_nodes`).
+- Primary key `(revision_id, from_node_id, to_node_id)`.
 
-These edges are derived from the global `guide_edges` graph, never hand-authored: at publish, the global prerequisite graph is projected onto the included (`is_included = true`) node set, bridging skipped prerequisites (if `A → Trig → C` and Trig is skipped, the projection stores `A → C`). They are a frozen *view* of the canonical graph, not a competing prerequisite authority (see [Objectives as frozen projections](#objectives-as-frozen-projections)). These edges power the objective's graph view, which is the secondary view. The primary view is the authored linear order in `objective_revision_node_orders` below.
+These rows hold drawn connections and the published projection of the global guide graph. Node IDs preserve connections that involve requests.
+Guide projection excludes null guide base IDs so requests cannot stop traversal through omitted guides.
 
 ### `objective_revision_node_orders`
 
-The objective's linear reading order, authored per target (sub-objective) and the objective's primary view. It holds one row per placed node per target, so a topic shared across targets can sit at a different position in each target's sequence. Rows exist only for included nodes.
+This table stores the authored reading order for each target. A shared prerequisite can have a different position under each target.
+Rows contain the selected prerequisites. The displayed sequence adds its target last.
 
 - `revision_id`: FK to `objective_revisions`.
 - `target_node_id`: the target node whose sequence this row belongs to (FK to `objective_revision_nodes`).
@@ -267,6 +275,9 @@ Subject tags, such as Math, Physics, or Game Development. Subjects are not conta
 - `summary`: optional short description for subject listings and the subject header. Nullable; subjects have no revision table, so it lives on the row.
 - `creator_id`: FK to `profiles.id` (the user who created the subject).
 - `created_at`: subject creation time.
+
+Guide and objective drafts can propose subjects with a name and summary. Draft subjects have no public slug.
+Guide approval or curator publication of an attached objective publishes the subject. Slug collisions receive a numeric suffix.
 
 ### `guide_revision_subjects`
 

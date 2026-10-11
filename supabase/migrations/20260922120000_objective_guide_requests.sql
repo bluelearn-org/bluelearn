@@ -1,0 +1,321 @@
+alter table public.requests
+  alter column dependent_guide_base_id drop not null;
+
+alter table public.requests
+  add column objective_id uuid references public.objectives (id) on delete restrict;
+
+create index requests_objective_idx on public.requests (objective_id);
+
+-- Without these edges the requester's page loses a resolved request: the API
+-- lists only open todos and guide_edges. A guide-raised request names one
+-- dependent. An objective-raised one takes its arrows from the current revision.
+create or replace function public.link_resolved_todo()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_edge record;
+begin
+  for v_edge in
+    select new.resolved_guide_base_id as from_id,
+           new.dependent_guide_base_id as to_id
+     where new.dependent_guide_base_id is not null
+    union
+    select coalesce(f.guide_base_id, fr.resolved_guide_base_id),
+           coalesce(t.guide_base_id, tr.resolved_guide_base_id)
+      from public.objective_revision_edges e
+      join public.objectives o on o.current_revision_id = e.revision_id
+      join public.objective_revision_nodes f on f.id = e.from_node_id
+      join public.objective_revision_nodes t on t.id = e.to_node_id
+      left join public.requests fr on fr.id = f.request_id
+      left join public.requests tr on tr.id = t.request_id
+     where new.id in (f.request_id, t.request_id)
+  loop
+    -- the other end is a request nobody has resolved yet; its turn writes this edge
+    if v_edge.from_id is null or v_edge.to_id is null then
+      continue;
+    end if;
+
+    begin
+      insert into public.guide_edges (from_guide_base_id, to_guide_base_id, edge_type)
+        values (v_edge.from_id, v_edge.to_id, 'prerequisite')
+        on conflict do nothing;
+    exception when raise_exception or check_violation then
+      -- guide_edges_prevent_cycle: the dependent already depends on this guide
+      null;
+    end;
+  end loop;
+
+  return null;
+end;
+$$;
+
+alter table public.objective_revision_nodes
+  alter column guide_base_id drop not null,
+  alter column guide_id drop not null;
+
+alter table public.objective_revision_nodes
+  add column request_id uuid references public.requests (id) on delete set null,
+  add column title text,
+  add column summary text;
+
+-- A request node has no guide revision to read its text from, so it carries
+-- its own.
+alter table public.objective_revision_nodes
+  add constraint objective_revision_nodes_guide_or_request
+  check (
+    (
+      guide_base_id is not null
+      and guide_id is not null
+      and request_id is null
+      and title is null
+      and summary is null
+    )
+    or (
+      guide_base_id is null
+      and guide_id is null
+      and title is not null
+      and summary is not null
+    )
+  );
+
+-- objective_closure walks from a target's guide base, and a request has none.
+alter table public.objective_revision_nodes
+  add constraint objective_revision_nodes_target_is_guide
+  check (not is_target or guide_base_id is not null);
+
+alter table public.objective_revision_nodes
+  add constraint objective_revision_nodes_revision_request_key
+  unique (revision_id, request_id);
+
+-- Re-keyed from guide base ids to node ids: an endpoint may now be a request
+-- node, which has no guide base to name it by.
+alter table public.objective_revision_edges
+  add column from_node_id uuid,
+  add column to_node_id uuid;
+
+update public.objective_revision_edges e
+  set from_node_id = f.id,
+      to_node_id = t.id
+  from public.objective_revision_nodes f,
+       public.objective_revision_nodes t
+  where f.revision_id = e.revision_id
+    and f.guide_base_id = e.from_guide_base_id
+    and t.revision_id = e.revision_id
+    and t.guide_base_id = e.to_guide_base_id;
+
+alter table public.objective_revision_edges
+  alter column from_node_id set not null,
+  alter column to_node_id set not null;
+
+alter table public.objective_revision_edges
+  drop constraint objective_revision_edges_from_is_node,
+  drop constraint objective_revision_edges_to_is_node,
+  drop constraint learning_path_revision_edges_pkey,
+  drop constraint learning_path_revision_edges_no_self_loop;
+
+alter table public.objective_revision_edges
+  drop column from_guide_base_id,
+  drop column to_guide_base_id;
+
+alter table public.objective_revision_edges
+  add constraint objective_revision_edges_pkey
+    primary key (revision_id, from_node_id, to_node_id),
+  add constraint objective_revision_edges_from_is_node
+    foreign key (from_node_id, revision_id)
+    references public.objective_revision_nodes (id, revision_id)
+    on delete cascade,
+  add constraint objective_revision_edges_to_is_node
+    foreign key (to_node_id, revision_id)
+    references public.objective_revision_nodes (id, revision_id)
+    on delete cascade,
+  add constraint objective_revision_edges_no_self_loop
+    check (from_node_id <> to_node_id);
+
+alter table public.objective_revisions
+  add column based_on_revision_id uuid
+    references public.objective_revisions (id) on delete set null;
+
+create or replace function public.publish_objective_revision(p_revision_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_objective_id uuid;
+  v_status public.objective_revision_status;
+  v_author_id uuid;
+  v_title text;
+  v_slug text;
+  v_based_on_revision_id uuid;
+  v_current_revision_id uuid;
+begin
+  if not public.has_role('curator') then
+    raise exception 'Only curators can publish objectives'
+      using errcode = 'insufficient_privilege';
+  end if;
+
+  select objective_id, status, author_id, title, based_on_revision_id
+    into v_objective_id, v_status, v_author_id, v_title, v_based_on_revision_id
+    from public.objective_revisions
+    where id = p_revision_id
+    for update;
+
+  if not found then
+    raise exception 'Revision not found' using errcode = 'no_data_found';
+  end if;
+
+  if v_author_id is distinct from (select auth.uid()) then
+    raise exception 'You can only publish a revision you authored'
+      using errcode = 'insufficient_privilege';
+  end if;
+
+  if v_status <> 'draft' then
+    raise exception 'Revision is not an editable draft'
+      using errcode = 'invalid_parameter_value';
+  end if;
+
+  -- Drafts from before this column carry null and publish unchecked, with
+  -- nothing to compare against.
+  if v_based_on_revision_id is not null then
+    select current_revision_id into v_current_revision_id
+      from public.objectives
+      where id = v_objective_id;
+
+    if v_based_on_revision_id is distinct from v_current_revision_id then
+      raise exception 'A newer revision was published; review it before publishing';
+    end if;
+  end if;
+
+  -- The slug is frozen from the title on first publish, so the title must exist
+  -- by then.
+  select slug into v_slug from public.objectives where id = v_objective_id;
+  if v_slug is null and coalesce(trim(v_title), '') = '' then
+    raise exception 'A title is required to publish an objective'
+      using errcode = 'invalid_parameter_value';
+  end if;
+
+  update public.objective_revisions
+    set status = 'published',
+        published_at = now()
+    where id = p_revision_id;
+
+  -- The projection still names guide bases, so each endpoint lands through the
+  -- node that holds it in this revision.
+  insert into public.objective_revision_edges
+    (revision_id, from_node_id, to_node_id)
+  select p_revision_id, f.id, t.id
+    from public.project_objective_edges(p_revision_id) e
+    join public.objective_revision_nodes f
+      on f.revision_id = p_revision_id
+     and f.guide_base_id = e.from_guide_base_id
+    join public.objective_revision_nodes t
+      on t.revision_id = p_revision_id
+     and t.guide_base_id = e.to_guide_base_id;
+
+  update public.objectives
+    set current_revision_id = p_revision_id,
+        status = 'published',
+        slug = coalesce(
+          slug,
+          lower(trim(both '-' from
+            regexp_replace(v_title, '[^a-zA-Z0-9]+', '-', 'g')))
+        )
+    where id = v_objective_id
+    returning slug into v_slug;
+
+  -- Return the live slug so the client can route to /objectives/{slug}.
+  return v_slug;
+end;
+$$;
+
+grant execute on function public.publish_objective_revision(uuid) to authenticated;
+
+create or replace function public.rollback_objective_revision(
+  p_revision_id uuid,
+  p_source_revision_id uuid
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_objective_id uuid;
+  v_title text;
+  v_summary text;
+  v_created_at timestamptz;
+  v_current_revision_id uuid;
+  v_new_revision_id uuid := gen_random_uuid();
+begin
+  -- RLS hides revisions the caller may not read, so an unseen one reads as
+  -- missing.
+  select objective_id into v_objective_id
+    from public.objective_revisions
+    where id = p_revision_id;
+
+  if not found then
+    raise exception 'Revision not found' using errcode = 'no_data_found';
+  end if;
+
+  select title, summary, created_at
+    into v_title, v_summary, v_created_at
+    from public.objective_revisions
+    where id = p_source_revision_id
+      and objective_id = v_objective_id;
+
+  if not found then
+    raise exception 'Revision not found for this objective'
+      using errcode = 'no_data_found';
+  end if;
+
+  select current_revision_id into v_current_revision_id
+    from public.objectives
+    where id = v_objective_id;
+
+  insert into public.objective_revisions
+    (id, objective_id, title, summary, change_summary, author_id, status,
+     based_on_revision_id)
+    values (
+      v_new_revision_id,
+      v_objective_id,
+      v_title,
+      v_summary,
+      'Rolled back to revision from ' || to_char(v_created_at, 'YYYY-MM-DD'),
+      auth.uid(),
+      'draft',
+      v_current_revision_id
+    );
+
+  insert into public.objective_revision_nodes
+    (revision_id, guide_base_id, guide_id, is_target, is_included, note,
+     target_position, is_featured)
+  select v_new_revision_id, guide_base_id, guide_id, is_target, is_included, note,
+     target_position, is_featured
+    from public.objective_revision_nodes
+    where revision_id = p_source_revision_id;
+
+  insert into public.objective_revision_node_orders
+    (revision_id, target_node_id, node_id, position)
+  select v_new_revision_id, tn.id, sn.id, o.position
+    from public.objective_revision_node_orders o
+    join public.objective_revision_nodes src_t on src_t.id = o.target_node_id
+    join public.objective_revision_nodes src_n on src_n.id = o.node_id
+    join public.objective_revision_nodes tn
+      on tn.revision_id = v_new_revision_id
+     and tn.guide_base_id = src_t.guide_base_id
+    join public.objective_revision_nodes sn
+      on sn.revision_id = v_new_revision_id
+     and sn.guide_base_id = src_n.guide_base_id
+    where o.revision_id = p_source_revision_id;
+
+  -- Return the draft revision id so the client routes straight to its editor.
+  return v_new_revision_id;
+end;
+$$;
+
+grant execute on function public.rollback_objective_revision(uuid, uuid)
+  to authenticated;
