@@ -155,7 +155,7 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
       supabase
         .from("objective_revision_nodes")
         .select(
-          "revision_id, id, guide_base_id, guide_id, is_featured, is_included"
+          "revision_id, id, guide_base_id, guide_id, title, is_featured, is_included"
         )
         .in("revision_id", batch)
     ),
@@ -212,7 +212,7 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
         : null,
       title: n.guide_base_id
         ? (baseMeta.get(n.guide_base_id)?.title ?? null)
-        : null,
+        : n.title,
       is_featured: n.is_featured,
     }));
     const orders = (ordersRes.data ?? []).filter(

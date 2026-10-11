@@ -9,6 +9,7 @@ import {
   createObjectiveRevision,
 } from "./factories/objectives";
 import { expectToMatchSpec } from "./openapi";
+import { buildObjectiveListItems } from "../src/services/objective.service";
 
 type Snapshot = {
   nodes: Array<{
@@ -341,4 +342,97 @@ describe("resolving an objective-raised request", () => {
     expect(await edgesFrom(first.base.id)).toEqual([second.base.id]);
     expect(await edgesFrom(second.base.id)).toEqual([goal.base.id]);
   });
+});
+
+describe("published objective cards", () => {
+  it("keeps request titles beside guide titles in the featured sequence", async () => {
+    const guide = await createPublishedGuide({ title: "Existing foundation" });
+
+    const guideId = crypto.randomUUID();
+    const requestId = crypto.randomUUID();
+    const targetId = crypto.randomUUID();
+    const { curator, objective, revision } = await drawnDraft({
+      nodes: [
+        { id: guideId, guide_base_id: guide.base.id },
+        { id: requestId, title: "Requested practice", summary: "Practice it" },
+        { id: targetId, title: "Requested goal", summary: "Complete it" },
+      ],
+      edges: [
+        { from_node_id: guideId, to_node_id: requestId },
+        { from_node_id: requestId, to_node_id: targetId },
+      ],
+    });
+
+    const curated = await patch(revision.id, curator.token, {
+      targets: [
+        {
+          node_id: targetId,
+          is_featured: true,
+          sequence: [guideId, requestId],
+        },
+      ],
+    });
+    expect(curated.status).toBe(200);
+    expect((await publish(revision.id, curator.token)).status).toBe(200);
+
+    const { data: row } = await admin
+      .from("objectives")
+      .select(
+        "id, slug, created_by, created_at, current_revision_id, current:objective_revisions!objectives_current_revision_id_fkey(title, summary)"
+      )
+      .eq("id", objective.id)
+      .single()
+      .throwOnError();
+
+    const [card] = await buildObjectiveListItems(admin, [row]);
+
+    expect(card.featured_sub_objective).toEqual([
+      { position: 1, slug: guide.base.slug, title: "Existing foundation" },
+      { position: 2, slug: null, title: "Requested practice" },
+      { position: 3, slug: null, title: "Requested goal" },
+    ]);
+    expect(card.guides_total).toBe(3);
+  });
+});
+
+describe("published objective prerequisite projection", () => {
+  it.each([false, true])(
+    "bridges an omitted guide when request nodes are present: %s",
+    async (withRequest) => {
+      const first = await createPublishedGuide();
+      const skipped = await createPublishedGuide();
+      const last = await createPublishedGuide();
+      await createPrerequisite(first.base.id, skipped.base.id);
+      await createPrerequisite(skipped.base.id, last.base.id);
+
+      const firstId = crypto.randomUUID();
+      const lastId = crypto.randomUUID();
+      const requestId = crypto.randomUUID();
+      const nodes: Array<Record<string, string>> = [
+        { id: firstId, guide_base_id: first.base.id },
+        { id: lastId, guide_base_id: last.base.id },
+      ];
+      if (withRequest) {
+        nodes.push({ id: requestId, ...request });
+      }
+
+      const { curator, revision } = await drawnDraft({
+        nodes,
+        edges: withRequest
+          ? [{ from_node_id: lastId, to_node_id: requestId }]
+          : [],
+      });
+
+      expect((await publish(revision.id, curator.token)).status).toBe(200);
+      const snapshot = await snapshotOf(revision.id, curator.token);
+
+      expect(snapshot.drawn_edges).toContainEqual({
+        from_node_id: firstId,
+        to_node_id: lastId,
+      });
+      expect(snapshot.nodes.map((node) => node.guide_base_id)).not.toContain(
+        skipped.base.id
+      );
+    }
+  );
 });
