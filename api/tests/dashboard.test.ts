@@ -320,4 +320,44 @@ describe("GET /dashboard/assignments", () => {
       `${prefix}-open`,
     ]);
   });
+
+  it("lists the newest assignments first until a column sort is picked", async () => {
+    const prefix = uniqueUsernamePrefix();
+    const author = await createMember(`${prefix}-author`);
+    const now = Date.now();
+    const created: Record<string, number> = {
+      old: now - 2 * 86400000,
+      mid: now - 86400000,
+      new: now,
+    };
+    for (const [name, createdAt] of Object.entries(created)) {
+      const review = await createReviewCase(author, {
+        created_at: new Date(createdAt).toISOString(),
+      });
+      const panel = await createReviewPanel(review.id, {
+        target_seat_count: 3,
+      });
+      await createPanelMember(
+        panel.id,
+        await createMember(`${prefix}-${name}`)
+      );
+    }
+
+    const seats = async (query: Record<string, string> = {}) =>
+      (
+        await requestTablePage("/dashboard/assignments", {
+          username: prefix,
+          ...query,
+        })
+      ).names;
+
+    expect(await seats()).toEqual([
+      `${prefix}-new`,
+      `${prefix}-mid`,
+      `${prefix}-old`,
+    ]);
+    expect(
+      await seats({ sortBy: "date_created", sortDirection: "asc" })
+    ).toEqual([`${prefix}-old`, `${prefix}-mid`, `${prefix}-new`]);
+  });
 });

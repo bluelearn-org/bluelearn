@@ -206,13 +206,18 @@ async function fetchTablePage<B extends TableRequest<B>>(
   columns: TableColumns,
   query: TableQuery,
   tiebreakers: string[],
-  failure: string
+  failure: string,
+  // Direction of the created_at sort used when no column sort is picked.
+  defaultAscending = true
 ) {
   const first = (query.page - 1) * query.limit;
   const sortColumn = query.sortBy ? columns[query.sortBy].column : "created_at";
+  const ascending = query.sortBy
+    ? query.sortDirection === "asc"
+    : defaultAscending;
   let request = filterTable(select({ head: false }), columns, query).order(
     sortColumn,
-    { ascending: query.sortDirection === "asc", nullsFirst: false }
+    { ascending, nullsFirst: false }
   );
   for (const column of tiebreakers) {
     request = request.order(column, { ascending: true, nullsFirst: false });
@@ -314,7 +319,9 @@ export async function fetchAssignmentsTable(
     assignmentColumns,
     query,
     ["panel_id", "member_id"],
-    "Failed to load the assignments table."
+    "Failed to load the assignments table.",
+    // Newest assignments first until a column sort is picked
+    false
   );
 
   const data = (rows ?? []).map((row) => ({

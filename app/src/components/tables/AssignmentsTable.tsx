@@ -61,12 +61,18 @@ export const assignmentColumns: Array<DashboardColumn & { width: string }> = [
   { key: "date_updated", label: "Date Updated", width: "w-sm", kind: "date" },
 ];
 
-function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
+function ExpireCell({
+  expiresAt,
+  isCompleted,
+}: {
+  expiresAt: string | null;
+  isCompleted: boolean;
+}) {
   const [now, setNow] = useState(() => Date.now());
   const expiresMs = expiresAt ? new Date(expiresAt).getTime() : null;
 
   useEffect(() => {
-    if (expiresMs === null) return;
+    if (expiresMs === null || isCompleted) return;
 
     const diffMs = expiresMs - Date.now();
 
@@ -75,7 +81,11 @@ function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
     const timer = setTimeout(() => setNow(Date.now()), deadlineTickMs(diffMs));
 
     return () => clearTimeout(timer);
-  }, [expiresMs, now]);
+  }, [expiresMs, now, isCompleted]);
+
+  if (isCompleted) {
+    return <span className="text-success font-mono text-xs">-</span>;
+  }
 
   if (expiresMs === null) {
     return <span className="text-muted-foreground">-</span>;
@@ -204,7 +214,10 @@ export const AssignmentsTable = ({
                 </TableCell>
 
                 <TableCell className="mono-micro w-[120px] px-4 py-3 whitespace-pre-line">
-                  <ExpireCell expiresAt={assignment.time_left} />
+                  <ExpireCell
+                    expiresAt={assignment.time_left}
+                    isCompleted={assignment.status === "completed"}
+                  />
                 </TableCell>
 
                 <TableCell className="w-[120px] px-4 py-3">
