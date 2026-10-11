@@ -21,16 +21,12 @@ type GuideGraphNodeProps = {
   leading?: ReactNode;
   // Floats over the card's top-right corner.
   badge?: ReactNode;
-  // A guide the design canvas asks for but nobody has written yet.
+
   isRequest?: boolean;
-  // The design canvas connects through these, flipped so prerequisites sit below.
+
   handles?: { target: Position; source: Position; className: string };
-  // The design canvas lays out a fixed column (OBJECTIVE_NODE_WIDTH).
-  fixedWidth?: boolean;
-  // The design canvas's hover is a focus: the card glows while its
-  // prerequisites and follow-ups light up. The walkthrough and curation keep
-  // the plain tint.
-  focusOnHover?: boolean;
+  fixedWidth?: boolean; // Match the canvas column.
+  focusOnHover?: boolean; // Canvas glow; other graphs keep the hover tint.
 };
 
 export function GuideGraphNode({

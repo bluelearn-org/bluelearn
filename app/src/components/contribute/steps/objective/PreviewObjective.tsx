@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import type { GuideListItem } from "@bluelearn/schemas";
 import type { ObjectiveContribution } from "@/types/contributions";
 import { Separator } from "@/components/ui/separator";
 import { StepperActionHeader } from "@/components/contribute/StepperActionHeader";
@@ -11,6 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/cards/Footer";
 import { nodeCard } from "@/lib/objectiveGraphEdits";
+import {
+  buildDraftObjectiveSnapshot,
+  buildSubObjectives,
+} from "@/lib/objectiveSnapshot";
+import { ObjectiveGraph } from "@/components/objective/ObjectiveGraph";
+import { Button } from "@/components/ui/button";
 
 type PropTypes = {
   Stepper: any;
@@ -21,7 +28,7 @@ type PropTypes = {
   submitting: boolean;
   isDirty?: boolean;
   isSynced?: boolean;
-  guideOptions: Array<any>;
+  guideOptions: Array<GuideListItem>;
   subjectOptions: Array<any>;
 };
 
@@ -144,7 +151,19 @@ export const PreviewObjective = ({
   guideOptions,
   subjectOptions,
 }: PropTypes) => {
-  const guidesBySlug = new Map(guideOptions.map((g) => [g.slug, g]));
+  const [view, setView] = useState<"graph" | "linear">("graph");
+
+  const snapshot = useMemo(
+    () => buildDraftObjectiveSnapshot(objectiveContData),
+    [objectiveContData]
+  );
+  const subObjectives = buildSubObjectives(snapshot);
+
+  const guidesBySlug = new Map<string, GuideListItem>();
+  for (const guide of guideOptions) {
+    if (guide.slug) guidesBySlug.set(guide.slug, guide);
+  }
+
   const cardOf = (nodeId: string) =>
     nodeCard(objectiveContData.graph, guidesBySlug, nodeId);
 
@@ -155,8 +174,11 @@ export const PreviewObjective = ({
     return subject ? subject.name : id;
   };
 
-  const getGuideDuration = (nodeId: string) =>
-    cardOf(nodeId)?.duration_minutes || 0;
+  const getGuideDuration = (nodeId: string) => {
+    const guide = cardOf(nodeId);
+
+    return guide && "duration_minutes" in guide ? guide.duration_minutes : 0;
+  };
 
   const getGuideSummary = (nodeId: string) => cardOf(nodeId)?.summary || null;
 
@@ -164,32 +186,22 @@ export const PreviewObjective = ({
     cardOf(nodeId)?.tags || [];
 
   const getTargetDuration = (targetNodeId: string) => {
-    const sub = objectiveContData.subObjectives.find(
-      (s) => s.targetNodeId === targetNodeId
-    );
-    if (sub?.curatedSequence && sub.curatedSequence.length > 0) {
-      return sub.curatedSequence.reduce(
-        (acc, nodeId) => acc + getGuideDuration(nodeId),
+    const sub = subObjectives.find((s) => s.target.id === targetNodeId);
+
+    return (
+      sub?.steps.reduce(
+        (total, node) => total + getGuideDuration(node.id),
         0
-      );
-    }
-    return getGuideDuration(targetNodeId);
+      ) ?? 0
+    );
   };
 
-  const totalDuration = objectiveContData.targets.reduce(
-    (acc, targetNodeId) => acc + getTargetDuration(targetNodeId),
+  const includedNodes = snapshot.nodes.filter((node) => node.is_included);
+  const totalDuration = includedNodes.reduce(
+    (total, node) => total + getGuideDuration(node.id),
     0
   );
-
-  const totalGuides = objectiveContData.targets.reduce((acc, targetNodeId) => {
-    const sub = objectiveContData.subObjectives.find(
-      (s) => s.targetNodeId === targetNodeId
-    );
-    if (sub?.curatedSequence && sub.curatedSequence.length > 0) {
-      return acc + sub.curatedSequence.length;
-    }
-    return acc + 1;
-  }, 0);
+  const totalGuides = includedNodes.length;
 
   const featuredTargetSlug =
     objectiveContData.featuredSubObjective || objectiveContData.targets[0];
@@ -200,24 +212,14 @@ export const PreviewObjective = ({
     description: getGuideSummary(slug) ?? undefined,
   }));
 
-  const featuredSub = featuredTargetSlug
-    ? objectiveContData.subObjectives.find(
-        (s) => s.targetNodeId === featuredTargetSlug
-      )
-    : null;
-
-  let featuredSubObjectiveNodes = undefined;
-  if (featuredTargetSlug) {
-    const sequence =
-      featuredSub?.curatedSequence && featuredSub.curatedSequence.length > 0
-        ? featuredSub.curatedSequence
-        : [featuredTargetSlug];
-    featuredSubObjectiveNodes = sequence.map((slug, idx) => ({
-      position: idx + 1,
-      slug,
-      title: getGuideTitle(slug),
-    }));
-  }
+  const featuredSub = subObjectives.find(
+    (sub) => sub.target.id === featuredTargetSlug
+  );
+  const featuredSubObjectiveNodes = featuredSub?.steps.map((node, index) => ({
+    position: index + 1,
+    slug: node.slug,
+    title: getGuideTitle(node.id),
+  }));
 
   const previewData = {
     slug: "",
@@ -225,6 +227,7 @@ export const PreviewObjective = ({
     summary: objectiveContData.summary || "No summary provided.",
     curator: "preview",
     created_at: "Today",
+
     featuredSubObjective: featuredSubObjectiveNodes,
     stats: [
       {
@@ -240,10 +243,17 @@ export const PreviewObjective = ({
         data: totalGuides,
       },
     ],
-    tags: objectiveContData.subjects.map((id) => ({
-      slug: id,
-      name: getSubjectName(id),
-    })),
+
+    tags: [
+      ...objectiveContData.subjects.map((id) => ({
+        slug: id,
+        name: getSubjectName(id),
+      })),
+      ...objectiveContData.newSubjects.map((subject) => ({
+        slug: subject.id ?? subject.name,
+        name: subject.name,
+      })),
+    ],
   };
 
   return (
@@ -291,20 +301,37 @@ export const PreviewObjective = ({
         <PreviewObjectiveCard objective={previewData} />
 
         <div className="space-y-6">
-          <h3 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
-            Sub-Objectives
-          </h3>
+          <div className="flex items-center justify-between gap-4">
+            <h3 className="font-mono text-[12px] tracking-[0.08em] text-muted-foreground uppercase">
+              Sub-Objectives
+            </h3>
+
+            <Button
+              variant="outline"
+              onClick={() => setView(view === "graph" ? "linear" : "graph")}
+            >
+              {view === "graph" ? "View Linear" : "View Graph"}
+            </Button>
+          </div>
+
           <Separator className="mb-4 bg-border" />
 
           {objectiveContData.targets.length === 0 ? (
             <p className="px-1 text-sm text-muted-foreground">
               No sub-objectives configured.
             </p>
+          ) : view === "graph" ? (
+            <ObjectiveGraph
+              objective={{ slug: "", title: objectiveContData.title }}
+              snapshot={snapshot}
+              guides={guideOptions}
+              preview
+            />
           ) : (
             <ol className="m-0 flex w-full list-none flex-col gap-10 px-0 pb-8">
               {objectiveContData.targets.map((targetNodeId, idx) => {
-                const sub = objectiveContData.subObjectives.find(
-                  (s) => s.targetNodeId === targetNodeId
+                const sub = subObjectives.find(
+                  (s) => s.target.id === targetNodeId
                 );
 
                 return (
@@ -356,12 +383,11 @@ export const PreviewObjective = ({
                         )}
                       </CardHeader>
                       <CardContent className="border-t p-4">
-                        {sub?.curatedSequence &&
-                        sub.curatedSequence.length > 0 ? (
+                        {sub && (
                           <ol className="relative ml-3 space-y-6 border-l border-muted-foreground/20">
-                            {sub.curatedSequence.map((stepSlug, stepIdx) => (
+                            {sub.steps.map((node, stepIdx) => (
                               <li
-                                key={stepIdx}
+                                key={node.id}
                                 className="ml-6 flex flex-col gap-1"
                               >
                                 <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full border border-muted-foreground/30 bg-background font-mono text-xs text-muted-foreground ring-4 ring-background">
@@ -369,21 +395,17 @@ export const PreviewObjective = ({
                                 </span>
                                 <div className="mt-1 flex items-center justify-between gap-4">
                                   <span className="text-sm leading-none font-medium">
-                                    {getGuideTitle(stepSlug)}
+                                    {getGuideTitle(node.id)}
                                   </span>
-                                  {getGuideDuration(stepSlug) > 0 && (
+                                  {getGuideDuration(node.id) > 0 && (
                                     <span className="shrink-0 font-mono text-[10px] text-muted-foreground uppercase">
-                                      {getGuideDuration(stepSlug)} min
+                                      {getGuideDuration(node.id)} min
                                     </span>
                                   )}
                                 </div>
                               </li>
                             ))}
                           </ol>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            Default sequence will be used.
-                          </p>
                         )}
                       </CardContent>
                     </Card>
