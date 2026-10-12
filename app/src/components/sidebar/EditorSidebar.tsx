@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import { SelectDraftModal } from "@/components/modals/SelectDraftModal";
 
-type GuideOption = Pick<GuideContribution, "title"> & {
+export type GuideOption = Pick<GuideContribution, "title"> & {
   localDraftId: string;
 };
 
@@ -50,17 +50,11 @@ export const EditorSidebar = ({
   onDeleteGuide,
 }: Props) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [selectDraftModalOpen, setSelectDraftModalOpen] = useState(false);
-  const [selectedDrafts, setSelectedDrafts] = useState<Array<string>>([]);
-
-  const handleSelectExistingDrafts = (draftIds: Array<string>) => {
-    setSelectedDrafts(draftIds);
-  };
 
   return (
     <aside
       className={cn(
-        "sticky top-[65px] max-h-[calc(100vh-65px)] shrink-0 self-start overflow-y-auto transition-[width] duration-200",
+        "sticky top-[65px] hidden max-h-[calc(100vh-65px)] shrink-0 self-start overflow-y-auto transition-[width] duration-200 md:block",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -77,80 +71,12 @@ export const EditorSidebar = ({
       >
         {/* Action buttons */}
         {!collapsed && !hideActionBtns && (
-          <div className="grid w-full grid-cols-2">
-            <DropdownMenu modal={false}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="icon-lg"
-                      className="btn-pri"
-                      aria-label="Add guide draft"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-
-                <TooltipContent>
-                  <p>Add Draft</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <DropdownMenuContent
-                align="start"
-                className="w-48 font-mono uppercase"
-              >
-                <DropdownMenuItem asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setSelectDraftModalOpen(true)}
-                    className="w-full justify-start"
-                    aria-label="Select existing draft"
-                  >
-                    <FileSearch className="h-4 w-4" />
-                    Select Existing Draft
-                  </Button>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={onAddGuide}
-                    className="w-full justify-start"
-                    aria-label="Create blank draft"
-                  >
-                    <FilePlus className="h-4 w-4" />
-                    Create Blank Draft
-                  </Button>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon-lg"
-                  onClick={() => onDeleteGuide(activeGuideId)}
-                  className="btn-destructive"
-                  disabled={guides.length <= 1}
-                  aria-label="Delete guide"
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-
-              <TooltipContent>
-                <p>Remove Draft</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <DraftActions
+            guideCount={guides.length}
+            activeGuideId={activeGuideId}
+            onAddGuide={onAddGuide}
+            onDeleteGuide={onDeleteGuide}
+          />
         )}
 
         {/* Collapse & Expand button */}
@@ -181,38 +107,116 @@ export const EditorSidebar = ({
       <Separator />
 
       {/* Guide Drafts */}
-      <ul>
-        {guides.map((guide, index) => {
-          const active = guide.localDraftId === activeGuideId;
+      <DraftList
+        guides={guides}
+        activeGuideId={activeGuideId}
+        collapsed={collapsed}
+        onSelectGuide={onSelectGuide}
+      />
+    </aside>
+  );
+};
 
-          const displayTitle = guide.title.trim() || `Guide ${index + 1}`;
+type DraftActionsProps = {
+  guideCount: number;
+  activeGuideId: string;
+  onAddGuide: () => void;
+  onDeleteGuide: (localDraftId: string) => void;
+};
 
-          return (
-            <li key={guide.localDraftId}>
-              <button
+/**
+ * add (existing / blank) and remove draft buttons
+ * shared by the desktop sidebar and the mobile drafts sheet
+ */
+export const DraftActions = ({
+  guideCount,
+  activeGuideId,
+  onAddGuide,
+  onDeleteGuide,
+}: DraftActionsProps) => {
+  const [selectDraftModalOpen, setSelectDraftModalOpen] = useState(false);
+  const [selectedDrafts, setSelectedDrafts] = useState<Array<string>>([]);
+
+  const handleSelectExistingDrafts = (draftIds: Array<string>) => {
+    setSelectedDrafts(draftIds);
+  };
+
+  return (
+    <>
+      <div className="grid w-full grid-cols-2">
+        <DropdownMenu modal={false}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon-lg"
+                  className="btn-pri"
+                  aria-label="Add guide draft"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+
+            <TooltipContent>
+              <p>Add Draft</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <DropdownMenuContent
+            align="start"
+            className="w-48 font-mono uppercase"
+          >
+            <DropdownMenuItem asChild>
+              <Button
                 type="button"
-                onClick={() => onSelectGuide(guide.localDraftId)}
-                className={cn(
-                  "data-label flex w-full items-center py-4 text-left transition-colors",
-                  collapsed ? "justify-center px-0" : "gap-4 px-2",
-                  "hover:font-bold hover:text-brand-bright-blue",
-                  active && "!font-bold !text-brand-bright-blue"
-                )}
-                title={collapsed ? displayTitle : undefined}
-                aria-current={active ? "step" : undefined}
+                variant="ghost"
+                onClick={() => setSelectDraftModalOpen(true)}
+                className="w-full justify-start"
+                aria-label="Select existing draft"
               >
-                <span className="shrink-0">{index + 1}</span>
+                <FileSearch className="h-4 w-4" />
+                Select Existing Draft
+              </Button>
+            </DropdownMenuItem>
 
-                {!collapsed && (
-                  <span className="min-w-0 truncate">{displayTitle}</span>
-                )}
-              </button>
+            <DropdownMenuItem asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onAddGuide}
+                className="w-full justify-start"
+                aria-label="Create blank draft"
+              >
+                <FilePlus className="h-4 w-4" />
+                Create Blank Draft
+              </Button>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-              <Separator />
-            </li>
-          );
-        })}
-      </ul>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon-lg"
+              onClick={() => onDeleteGuide(activeGuideId)}
+              className="btn-destructive"
+              disabled={guideCount <= 1}
+              aria-label="Delete guide"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+
+          <TooltipContent>
+            <p>Remove Draft</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       {selectDraftModalOpen && (
         <SelectDraftModal
@@ -223,6 +227,55 @@ export const EditorSidebar = ({
           onDraftsChange={handleSelectExistingDrafts}
         />
       )}
-    </aside>
+    </>
+  );
+};
+
+type DraftListProps = {
+  guides: Array<GuideOption>;
+  activeGuideId: string;
+  collapsed?: boolean;
+  onSelectGuide: (localDraftId: string) => void;
+};
+
+export const DraftList = ({
+  guides,
+  activeGuideId,
+  collapsed = false,
+  onSelectGuide,
+}: DraftListProps) => {
+  return (
+    <ul>
+      {guides.map((guide, index) => {
+        const active = guide.localDraftId === activeGuideId;
+
+        const displayTitle = guide.title.trim() || `Guide ${index + 1}`;
+
+        return (
+          <li key={guide.localDraftId}>
+            <button
+              type="button"
+              onClick={() => onSelectGuide(guide.localDraftId)}
+              className={cn(
+                "data-label flex w-full items-center py-4 text-left transition-colors",
+                collapsed ? "justify-center px-0" : "gap-4 px-2",
+                "hover:font-bold hover:text-brand-bright-blue",
+                active && "!font-bold !text-brand-bright-blue"
+              )}
+              title={collapsed ? displayTitle : undefined}
+              aria-current={active ? "step" : undefined}
+            >
+              <span className="shrink-0">{index + 1}</span>
+
+              {!collapsed && (
+                <span className="min-w-0 truncate">{displayTitle}</span>
+              )}
+            </button>
+
+            <Separator />
+          </li>
+        );
+      })}
+    </ul>
   );
 };
