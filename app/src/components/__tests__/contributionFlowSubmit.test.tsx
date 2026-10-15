@@ -68,6 +68,15 @@ vi.mock("@/components/GuideReader", () => ({
 const INCOMPLETE_DRAFT_MESSAGE =
   "Add a title, summary, body, and at least one tag before submitting";
 
+const createLocalStorageMock = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key),
+  };
+};
+
 const blankGuide = (): GuideContribution => ({
   type: "theoretical",
   title: "",
@@ -130,6 +139,11 @@ const submitAll = async () => {
 
 describe("ContributionFlow batch submit", () => {
   beforeEach(() => {
+    Object.defineProperty(window, "localStorage", {
+      value: createLocalStorageMock(),
+      writable: true,
+      configurable: true,
+    });
     clearAllStoredDrafts();
     vi.clearAllMocks();
 

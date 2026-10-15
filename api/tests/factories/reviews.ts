@@ -65,13 +65,14 @@ export async function suspendAllVerifiers() {
   const { data } = await admin
     .from("user_roles")
     .select("user_id")
-    .eq("role", "verifier");
+    .eq("role", "verifier")
+    .throwOnError();
   const ids = (data ?? []).map((r) => r.user_id);
   if (ids.length > 0) {
     await admin
-      .from("profiles")
-      .update({ is_suspended: true })
-      .in("id", ids)
+      .from("user_statuses")
+      .update({ status: "suspended" })
+      .in("user_id", ids)
       .throwOnError();
   }
 }

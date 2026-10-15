@@ -181,6 +181,7 @@ export async function listPublishedGuides(
     .from("published_guides")
     .select(PUBLISHED_GUIDE_SELECT, { count: "exact" })
     .order("title")
+    .order("id")
     .range(from, to);
 
   if (error) {
