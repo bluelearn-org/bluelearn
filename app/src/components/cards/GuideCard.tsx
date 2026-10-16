@@ -24,9 +24,10 @@ type PropTypes = {
   guide: GuideProp;
   to?: typeof GuideRoute.to;
   origin?: BreadcrumbOrigin;
+  search?: { objective?: string; target?: string };
 };
 
-export const GuideCard = ({ guide, to, origin }: PropTypes) => {
+export const GuideCard = ({ guide, to, origin, search }: PropTypes) => {
   const card = (
     <Card className="group h-full rounded-md bg-background shadow-none transition-colors hover:bg-muted">
       <CardHeader className="relative p-4">
@@ -86,6 +87,7 @@ export const GuideCard = ({ guide, to, origin }: PropTypes) => {
     <Link
       to={to}
       params={{ slug: guide.slug }}
+      search={search}
       state={{ breadcrumbOrigin: origin }}
     >
       {card}

@@ -2,11 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, PanelLeftClose } from "lucide-react";
 import type { Objective, Walkthrough } from "@bluelearn/schemas";
 import type { BreadcrumbOrigin } from "@/lib/breadcrumbs";
+import type { ObjectiveGuideSearch } from "@/lib/objectiveSnapshot";
 import { Badge } from "@/components/ui/badge";
 
 type GuideContext = {
   targetSlug: string;
   targetTitle: string;
+  // The objective the reader was opened from, handed back on return so it
+  // keeps its place in the sequence.
+  objectiveSearch?: ObjectiveGuideSearch;
 };
 
 // The objective page already sits around this panel, so it offers no way back.
@@ -35,21 +39,25 @@ export function WalkthroughPanel(props: WalkthroughPanelProps) {
   let back: { label: string; path: string } | null;
   let openSlug: string | null;
   let openOrigin: BreadcrumbOrigin | undefined;
+  let backSearch: ObjectiveGuideSearch = {};
+  let openSearch: ObjectiveGuideSearch = {};
 
   if ("objective" in props) {
     const title = props.objective.title ?? "Untitled objective";
 
     back = null;
     openSlug = props.preview ? null : props.guideSlug;
+    openSearch = { objective: props.objective.slug };
     openOrigin = {
       type: "objective",
       title,
       path: `/objectives/${props.objective.slug}`,
     };
   } else {
-    const { targetSlug, targetTitle } = props;
+    const { targetSlug, targetTitle, objectiveSearch = {} } = props;
 
     back = { label: targetTitle, path: `/guides/${targetSlug}` };
+    backSearch = objectiveSearch;
     openSlug = node.slug;
     // Opening the target keeps the trail the user arrived by; opening a
     // prerequisite makes the target the origin, since that is what led here.
@@ -57,6 +65,7 @@ export function WalkthroughPanel(props: WalkthroughPanelProps) {
       node.slug === targetSlug
         ? breadcrumbOrigin
         : { type: "guide", title: targetTitle, path: back.path };
+    openSearch = node.slug === targetSlug ? objectiveSearch : {};
   }
 
   return (
@@ -75,6 +84,7 @@ export function WalkthroughPanel(props: WalkthroughPanelProps) {
       {back && (
         <Link
           to={back.path}
+          search={backSearch}
           state={{ breadcrumbOrigin }}
           className="mono-micro flex items-center gap-2 text-muted-foreground hover:text-foreground"
         >
@@ -130,6 +140,7 @@ export function WalkthroughPanel(props: WalkthroughPanelProps) {
         <Link
           to="/guides/$slug"
           params={{ slug: openSlug }}
+          search={openSearch}
           state={{ breadcrumbOrigin: openOrigin }}
           className="btn-pri w-full"
         >
