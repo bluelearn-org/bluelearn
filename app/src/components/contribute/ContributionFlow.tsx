@@ -13,6 +13,8 @@ import type {
   VariantContribution,
 } from "@/types/contributions";
 
+import type { DraftSaveStatus } from "@/components/contribute/StepperActionHeader";
+import { DraftSaveStatusContext } from "@/components/contribute/StepperActionHeader";
 import { MobileStepProgress } from "@/components/contribute/MobileStepProgress";
 
 import { SelectType } from "@/components/contribute/steps/SelectType";
@@ -328,6 +330,8 @@ export default function ContributionFlow({
 
   const [objectiveLocalDraftId] = useState<string>(() => createLocalDraftId());
 
+  const [saveStatus, setSaveStatus] = useState<DraftSaveStatus>("idle");
+
   const [objectiveContData, setObjectiveContData] =
     useState<ObjectiveContribution>(() => {
       if (draftId || editSlug) {
@@ -370,45 +374,48 @@ export default function ContributionFlow({
   }, [initialStep]);
 
   return (
-    <Stepper.Root
-      linear
-      step={currentStep}
-      onStepChange={(newStep: string) => {
-        setCurrentStep(newStep);
-        onStepChange?.(newStep);
-      }}
-      className="flex min-h-0 w-full flex-1 flex-col gap-8"
-    >
-      {({ stepper }: any) => (
-        <Inner
-          Stepper={Stepper}
-          stepper={stepper}
-          type={type}
-          setType={setType}
-          skipTypeStep={skipTypeStep}
-          activeStep={currentStep}
-          step={step}
-          onPublished={onPublished}
-          draftId={draftId}
-          draftKind={draftKind}
-          sourceRevisionId={sourceRevisionId}
-          editSlug={editSlug}
-          todoTitle={todoTitle}
-          todoSummary={todoSummary}
-          todoIds={todoIds}
-          guideContData={guideContData}
-          setGuideContData={setGuideContData}
-          activeGuideId={activeGuideId}
-          setActiveGuideId={setActiveGuideId}
-          variantLocalDraftId={variantLocalDraftId}
-          variantContData={variantContData}
-          setVariantContData={setVariantContData}
-          objectiveLocalDraftId={objectiveLocalDraftId}
-          objectiveContData={objectiveContData}
-          setObjectiveContData={setObjectiveContData}
-        />
-      )}
-    </Stepper.Root>
+    <DraftSaveStatusContext.Provider value={saveStatus}>
+      <Stepper.Root
+        linear
+        step={currentStep}
+        onStepChange={(newStep: string) => {
+          setCurrentStep(newStep);
+          onStepChange?.(newStep);
+        }}
+        className="flex min-h-0 w-full flex-1 flex-col gap-8"
+      >
+        {({ stepper }: any) => (
+          <Inner
+            Stepper={Stepper}
+            stepper={stepper}
+            type={type}
+            setType={setType}
+            skipTypeStep={skipTypeStep}
+            activeStep={currentStep}
+            step={step}
+            onPublished={onPublished}
+            draftId={draftId}
+            draftKind={draftKind}
+            sourceRevisionId={sourceRevisionId}
+            editSlug={editSlug}
+            todoTitle={todoTitle}
+            todoSummary={todoSummary}
+            todoIds={todoIds}
+            guideContData={guideContData}
+            setGuideContData={setGuideContData}
+            activeGuideId={activeGuideId}
+            setActiveGuideId={setActiveGuideId}
+            variantLocalDraftId={variantLocalDraftId}
+            variantContData={variantContData}
+            setVariantContData={setVariantContData}
+            objectiveLocalDraftId={objectiveLocalDraftId}
+            objectiveContData={objectiveContData}
+            setObjectiveContData={setObjectiveContData}
+            setSaveStatus={setSaveStatus}
+          />
+        )}
+      </Stepper.Root>
+    </DraftSaveStatusContext.Provider>
   );
 }
 
@@ -438,6 +445,7 @@ function Inner({
   objectiveLocalDraftId,
   objectiveContData,
   setObjectiveContData,
+  setSaveStatus,
 }: {
   Stepper: any;
   stepper: any;
@@ -468,6 +476,7 @@ function Inner({
   objectiveLocalDraftId: string;
   objectiveContData: ObjectiveContribution;
   setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
+  setSaveStatus: Dispatch<SetStateAction<DraftSaveStatus>>;
 }) {
   const activeGuide: MultiGuide = useMemo(() => {
     const foundGuide = guideContData.find(
@@ -541,8 +550,29 @@ function Inner({
     if (draftId) {
       return draftId;
     }
+
+    if (!editSlug && type === "variant") {
+      return getStoredDraftsByType("variant")[0]?.revisionId ?? null;
+    }
+
+    if (!editSlug && type === "objective") {
+      return getStoredDraftsByType("objective")[0]?.revisionId ?? null;
+    }
+
     return null;
   });
+
+  useEffect(() => {
+    if (draftId || editSlug) {
+      return;
+    }
+
+    if (type === "variant") {
+      setRevisionId(getStoredDraftsByType("variant")[0]?.revisionId ?? null);
+    } else if (type === "objective") {
+      setRevisionId(getStoredDraftsByType("objective")[0]?.revisionId ?? null);
+    }
+  }, [draftId, editSlug, type]);
 
   const [autosaveReady, setAutosaveReady] = useState(!draftId && !editSlug);
 
@@ -576,26 +606,6 @@ function Inner({
     step
   );
 
-  // whether the active contribution has edits that haven't been saved yet
-  const isDirty =
-    type === "guide"
-      ? guideSave.isDirty
-      : type === "variant"
-        ? variantSave.isDirty
-        : type === "objective"
-          ? objectiveSave.isDirty
-          : false;
-
-  // whether the locally saved content is confirmed saved to the server too
-  const isSynced =
-    type === "guide"
-      ? guideSave.isSynced
-      : type === "variant"
-        ? variantSave.isSynced
-        : type === "objective"
-          ? objectiveSave.isSynced
-          : true;
-
   const [submitting, setSubmitting] = useState(false);
 
   const [publishAttempted, setPublishAttempted] = useState(false);
@@ -605,12 +615,12 @@ function Inner({
   const storeContributionDraft = (
     draftType: ContributionType,
     data: GuideContribution | VariantContribution | ObjectiveContribution,
-    localDraftId: string,
+    draftLocalId: string,
     serverRevisionId: string | null,
     draftStep?: string
   ) => {
     setStoredDraft({
-      localDraftId,
+      localDraftId: draftLocalId,
       type: draftType,
       data,
       revisionId: serverRevisionId,
@@ -826,6 +836,7 @@ function Inner({
 
         setShowChangeSummary(!!data.objective.current_revision_id);
         setType("objective");
+        setAutosaveReady(true);
         requestAnimationFrame(() => stepper.goTo("objective-details"));
       })
       .catch(() => {
@@ -1070,6 +1081,202 @@ function Inner({
     return creatingRef.current;
   };
 
+  const persistAndStoreDraft = async () => {
+    const id = await persistDraft();
+
+    if (type === "guide") {
+      storeContributionDraft(
+        "guide",
+        savedGuide,
+        activeGuide.localDraftId,
+        id,
+        step
+      );
+
+      if (id && id !== activeGuide.revisionId) {
+        setGuideContData((prev) =>
+          prev.map((guide) =>
+            guide.localDraftId === activeGuide.localDraftId
+              ? { ...guide, revisionId: id }
+              : guide
+          )
+        );
+      }
+    }
+
+    if (type === "variant") {
+      storeContributionDraft(
+        "variant",
+        variantContData,
+        variantLocalDraftId,
+        id,
+        step
+      );
+    }
+
+    if (type === "objective") {
+      storeContributionDraft(
+        "objective",
+        objectiveContData,
+        objectiveLocalDraftId,
+        id,
+        step
+      );
+    }
+
+    return id;
+  };
+
+  const persistDraftRef = useRef(persistAndStoreDraft);
+  persistDraftRef.current = persistAndStoreDraft;
+
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveRunRef = useRef(0);
+  const autosaveInFlightRef = useRef(false);
+  const autosaveQueuedRef = useRef(false);
+  const runAutosaveRef = useRef<() => void>(() => {});
+
+  const autosaveDataKey =
+    type === "guide"
+      ? JSON.stringify(savedGuide)
+      : type === "variant"
+        ? JSON.stringify(variantContData)
+        : type === "objective"
+          ? JSON.stringify(objectiveContData)
+          : "";
+
+  const hasAutosaveContent =
+    type === "guide"
+      ? Boolean(
+          savedGuide.title.trim() ||
+          savedGuide.summary.trim() ||
+          savedGuide.body.trim() ||
+          savedGuide.subjects.length ||
+          savedGuide.newSubjects.length
+        )
+      : type === "variant"
+        ? Boolean(
+            variantContData.title.trim() ||
+            variantContData.summary.trim() ||
+            variantContData.body.trim() ||
+            variantContData.baseGuide
+          )
+        : type === "objective"
+          ? Boolean(
+              objectiveContData.title.trim() ||
+              objectiveContData.summary.trim() ||
+              objectiveContData.changeSummary.trim() ||
+              objectiveContData.subjects.length ||
+              objectiveContData.targets.length
+            )
+          : false;
+
+  const hasServerAutosavePrerequisites =
+    type === "guide"
+      ? true
+      : type === "variant"
+        ? Boolean(
+            variantContData.baseGuide &&
+            guideOptions.some(
+              (guide) => guide.slug === variantContData.baseGuide
+            )
+          )
+        : type === "objective"
+          ? objectiveContData.targets.length > 0 &&
+            objectiveContData.targets.every((slug) =>
+              guideOptions.some((guide) => guide.slug === slug)
+            ) &&
+            objectiveContData.subObjectives.every((subObjective) =>
+              subObjective.curatedSequence.every((slug) =>
+                guideOptions.some((guide) => guide.slug === slug)
+              )
+            )
+          : false;
+
+  runAutosaveRef.current = () => {
+    if (autosaveInFlightRef.current) {
+      autosaveQueuedRef.current = true;
+      return;
+    }
+
+    autosaveInFlightRef.current = true;
+    const run = autosaveRunRef.current;
+
+    persistDraftRef
+      .current()
+      .then(() => {
+        if (run === autosaveRunRef.current) {
+          setSaveStatus("saved");
+        }
+      })
+      .catch((error) => {
+        if (run === autosaveRunRef.current) {
+          setSaveStatus("error");
+          toast.error(
+            error instanceof Error ? error.message : "Could not save draft"
+          );
+        }
+      })
+      .finally(() => {
+        autosaveInFlightRef.current = false;
+
+        if (autosaveQueuedRef.current) {
+          autosaveQueuedRef.current = false;
+          autosaveTimerRef.current = setTimeout(() => {
+            autosaveTimerRef.current = null;
+            runAutosaveRef.current();
+          }, 2_000);
+        }
+      });
+  };
+
+  useEffect(() => {
+    if (
+      !autosaveReady ||
+      !type ||
+      !hasAutosaveContent ||
+      !hasServerAutosavePrerequisites
+    ) {
+      if (!hasAutosaveContent || !hasServerAutosavePrerequisites) {
+        setSaveStatus("idle");
+      }
+      return;
+    }
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveRunRef.current += 1;
+    setSaveStatus("saving");
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      runAutosaveRef.current();
+    }, 2_000);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    autosaveDataKey,
+    autosaveReady,
+    guideOptions,
+    hasAutosaveContent,
+    hasServerAutosavePrerequisites,
+    type,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, []);
+
   // image upload
   const uploadGuideImage = async (file: File) => {
     try {
@@ -1152,6 +1359,7 @@ function Inner({
 
       return true;
     } catch (e) {
+      setSaveStatus("error");
       toast.error(e instanceof Error ? e.message : "Could not save draft");
 
       return false;
@@ -1423,8 +1631,6 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
         />
 
         <PreviewGuide
@@ -1439,8 +1645,6 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
         />
 
         <VariantInfo
@@ -1455,8 +1659,6 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
         />
 
         <PreviewVariant
@@ -1467,8 +1669,6 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
         />
 
         <ObjectiveDetails
@@ -1481,8 +1681,6 @@ function Inner({
           hideBackBtn={skipTypeStep}
           onSaveDraft={saveDraft}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
         />
 
         <OrderTargetGuides
@@ -1491,8 +1689,6 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
           guides={guideOptions}
         />
 
@@ -1521,8 +1717,6 @@ function Inner({
           setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
           guides={guideOptions}
         />
 
@@ -1533,8 +1727,6 @@ function Inner({
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
-          isDirty={isDirty}
-          isSynced={isSynced}
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
         />
