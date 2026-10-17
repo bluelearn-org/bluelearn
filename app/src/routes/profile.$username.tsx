@@ -1,6 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { profileActivitySearchSchema } from "@bluelearn/schemas";
 import type { ProfileActivitySearch } from "@bluelearn/schemas";
+import { useAuth } from "@/lib/authContext";
 import { getAvatarUrl, getInitials } from "@/lib/profile";
 import { getProfilePage } from "@/lib/api/identity";
 import { cn } from "@/lib/utils";
@@ -49,6 +54,8 @@ function ProfilePage() {
   const { username } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const router = useRouter();
+  const { session } = useAuth();
 
   const setFilters = (next: Partial<ProfileActivitySearch>) =>
     navigate({
@@ -139,6 +146,9 @@ function ProfilePage() {
         <Separator className="mb-8 bg-border" />
 
         <ActivityTable
+          key={profile.id}
+          canDeleteDrafts={session?.user.id === profile.id}
+          onDeleted={() => router.invalidate()}
           activity={activity}
           search={search}
           setFilters={setFilters}
