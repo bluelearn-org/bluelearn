@@ -30,9 +30,12 @@ export async function listGuidesPage(
   return res.json();
 }
 
-export async function getGuide(slug: string, { signal }: FetchOptions = {}) {
+export async function getGuide(
+  slug: string,
+  { signal, mature }: FetchOptions & { mature?: "confirmed" } = {}
+) {
   const res = await guides[":slug"].$get(
-    { param: { slug } },
+    { param: { slug }, query: { mature } },
     { init: { signal } }
   );
   if (!res.ok) return assertOk(res) as Promise<never>;

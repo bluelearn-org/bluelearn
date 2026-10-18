@@ -8,7 +8,7 @@ import remarkDirective from "remark-directive";
 
 import { Calendar, Clock, ShieldCheck, User } from "lucide-react";
 import { createElement } from "react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { Guide } from "@bluelearn/schemas";
 import type { GuideType } from "@/types/guides";
 import { remarkCallout } from "@/lib/remarkCallout";
@@ -18,6 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { CodeBlock } from "@/components/CodeBlock";
 import { Callout } from "@/components/Callout";
 import { GuideToc } from "@/components/GuideToc";
+import {
+  MatureContentIcon,
+  matureContentColor,
+} from "@/components/MatureContentNotice";
 
 import { formatDate, formatDuration, getHeadingId } from "@/lib/guideUtils";
 
@@ -45,6 +49,7 @@ type PropTypes = {
   guideType?: GuideType;
   showToc?: boolean;
   isOfficial?: boolean;
+  contentNotice?: ReactNode;
 };
 
 export const GuideReader = ({
@@ -52,6 +57,7 @@ export const GuideReader = ({
   guideType,
   showToc = false,
   isOfficial = false,
+  contentNotice,
 }: PropTypes) => {
   const created = new Date(guide.created_at);
   const createdLabel = Number.isNaN(created.getTime())
@@ -96,7 +102,7 @@ export const GuideReader = ({
       <header className="mb-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
-            {showToc && <GuideToc body={guide.body ?? ""} />}
+            {showToc && !contentNotice && <GuideToc body={guide.body ?? ""} />}
             <h1 className="text-3xl font-bold">{guide.title}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -137,6 +143,14 @@ export const GuideReader = ({
             <Clock className="h-3 w-3 text-muted-foreground/75" />
             {formatDuration(guide.duration_minutes)}
           </span>
+          {guide.disclaimers.includes("mature") && (
+            <span
+              className={`flex items-center gap-1 font-bold ${matureContentColor}`}
+            >
+              <MatureContentIcon className="size-5 border-[1.5px] text-[9px]" />
+              Mature content
+            </span>
+          )}
         </div>
 
         {guide.tags.length > 0 && (
@@ -162,59 +176,64 @@ export const GuideReader = ({
 
       <Separator className="mb-8" />
 
-      <article className="markdown">
-        <ReactMarkdown
-          remarkPlugins={[
-            remarkGfm,
-            remarkMath,
-            remarkDirective,
-            remarkCallout,
-            remarkIndentedCodeAsParagraph,
-          ]}
-          rehypePlugins={[
-            rehypeRaw,
-            [rehypeSanitize, sanitizeSchema],
-            rehypeKatex,
-          ]}
-          components={{
-            h1: renderHeading(1),
-            h2: renderHeading(2),
-            h3: renderHeading(3),
-            h4: renderHeading(4),
-            h5: renderHeading(5),
-            h6: renderHeading(6),
-            pre({ children }) {
-              const child = children as ReactElement<{
-                className?: string;
-                children?: React.ReactNode;
-              }>;
+      {contentNotice ?? (
+        <article className="markdown">
+          <ReactMarkdown
+            remarkPlugins={[
+              remarkGfm,
+              remarkMath,
+              remarkDirective,
+              remarkCallout,
+              remarkIndentedCodeAsParagraph,
+            ]}
+            rehypePlugins={[
+              rehypeRaw,
+              [rehypeSanitize, sanitizeSchema],
+              rehypeKatex,
+            ]}
+            components={{
+              h1: renderHeading(1),
+              h2: renderHeading(2),
+              h3: renderHeading(3),
+              h4: renderHeading(4),
+              h5: renderHeading(5),
+              h6: renderHeading(6),
+              pre({ children }) {
+                const child = children as ReactElement<{
+                  className?: string;
+                  children?: React.ReactNode;
+                }>;
 
-              const code = String(child.props.children).replace(/\n$/, "");
-              const language = child.props.className?.replace("language-", "");
+                const code = String(child.props.children).replace(/\n$/, "");
+                const language = child.props.className?.replace(
+                  "language-",
+                  ""
+                );
 
-              return <CodeBlock code={code} language={language} />;
-            },
+                return <CodeBlock code={code} language={language} />;
+              },
 
-            code({ children, className }) {
-              if (className) {
-                return <code className={className}>{children}</code>;
-              }
+              code({ children, className }) {
+                if (className) {
+                  return <code className={className}>{children}</code>;
+                }
 
-              return (
-                <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                  {children}
-                </code>
-              );
-            },
-            // @ts-expect-error custom component callout
-            callout({ node, children, ...props }: any) {
-              return <Callout type={props.type}>{children}</Callout>;
-            },
-          }}
-        >
-          {guide.body ?? ""}
-        </ReactMarkdown>
-      </article>
+                return (
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
+                    {children}
+                  </code>
+                );
+              },
+              // @ts-expect-error custom component callout
+              callout({ node, children, ...props }: any) {
+                return <Callout type={props.type}>{children}</Callout>;
+              },
+            }}
+          >
+            {guide.body ?? ""}
+          </ReactMarkdown>
+        </article>
+      )}
     </>
   );
 };
