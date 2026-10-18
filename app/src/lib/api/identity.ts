@@ -3,6 +3,18 @@ import { assertOk } from "@/lib/api/apiHelpers";
 
 const me = client.me;
 
+export async function getMyDateOfBirth() {
+  const res = await me["date-of-birth"].$get();
+  await assertOk(res);
+  return res.json();
+}
+
+export async function updateMyDateOfBirth(date_of_birth: string | null) {
+  const res = await me["date-of-birth"].$patch({ json: { date_of_birth } });
+  await assertOk(res);
+  return res.json();
+}
+
 type FetchOptions = { signal?: AbortSignal };
 
 export async function getMyIdentity({ signal }: FetchOptions = {}) {

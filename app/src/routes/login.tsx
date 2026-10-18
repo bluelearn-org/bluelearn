@@ -4,6 +4,16 @@ import { useRedirectIfAuthed } from "@/lib/authContext";
 import { buildPageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { confirmAge?: boolean; welcome?: boolean } => ({
+    confirmAge:
+      search.confirmAge === true || search.confirmAge === "true"
+        ? true
+        : undefined,
+    welcome:
+      search.welcome === true || search.welcome === "true" ? true : undefined,
+  }),
   head: () => ({
     meta: buildPageMeta(
       "Log In",
@@ -14,7 +24,10 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-  useRedirectIfAuthed();
+  const { confirmAge, welcome } = Route.useSearch();
+  useRedirectIfAuthed(
+    confirmAge ? "/settings/account" : welcome ? "/welcome" : "/"
+  );
 
   return (
     <div className="flex min-h-[calc(100svh_-_70px)] flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">

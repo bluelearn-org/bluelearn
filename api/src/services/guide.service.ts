@@ -21,6 +21,7 @@ import { claimTodos } from "./todo.service";
 import { readingMinutes } from "../lib/reading";
 import { loadUsernames } from "./identity.service";
 import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
+import { getContentAccess, getReaderMetadata } from "./mature-content.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -340,7 +341,11 @@ async function loadRequests(
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
-export async function getGuideBySlug(supabase: DB, rawSlug: string) {
+export async function getGuideBySlug(
+  supabase: DB,
+  rawSlug: string,
+  confirmed = false
+) {
   const slug = rawSlug.toLowerCase();
 
   const { data: guide, error } = await supabase
@@ -358,7 +363,9 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
   if (!guide) throw new ServiceError("Guide not found", 404);
 
   const canonical = guide.canonical;
-  const current = canonical?.current ?? null;
+  const current =
+    canonical?.current ??
+    (canonical ? await getReaderMetadata(supabase, canonical.id) : null);
 
   const [subjects, prerequisites, requests, follow_ups, disclaimers] =
     await Promise.all([
@@ -369,6 +376,11 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
       loadDisclaimers(supabase, guide.id),
     ]);
   const authorId = canonical?.author_id ?? null;
+  const contentAccess = await getContentAccess(
+    supabase,
+    disclaimers,
+    confirmed
+  );
   const usernames = await loadUsernames(supabase, [authorId]);
 
   const detail: Guide = {
@@ -379,7 +391,8 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
     author: authorId ? (usernames.get(authorId) ?? "") : "",
     knowledge_type: guide.knowledge_type,
     summary: current?.summary ?? null,
-    body: current?.body ?? null,
+    body: contentAccess === "allowed" ? (current?.body ?? null) : null,
+    content_access: contentAccess,
     duration_minutes: readingMinutes(current?.word_count ?? 0),
     created_at: guide.created_at,
     tags: subjects.map((s) => ({ slug: s.slug, name: s.name })),
@@ -589,7 +602,8 @@ export async function addGuideVariant(
 export async function getVariantBySlug(
   supabase: DB,
   rawSlug: string,
-  rawVariantSlug: string
+  rawVariantSlug: string,
+  confirmed = false
 ) {
   const baseId = await resolveBaseId(supabase, rawSlug);
 
@@ -630,17 +644,25 @@ export async function getVariantBySlug(
     throw new ServiceError("Failed to load vote tally", 500);
   }
 
-  const { author_id, current, base, ...rest } = variant;
+  const { author_id, current: visibleCurrent, base, ...rest } = variant;
+  const current =
+    visibleCurrent ?? (await getReaderMetadata(supabase, variant.id));
+  const contentAccess = await getContentAccess(
+    supabase,
+    disclaimers,
+    confirmed
+  );
 
   return {
     variant: {
       ...rest,
+      content_access: contentAccess,
       current: current
         ? {
             id: current.id,
             title: current.title,
             summary: current.summary,
-            body: current.body,
+            body: contentAccess === "allowed" ? current.body : null,
             created_at: current.created_at,
           }
         : null,

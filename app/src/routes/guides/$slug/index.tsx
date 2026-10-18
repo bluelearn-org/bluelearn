@@ -23,6 +23,7 @@ import { buildGuideMeta } from "@/lib/guideUtils";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
+import { useMatureContent } from "@/lib/useMatureContent";
 import { GuideReader } from "@/components/GuideReader";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import {
@@ -58,6 +59,7 @@ function RouteComponent() {
   const canAuthor = useSuspensionStatus() === "active";
   const { slug } = Route.useParams();
   const guide = Route.useLoaderData();
+  const reader = useMatureContent({ guide });
 
   const { vote, tally, submitting, upvote, downvote, removeVote } = useVote(
     guide.variant_id
@@ -99,7 +101,7 @@ function RouteComponent() {
               isOfficial={guide.is_official}
             />
           }
-          guide={guide}
+          guide={{ ...guide, body: reader.body }}
           slug={slug}
         />
 
@@ -245,7 +247,8 @@ function RouteComponent() {
           {/* Header */}
 
           <GuideReader
-            guide={guide}
+            guide={{ ...guide, body: reader.body }}
+            contentNotice={reader.contentNotice}
             guideType={guide.knowledge_type}
             showToc
             isOfficial={guide.is_official}
