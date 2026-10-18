@@ -14,6 +14,7 @@ type DraftTagsAndEdges = {
   prerequisites?: string[];
   newSubjects?: { name: string; summary?: string | null }[];
   requests?: { title: string; summary: string }[];
+  follow_ups?: string[];
 };
 
 // The full snapshot of a single revision. RLS exposes a revision once it is
@@ -127,17 +128,59 @@ export async function resolveRevisionBase(supabase: DB, revisionId: string) {
 }
 
 // Fetches a list of slugs that are proposed as new edges for a revision
-// TODO: differentiate between prereqs and follow-ups.
-// Probably need a new column for this
-async function loadRevisionEdges(supabase: DB, revisionId: string) {
+// async function loadRevisionEdges(supabase: DB, revisionId: string) {
+//   const [prereqs, followUps] = await Promise.all([
+//     supabase.from("guide_revision_edges")
+//       .select("from:guide_bases!guide_revision_edges_new_edge_id_fkey(slug)")
+//       .eq("guide_revision_id", revisionId)
+//       .eq("edge_type", "prereq"),
+//     supabase.from("guide_revision_edges")
+//       .select("from:guide_bases!guide_revision_edges_new_edge_id_fkey(slug)")
+//       .eq("guide_revision_id", revisionId)
+//       .eq("edge_type", "follow-up"),
+//   ]);
+//   const { data, error } = await supabase
+//     .from("guide_revision_edges")
+//     .select("from:guide_bases!guide_revision_edges_new_edge_id_fkey(slug)")
+//     .eq("guide_revision_id", revisionId);
+//
+//   if (error) {
+//     console.error(error);
+//     throw new ServiceError("Failed to fetch revision's edge", 500);
+//   }
+//
+//   return (data ?? [])
+//     .map((e) => e.from?.slug)
+//     .filter((s): s is string => s != null);
+// }
+
+async function loadRevisionPrerequisites(supabase: DB, revisionId: string) {
   const { data, error } = await supabase
     .from("guide_revision_edges")
     .select("from:guide_bases!guide_revision_edges_new_edge_id_fkey(slug)")
-    .eq("guide_revision_id", revisionId);
+    .eq("guide_revision_id", revisionId)
+    .eq("edge_type", "prereq");
 
   if (error) {
     console.error(error);
-    throw new ServiceError("Failed to fetch revision's edge", 500);
+    throw new ServiceError("Failed to fetch revision's prereqs", 500);
+  }
+
+  return (data ?? [])
+    .map((e) => e.from?.slug)
+    .filter((s): s is string => s != null);
+}
+
+async function loadRevisionFollowUps(supabase: DB, revisionId: string) {
+  const { data, error } = await supabase
+    .from("guide_revision_edges")
+    .select("from:guide_bases!guide_revision_edges_new_edge_id_fkey(slug)")
+    .eq("guide_revision_id", revisionId)
+    .eq("edge_type", "follow-up");
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to fetch revision's follow_ups", 500);
   }
 
   return (data ?? [])
@@ -163,11 +206,16 @@ async function loadRevisionRequests(supabase: DB, revisionId: string) {
 async function createRevisionEdge(
   supabase: DB,
   revisionId: string,
-  prerequisiteBaseId: string
+  newEdgeId: string,
+  newEdgeType: "prereq" | "follow-up"
 ) {
   const { error } = await supabase
     .from("guide_revision_edges")
-    .insert({ guide_revision_id: revisionId, new_edge_id: prerequisiteBaseId });
+    .insert({
+      guide_revision_id: revisionId,
+      new_edge_id: newEdgeId,
+      edge_type: newEdgeType,
+    });
 
   if (error) {
     console.error(error);
@@ -175,10 +223,11 @@ async function createRevisionEdge(
   }
 }
 
-async function replaceRevisionEdges(
+// Resolve slugs to unique ids, then clear existing edges. Insert all resolved ids.
+async function replaceRevisionPrereqs(
   supabase: DB,
   revisionId: string,
-  slugs: string[]
+  slugs: string[] // TODO: replace this with map of slugs and edge type
 ) {
   const unique = [...new Set(slugs.map((s) => s.toLowerCase()))];
 
@@ -188,15 +237,17 @@ async function replaceRevisionEdges(
       .from("guide_bases")
       .select("id, slug")
       .in("slug", unique);
+
     if (error) {
       console.error(error);
       throw new ServiceError("Failed to resolve prerequisites", 500);
     }
     if ((data ?? []).length !== unique.length) {
-      throw new ServiceError("Unknown prerequisite guide", 400);
+      throw new ServiceError("Unknown prerequisite guide");
     }
     prereqIds = (data ?? []).map((b) => b.id);
   }
+
   const { error: delError } = await supabase
     .from("guide_revision_edges")
     .delete()
@@ -208,7 +259,37 @@ async function replaceRevisionEdges(
   }
 
   for (const prereq of prereqIds) {
-    await createRevisionEdge(supabase, revisionId, prereq);
+    await createRevisionEdge(supabase, revisionId, prereq, "prereq");
+  }
+}
+
+// Resolve slugs to unique ids, then clear existing edges. Insert all resolved ids.
+async function replaceRevisionFollowUps(
+  supabase: DB,
+  revisionId: string,
+  slugs: string[]
+) {
+  const unique = [...new Set(slugs.map((s) => s.toLowerCase()))];
+
+  let followUpIds: string[] = [];
+  if (unique.length > 0) {
+    const { data, error } = await supabase
+      .from("guide_bases")
+      .select("id, slug")
+      .in("slug", unique);
+
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Failed to resolve follow-ups", 500);
+    }
+    if ((data ?? []).length !== unique.length) {
+      throw new ServiceError("Unknown follow-up guide");
+    }
+    followUpIds = (data ?? []).map((b) => b.id);
+  }
+
+  for (const followUp of followUpIds) {
+    await createRevisionEdge(supabase, revisionId, followUp, "follow-up");
   }
 }
 
@@ -256,7 +337,7 @@ export async function syncDraftTagsAndEdges(
   revisionId: string,
   input: DraftTagsAndEdges
 ) {
-  const { tags, prerequisites, newSubjects = [], requests } = input;
+  const { tags, prerequisites, follow_ups, newSubjects = [], requests } = input;
 
   const createdIds: string[] = [];
   for (const s of newSubjects) {
@@ -275,8 +356,14 @@ export async function syncDraftTagsAndEdges(
     ]);
   }
 
+  // Updates drafts edges & requests.
+  // Prereqs and follow ups are seperate here, but stored in the same edges table
+  // This is because frontend handles them differently, but backend just saves them as edges
   if (prerequisites !== undefined) {
-    await replaceRevisionEdges(supabase, revisionId, prerequisites);
+    await replaceRevisionPrereqs(supabase, revisionId, prerequisites);
+  }
+  if (follow_ups !== undefined) {
+    await replaceRevisionFollowUps(supabase, revisionId, follow_ups);
   }
   if (requests !== undefined) {
     await replaceRevisionRequests(supabase, revisionId, requests);
@@ -360,14 +447,21 @@ export async function getRevision(supabase: DB, id: string) {
   }
   if (!data) throw new ServiceError("Revision not found", 404);
   const { revised_from_revision_id, ...revision } = data;
-  const [context, revised_from_case_id, subjects, prerequisites, todos] =
-    await Promise.all([
-      loadDraftContext(supabase, revision.guide_id),
-      loadRevisedFromCaseId(supabase, revised_from_revision_id),
-      loadRevisionTags(supabase, id),
-      loadRevisionEdges(supabase, id),
-      loadRevisionRequests(supabase, id),
-    ]);
+  const [
+    context,
+    revised_from_case_id,
+    subjects,
+    prerequisites,
+    followUps,
+    todos,
+  ] = await Promise.all([
+    loadDraftContext(supabase, revision.guide_id),
+    loadRevisedFromCaseId(supabase, revised_from_revision_id),
+    loadRevisionTags(supabase, id),
+    loadRevisionPrerequisites(supabase, id),
+    loadRevisionFollowUps(supabase, id),
+    loadRevisionRequests(supabase, id),
+  ]);
   const { knowledge_type, is_variant, base_slug, variant_slug, disclaimers } =
     context;
   return {
@@ -379,6 +473,7 @@ export async function getRevision(supabase: DB, id: string) {
     variant_slug,
     prerequisites,
     todos,
+    followUps,
     revised_from_case_id,
     disclaimers,
   };
@@ -414,8 +509,15 @@ export async function updateRevision(
   id: string,
   input: UpdateRevisionInput
 ) {
-  const { tags, prerequisites, newSubjects, requests, disclaimers, ...fields } =
-    input;
+  const {
+    tags,
+    prerequisites,
+    newSubjects,
+    requests,
+    disclaimers,
+    follow_ups,
+    ...fields
+  } = input;
 
   const patch = {
     ...fields,
@@ -469,6 +571,7 @@ export async function updateRevision(
     prerequisites,
     newSubjects,
     requests,
+    follow_ups,
   });
 
   if (disclaimers !== undefined) {

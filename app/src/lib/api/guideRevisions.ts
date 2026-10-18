@@ -33,6 +33,7 @@ export type RemoteRevision = {
     title: string;
     summary: string;
   }>;
+  followUps: Array<string>;
   revised_from_case_id: string | null;
   disclaimers: Array<
     "medical" | "financial" | "legal" | "mature" | "profanity"

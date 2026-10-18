@@ -1,8 +1,11 @@
+create type new_edge_type as enum ('prereq', 'follow-up');
+
 create table if not exists public.guide_revision_edges(
   guide_revision_id uuid not null
     references public.guide_revisions(id) on delete cascade,
   new_edge_id uuid not null
     references public.guide_bases(id) on delete cascade, 
+  edge_type new_edge_type not null,
   primary key (guide_revision_id, new_edge_id)
 );
 

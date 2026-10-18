@@ -42,6 +42,7 @@ const sampleGuide: GuideContribution = {
   subjects: ["sub-1"],
   newSubjects: [],
   prereqs: [],
+  followUps: [],
   requests: [],
   disclaimers: [],
 };
@@ -237,6 +238,7 @@ describe("contributionStorage", () => {
       newSubjects: [],
       prereqs: [],
       requests: [],
+      followUps: [],
       disclaimers: [],
     };
 

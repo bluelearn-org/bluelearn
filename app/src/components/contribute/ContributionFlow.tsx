@@ -81,6 +81,7 @@ const createGuideContData = (): GuideContribution => ({
   subjects: [],
   newSubjects: [],
   prereqs: [],
+  followUps: [],
   requests: [],
   disclaimers: [],
 });
@@ -100,6 +101,7 @@ const createVariantContData = (): VariantContribution => ({
   newSubjects: [],
   prereqs: [],
   requests: [],
+  followUps: [],
   body: "",
   disclaimers: [],
 });
@@ -649,6 +651,7 @@ function Inner({
             subjects: tagged,
             newSubjects: pending,
             prereqs: data.prerequisites,
+            followUps: [],
             requests: data.todos,
             disclaimers: data.disclaimers,
           };
@@ -674,6 +677,7 @@ function Inner({
             newSubjects: pending,
             prereqs: data.prerequisites,
             requests: data.todos,
+            followUps: [],
             disclaimers: data.disclaimers,
           };
 
@@ -691,6 +695,7 @@ function Inner({
               subjects: gData.subjects,
               newSubjects: gData.newSubjects,
               prereqs: gData.prereqs,
+              followUps: [],
               requests: gData.requests,
               disclaimers: gData.disclaimers,
             },

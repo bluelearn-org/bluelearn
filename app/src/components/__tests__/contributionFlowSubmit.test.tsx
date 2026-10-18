@@ -77,6 +77,7 @@ const blankGuide = (): GuideContribution => ({
   newSubjects: [],
   prereqs: [],
   requests: [],
+  followUps: [],
   disclaimers: [],
 });
 

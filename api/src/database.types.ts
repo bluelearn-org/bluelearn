@@ -248,14 +248,17 @@ export type Database = {
       }
       guide_revision_edges: {
         Row: {
+          edge_type: Database["public"]["Enums"]["new_edge_type"]
           guide_revision_id: string
           new_edge_id: string
         }
         Insert: {
+          edge_type: Database["public"]["Enums"]["new_edge_type"]
           guide_revision_id: string
           new_edge_id: string
         }
         Update: {
+          edge_type?: Database["public"]["Enums"]["new_edge_type"]
           guide_revision_id?: string
           new_edge_id?: string
         }
@@ -1478,6 +1481,7 @@ export type Database = {
         | "scope_creep"
       edge_type: "prerequisite" | "related"
       knowledge_type: "theoretical" | "practical"
+      new_edge_type: "prereq" | "follow-up"
       node_status: "draft" | "published" | "archived"
       objective_revision_status: "draft" | "published"
       review_outcome: "approved" | "rejected"
@@ -1645,6 +1649,7 @@ export const Constants = {
       ],
       edge_type: ["prerequisite", "related"],
       knowledge_type: ["theoretical", "practical"],
+      new_edge_type: ["prereq", "follow-up"],
       node_status: ["draft", "published", "archived"],
       objective_revision_status: ["draft", "published"],
       review_outcome: ["approved", "rejected"],
