@@ -1101,6 +1101,266 @@ export type Database = {
           },
         ]
       }
+      review_suggestions: {
+        Row: {
+          applied_revision_id: string | null
+          author_id: string | null
+          block_index: number
+          block_length: number
+          case_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          note: string | null
+          proposed: string
+          quote: string
+          revision_id: string
+          source_end: number
+          source_start: number
+          source_text: string
+          status: Database["public"]["Enums"]["review_suggestion_status"]
+        }
+        Insert: {
+          applied_revision_id?: string | null
+          author_id?: string | null
+          block_index: number
+          block_length: number
+          case_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          note?: string | null
+          proposed: string
+          quote: string
+          revision_id: string
+          source_end: number
+          source_start: number
+          source_text: string
+          status?: Database["public"]["Enums"]["review_suggestion_status"]
+        }
+        Update: {
+          applied_revision_id?: string | null
+          author_id?: string | null
+          block_index?: number
+          block_length?: number
+          case_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          note?: string | null
+          proposed?: string
+          quote?: string
+          revision_id?: string
+          source_end?: number
+          source_start?: number
+          source_text?: string
+          status?: Database["public"]["Enums"]["review_suggestion_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_suggestions_applied_revision_id_fkey"
+            columns: ["applied_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_applied_revision_id_fkey"
+            columns: ["applied_revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "review_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_suggestions_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+        ]
+      }
+      review_thread_replies: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          thread_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          thread_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_thread_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_thread_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_thread_replies_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "review_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_threads: {
+        Row: {
+          anchor_kind: Database["public"]["Enums"]["review_anchor_kind"]
+          author_id: string | null
+          body: string
+          case_id: string
+          created_at: string
+          end_block: number
+          end_offset: number
+          id: string
+          quote: string
+          revision_id: string
+          source_end: number | null
+          source_start: number | null
+          source_text: string | null
+          start_block: number
+          start_offset: number
+        }
+        Insert: {
+          anchor_kind: Database["public"]["Enums"]["review_anchor_kind"]
+          author_id?: string | null
+          body: string
+          case_id: string
+          created_at?: string
+          end_block: number
+          end_offset: number
+          id?: string
+          quote: string
+          revision_id: string
+          source_end?: number | null
+          source_start?: number | null
+          source_text?: string | null
+          start_block: number
+          start_offset: number
+        }
+        Update: {
+          anchor_kind?: Database["public"]["Enums"]["review_anchor_kind"]
+          author_id?: string | null
+          body?: string
+          case_id?: string
+          created_at?: string
+          end_block?: number
+          end_offset?: number
+          id?: string
+          quote?: string
+          revision_id?: string
+          source_end?: number | null
+          source_start?: number | null
+          source_text?: string | null
+          start_block?: number
+          start_offset?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_threads_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_threads_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_threads_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "review_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_threads_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_threads_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+        ]
+      }
       revision_assets: {
         Row: {
           asset_id: string
@@ -1436,6 +1696,36 @@ export type Database = {
         Args: { p_summary?: string; p_targets: string[]; p_title?: string }
         Returns: string
       }
+      create_review_suggestion: {
+        Args: {
+          p_block_index: number
+          p_block_length: number
+          p_case_id: string
+          p_note?: string
+          p_proposed: string
+          p_quote: string
+          p_revision_id: string
+          p_source_end: number
+          p_source_start: number
+        }
+        Returns: string
+      }
+      create_review_thread: {
+        Args: {
+          p_anchor_kind: Database["public"]["Enums"]["review_anchor_kind"]
+          p_body: string
+          p_case_id: string
+          p_end_block: number
+          p_end_offset: number
+          p_quote: string
+          p_revision_id: string
+          p_source_end?: number
+          p_source_start?: number
+          p_start_block: number
+          p_start_offset: number
+        }
+        Returns: string
+      }
       create_variant: {
         Args: {
           p_body?: string
@@ -1444,6 +1734,14 @@ export type Database = {
           p_title?: string
         }
         Returns: string
+      }
+      decide_review_suggestion: {
+        Args: {
+          p_case_id: string
+          p_decision: Database["public"]["Enums"]["review_suggestion_status"]
+          p_suggestion_id: string
+        }
+        Returns: Database["public"]["Enums"]["case_status"]
       }
       eligible_panel_admins: {
         Args: { p_created_by: string; p_panel_id?: string }
@@ -1457,6 +1755,10 @@ export type Database = {
           id: string
         }[]
       }
+      has_live_review_seat: {
+        Args: { p_panel_id: string; p_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
@@ -1469,6 +1771,15 @@ export type Database = {
           slug: string
           summary: string
           title: string
+        }[]
+      }
+      lock_open_review_case: {
+        Args: { p_case_id: string }
+        Returns: {
+          body: string
+          panel_id: string
+          revision_author_id: string
+          revision_id: string
         }[]
       }
       objective_closure: {
@@ -1510,6 +1821,14 @@ export type Database = {
         Args: { p_member_id: string; p_panel_id: string }
         Returns: string
       }
+      reply_review_thread: {
+        Args: { p_body: string; p_case_id: string; p_thread_id: string }
+        Returns: string
+      }
+      review_anchor_source: {
+        Args: { p_body: string; p_end: number; p_start: number }
+        Returns: string
+      }
       revise_guide_revision: {
         Args: { p_revision_id: string }
         Returns: string
@@ -1526,6 +1845,10 @@ export type Database = {
       todo_has_open_claim: {
         Args: { p_exclude_base_id?: string; p_todo_ids: string[] }
         Returns: boolean
+      }
+      utf16_char_offset: {
+        Args: { p_text: string; p_units: number }
+        Returns: number
       }
       wilson_lower_bound: {
         Args: { downvotes: number; upvotes: number; z?: number }
@@ -1560,7 +1883,9 @@ export type Database = {
       knowledge_type: "theoretical" | "practical"
       node_status: "draft" | "published" | "archived"
       objective_revision_status: "draft" | "published"
+      review_anchor_kind: "passage" | "block"
       review_outcome: "approved" | "rejected"
+      review_suggestion_status: "pending" | "accepted" | "rejected"
       revision_status: "draft" | "submitted"
       seat_status: "assigned" | "recused" | "replaced" | "completed"
       subject_status: "draft" | "published"
@@ -1727,7 +2052,9 @@ export const Constants = {
       knowledge_type: ["theoretical", "practical"],
       node_status: ["draft", "published", "archived"],
       objective_revision_status: ["draft", "published"],
+      review_anchor_kind: ["passage", "block"],
       review_outcome: ["approved", "rejected"],
+      review_suggestion_status: ["pending", "accepted", "rejected"],
       revision_status: ["draft", "submitted"],
       seat_status: ["assigned", "recused", "replaced", "completed"],
       subject_status: ["draft", "published"],

@@ -252,6 +252,48 @@
   .markdown a {
     @apply text-primary underline;
   }
+
+  /* Clears the badges that straddle the edge of the block above. A heading
+     keeps its own larger margin. */
+  [data-review-block]:has([data-review-annotation-badges])
+    + [data-review-block]
+    [data-review-block-content]
+    > :first-child:not(h1, h2, h3, h4, h5, h6) {
+    margin-top: 0.75rem;
+  }
+
+  /* The composer keeps its passage visible while the input has focus. */
+  ::highlight(review-passage-draft) {
+    background-color: color-mix(
+      in oklab,
+      var(--brand-bright-blue) 35%,
+      transparent
+    );
+    text-decoration: underline;
+    text-decoration-color: var(--brand-bright-blue);
+  }
+}
+
+/* MDXEditor ships unlayered styles; scope these overrides to review composers. */
+[data-review-composer] .mdxeditor-toolbar {
+  padding: 2px 4px;
+}
+
+[data-review-composer] .review-comment-input {
+  padding: 6px 10px;
+}
+
+::view-transition-group(.review-motion) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.review-motion),
+  ::view-transition-old(.review-motion),
+  ::view-transition-new(.review-motion) {
+    animation-duration: 0s;
+  }
 }
 
 /* == COMPONENT UTILITIES == */

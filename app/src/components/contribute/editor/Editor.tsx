@@ -31,12 +31,16 @@ type EditorProps = {
   value?: string;
   onChange?: (markdown: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
+  // The guide flow waits for a pause in typing. A short form submits right
+  // after an edit, and a tap on iOS does not always blur the editor first.
+  changeDelayMs?: number;
 };
 
 export default function Editor({
   value,
   onChange,
   onUploadImage,
+  changeDelayMs = 1000,
 }: EditorProps) {
   const [initialMarkdown] = useState<string>(() => value ?? "");
   const [markdown, setMarkdown] = useState<string>(() => value ?? "");
@@ -53,17 +57,20 @@ export default function Editor({
   const latestRef = useRef<string | null>(null);
 
   // debounce so we don't re-render the flow on every keystroke
-  const handleMarkdownChange = useCallback((newMarkdown: string) => {
-    setMarkdown(newMarkdown);
-    latestRef.current = newMarkdown;
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      onChangeRef.current?.(newMarkdown);
-      saveTimeoutRef.current = null;
-    }, 1000);
-  }, []);
+  const handleMarkdownChange = useCallback(
+    (newMarkdown: string) => {
+      setMarkdown(newMarkdown);
+      latestRef.current = newMarkdown;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        onChangeRef.current?.(newMarkdown);
+        saveTimeoutRef.current = null;
+      }, changeDelayMs);
+    },
+    [changeDelayMs]
+  );
 
   // MDXEditor's imperative setMarkdown() does NOT fire the editor's onChange,
   // so an imported file would otherwise never reach `markdown` or the parent's

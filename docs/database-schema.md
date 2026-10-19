@@ -438,6 +438,34 @@ Links a decision to one or more rubric reasons → a reviewer can cite several a
 
 A `rejected` decision must have at least one row here; an `approved` has none. 
 
+#### Passage comments and suggested edits
+
+`review_threads` stores comments on passages or whole blocks of a guide revision.
+Each thread records its reviewer, quoted text, rendered text offsets, and optional source offsets.
+Source offsets use UTF-16 code units, as JavaScript strings do.
+`review_thread_replies` stores replies from the author and panelists with a live seat.
+The reader checks each quote before it marks a passage.
+If the text changes, the reader shows the original quote separately.
+Comments on changed or missing source text keep their saved quote.
+
+`review_suggestions` stores a reviewer's proposed replacement for a complete source block.
+Each suggestion has a `pending`, `accepted`, or `rejected` status.
+Only the author of the reviewed revision can accept or reject a suggestion while the case remains open.
+The database refuses accepted edits that overlap.
+
+An approving majority waits while any suggestion remains pending.
+The vote tally runs again each time the author accepts or rejects a suggestion.
+If approval can proceed, `close_review_panel` creates one revision that contains all accepted edits.
+The new revision keeps the reviewed revision's author, subject tags, and references to uploaded media.
+The reviewed revision remains unchanged, and each accepted suggestion records the new revision ID.
+A rejecting majority closes the case without publication.
+
+The API provides these operations under `/reviews/cases/:id`.
+Clients have no direct access to the three tables.
+Database functions check authorship, live seats, account suspension, and case state before each write.
+These functions lock the open panel to prevent publication during a concurrent feedback write.
+Closed cases expose the discussion as read-only history.
+
 #### Specialized case tables
 
 Each attaches type-specific data to a `review_cases` row. `case_id` is both primary key and FK to `review_cases` → one satellite row per case.
@@ -500,7 +528,11 @@ Submitting a revision creates a `guide_review_cases` row pointing at a `review_c
 **Why** `guide_revisions.status` **is only** `draft | submitted`**.** A revision only needs to record the part of its lifecycle that *it* owns:
 
 - `draft` — being written, mutable, no case yet.
-- `submitted` — handed off to review; exactly one `guide_review_cases` row now exists.
+- `submitted` — handed off to review, or created at publication from author-accepted reviewer edits.
+
+A reviewed revision has a `guide_review_cases` row.
+A revision created from accepted edits links back through `review_suggestions.applied_revision_id`.
+The original case remains attached to the unchanged revision that the panel reviewed.
 
 Adding `in_review`, `accepted`, or `rejected` here would duplicate `review_cases.status`. Two columns describing the same fact means they can possibly disagree/drift (e.g. the case is `approved` but the revision still says `in_review` because an update was missed). So, a revision "reads as accepted" when its case is `approved`, and it is never stamped on the revision row itself. `published` and `archived` are excluded for a different reason: they describe a *node's* disposition, not a single revision's, so they belong to `guides`/`guide_bases`, not here.
 
