@@ -145,6 +145,10 @@ const api = {
       author: VERIFIER,
       body: body.trim(),
       created_at: NOW,
+      edited_at: null,
+      deleted_at: null,
+      can_edit: true,
+      can_delete: true,
       replies: [],
     };
     server.threads.push(thread);
@@ -221,6 +225,10 @@ function threadRow(id: string, overrides: Record<string, unknown>) {
     author: VERIFIER,
     body: `Body of ${id}`,
     created_at: NOW,
+    edited_at: null,
+    deleted_at: null,
+    can_edit: false,
+    can_delete: false,
     replies: [],
     ...overrides,
   };
@@ -301,7 +309,6 @@ function renderCase({ expiresAt = "2099-01-01T00:00:00Z" } = {}) {
 const blockContent = (index: number) =>
   document.querySelector(`[data-review-block-content="${index}"]`)!;
 
-// Which block a badge or card hangs under.
 const blockOf = (element: Element) =>
   element
     .closest("[data-review-ui]")!
@@ -421,6 +428,7 @@ describe("stored review comments", () => {
         anchor_status: "outdated",
       }),
     ];
+
     renderCase();
 
     const badge = await screen.findByRole("button", { name: /Vera Verifier/ });
@@ -440,6 +448,7 @@ describe("stored review comments", () => {
     expect(within(apart).getByText("rigid")).toBeTruthy();
 
     fireEvent.click(badge);
+
     const card = document.getElementById("review-card-placed")!;
     const movedBadge = within(card).getByRole("button", {
       name: /Vera Verifier/,

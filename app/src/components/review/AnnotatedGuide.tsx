@@ -55,6 +55,7 @@ const AnnotationStatus = () => {
 // quote and stay out of the text instead of attaching to other words.
 const DetachedAnnotations = () => {
   const { detached } = useReviewAnnotations();
+
   if (detached.length === 0) return null;
 
   return (

@@ -29,8 +29,12 @@ import {
   createReviewSuggestion,
   createReviewThread,
   decideReviewSuggestion,
+  deleteReviewReply,
+  deleteReviewThread,
   getReviewAnnotations,
   replyToReviewThread,
+  updateReviewReply,
+  updateReviewThread,
 } from "@/lib/api/reviewAnnotations";
 import { useSuspensionStatus } from "@/lib/authContext";
 import { blocksAnchor, sourceRangeFits } from "@/lib/reviewAnchors";
@@ -39,6 +43,8 @@ import { paintHighlights, placeItems } from "@/lib/reviewPlacement";
 // The open composer. It holds the anchor taken before the composer took
 // focus, so the page selection is free to change afterwards.
 export type Draft = { mode: "comment" | "suggestion"; anchor: PassageAnchor };
+
+type MessageTarget = { threadId: string; replyId: string | null };
 
 type AnnotationsContext = {
   rootRef: RefObject<HTMLDivElement | null>;
@@ -68,6 +74,8 @@ type AnnotationsContext = {
   drafts: Map<string, string>;
   createThread: (anchor: PassageAnchor, body: string) => Promise<void>;
   reply: (threadId: string, body: string) => Promise<void>;
+  editMessage: (target: MessageTarget, body: string) => Promise<void>;
+  deleteMessage: (target: MessageTarget) => Promise<void>;
   createSuggestion: (
     anchor: PassageAnchor,
     proposed: string,
@@ -106,6 +114,8 @@ export function draftKey(draft: Draft) {
 }
 
 export const replyDraftKey = (threadId: string) => `reply:${threadId}`;
+
+export const editDraftKey = (messageId: string) => `edit:${messageId}`;
 
 type PropTypes = {
   caseId: string;
@@ -186,6 +196,7 @@ export const ReviewAnnotationsProvider = ({
   // let one frame show the publication hold with no badges and "Loading".
   useLayoutEffect(() => {
     const root = rootRef.current;
+
     if (!data || !root) return;
 
     setPlacement(placeItems(data, revisionId, root));
@@ -195,6 +206,7 @@ export const ReviewAnnotationsProvider = ({
   // its text nodes, which empties any Range built before it.
   useLayoutEffect(() => {
     const root = rootRef.current;
+
     if (!root || !placement) return;
 
     paintHighlights(root, [
@@ -232,6 +244,7 @@ export const ReviewAnnotationsProvider = ({
   const selectBlocks = useCallback((start: number, end: number) => {
     const root = rootRef.current;
     const anchor = root && blocksAnchor(root, start, end);
+
     if (!anchor) return;
 
     document.getSelection()?.removeAllRanges();
@@ -251,6 +264,7 @@ export const ReviewAnnotationsProvider = ({
   const transition = useRef<ViewTransition | null>(null);
   const toggle = useCallback((id: string) => {
     transition.current?.skipTransition();
+
     const update = () => {
       flushSync(() => {
         setExpanded((prev) => {
@@ -273,6 +287,7 @@ export const ReviewAnnotationsProvider = ({
           animationError.name === "AbortError"
         )
           return;
+
         console.error("Review animation failed.", animationError);
       });
     } else {
@@ -362,6 +377,33 @@ export const ReviewAnnotationsProvider = ({
     [caseId, drafts, refresh]
   );
 
+  const editMessage = useCallback(
+    async ({ threadId, replyId }: MessageTarget, body: string) => {
+      if (replyId === null) {
+        await updateReviewThread(caseId, threadId, { body });
+      } else {
+        await updateReviewReply(caseId, threadId, replyId, { body });
+      }
+
+      drafts.delete(editDraftKey(replyId ?? threadId));
+      await refresh();
+    },
+    [caseId, drafts, refresh]
+  );
+
+  const deleteMessage = useCallback(
+    async ({ threadId, replyId }: MessageTarget) => {
+      if (replyId === null) {
+        await deleteReviewThread(caseId, threadId);
+      } else {
+        await deleteReviewReply(caseId, threadId, replyId);
+      }
+
+      await refresh();
+    },
+    [caseId, refresh]
+  );
+
   const createSuggestion = useCallback(
     async (anchor: PassageAnchor, proposed: string, note: string) => {
       const { source_start: start, source_end: end } = anchor;
@@ -431,6 +473,8 @@ export const ReviewAnnotationsProvider = ({
       drafts,
       createThread,
       reply,
+      editMessage,
+      deleteMessage,
       createSuggestion,
       decide,
     }),
@@ -455,6 +499,8 @@ export const ReviewAnnotationsProvider = ({
       drafts,
       createThread,
       reply,
+      editMessage,
+      deleteMessage,
       createSuggestion,
       decide,
     ]

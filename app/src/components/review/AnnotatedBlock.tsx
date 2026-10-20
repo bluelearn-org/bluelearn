@@ -168,6 +168,7 @@ export const AnnotatedBlock = ({
   const activate = (event: MouseEvent<HTMLDivElement>) => {
     if (!hasActions || draft) return;
     const target = event.target as Element;
+
     if (
       target.closest(
         `[${ANNOTATION_UI_ATTR}], a, button, input, textarea, select, [contenteditable="true"]`
@@ -175,6 +176,7 @@ export const AnnotatedBlock = ({
     )
       return;
     if (!document.getSelection()?.isCollapsed) return;
+
     selectBlocks(index, index);
   };
 

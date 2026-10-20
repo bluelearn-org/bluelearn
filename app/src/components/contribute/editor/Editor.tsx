@@ -27,7 +27,7 @@ import "@mdxeditor/editor/style.css";
 import "./Editor.css";
 
 type EditorProps = {
-  // Markdown to open with, e.g. when resuming a draft.
+  // Initial markdown only; later value changes do not replace the draft.
   value?: string;
   onChange?: (markdown: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
@@ -56,11 +56,12 @@ export default function Editor({
   onUploadImageRef.current = onUploadImage;
   const latestRef = useRef<string | null>(null);
 
-  // debounce so we don't re-render the flow on every keystroke
+  // Keep parent updates off the per-keystroke path.
   const handleMarkdownChange = useCallback(
     (newMarkdown: string) => {
       setMarkdown(newMarkdown);
       latestRef.current = newMarkdown;
+
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
@@ -82,29 +83,30 @@ export default function Editor({
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
+
     setMarkdown(newMarkdown);
     latestRef.current = newMarkdown;
     onChangeRef.current?.(newMarkdown);
   }, []);
 
-  // If the user clicks away (e.g., clicking "Save Draft" or "Next"),
-  // immediately flush any pending debounced state to the parent
-  // so that the button click handlers see the freshest data.
+  // Flush before Save Draft or Next reads the parent state.
   const handleBlur = useCallback(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
+
       if (latestRef.current !== null) {
         onChangeRef.current?.(latestRef.current);
       }
     }
   }, []);
 
-  // Force a save on a pending edit if user leaves before the debounce fires
+  // Preserve pending edits when the editor unmounts.
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+
         if (latestRef.current !== null) {
           onChangeRef.current?.(latestRef.current);
         }
@@ -140,7 +142,6 @@ export default function Editor({
     []
   );
 
-  // Stable plugins configuration to avoid rebuilding Lexical instance during state re-renders
   const plugins = useMemo(
     () => [
       headingsPlugin({

@@ -51,15 +51,18 @@ export function useBlockSelection(options: Options) {
     (edge: Edge, event: PointerEvent<HTMLButtonElement>) => {
       const { rootRef, selection, enabled } = latest.current;
       const root = rootRef.current;
+
       if (!enabled || !selection || !root) return;
       if (event.button !== 0 || drag.current) return;
 
       event.preventDefault();
       event.stopPropagation();
+
       const blocks = readBlocks(root);
       const movingIndex =
         edge === "start" ? selection.start_block : selection.end_block;
       const movingBlock = blocks.find((block) => block.index === movingIndex);
+
       if (!movingBlock) return;
 
       const bounds = movingBlock.element.getBoundingClientRect();
@@ -103,6 +106,7 @@ export function useBlockSelection(options: Options) {
       const { rootRef, selection, enabled, selectBlocks, clear } =
         latest.current;
       const root = rootRef.current;
+
       if (!enabled || !selection || !root) return;
 
       const current =
@@ -123,7 +127,9 @@ export function useBlockSelection(options: Options) {
 
       const count = root.querySelectorAll(`[${BLOCK_CONTENT_ATTR}]`).length;
       const next = keyboardTarget(event.key, current, count);
+
       if (next === null) return;
+
       event.preventDefault();
 
       const fixed =

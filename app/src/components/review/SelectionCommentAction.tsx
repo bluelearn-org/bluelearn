@@ -32,7 +32,6 @@ function sameAnchor(a: PassageAnchor | null, b: PassageAnchor | null) {
   );
 }
 
-// Radix positions against the live passage range and handles viewport collisions.
 export const SelectionCommentAction = () => {
   const {
     rootRef,
@@ -75,8 +74,8 @@ export const SelectionCommentAction = () => {
   useEffect(() => {
     const update = () => {
       if (pressing.current) return;
-
       if (blockSelection && document.getSelection()?.isCollapsed) return;
+
       const root = rootRef.current;
       const next = root
         ? anchorFromSelection(document.getSelection(), root)
@@ -123,6 +122,7 @@ export const SelectionCommentAction = () => {
   const start = (mode: "comment" | "suggestion") => {
     pressing.current = false;
     const anchor = mode === "comment" ? candidate : blockSource;
+
     if (!anchor) return;
 
     setCandidate(null);

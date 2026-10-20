@@ -27,8 +27,7 @@ import { expectToMatchSpec } from "./openapi";
 type User = Awaited<ReturnType<typeof makeUser>>;
 
 const DEFINITION = "A group is a set with one operation.";
-// "𝔽" is one character but two UTF-16 units, so every offset after this block
-// differs between the browser and Postgres.
+// Keep 𝔽: it makes UTF-16 and Postgres character offsets diverge.
 const FIELD = "Over 𝔽₂ every element is its own inverse.";
 const IMAGE = "![Cayley table](https://example.com/cayley.png)";
 const BODY = ["# Groups", "", DEFINITION, "", FIELD, "", IMAGE].join("\n");
@@ -79,6 +78,7 @@ async function seedFeedbackCase(
   const author = await makeUser();
   let guideId: string;
   let liveRevisionId: string | null = null;
+
   if (caseType === "guide_edit") {
     const live = await createPublishedGuide({
       title: "Groups",
@@ -760,5 +760,144 @@ describe("verifier edits", () => {
       .eq("case_id", reviewCase.id)
       .throwOnError();
     expect(data).toEqual([]);
+  });
+});
+
+describe("comment ownership", () => {
+  it("keeps replies and the published revision when owners edit and delete after closure", async () => {
+    const { revision, reviewCase, panelists, guideId } =
+      await seedFeedbackCase();
+    const threadsPath = `/reviews/cases/${reviewCase.id}/threads`;
+    const created = await post(panelists[0].token, threadsPath, {
+      anchor: blockAnchor(revision.id, 1, DEFINITION),
+      body: "Original comment",
+    });
+    const { thread } = (await created.json()) as { thread: ReviewThread };
+    const threadPath = `${threadsPath}/${thread.id}`;
+    const replied = await post(panelists[1].token, `${threadPath}/replies`, {
+      body: "Reply stays",
+    });
+    const { reply } = (await replied.json()) as { reply: ReviewThreadReply };
+    await approveByMajority(panelists, reviewCase.id);
+    const published = await guideState(guideId);
+
+    const edited = await app.request(
+      threadPath,
+      jsonAuth(panelists[0].token, "PATCH", { body: "Corrected comment" }),
+      env
+    );
+    expect(edited.status).toBe(200);
+    const editedBody = (await edited.json()) as { thread: ReviewThread };
+    expect(editedBody.thread.body).toBe("Corrected comment");
+    expect(editedBody.thread.edited_at).not.toBeNull();
+    expect(editedBody.thread.can_edit).toBe(true);
+
+    const replyPath = `${threadPath}/replies/${reply.id}`;
+    const editedReply = await app.request(
+      replyPath,
+      jsonAuth(panelists[1].token, "PATCH", { body: "Corrected reply" }),
+      env
+    );
+    expect(editedReply.status).toBe(200);
+    expect(
+      ((await editedReply.json()) as { reply: ReviewThreadReply }).reply.body
+    ).toBe("Corrected reply");
+
+    const removed = await app.request(
+      threadPath,
+      { ...auth(panelists[0].token), method: "DELETE" },
+      env
+    );
+    expect(removed.status).toBe(200);
+    const tombstone = ((await removed.json()) as { thread: ReviewThread })
+      .thread;
+    expect(tombstone.body).toBe("");
+    expect(tombstone.deleted_at).not.toBeNull();
+    expect(tombstone.can_edit).toBe(false);
+    expect(tombstone.can_delete).toBe(false);
+    expect(tombstone.replies.find((entry) => entry.id === reply.id)?.body).toBe(
+      "Corrected reply"
+    );
+
+    const repeated = await app.request(
+      threadPath,
+      { ...auth(panelists[0].token), method: "DELETE" },
+      env
+    );
+    expect(
+      ((await repeated.json()) as { thread: ReviewThread }).thread.deleted_at
+    ).toBe(tombstone.deleted_at);
+    const resurrected = await app.request(
+      threadPath,
+      jsonAuth(panelists[0].token, "PATCH", { body: "Restored" }),
+      env
+    );
+    expect(resurrected.status).toBe(409);
+
+    const removedReply = await app.request(
+      replyPath,
+      { ...auth(panelists[1].token), method: "DELETE" },
+      env
+    );
+    expect(removedReply.status).toBe(200);
+    const replyTombstone = (
+      (await removedReply.json()) as { reply: ReviewThreadReply }
+    ).reply;
+    expect(replyTombstone.body).toBe("");
+    expect(replyTombstone.deleted_at).not.toBeNull();
+    expect(await guideState(guideId)).toEqual(published);
+  });
+
+  it("enforces ownership in direct RPC calls as well as the API", async () => {
+    const { author, revision, reviewCase, panelists } =
+      await seedFeedbackCase();
+    const created = await post(
+      panelists[0].token,
+      `/reviews/cases/${reviewCase.id}/threads`,
+      {
+        anchor: blockAnchor(revision.id, 1, DEFINITION),
+        body: "Owner text",
+      }
+    );
+    const { thread } = (await created.json()) as { thread: ReviewThread };
+    const path = `/reviews/cases/${reviewCase.id}/threads/${thread.id}`;
+
+    const byAuthor = await app.request(
+      path,
+      { ...auth(author.token), method: "DELETE" },
+      env
+    );
+    expect(byAuthor.status).toBe(403);
+
+    for (const operation of ["edit_review_thread", "delete_review_thread"]) {
+      const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${operation}`, {
+        method: "POST",
+        headers: {
+          apikey: env.SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${panelists[1].token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_case_id: reviewCase.id,
+          p_thread_id: thread.id,
+          ...(operation === "edit_review_thread"
+            ? { p_body: "Foreign edit" }
+            : {}),
+        }),
+      });
+      expect(res.status).toBe(403);
+    }
+
+    const { data } = await admin
+      .from("review_threads")
+      .select("body, edited_at, deleted_at")
+      .eq("id", thread.id)
+      .single()
+      .throwOnError();
+    expect(data).toEqual({
+      body: "Owner text",
+      edited_at: null,
+      deleted_at: null,
+    });
   });
 });

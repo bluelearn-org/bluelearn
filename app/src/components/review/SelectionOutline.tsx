@@ -15,6 +15,7 @@ export const SelectionOutline = () => {
 
   useLayoutEffect(() => {
     const root = rootRef.current;
+
     if (!root || start === null || end === null) {
       setBounds(null);
       return;
@@ -22,6 +23,7 @@ export const SelectionOutline = () => {
 
     const first = root.querySelector(`[${BLOCK_CONTENT_ATTR}="${start}"]`);
     const last = root.querySelector(`[${BLOCK_CONTENT_ATTR}="${end}"]`);
+
     if (!first || !last) {
       setBounds(null);
       return;

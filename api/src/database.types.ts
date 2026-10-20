@@ -1230,6 +1230,8 @@ export type Database = {
           author_id: string | null
           body: string
           created_at: string
+          deleted_at: string | null
+          edited_at: string | null
           id: string
           thread_id: string
         }
@@ -1237,6 +1239,8 @@ export type Database = {
           author_id?: string | null
           body: string
           created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           thread_id: string
         }
@@ -1244,6 +1248,8 @@ export type Database = {
           author_id?: string | null
           body?: string
           created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           thread_id?: string
         }
@@ -1278,6 +1284,8 @@ export type Database = {
           body: string
           case_id: string
           created_at: string
+          deleted_at: string | null
+          edited_at: string | null
           end_block: number
           end_offset: number
           id: string
@@ -1295,6 +1303,8 @@ export type Database = {
           body: string
           case_id: string
           created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
           end_block: number
           end_offset: number
           id?: string
@@ -1312,6 +1322,8 @@ export type Database = {
           body?: string
           case_id?: string
           created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
           end_block?: number
           end_offset?: number
           id?: string
@@ -1742,6 +1754,27 @@ export type Database = {
           p_suggestion_id: string
         }
         Returns: Database["public"]["Enums"]["case_status"]
+      }
+      delete_review_reply: {
+        Args: { p_case_id: string; p_reply_id: string; p_thread_id: string }
+        Returns: undefined
+      }
+      delete_review_thread: {
+        Args: { p_case_id: string; p_thread_id: string }
+        Returns: undefined
+      }
+      edit_review_reply: {
+        Args: {
+          p_body: string
+          p_case_id: string
+          p_reply_id: string
+          p_thread_id: string
+        }
+        Returns: undefined
+      }
+      edit_review_thread: {
+        Args: { p_body: string; p_case_id: string; p_thread_id: string }
+        Returns: undefined
       }
       eligible_panel_admins: {
         Args: { p_created_by: string; p_panel_id?: string }

@@ -6,6 +6,7 @@ import type {
   CreateReviewThreadInput,
   DecideReviewSuggestionInput,
   ReviewParticipant,
+  UpdateReviewCommentInput,
 } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { diffField } from "../lib/diff";
@@ -153,15 +154,17 @@ async function isSuspended(service: DB, userId: string) {
   return data?.is_suspended ?? true;
 }
 
-async function permissionsFor(
-  service: DB,
-  context: CaseContext,
-  viewerId: string | null
-) {
-  const viewer = viewerOf(context, viewerId);
+// Mirrors is_active_guide_author: null unless signed in and not suspended.
+async function activeViewerIdOf(service: DB, viewerId: string | null) {
+  if (viewerId === null || (await isSuspended(service, viewerId))) return null;
+
+  return viewerId;
+}
+
+function permissionsFor(context: CaseContext, activeViewerId: string | null) {
+  const viewer = viewerOf(context, activeViewerId);
   const open = context.status === "in_review" && context.openPanelId !== null;
-  const active =
-    open && viewerId !== null && !(await isSuspended(service, viewerId));
+  const active = open && activeViewerId !== null;
 
   return {
     can_comment: active && viewer.hasLiveSeat,
@@ -178,6 +181,7 @@ async function loadPeople(
 ): Promise<People> {
   const people: People = new Map();
   const unique = [...new Set(ids.filter((id): id is string => id !== null))];
+
   if (unique.length === 0) return people;
 
   const { data, error } = await service
@@ -189,6 +193,7 @@ async function loadPeople(
     console.error(error);
     throw new ServiceError("Failed to load review participants", 500);
   }
+
   for (const p of data ?? []) {
     people.set(p.id, {
       ...p,
@@ -216,16 +221,37 @@ function anchorStatus(
   return slice === row.source_text ? "current" : "outdated";
 }
 
-function toReply(row: ReplyRow, people: People) {
+// Mirrors the database edit and delete functions, which enforce this rule.
+function managementOf(
+  row: { author_id: string | null; deleted_at: string | null },
+  activeViewerId: string | null
+) {
+  const manageable =
+    activeViewerId !== null &&
+    row.author_id === activeViewerId &&
+    row.deleted_at === null;
+
+  return { can_edit: manageable, can_delete: manageable };
+}
+
+function toReply(row: ReplyRow, people: People, activeViewerId: string | null) {
   return {
     id: row.id,
     author: row.author_id ? (people.get(row.author_id) ?? null) : null,
     body: row.body,
     created_at: row.created_at,
+    edited_at: row.edited_at,
+    deleted_at: row.deleted_at,
+    ...managementOf(row, activeViewerId),
   };
 }
 
-function toThread(row: ThreadRow, context: CaseContext, people: People) {
+function toThread(
+  row: ThreadRow,
+  context: CaseContext,
+  people: People,
+  activeViewerId: string | null
+) {
   return {
     id: row.id,
     revision_id: row.revision_id,
@@ -244,9 +270,12 @@ function toThread(row: ThreadRow, context: CaseContext, people: People) {
     author: row.author_id ? (people.get(row.author_id) ?? null) : null,
     body: row.body,
     created_at: row.created_at,
+    edited_at: row.edited_at,
+    deleted_at: row.deleted_at,
+    ...managementOf(row, activeViewerId),
     replies: [...row.review_thread_replies]
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
-      .map((reply) => toReply(reply, people)),
+      .map((reply) => toReply(reply, people, activeViewerId)),
   };
 }
 
@@ -311,7 +340,7 @@ async function loadSuggestions(service: DB, caseId: string) {
 
 // Same visibility as getReviewCase: an open case shows only to its author and
 // panel, a closed one to everyone.
-export async function getReviewAnnotations(
+async function loadVisibleCase(
   service: DB,
   caseId: string,
   viewerId: string | null
@@ -319,23 +348,35 @@ export async function getReviewAnnotations(
   const context = await loadCaseContext(service, caseId);
   const viewer = viewerOf(context, viewerId);
   const closed = context.status === "approved" || context.status === "rejected";
+
   if (viewer.role === "public" && !closed)
     throw new ServiceError("You cannot view this review case", 403);
 
-  const [threadsRes, suggestions, permissions] = await Promise.all([
+  return { context, viewer };
+}
+
+export async function getReviewAnnotations(
+  service: DB,
+  caseId: string,
+  viewerId: string | null
+) {
+  const { context, viewer } = await loadVisibleCase(service, caseId, viewerId);
+
+  const [threadsRes, suggestions, activeViewerId] = await Promise.all([
     service
       .from("review_threads")
       .select(THREAD_COLUMNS)
       .eq("case_id", caseId)
       .order("created_at"),
     loadSuggestions(service, caseId),
-    permissionsFor(service, context, viewerId),
+    activeViewerIdOf(service, viewerId),
   ]);
 
   if (threadsRes.error) {
     console.error(threadsRes.error);
     throw new ServiceError("Failed to load review comments", 500);
   }
+
   const threads = (threadsRes.data ?? []) as ThreadRow[];
   const people = await loadPeople(service, context, [
     ...threads.flatMap((t) => [
@@ -350,11 +391,61 @@ export async function getReviewAnnotations(
     case_status: context.status,
     revision_id: context.revisionId,
     viewer_role: viewer.role,
-    permissions,
+    permissions: permissionsFor(context, activeViewerId),
     publication: publicationOf(context, suggestions),
-    threads: threads.map((t) => toThread(t, context, people)),
+    threads: threads.map((t) => toThread(t, context, people, activeViewerId)),
     suggestions: suggestions.map((s) => toSuggestion(s, context, people)),
   };
+}
+
+// Each write has just checked the caller's account on their own client, so
+// its response counts the caller as the active viewer.
+async function loadThread(
+  service: DB,
+  context: CaseContext,
+  threadId: string,
+  callerId: string
+) {
+  const { data, error } = await service
+    .from("review_threads")
+    .select(THREAD_COLUMNS)
+    .eq("id", threadId)
+    .single();
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load comment", 500);
+  }
+
+  const row = data as ThreadRow;
+  const people = await loadPeople(service, context, [
+    row.author_id,
+    ...row.review_thread_replies.map((r) => r.author_id),
+  ]);
+
+  return toThread(row, context, people, callerId);
+}
+
+async function loadReply(
+  service: DB,
+  context: CaseContext,
+  replyId: string,
+  callerId: string
+) {
+  const { data: row, error } = await service
+    .from("review_thread_replies")
+    .select("*")
+    .eq("id", replyId)
+    .single();
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load reply", 500);
+  }
+
+  const people = await loadPeople(service, context, [row.author_id]);
+
+  return toReply(row, people, callerId);
 }
 
 // Writes run on the caller's own client: the database functions check the
@@ -362,6 +453,7 @@ export async function getReviewAnnotations(
 export async function createReviewThread(
   supabase: DB,
   service: DB,
+  userId: string,
   caseId: string,
   { anchor, body }: CreateReviewThreadInput
 ) {
@@ -378,26 +470,18 @@ export async function createReviewThread(
     p_source_start: anchor.source_start ?? undefined,
     p_source_end: anchor.source_end ?? undefined,
   });
+
   if (error) throw rpcFailure(error, "Failed to add comment");
 
-  const { data: row, error: rowError } = await service
-    .from("review_threads")
-    .select(THREAD_COLUMNS)
-    .eq("id", id)
-    .single();
-  if (rowError) {
-    console.error(rowError);
-    throw new ServiceError("Failed to load comment", 500);
-  }
-
   const context = await loadCaseContext(service, caseId);
-  const people = await loadPeople(service, context, [row.author_id]);
-  return toThread(row as ThreadRow, context, people);
+
+  return loadThread(service, context, id, userId);
 }
 
 export async function replyToReviewThread(
   supabase: DB,
   service: DB,
+  userId: string,
   caseId: string,
   threadId: string,
   { body }: CreateReviewReplyInput
@@ -407,21 +491,100 @@ export async function replyToReviewThread(
     p_thread_id: threadId,
     p_body: body,
   });
+
   if (error) throw rpcFailure(error, "Failed to add reply");
 
-  const { data: row, error: rowError } = await service
-    .from("review_thread_replies")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (rowError) {
-    console.error(rowError);
-    throw new ServiceError("Failed to load reply", 500);
-  }
-
   const context = await loadCaseContext(service, caseId);
-  const people = await loadPeople(service, context, [row.author_id]);
-  return toReply(row, people);
+
+  return loadReply(service, context, id, userId);
+}
+
+// Authors manage their own messages, also after the case closes. The database
+// functions check the account, the owner, and the deleted state. A reassigned
+// panelist can own messages on an open case they can no longer read, so the
+// read rule comes first.
+export async function editReviewThread(
+  supabase: DB,
+  service: DB,
+  userId: string,
+  caseId: string,
+  threadId: string,
+  { body }: UpdateReviewCommentInput
+) {
+  const { context } = await loadVisibleCase(service, caseId, userId);
+
+  const { error } = await supabase.rpc("edit_review_thread", {
+    p_case_id: caseId,
+    p_thread_id: threadId,
+    p_body: body,
+  });
+
+  if (error) throw rpcFailure(error, "Failed to edit comment");
+
+  return loadThread(service, context, threadId, userId);
+}
+
+export async function deleteReviewThread(
+  supabase: DB,
+  service: DB,
+  userId: string,
+  caseId: string,
+  threadId: string
+) {
+  const { context } = await loadVisibleCase(service, caseId, userId);
+
+  const { error } = await supabase.rpc("delete_review_thread", {
+    p_case_id: caseId,
+    p_thread_id: threadId,
+  });
+
+  if (error) throw rpcFailure(error, "Failed to delete comment");
+
+  return loadThread(service, context, threadId, userId);
+}
+
+export async function editReviewReply(
+  supabase: DB,
+  service: DB,
+  userId: string,
+  caseId: string,
+  threadId: string,
+  replyId: string,
+  { body }: UpdateReviewCommentInput
+) {
+  const { context } = await loadVisibleCase(service, caseId, userId);
+
+  const { error } = await supabase.rpc("edit_review_reply", {
+    p_case_id: caseId,
+    p_thread_id: threadId,
+    p_reply_id: replyId,
+    p_body: body,
+  });
+
+  if (error) throw rpcFailure(error, "Failed to edit reply");
+
+  return loadReply(service, context, replyId, userId);
+}
+
+export async function deleteReviewReply(
+  supabase: DB,
+  service: DB,
+  userId: string,
+  caseId: string,
+  threadId: string,
+  replyId: string
+) {
+  const { context } = await loadVisibleCase(service, caseId, userId);
+
+  const { error } = await supabase.rpc("delete_review_reply", {
+    p_case_id: caseId,
+    p_thread_id: threadId,
+    p_reply_id: replyId,
+  });
+
+  if (error) throw rpcFailure(error, "Failed to delete reply");
+
+  return loadReply(service, context, replyId, userId);
 }
 
 export async function createReviewSuggestion(
@@ -441,15 +604,18 @@ export async function createReviewSuggestion(
     p_proposed: proposed,
     p_note: note ?? undefined,
   });
+
   if (error) throw rpcFailure(error, "Failed to suggest edit");
 
   const context = await loadCaseContext(service, caseId);
   const suggestion = (await loadSuggestions(service, caseId)).find(
     (s) => s.id === id
   );
+
   if (!suggestion) throw new ServiceError("Failed to load suggested edit", 500);
 
   const people = await loadPeople(service, context, [suggestion.author_id]);
+
   return toSuggestion(suggestion, context, people);
 }
 
@@ -467,17 +633,20 @@ export async function decideReviewSuggestion(
     p_suggestion_id: suggestionId,
     p_decision: decision,
   });
+
   if (error) throw rpcFailure(error, "Failed to record your answer");
 
   const context = await loadCaseContext(service, caseId);
   const suggestions = await loadSuggestions(service, caseId);
   const suggestion = suggestions.find((s) => s.id === suggestionId);
+
   if (!suggestion) throw new ServiceError("Failed to load suggested edit", 500);
 
   const people = await loadPeople(service, context, [
     suggestion.author_id,
     suggestion.decided_by,
   ]);
+
   return {
     suggestion: toSuggestion(suggestion, context, people),
     case_status: context.status,

@@ -109,6 +109,7 @@ export const ReviewSidebar = ({
   }, [seatLive, expiresMs, now, router]);
 
   const diffMs = seatLive && expiresMs !== null ? expiresMs - now : null;
+
   const timedOut =
     seatStatus === "replaced" || (diffMs !== null && diffMs <= 0);
 
@@ -124,6 +125,7 @@ export const ReviewSidebar = ({
     abortControllerRef.current = controller;
 
     const missingFields = validateReview();
+
     if (missingFields.length !== 0) {
       toast.error(missingFields);
       return;

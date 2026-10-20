@@ -146,11 +146,16 @@ export const reviewAnchorSchema = z.object({
 // "outdated" feedback is listed with its quote and never re-placed in the text.
 export const reviewAnchorStatusSchema = z.enum(["current", "outdated"]);
 
+// A deleted thread or reply stays in place with its author and an empty body.
 export const reviewThreadReplySchema = z.object({
   id: z.string(),
   author: reviewParticipantSchema.nullable(),
   body: z.string(),
   created_at: z.string(),
+  edited_at: z.string().nullable(),
+  deleted_at: z.string().nullable(),
+  can_edit: z.boolean(),
+  can_delete: z.boolean(),
 });
 
 export const reviewThreadSchema = z.object({
@@ -161,6 +166,10 @@ export const reviewThreadSchema = z.object({
   author: reviewParticipantSchema.nullable(),
   body: z.string(),
   created_at: z.string(),
+  edited_at: z.string().nullable(),
+  deleted_at: z.string().nullable(),
+  can_edit: z.boolean(),
+  can_delete: z.boolean(),
   replies: z.array(reviewThreadReplySchema),
 });
 

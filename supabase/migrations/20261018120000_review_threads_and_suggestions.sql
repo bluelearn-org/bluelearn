@@ -1,14 +1,11 @@
--- Panel feedback pinned to the exact revision a case judges. Threads carry the
--- discussion; suggestions carry verifier edits, which go live only after the
--- revision's author accepts them.
+-- Feedback stays pinned to the revision the panel reviewed.
 
 create type public.review_anchor_kind as enum ('passage', 'block');
 
 create type public.review_suggestion_status as enum ('pending', 'accepted', 'rejected');
 
--- source_start/source_end count UTF-16 code units of the revision body, the
--- unit the reader's Markdown positions use; source_text is the server's own
--- slice. Block indexes and rendered-text offsets are the reader's coordinates.
+-- Source offsets use browser UTF-16 units; source_text comes from the server.
+-- Block indexes and rendered-text offsets remain reader coordinates.
 create table public.review_threads (
   id uuid primary key default gen_random_uuid(),
   case_id uuid not null references public.review_cases (id) on delete restrict,
@@ -59,8 +56,7 @@ create table public.review_thread_replies (
 create index review_thread_replies_thread_id_idx
   on public.review_thread_replies (thread_id);
 
--- A suggestion replaces one whole block. applied_revision_id is the revision
--- that went live carrying the edit, so reviewer attribution outlives the case.
+-- Keep applied_revision_id so verifier attribution survives publication.
 create table public.review_suggestions (
   id uuid primary key default gen_random_uuid(),
   case_id uuid not null references public.review_cases (id) on delete restrict,
@@ -102,10 +98,8 @@ create table public.review_suggestions (
 create index review_suggestions_case_id_idx
   on public.review_suggestions (case_id, status);
 
--- Open-case feedback is private to the author and the seated panel, and
--- close_review_panel trusts suggestion status, so clients get no direct table
--- access: the API reads with the service role after the same visibility check
--- as getReviewCase, and every write goes through the functions below.
+-- Direct client writes could bypass the suggestion status that gates publication.
+-- API reads enforce case visibility; writes use the checked functions below.
 alter table public.review_threads enable row level security;
 alter table public.review_thread_replies enable row level security;
 alter table public.review_suggestions enable row level security;
@@ -113,9 +107,8 @@ alter table public.review_suggestions enable row level security;
 revoke all on public.review_threads, public.review_thread_replies, public.review_suggestions
   from anon, authenticated;
 
--- Browsers count string offsets in UTF-16 code units, Postgres in characters.
--- They differ only after astral characters (emoji, math letters). Returns null
--- for an offset past the end or inside a surrogate pair.
+-- Convert browser UTF-16 offsets to Postgres character offsets.
+-- Return null past the end or inside a surrogate pair.
 create or replace function public.utf16_char_offset(p_text text, p_units integer)
 returns integer
 language sql
@@ -143,9 +136,8 @@ $$;
 revoke execute on function public.utf16_char_offset(text, integer)
   from public, anon, authenticated;
 
--- The body slice an anchor covers, or null when the range is out of bounds,
--- blank, or not on line edges. Only indentation may precede it and only
--- trailing blanks may follow it, so an accepted edit never splices into a word.
+-- Reject blank slices and boundaries inside a line's non-whitespace text.
+-- Indentation and trailing whitespace are allowed.
 create or replace function public.review_anchor_source(
   p_body text,
   p_start integer,
@@ -166,6 +158,7 @@ begin
   end if;
 
   v_source := substr(p_body, v_from + 1, v_to - v_from);
+
   if btrim(v_source, E' \t\r\n') = '' then
     return null;
   end if;
@@ -182,8 +175,7 @@ $$;
 revoke execute on function public.review_anchor_source(text, integer, integer)
   from public, anon, authenticated;
 
--- Same seat rule as cast_review_decision: an assigned seat counts until it
--- expires, a completed seat keeps its voice.
+-- Match cast_review_decision: assigned seats expire; completed seats remain eligible.
 create or replace function public.has_live_review_seat(
   p_panel_id uuid,
   p_user_id uuid
@@ -211,8 +203,7 @@ $$;
 revoke execute on function public.has_live_review_seat(uuid, uuid)
   from public, anon, authenticated;
 
--- The open panel row is the publication lock. close_review_panel takes it too,
--- so feedback can never land beside the vote or answer that publishes.
+-- Share close_review_panel's row lock so feedback cannot race publication.
 create or replace function public.lock_open_review_case(p_case_id uuid)
 returns table (panel_id uuid, revision_id uuid, revision_author_id uuid, body text)
 language plpgsql
@@ -220,6 +211,7 @@ set search_path = ''
 as $$
 begin
   perform 1 from public.review_cases rc where rc.id = p_case_id;
+
   if not found then
     raise exception 'Review case not found' using errcode = 'no_data_found';
   end if;
@@ -285,6 +277,7 @@ begin
 
   if p_source_start is not null or p_source_end is not null then
     v_source := public.review_anchor_source(v_case.body, p_source_start, p_source_end);
+
     if v_source is null then
       raise exception 'The anchor does not match this revision''s text'
         using errcode = 'data_exception';
@@ -333,6 +326,7 @@ begin
   perform 1
     from public.review_threads t
     where t.id = p_thread_id and t.case_id = p_case_id;
+
   if not found then
     raise exception 'Thread not found' using errcode = 'no_data_found';
   end if;
@@ -399,6 +393,7 @@ begin
   end if;
 
   v_source := public.review_anchor_source(v_case.body, p_source_start, p_source_end);
+
   if v_source is null then
     raise exception 'The anchor does not match this revision''s text'
       using errcode = 'data_exception';
@@ -430,9 +425,7 @@ grant execute on function public.create_review_suggestion(
   uuid, uuid, integer, integer, text, integer, integer, text, text
 ) to authenticated;
 
--- The author's answer to one verifier edit. Every answer reruns the tally;
--- close_review_panel stops before publication while any edit is pending, so
--- the answer that clears the last one publishes a waiting approval right here.
+-- The final suggestion decision can release a waiting approval in this transaction.
 create or replace function public.decide_review_suggestion(
   p_case_id uuid,
   p_suggestion_id uuid,
@@ -456,6 +449,7 @@ begin
   perform 1
     from public.review_suggestions s
     where s.id = p_suggestion_id and s.case_id = p_case_id;
+
   if not found then
     raise exception 'Suggestion not found' using errcode = 'no_data_found';
   end if;
@@ -482,8 +476,7 @@ begin
       using errcode = 'object_not_in_prerequisite_state';
   end if;
 
-  -- Accepted edits are spliced into one body at publication, so no two of them
-  -- may claim the same text.
+  -- Reject overlapping edits before they reach the publication splice.
   if p_decision = 'accepted' and exists (
     select 1
       from public.review_suggestions s
@@ -505,6 +498,7 @@ begin
   perform public.close_review_panel(p_case_id);
 
   select rc.status into v_status from public.review_cases rc where rc.id = p_case_id;
+
   return v_status;
 end;
 $$;
@@ -516,10 +510,7 @@ grant execute on function public.decide_review_suggestion(
   uuid, uuid, public.review_suggestion_status
 ) to authenticated;
 
--- Same as 20260916210000_rename_todo_prerequisites_and_claims.sql except:
--- an approving majority waits while any verifier edit is still pending, and
--- accepted edits go live as a new revision, so the revision the panel judged
--- stays exactly as reviewed.
+-- Publish accepted edits as a new revision; preserve the revision the panel judged.
 create or replace function public.close_review_panel(p_case_id uuid)
 returns void
 language plpgsql
@@ -582,8 +573,7 @@ begin
     return;
   end if;
 
-  -- An approval publishes, so it waits for the author's answer on every
-  -- verifier edit. A rejection publishes nothing and closes as before.
+  -- Pending edits delay approval only; rejection needs no author decision.
   if v_outcome = 'approved' and exists (
     select 1
       from public.review_suggestions s
@@ -636,17 +626,18 @@ begin
     loop
       v_from := public.utf16_char_offset(v_original, v_edit.source_start);
       v_to := public.utf16_char_offset(v_original, v_edit.source_end);
+
       if v_from is null
          or v_to is null
          or substr(v_original, v_from + 1, v_to - v_from) is distinct from v_edit.source_text then
         raise exception 'Accepted edit % no longer matches its revision', v_edit.id
           using errcode = 'data_corrupted';
       end if;
+
       v_body := overlay(v_body placing v_edit.proposed from v_from + 1 for v_to - v_from);
     end loop;
 
-    -- Approved strictly after the reviewed revision, so the version history
-    -- reads reviewed -> accepted edits and diffing the two shows only the edits.
+    -- Keep accepted edits strictly later in history so the diff isolates them.
     insert into public.guide_revisions (
       guide_id, title, summary, body, change_summary, author_id, status, approved_at
     )
@@ -663,10 +654,8 @@ begin
         from public.guide_revision_subjects grs
         where grs.guide_revision_id = v_reviewed_id;
 
-    -- revision_assets is the purge manifest. Copy the reviewed links, then add
-    -- every managed asset the accepted text names by its storage key, so media
-    -- a verifier referenced survives a purge of other revisions.
-    -- Matching scans media_assets per publish; index storage keys if that grows.
+    -- Register verifier-added media here so revision purges cannot delete it.
+    -- Storage-key matching scans media_assets on each publication.
     insert into public.revision_assets (revision_id, asset_id)
       select v_revision_id, ra.asset_id
         from public.revision_assets ra
@@ -686,11 +675,14 @@ begin
     v_slug_base := lower(
       trim(both '-' from regexp_replace(coalesce(v_title, ''), '[^a-zA-Z0-9]+', '-', 'g'))
     );
+
     if v_slug_base = '' then
       v_slug_base := 'guide';
     end if;
+
     v_slug := v_slug_base;
     v_suffix := 1;
+
     while exists (
       select 1 from public.guides
       where guide_base_id = v_base_id and slug = v_slug and id <> v_guide_id
@@ -708,12 +700,14 @@ begin
     if v_base_slug is null then
       v_slug := v_slug_base;
       v_suffix := 1;
+
       while exists (
         select 1 from public.guide_bases where slug = v_slug and id <> v_base_id
       ) loop
         v_suffix := v_suffix + 1;
         v_slug := v_slug_base || '-' || v_suffix;
       end loop;
+
       v_base_slug := v_slug;
     end if;
 
@@ -749,11 +743,14 @@ begin
     v_slug_base := lower(
       trim(both '-' from regexp_replace(coalesce(v_subject.name, ''), '[^a-zA-Z0-9]+', '-', 'g'))
     );
+
     if v_slug_base = '' then
       v_slug_base := 'subject';
     end if;
+
     v_slug := v_slug_base;
     v_suffix := 1;
+
     while exists (
       select 1 from public.subjects where slug = v_slug
     ) loop

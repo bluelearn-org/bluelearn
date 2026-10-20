@@ -462,9 +462,23 @@ A rejecting majority closes the case without publication.
 
 The API provides these operations under `/reviews/cases/:id`.
 Clients have no direct access to the three tables.
-Database functions check authorship, live seats, account suspension, and case state before each write.
+Database functions check live seats, account suspension, and case state before new feedback writes.
 These functions lock the open panel to prevent publication during a concurrent feedback write.
-Closed cases expose the discussion as read-only history.
+
+Message owners can edit or delete their comments and replies after the case closes or their seat expires.
+The account must remain active, and the caller must have access to the case.
+The guide author has no additional rights over another person's messages.
+Each edit sets `edited_at`, which the reader shows as an edited marker.
+Deletion clears `body` and sets `deleted_at`.
+The reader shows a deleted-message placeholder and keeps all replies.
+Repeated deletion preserves the original deletion timestamp.
+Deleted messages cannot be edited.
+
+The API accepts `PATCH` and `DELETE` at `/reviews/cases/:id/threads/:threadId`.
+Reply operations use `/reviews/cases/:id/threads/:threadId/replies/:replyId`.
+Each response includes `can_edit` and `can_delete` for the current viewer.
+Database functions enforce message ownership independently of those display permissions.
+These operations do not change votes, suggestions, case outcomes, or published revisions.
 
 #### Specialized case tables
 

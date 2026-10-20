@@ -99,6 +99,10 @@ export const createReviewReplySchema = z.object({
   body: reviewTextSchema,
 });
 
+export const updateReviewCommentSchema = z.object({
+  body: reviewTextSchema,
+});
+
 // A suggestion replaces the whole source of one block, so it needs both
 // source offsets.
 export const createReviewSuggestionSchema = z.object({
@@ -120,6 +124,9 @@ export const decideReviewSuggestionSchema = z.object({
 export type ReviewAnchorInput = z.infer<typeof reviewAnchorInputSchema>;
 export type CreateReviewThreadInput = z.infer<typeof createReviewThreadSchema>;
 export type CreateReviewReplyInput = z.infer<typeof createReviewReplySchema>;
+export type UpdateReviewCommentInput = z.infer<
+  typeof updateReviewCommentSchema
+>;
 export type CreateReviewSuggestionInput = z.infer<
   typeof createReviewSuggestionSchema
 >;

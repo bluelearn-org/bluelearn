@@ -10,6 +10,7 @@ type PropTypes = {
 // the author accepts or rejects every suggested edit.
 export const PublicationGateNotice = ({ viewerRole }: PropTypes) => {
   const publication = useOptionalReviewAnnotations()?.publication;
+
   if (!publication?.awaiting_author) return null;
 
   const count = publication.pending_suggestions;

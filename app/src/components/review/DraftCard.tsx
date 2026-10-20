@@ -14,8 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-// The guide editor itself, with math and callouts, so any block survives the
-// round trip. Loaded on demand: most readers never suggest an edit.
+// Suggested edits need the guide editor's math and callout support.
 const Editor = lazy(() => import("@/components/contribute/editor/Editor"));
 
 type PropTypes = {

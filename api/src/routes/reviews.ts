@@ -17,6 +17,7 @@ import {
   reviewSuggestionResponseSchema,
   reviewThreadReplyResponseSchema,
   reviewThreadResponseSchema,
+  updateReviewCommentSchema,
 } from "@bluelearn/schemas";
 import { errorResponses, jsonContent, validate } from "../lib/openapi";
 import {
@@ -37,6 +38,10 @@ import {
   createReviewSuggestion,
   createReviewThread,
   decideReviewSuggestion,
+  deleteReviewReply,
+  deleteReviewThread,
+  editReviewReply,
+  editReviewThread,
   getReviewAnnotations,
   replyToReviewThread,
 } from "../services/review-annotation.service";
@@ -47,6 +52,11 @@ import {
 
 const idParamSchema = z.object({ id: z.uuid() });
 const threadParamSchema = z.object({ id: z.uuid(), threadId: z.uuid() });
+const replyParamSchema = z.object({
+  id: z.uuid(),
+  threadId: z.uuid(),
+  replyId: z.uuid(),
+});
 const suggestionParamSchema = z.object({
   id: z.uuid(),
   suggestionId: z.uuid(),
@@ -120,6 +130,7 @@ export const reviewsRouter = new Hono<HonoEnv>()
         c.req.valid("param").id,
         user?.id ?? null
       );
+
       return c.json(result, 200);
     }
   )
@@ -143,6 +154,7 @@ export const reviewsRouter = new Hono<HonoEnv>()
     async (c) => {
       const input = c.req.valid("json");
       const id = c.req.valid("param").id;
+
       const result = await castDecision(c.get("supabase"), id, input);
       // This vote may have published the revision — refresh the search index
       // for the guide behind this case (best-effort).
@@ -177,6 +189,7 @@ export const reviewsRouter = new Hono<HonoEnv>()
         c.req.valid("param").id,
         user?.id ?? null
       );
+
       return c.json(result, 200);
     }
   )
@@ -201,9 +214,11 @@ export const reviewsRouter = new Hono<HonoEnv>()
       const thread = await createReviewThread(
         c.get("supabase"),
         getServiceSupabase(c),
+        c.get("user").id,
         c.req.valid("param").id,
         c.req.valid("json")
       );
+
       return c.json({ thread }, 201);
     }
   )
@@ -229,11 +244,135 @@ export const reviewsRouter = new Hono<HonoEnv>()
       const reply = await replyToReviewThread(
         c.get("supabase"),
         getServiceSupabase(c),
+        c.get("user").id,
         id,
         threadId,
         c.req.valid("json")
       );
+
       return c.json({ reply }, 201);
+    }
+  )
+
+  // Only the author edits a comment, also after the case closes.
+  .patch(
+    "/cases/:id/threads/:threadId",
+    describeRoute({
+      tags: ["reviews"],
+      summary: "Edit your comment",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(reviewThreadResponseSchema, "The edited thread"),
+        ...errorResponses(400, 401, 403, 404, 409, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "review-feedback" }),
+    validate("param", threadParamSchema),
+    validate("json", updateReviewCommentSchema),
+    async (c) => {
+      const { id, threadId } = c.req.valid("param");
+      const thread = await editReviewThread(
+        c.get("supabase"),
+        getServiceSupabase(c),
+        c.get("user").id,
+        id,
+        threadId,
+        c.req.valid("json")
+      );
+
+      return c.json({ thread }, 200);
+    }
+  )
+
+  // Deleting empties the comment but keeps its anchor and replies.
+  .delete(
+    "/cases/:id/threads/:threadId",
+    describeRoute({
+      tags: ["reviews"],
+      summary: "Delete your comment",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(reviewThreadResponseSchema, "The deleted thread"),
+        ...errorResponses(400, 401, 403, 404, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "review-feedback" }),
+    validate("param", threadParamSchema),
+    async (c) => {
+      const { id, threadId } = c.req.valid("param");
+      const thread = await deleteReviewThread(
+        c.get("supabase"),
+        getServiceSupabase(c),
+        c.get("user").id,
+        id,
+        threadId
+      );
+
+      return c.json({ thread }, 200);
+    }
+  )
+
+  // Only the author edits a reply, also after the case closes.
+  .patch(
+    "/cases/:id/threads/:threadId/replies/:replyId",
+    describeRoute({
+      tags: ["reviews"],
+      summary: "Edit your reply",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(reviewThreadReplyResponseSchema, "The edited reply"),
+        ...errorResponses(400, 401, 403, 404, 409, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "review-feedback" }),
+    validate("param", replyParamSchema),
+    validate("json", updateReviewCommentSchema),
+    async (c) => {
+      const { id, threadId, replyId } = c.req.valid("param");
+      const reply = await editReviewReply(
+        c.get("supabase"),
+        getServiceSupabase(c),
+        c.get("user").id,
+        id,
+        threadId,
+        replyId,
+        c.req.valid("json")
+      );
+
+      return c.json({ reply }, 200);
+    }
+  )
+
+  // Deleting empties the reply but keeps its place in the thread.
+  .delete(
+    "/cases/:id/threads/:threadId/replies/:replyId",
+    describeRoute({
+      tags: ["reviews"],
+      summary: "Delete your reply",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(reviewThreadReplyResponseSchema, "The deleted reply"),
+        ...errorResponses(400, 401, 403, 404, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "review-feedback" }),
+    validate("param", replyParamSchema),
+    async (c) => {
+      const { id, threadId, replyId } = c.req.valid("param");
+      const reply = await deleteReviewReply(
+        c.get("supabase"),
+        getServiceSupabase(c),
+        c.get("user").id,
+        id,
+        threadId,
+        replyId
+      );
+
+      return c.json({ reply }, 200);
     }
   )
 
@@ -261,6 +400,7 @@ export const reviewsRouter = new Hono<HonoEnv>()
         c.req.valid("param").id,
         c.req.valid("json")
       );
+
       return c.json({ suggestion }, 201);
     }
   )

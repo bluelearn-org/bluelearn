@@ -1,10 +1,7 @@
 import { REVIEW_QUOTE_MAX_LENGTH } from "@bluelearn/schemas";
 
-// A review comment points at a passage of the rendered guide body. The anchor
-// stores UTF-16 offsets in the guide text of the top-level blocks, never a DOM
-// Range: a Range dies with the nodes it points at, and the review page
-// re-renders around it. When the guide text no longer matches the anchor,
-// anchorHolds fails and the comment leaves the passage instead of moving.
+// Store UTF-16 offsets in top-level block text; DOM Ranges become invalid when guide nodes change.
+// Detach mismatched quotes rather than attaching feedback to different text.
 
 // AnnotatedBlock puts these on the content element of each block.
 export const BLOCK_CONTENT_ATTR = "data-review-block-content";
@@ -133,6 +130,7 @@ export function anchorFromSelection(
     return null;
 
   const range = selection.getRangeAt(0);
+
   if (
     !insideGuideText(root, range.startContainer) ||
     !insideGuideText(root, range.endContainer)
@@ -142,6 +140,7 @@ export function anchorFromSelection(
   const blocks = Array.from(
     root.querySelectorAll<HTMLElement>(`[${BLOCK_CONTENT_ATTR}]`)
   ).filter((content) => range.intersectsNode(content));
+
   if (blocks.length === 0) return null;
 
   let start = blocks[0].contains(range.startContainer)
@@ -165,6 +164,7 @@ export function anchorFromSelection(
   }
 
   const quote = quoteOf(blocks, start, end);
+
   if (quote.trim() === "") return null;
 
   return {
@@ -256,6 +256,7 @@ export function anchorHolds(root: HTMLElement, anchor: PassageAnchor) {
   }
 
   const last = blocks[blocks.length - 1];
+
   if (
     anchor.start_offset > textOf(blocks[0]).length ||
     anchor.end_offset > textOf(last).length
@@ -288,6 +289,7 @@ export function rangeFromAnchor(root: HTMLElement, anchor: PassageAnchor) {
 
   const start = pointAt(blocks[0], anchor.start_offset);
   const end = pointAt(blocks[blocks.length - 1], anchor.end_offset);
+
   if (!start || !end) return null;
 
   const range = root.ownerDocument.createRange();
@@ -307,6 +309,7 @@ export function guideTextRanges(
   if (!blocks) return [];
 
   const last = blocks.length - 1;
+
   if (
     anchor.start_offset > textOf(blocks[0]).length ||
     anchor.end_offset > textOf(blocks[last]).length
