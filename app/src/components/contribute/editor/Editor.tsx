@@ -27,7 +27,7 @@ import "@mdxeditor/editor/style.css";
 import "./Editor.css";
 
 type EditorProps = {
-  // Initial markdown only; later value changes do not replace the draft.
+  // Markdown to open with, e.g. when resuming a draft.
   value?: string;
   onChange?: (markdown: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
@@ -58,7 +58,7 @@ export default function Editor({
   onUploadImageRef.current = onUploadImage;
   const latestRef = useRef<string | null>(null);
 
-  // Keep parent updates off the per-keystroke path.
+  // debounce so we don't re-render the flow on every keystroke
   const handleMarkdownChange = useCallback(
     (newMarkdown: string) => {
       setMarkdown(newMarkdown);
@@ -91,7 +91,9 @@ export default function Editor({
     onChangeRef.current?.(newMarkdown);
   }, []);
 
-  // Flush before Save Draft or Next reads the parent state.
+  // If the user clicks away (e.g., clicking "Save Draft" or "Next"),
+  // immediately flush any pending debounced state to the parent
+  // so that the button click handlers see the freshest data.
   const handleBlur = useCallback(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -103,7 +105,7 @@ export default function Editor({
     }
   }, []);
 
-  // Preserve pending edits when the editor unmounts.
+  // Force a save on a pending edit if user leaves before the debounce fires
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -144,6 +146,8 @@ export default function Editor({
     []
   );
 
+  // Stable plugins configuration to avoid rebuilding Lexical instance during state re-renders
+  // Note: changes to markdown, mode, or overlayContainer recreate this configuration.
   const plugins = useMemo(
     () => [
       headingsPlugin({
