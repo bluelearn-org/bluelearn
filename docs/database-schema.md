@@ -448,6 +448,10 @@ The reader checks each quote before it marks a passage.
 If the text changes, the reader shows the original quote separately.
 Comments on changed or missing source text keep their saved quote.
 
+Text selections include the complete blocks that contain the selected text.
+The comment preview uses the guide renderer and preserves block formatting without a line limit.
+Saved quotes use their stored source when available, or their saved plain text when no source remains.
+
 The reader shows a one-pixel outline around the selected blocks.
 Four corner handles and two center handles use three-pixel strokes centered on the outline.
 Each handle has an invisible 44-pixel square target with more padding outside the selection.

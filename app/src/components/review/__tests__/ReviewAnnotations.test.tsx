@@ -287,12 +287,12 @@ const guide: ReaderGuide = {
   requests: [],
 };
 
-function renderCase({ expiresAt = "2099-01-01T00:00:00Z" } = {}) {
+function renderCase({ expiresAt = "2099-01-01T00:00:00Z", body = BODY } = {}) {
   return render(
     <ReviewAnnotationsProvider
       caseId="case-1"
       revisionId={REVISION}
-      revisionBody={BODY}
+      revisionBody={body}
       viewerExpiresAt={expiresAt}
     >
       <aside>
@@ -300,7 +300,7 @@ function renderCase({ expiresAt = "2099-01-01T00:00:00Z" } = {}) {
         <PublicationGateNotice viewerRole={server.viewer} />
       </aside>
       <AnnotatedGuide>
-        <GuideReader guide={guide} BlockWrapper={AnnotatedBlock} />
+        <GuideReader guide={{ ...guide, body }} BlockWrapper={AnnotatedBlock} />
       </AnnotatedGuide>
     </ReviewAnnotationsProvider>
   );
@@ -606,9 +606,10 @@ describe("stored review comments", () => {
     );
     const draft = screen.getByRole("region", { name: "New comment" });
     expect(blockOf(draft)).toBe("0");
-    expect(draft.querySelector("blockquote")?.textContent).toBe(
-      first.textContent
+    expect(draft.querySelector("figure p")?.textContent).toBe(
+      "Cells make energy in mitochondria."
     );
+    expect(draft.querySelector("figure")?.textContent).not.toContain(RIGID);
     fireEvent.click(within(draft).getByRole("button", { name: "Cancel" }));
     expect(document.activeElement?.closest("[data-review-block]")).toBe(
       actions
@@ -636,9 +637,10 @@ describe("stored review comments", () => {
     );
     const draft = screen.getByRole("region", { name: "New comment" });
     expect(blockOf(draft)).toBe("1");
-    expect(draft.querySelector("blockquote")?.textContent).toBe(
-      blockContent(0).textContent
+    expect(draft.querySelector("figure p")?.textContent).toBe(
+      "Cells make energy in mitochondria."
     );
+    expect(draft.querySelector("figure")?.textContent).not.toContain(RIGID);
     fireEvent.click(within(draft).getByRole("button", { name: "Cancel" }));
     expect(document.activeElement?.closest("[data-review-block]")).toBe(
       actions
@@ -855,7 +857,8 @@ describe("commenting on a selection", () => {
 
     const draft = screen.getByRole("region", { name: "New comment" });
     expect(draft.textContent).toContain("Cells make energy in mitochondria.");
-    expect(draft.textContent).toContain("The cell wall");
+    expect(draft.querySelector("figure")!.textContent).toContain(RIGID);
+    expect(draft.querySelector("figure strong")?.textContent).toBe("energy");
     expect(blockContent(0).hasAttribute("data-review-selected")).toBe(true);
     expect(blockContent(1).hasAttribute("data-review-selected")).toBe(true);
     expect(blockContent(2).hasAttribute("data-review-selected")).toBe(false);
@@ -879,7 +882,7 @@ describe("commenting on a selection", () => {
     press(screen.getByRole("button", { name: "Comment on selection" }));
 
     const draft = screen.getByRole("region", { name: "New comment" });
-    expect(draft.textContent).toContain("cell wall");
+    expect(draft.querySelector("figure p")?.textContent).toBe(RIGID);
     expect(blockOf(draft)).toBe("2");
 
     await waitFor(() =>
@@ -907,12 +910,12 @@ describe("commenting on a selection", () => {
     expect(card.textContent).toContain("Plant cells only?");
 
     const anchor = {
-      kind: "passage",
+      kind: "block",
       start_block: 2,
-      start_offset: 4,
+      start_offset: 0,
       end_block: 2,
-      end_offset: 13,
-      quote: "cell wall",
+      end_offset: RIGID.length,
+      quote: RIGID,
       source_start: BODY.lastIndexOf(RIGID),
       source_end: BODY.lastIndexOf(RIGID) + RIGID.length,
       revision_id: REVISION,
@@ -922,6 +925,56 @@ describe("commenting on a selection", () => {
       { anchor, body },
       { anchor, body },
     ]);
+  });
+
+  it("mirrors a complete formatted block and resolves references outside it", async () => {
+    renderCase({
+      body: [
+        "Outside the quote.",
+        "",
+        "Keep **bold**, *emphasis*, `code`, $x^2$, and [the reference][source].",
+        "",
+        "[source]: https://example.com/source",
+      ].join("\n"),
+    });
+    await screen.findByText(/No comments yet/);
+
+    selectText(blockContent(1).querySelector("strong")!.firstChild!, 1, 3);
+    press(screen.getByRole("button", { name: "Comment on selection" }));
+
+    const quote = screen
+      .getByRole("region", { name: "New comment" })
+      .querySelector("figure")!;
+    expect(quote.textContent).toContain("Keep bold, emphasis, code,");
+    expect(quote.textContent).not.toContain("Outside the quote.");
+    expect(quote.querySelector("strong")?.textContent).toBe("bold");
+    expect(quote.querySelector("em")?.textContent).toBe("emphasis");
+    expect(quote.querySelector("code")?.textContent).toBe("code");
+    expect(quote.querySelector(".katex")).not.toBeNull();
+    expect(
+      within(quote)
+        .getByRole("link", { name: "the reference" })
+        .getAttribute("href")
+    ).toBe("https://example.com/source");
+  });
+
+  it("keeps the complete list when only one list item is highlighted", async () => {
+    renderCase({
+      body: "- First **item**\n- Second item\n\nOutside the list.",
+    });
+    await screen.findByText(/No comments yet/);
+
+    selectText(blockContent(0).querySelector("strong")!.firstChild!, 0, 4);
+    press(screen.getByRole("button", { name: "Comment on selection" }));
+
+    const quote = screen
+      .getByRole("region", { name: "New comment" })
+      .querySelector("figure")!;
+    expect(
+      Array.from(quote.querySelectorAll("ul > li"), (item) => item.textContent)
+    ).toEqual(["First item", "Second item"]);
+    expect(quote.querySelector("strong")?.textContent).toBe("item");
+    expect(quote.textContent).not.toContain("Outside the list.");
   });
 
   it("refuses an empty selection", async () => {

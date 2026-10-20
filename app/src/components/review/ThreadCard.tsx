@@ -4,6 +4,7 @@ import { REVIEW_COMMENT_MAX_LENGTH } from "@bluelearn/schemas";
 import type { ReactNode, RefObject } from "react";
 
 import type { ReviewReply, ReviewThread } from "@/lib/api/reviewAnnotations";
+import { GuideMarkdown } from "@/components/GuideReader";
 import {
   CommentEntry,
   PassageQuote,
@@ -250,7 +251,16 @@ export const ThreadCard = ({
       aria-label={`Comment thread by ${participantName(thread.author)}`}
       className="my-3 space-y-3 rounded-lg border bg-card p-3 text-sm shadow-xs"
     >
-      {detached && <PassageQuote anchor={thread.anchor} />}
+      {detached && (
+        <PassageQuote anchor={thread.anchor}>
+          {thread.anchor.source_text !== null ? (
+            <GuideMarkdown
+              markdown={thread.anchor.source_text}
+              anchorHeadings={false}
+            />
+          ) : undefined}
+        </PassageQuote>
+      )}
 
       {rootDeleted && (
         <div className="flex items-center gap-3">

@@ -268,36 +268,6 @@ export function anchorHolds(root: HTMLElement, anchor: PassageAnchor) {
   );
 }
 
-function pointAt(content: HTMLElement, offset: number) {
-  let remaining = offset;
-
-  for (const node of guideTextNodes(content)) {
-    const length = node.data.length;
-    if (remaining <= length) return { node, offset: remaining };
-    remaining -= length;
-  }
-
-  return remaining === 0 ? { node: content as Node, offset: 0 } : null;
-}
-
-// A fresh Range over the whole passage. Callers rebuild it from the anchor
-// after each render instead of keeping it. The Range also covers comment cards
-// and guide UI between its ends, so highlights paint guideTextRanges instead.
-export function rangeFromAnchor(root: HTMLElement, anchor: PassageAnchor) {
-  const blocks = blockRange(root, anchor);
-  if (!blocks) return null;
-
-  const start = pointAt(blocks[0], anchor.start_offset);
-  const end = pointAt(blocks[blocks.length - 1], anchor.end_offset);
-
-  if (!start || !end) return null;
-
-  const range = root.ownerDocument.createRange();
-  range.setStart(start.node, start.offset);
-  range.setEnd(end.node, end.offset);
-  return range;
-}
-
 // The guide text of an anchor as one Range per text node, for painting a
 // highlight without comment cards or guide UI. An anchor whose offsets no
 // longer fit its blocks gets no ranges.

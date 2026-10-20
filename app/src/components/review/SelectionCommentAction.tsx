@@ -16,7 +16,7 @@ import {
   BLOCK_CONTENT_ATTR,
   anchorFromSelection,
   blockAnchor,
-  rangeFromAnchor,
+  blocksAnchor,
   sourceRangeFits,
 } from "@/lib/reviewAnchors";
 
@@ -50,26 +50,22 @@ export const SelectionCommentAction = () => {
   const pressing = useRef(false);
   const virtualAnchor = useMemo(() => {
     const root = rootRef.current;
-    const range = root && candidate ? rangeFromAnchor(root, candidate) : null;
-    // A multi-block range also encloses intervening cards and hidden actions.
-    // Its endpoint keeps the toolbar beside the selected text itself.
-    range?.collapse(false);
 
     return {
       current: {
         contextElement: root ?? undefined,
         getBoundingClientRect: () => {
-          if (blockSelection && candidate && root) {
-            const lastBlock = root.querySelector(
+          const lastBlock =
+            candidate &&
+            root?.querySelector(
               `[${BLOCK_CONTENT_ATTR}="${candidate.end_block}"]`
             );
-            return lastBlock?.getBoundingClientRect() ?? new DOMRect();
-          }
-          return range?.getBoundingClientRect() ?? new DOMRect();
+
+          return lastBlock?.getBoundingClientRect() ?? new DOMRect();
         },
       },
     };
-  }, [candidate, rootRef, blockSelection]);
+  }, [candidate, rootRef]);
 
   useEffect(() => {
     const update = () => {
@@ -77,9 +73,13 @@ export const SelectionCommentAction = () => {
       if (blockSelection && document.getSelection()?.isCollapsed) return;
 
       const root = rootRef.current;
-      const next = root
+      const selected = root
         ? anchorFromSelection(document.getSelection(), root)
         : null;
+      const next =
+        root && selected
+          ? blocksAnchor(root, selected.start_block, selected.end_block)
+          : null;
       setCandidate((prev) => (sameAnchor(prev, next) ? prev : next));
     };
     const release = (event: PointerEvent) => {

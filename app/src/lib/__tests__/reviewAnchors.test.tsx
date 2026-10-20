@@ -14,7 +14,6 @@ import {
   anchorHolds,
   blockAnchor,
   guideTextRanges,
-  rangeFromAnchor,
   sourceRangeFits,
 } from "@/lib/reviewAnchors";
 
@@ -114,7 +113,6 @@ describe("passage anchors", () => {
     expect(anchor.quote).toBe("make energy with mito");
     expect([anchor.start_block, anchor.end_block]).toEqual([0, 0]);
     expect(anchor.end_offset - anchor.start_offset).toBe(anchor.quote.length);
-    expect(rangeFromAnchor(root, anchor)!.toString()).toBe(anchor.quote);
     // The source offsets point at the markdown of the block, not the HTML.
     expect(BODY.slice(anchor.source_start!, anchor.source_end!)).toBe(
       BODY.split("\n")[0]
@@ -131,7 +129,6 @@ describe("passage anchors", () => {
     )!;
     expect([across.start_block, across.end_block]).toEqual([1, 2]);
     expect(across.quote).toBe("cell wall is rigid.\nThe cell");
-    expect(rangeFromAnchor(root, across)!.toString()).toContain("rigid.");
 
     // A triple click ends at the start of the next block.
     const tripleClick = anchorFromSelection(
@@ -153,7 +150,7 @@ describe("passage anchors", () => {
 
     expect(anchor.quote).toBe("cell wall");
     expect(anchor.start_block).toBe(2);
-    const range = rangeFromAnchor(root, anchor)!;
+    const [range] = guideTextRanges(root, anchor);
     expect(third.contains(range.startContainer)).toBe(true);
     expect(second.contains(range.startContainer)).toBe(false);
   });
@@ -288,11 +285,9 @@ describe("code blocks", () => {
     const passage = anchorFromSelection(select([code, 8], [code, 14]), root)!;
     expect(passage.quote).toBe("answer");
     expect([passage.start_block, passage.start_offset]).toEqual([1, 8]);
-    expect(rangeFromAnchor(root, passage)!.toString()).toBe("answer");
 
     const block = blockAnchor(root, 1)!;
     expect([block.quote, block.end_offset]).toEqual([CODE, CODE.length]);
-    expect(rangeFromAnchor(root, block)!.toString()).toBe(CODE);
     expect(guideTextRanges(root, block).map(String)).toEqual([CODE]);
     expect(
       guideTextRanges(root, { ...block, end_offset: CODE.length + 1 })
@@ -323,7 +318,7 @@ describe("code blocks", () => {
     expect(anchorHolds(root, passage)).toBe(true);
     expect(anchorHolds(root, block)).toBe(true);
     expect(blockAnchor(root, 1)).toEqual(block);
-    expect(rangeFromAnchor(root, passage)!.toString()).toBe("answer");
+    expect(guideTextRanges(root, passage).map(String)).toEqual(["answer"]);
   });
 
   it("skips the label and Copy button in a selection that spans them", () => {
@@ -340,9 +335,6 @@ describe("code blocks", () => {
     expect([across.start_block, across.end_block]).toEqual([0, 1]);
     expect(across.quote).toBe("this code:\n  const");
     expect(across.end_offset).toBe(7);
-    const range = rangeFromAnchor(root, across)!;
-    expect(range.endContainer).toBe(code);
-    expect(range.endOffset).toBe(7);
     const painted = guideTextRanges(root, across).map(String);
     expect(painted).toEqual(["this code:", "  const"]);
 

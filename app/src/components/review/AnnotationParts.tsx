@@ -45,21 +45,31 @@ export const ReviewerBadge = ({
   );
 };
 
-export const PassageQuote = ({ anchor }: { anchor: PassageAnchor }) => {
+export const PassageQuote = ({
+  anchor,
+  children,
+}: {
+  anchor: PassageAnchor;
+  children?: ReactNode;
+}) => {
   const truncated =
     anchor.kind === "block" && anchor.quote.length < anchor.end_offset;
 
   return (
-    <figure className="flex gap-2 rounded-md bg-muted/60 px-3 py-2 text-xs">
+    <figure className="flex gap-2 rounded-md bg-muted/60 px-3 py-2">
       <Quote
         aria-hidden
         className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
       />
-      <blockquote className="line-clamp-4 border-0 p-0 break-words whitespace-pre-wrap text-foreground">
-        {anchor.quote === ""
-          ? "A block without text, such as an image."
-          : `${anchor.quote}${truncated ? "..." : ""}`}
-      </blockquote>
+      <div className="markdown min-w-0 flex-1 text-base font-normal text-foreground">
+        {children ?? (
+          <p className="break-words whitespace-pre-wrap">
+            {anchor.quote === ""
+              ? "A block without text, such as an image."
+              : `${anchor.quote}${truncated ? "..." : ""}`}
+          </p>
+        )}
+      </div>
     </figure>
   );
 };

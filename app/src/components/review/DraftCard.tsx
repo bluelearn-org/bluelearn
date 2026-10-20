@@ -1,10 +1,12 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   REVIEW_COMMENT_MAX_LENGTH,
   REVIEW_PROPOSED_MAX_LENGTH,
 } from "@bluelearn/schemas";
 import type { Draft } from "@/components/review/ReviewAnnotations";
+import type { GuideBlockProps } from "@/components/GuideReader";
+import { GuideMarkdown } from "@/components/GuideReader";
 import { PassageQuote } from "@/components/review/AnnotationParts";
 import { CommentComposer } from "@/components/review/CommentComposer";
 import {
@@ -148,8 +150,15 @@ const SuggestionDraft = ({ draft, onCancel }: PropTypes) => {
 };
 
 export const DraftCard = ({ draft, onCancel }: PropTypes) => {
-  const { drafts, createThread } = useReviewAnnotations();
+  const { drafts, createThread, revisionBody } = useReviewAnnotations();
   const key = draftKey(draft);
+  const { start_block: start, end_block: end } = draft.anchor;
+  const QuoteBlock = useMemo(
+    () =>
+      ({ index, children }: GuideBlockProps) =>
+        index >= start && index <= end ? <>{children}</> : null,
+    [start, end]
+  );
 
   if (draft.mode === "suggestion")
     return <SuggestionDraft draft={draft} onCancel={onCancel} />;
@@ -159,7 +168,13 @@ export const DraftCard = ({ draft, onCancel }: PropTypes) => {
       aria-label="New comment"
       className="my-3 space-y-3 rounded-lg border border-brand-bright-blue/40 bg-card p-3 text-sm shadow-xs"
     >
-      <PassageQuote anchor={draft.anchor} />
+      <PassageQuote anchor={draft.anchor}>
+        <GuideMarkdown
+          markdown={revisionBody}
+          anchorHeadings={false}
+          BlockWrapper={QuoteBlock}
+        />
+      </PassageQuote>
       <CommentComposer
         label="Comment"
         submitLabel="Post comment"
