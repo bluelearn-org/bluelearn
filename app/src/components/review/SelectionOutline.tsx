@@ -74,7 +74,7 @@ export const SelectionOutline = () => {
         width={bounds.width}
         height={bounds.height}
         rx={8}
-        strokeWidth={2}
+        strokeWidth={1}
         className="fill-brand-bright-blue/10 stroke-brand-bright-blue"
       />
     </svg>

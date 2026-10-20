@@ -23,7 +23,7 @@ import type {
   MarkedPassage,
   Placement,
 } from "@/lib/reviewPlacement";
-import { badgeId } from "@/components/review/AnnotationParts";
+import { badgeId, cardId } from "@/components/review/AnnotationParts";
 import { useBlockSelection } from "@/components/review/useBlockSelection";
 import {
   createReviewSuggestion,
@@ -37,7 +37,11 @@ import {
   updateReviewThread,
 } from "@/lib/api/reviewAnnotations";
 import { useSuspensionStatus } from "@/lib/authContext";
-import { blocksAnchor, sourceRangeFits } from "@/lib/reviewAnchors";
+import {
+  ANNOTATION_UI_ATTR,
+  blocksAnchor,
+  sourceRangeFits,
+} from "@/lib/reviewAnchors";
 import { paintHighlights, placeItems } from "@/lib/reviewPlacement";
 
 // The open composer. It holds the anchor taken before the composer took
@@ -280,6 +284,9 @@ export const ReviewAnnotationsProvider = ({
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
       transition.current = document.startViewTransition(update);
+
+      if ("types" in transition.current) transition.current.types.add("review");
+
       void transition.current.ready.catch((animationError: unknown) => {
         // A second toggle can skip the first animation before its snapshot is ready.
         if (
@@ -312,31 +319,35 @@ export const ReviewAnnotationsProvider = ({
     try {
       setData(await getReviewAnnotations(caseId));
       setError(null);
+      return true;
     } catch (err) {
       setError(
         err instanceof Error && err.message
           ? err.message
           : "Could not load review comments."
       );
+      return false;
     }
   }, [caseId]);
 
-  // Posting removes the draft with its focused button. The new card's badge
-  // takes the focus once the refreshed list places it.
-  const focusAfterPlacement = useRef<string | null>(null);
+  // Resolve focus after placement; deletion can remove both the message and its badge.
+  const focusAfterPlacement = useRef<
+    (() => HTMLElement | null | undefined) | null
+  >(null);
 
   useLayoutEffect(() => {
-    const id = focusAfterPlacement.current;
-    if (!placement || id === null) return;
+    const target = focusAfterPlacement.current;
+    if (!placement || target === null) return;
 
     focusAfterPlacement.current = null;
-    document.getElementById(badgeId(id))?.focus({ preventScroll: true });
+    target()?.focus({ preventScroll: true });
   }, [placement]);
 
   const finishDraft = useCallback(
     (finished: Draft, createdId: string) => {
       drafts.delete(draftKey(finished));
-      focusAfterPlacement.current = createdId;
+      focusAfterPlacement.current = () =>
+        document.getElementById(badgeId(createdId));
       setDraft(null);
       setExpanded((prev) => new Set(prev).add(createdId));
     },
@@ -393,13 +404,27 @@ export const ReviewAnnotationsProvider = ({
 
   const deleteMessage = useCallback(
     async ({ threadId, replyId }: MessageTarget) => {
+      // Capture the stable container before deletion can remove its thread.
+      const place = document
+        .getElementById(cardId(threadId))
+        ?.closest<HTMLElement>(
+          `[${ANNOTATION_UI_ATTR}], [data-review-detached]`
+        );
+
       if (replyId === null) {
         await deleteReviewThread(caseId, threadId);
       } else {
         await deleteReviewReply(caseId, threadId, replyId);
       }
 
-      await refresh();
+      focusAfterPlacement.current = () =>
+        document.getElementById(badgeId(threadId)) ??
+        document.getElementById(cardId(threadId)) ??
+        place?.querySelector<HTMLElement>(
+          "[data-review-block-actions] button"
+        ) ??
+        place;
+      if (!(await refresh())) focusAfterPlacement.current = null;
     },
     [caseId, refresh]
   );

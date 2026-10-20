@@ -29,6 +29,7 @@ import {
   blockAnchor,
   sourceRangeFits,
 } from "@/lib/reviewAnchors";
+import { liveMessageCount } from "@/lib/reviewPlacement";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS = {
@@ -42,6 +43,8 @@ const AnnotationBadge = ({ item }: { item: AnnotationItem }) => {
   const open = expanded.has(item.id);
   const author =
     item.type === "thread" ? item.thread.author : item.suggestion.author;
+  const messageCount =
+    item.type === "thread" ? liveMessageCount(item.thread) : 0;
 
   return (
     <button
@@ -68,9 +71,9 @@ const AnnotationBadge = ({ item }: { item: AnnotationItem }) => {
             )}
           >
             <MessageSquare aria-hidden className="size-3.5" />
-            {item.thread.replies.length + 1}
+            {messageCount}
             <span className="sr-only">
-              {item.thread.replies.length === 0 ? "comment" : "comments"}
+              {messageCount === 1 ? "comment" : "comments"}
             </span>
           </span>
         ) : (
@@ -94,26 +97,57 @@ const AnnotationBadge = ({ item }: { item: AnnotationItem }) => {
   );
 };
 
-const SelectionGrip = ({ edge }: { edge: "start" | "end" }) => {
+const SelectionGrip = ({
+  edge,
+  position,
+}: {
+  edge: "start" | "end";
+  position: "left" | "center" | "right";
+}) => {
   const { selectionControls } = useReviewAnnotations();
+  const handle = `${edge}-${position}`;
+  const dragging = selectionControls.draggingHandle === handle;
+
   return (
     <button
       type="button"
-      aria-label={`Adjust selection ${edge}`}
+      aria-label={`Adjust selection ${edge} (${position})`}
       title="Drag to snap to a block. Use Up and Down arrows to adjust; Escape clears the selection."
       data-review-selection-grip={edge}
+      data-review-selection-handle={handle}
+      data-dragging={dragging ? "" : undefined}
       {...{ [ANNOTATION_UI_ATTR]: "" }}
       className={cn(
-        "absolute z-30 flex size-11 touch-none items-center justify-center rounded-full outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
-        edge === "start" ? "-top-9 -left-2" : "-right-2 -bottom-9"
+        "group absolute z-30 size-11 cursor-ns-resize touch-none rounded-lg outline-none select-none",
+        edge === "start" ? "-top-[37px]" : "-bottom-[37px]",
+        position === "left" && "-left-[26px]",
+        position === "center" && "left-1/2 -translate-x-1/2",
+        position === "right" && "-right-[26px]"
       )}
-      onPointerDown={(event) => selectionControls.startDrag(edge, event)}
-      onKeyDown={(event) => selectionControls.adjustWithKeyboard(edge, event)}
+      onPointerDown={(event) =>
+        selectionControls.startDrag(edge, event, handle)
+      }
+      onKeyDown={(event) =>
+        selectionControls.adjustWithKeyboard(edge, event, handle)
+      }
       onClick={(event) => event.stopPropagation()}
     >
-      <span className="flex h-5 w-8 items-center justify-center rounded-full border border-background bg-brand-bright-blue text-white shadow-sm">
-        <GripHorizontal aria-hidden className="size-4" />
-      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute size-3.5 border-brand-bright-blue/70 transition-[border-color,background-color,box-shadow,scale] duration-100 group-hover:border-brand-bright-blue group-focus-visible:border-brand-bright-blue group-focus-visible:bg-brand-bright-blue/10 group-focus-visible:ring-2 group-focus-visible:ring-brand-bright-blue/40 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background group-active:scale-90 group-data-[dragging]:scale-90 group-data-[dragging]:border-brand-bright-blue motion-reduce:transition-none motion-reduce:group-active:scale-100 motion-reduce:group-data-[dragging]:scale-100",
+          edge === "start"
+            ? "top-[31.5px] border-t-[3px]"
+            : "bottom-[31.5px] border-b-[3px]",
+          position === "center" && "left-1/2 h-0 w-5 -translate-x-1/2",
+          position === "left" && "left-[20.5px] border-l-[3px]",
+          position === "right" && "right-[20.5px] border-r-[3px]",
+          position === "left" &&
+            (edge === "start" ? "rounded-tl-[9.5px]" : "rounded-bl-[9.5px]"),
+          position === "right" &&
+            (edge === "start" ? "rounded-tr-[9.5px]" : "rounded-br-[9.5px]")
+        )}
+      />
     </button>
   );
 };
@@ -244,8 +278,20 @@ export const AnnotatedBlock = ({
         </div>
         {blockSelection && !draft && permissions.can_comment && (
           <>
-            {selection?.start_block === index && <SelectionGrip edge="start" />}
-            {selection?.end_block === index && <SelectionGrip edge="end" />}
+            {selection?.start_block === index && (
+              <>
+                <SelectionGrip edge="start" position="left" />
+                <SelectionGrip edge="start" position="center" />
+                <SelectionGrip edge="start" position="right" />
+              </>
+            )}
+            {selection?.end_block === index && (
+              <>
+                <SelectionGrip edge="end" position="left" />
+                <SelectionGrip edge="end" position="center" />
+                <SelectionGrip edge="end" position="right" />
+              </>
+            )}
           </>
         )}
       </div>
@@ -253,6 +299,10 @@ export const AnnotatedBlock = ({
       <div
         {...{ [ANNOTATION_UI_ATTR]: "" }}
         data-review-annotation-badges={items.length > 0 ? index : undefined}
+        // Takes the focus when a delete leaves this passage with no control.
+        tabIndex={-1}
+        role="group"
+        aria-label={`Review discussion for block ${index + 1}`}
         className={items.length > 0 ? "flow-root" : undefined}
       >
         {items.some((item) => !expanded.has(item.id)) && (

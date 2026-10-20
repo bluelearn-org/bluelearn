@@ -70,7 +70,6 @@ export const CommentEntry = ({
   body,
   createdAt,
   edited,
-  deleted,
   identity,
   actions,
 }: {
@@ -79,7 +78,6 @@ export const CommentEntry = ({
   body: string;
   createdAt: string;
   edited: boolean;
-  deleted: boolean;
   identity?: ReactNode;
   actions?: ReactNode;
 }) => (
@@ -88,15 +86,10 @@ export const CommentEntry = ({
     tabIndex={-1}
     className="flex items-start gap-3 rounded-md border border-brand-bright-blue/15 bg-brand-bright-blue/5 px-3 py-2"
   >
-    {deleted ? (
-      <p className="mb-0 min-w-0 flex-1 text-sm text-muted-foreground italic">
-        Comment deleted
-      </p>
-    ) : (
-      <div className="min-w-0 flex-1 text-sm [&_p]:mb-2 [&_p]:text-foreground [&_p:last-child]:mb-0">
-        <GuideMarkdown markdown={body} anchorHeadings={false} />
-      </div>
-    )}
+    <div className="min-w-0 flex-1 text-sm [&_p]:mb-2 [&_p]:text-foreground [&_p:last-child]:mb-0">
+      <GuideMarkdown markdown={body} anchorHeadings={false} />
+    </div>
+    {actions}
     <header className="flex max-w-[50%] min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-xs [&_.mono-micro]:sr-only [&>span]:max-w-full">
       {identity ?? <ReviewerBadge participant={author} />}
       <time
@@ -105,12 +98,11 @@ export const CommentEntry = ({
       >
         {formatDate(new Date(createdAt))}
       </time>
-      {edited && !deleted && (
+      {edited && (
         <span className="text-[10px] leading-tight font-normal text-muted-foreground">
           Edited
         </span>
       )}
     </header>
-    {actions}
   </article>
 );

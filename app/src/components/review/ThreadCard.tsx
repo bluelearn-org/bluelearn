@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSuspensionStatus } from "@/lib/authContext";
 import { ANNOTATION_UI_ATTR } from "@/lib/reviewAnchors";
+import { liveReplies } from "@/lib/reviewPlacement";
 
 type PropTypes = {
   thread: ReviewThread;
@@ -47,7 +48,6 @@ const ThreadMessage = ({ threadId, message, identity }: MessageProps) => {
   const [step, setStep] = useState<Step>("view");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const entryRef = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
   const focusAfterStep = useRef<RefObject<HTMLElement | null>>(null);
@@ -97,7 +97,7 @@ const ThreadMessage = ({ threadId, message, identity }: MessageProps) => {
 
     try {
       await deleteMessage(target);
-      changeStep("view", entryRef);
+      changeStep("view", null);
     } catch (e) {
       setError(
         e instanceof Error && e.message
@@ -172,12 +172,10 @@ const ThreadMessage = ({ threadId, message, identity }: MessageProps) => {
   return (
     <>
       <CommentEntry
-        ref={entryRef}
         author={message.author}
         body={message.body}
         createdAt={message.created_at}
         edited={message.edited_at !== null}
-        deleted={deleted}
         identity={identity}
         actions={menu}
       />
@@ -240,16 +238,31 @@ export const ThreadCard = ({
     replyButton.current?.focus({ preventScroll: true });
   };
 
+  // Keep the badge on the notice so the surviving thread can still collapse.
+  const rootDeleted = thread.deleted_at !== null;
+  const replies = liveReplies(thread);
+  const messages = rootDeleted ? replies : [thread, ...replies];
+
   return (
     <section
       id={cardId(thread.id)}
+      tabIndex={-1}
       aria-label={`Comment thread by ${participantName(thread.author)}`}
       className="my-3 space-y-3 rounded-lg border bg-card p-3 text-sm shadow-xs"
     >
       {detached && <PassageQuote anchor={thread.anchor} />}
 
+      {rootDeleted && (
+        <div className="flex items-center gap-3">
+          <p className="mb-0 min-w-0 flex-1 text-xs text-muted-foreground italic">
+            Original comment deleted
+          </p>
+          {identity}
+        </div>
+      )}
+
       <ol className="list-none space-y-3 pl-0">
-        {[thread, ...thread.replies].map((message) => (
+        {messages.map((message) => (
           <li key={message.id} className="whitespace-normal">
             <ThreadMessage
               threadId={thread.id}

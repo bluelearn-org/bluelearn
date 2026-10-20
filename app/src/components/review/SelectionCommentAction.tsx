@@ -162,7 +162,7 @@ export const SelectionCommentAction = () => {
           // A page swipe must scroll without discarding the snapped range.
           if (blockSelection) event.preventDefault();
         }}
-        className="w-max max-w-[calc(100vw-1.5rem)] gap-2 rounded-2xl border bg-background p-1.5 shadow-lg"
+        className="w-max max-w-[calc(100vw-1.5rem)] gap-2 rounded-xl border border-border/60 bg-background p-1.5 shadow-sm ring-0 data-open:animate-[review-selection-toolbar_140ms_ease-out]! motion-reduce:data-open:animate-none! motion-reduce:data-closed:animate-none!"
       >
         {tooLong && (
           <p role="status" className="px-3 py-2 text-xs">

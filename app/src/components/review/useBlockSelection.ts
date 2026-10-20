@@ -31,7 +31,7 @@ export function useBlockSelection(options: Options) {
   const latest = useRef(options);
   latest.current = options;
   const drag = useRef<Drag | null>(null);
-  const [dragging, setDragging] = useState(false);
+  const [draggingHandle, setDraggingHandle] = useState<string | null>(null);
 
   const stop = useCallback(() => {
     const current = drag.current;
@@ -44,11 +44,11 @@ export function useBlockSelection(options: Options) {
     if (root?.hasPointerCapture(current.pointerId))
       root.releasePointerCapture(current.pointerId);
 
-    setDragging(false);
+    setDraggingHandle(null);
   }, []);
 
   const startDrag = useCallback(
-    (edge: Edge, event: PointerEvent<HTMLButtonElement>) => {
+    (edge: Edge, event: PointerEvent<HTMLButtonElement>, handle: string) => {
       const { rootRef, selection, enabled } = latest.current;
       const root = rootRef.current;
 
@@ -81,7 +81,7 @@ export function useBlockSelection(options: Options) {
         blocks,
       };
       drag.current = current;
-      setDragging(true);
+      setDraggingHandle(handle);
 
       const tick = (time: number) => {
         if (drag.current !== current) return;
@@ -102,7 +102,7 @@ export function useBlockSelection(options: Options) {
   );
 
   const adjustWithKeyboard = useCallback(
-    (edge: Edge, event: KeyboardEvent<HTMLButtonElement>) => {
+    (edge: Edge, event: KeyboardEvent<HTMLButtonElement>, handle: string) => {
       const { rootRef, selection, enabled, selectBlocks, clear } =
         latest.current;
       const root = rootRef.current;
@@ -141,7 +141,7 @@ export function useBlockSelection(options: Options) {
       requestAnimationFrame(() => {
         if (!root.isConnected) return;
         const grip = root.querySelector<HTMLButtonElement>(
-          `[data-review-selection-grip="${edge}"]`
+          `[data-review-selection-handle="${handle}"]`
         );
         grip?.focus({ preventScroll: true });
         grip?.scrollIntoView({ block: "nearest", behavior: "instant" });
@@ -161,6 +161,7 @@ export function useBlockSelection(options: Options) {
 
       event.preventDefault();
       current.y = event.clientY;
+      snapToPointer(current, latest.current);
     };
     const finish = (event: globalThis.PointerEvent) => {
       const current = drag.current;
@@ -190,8 +191,13 @@ export function useBlockSelection(options: Options) {
   }, [stop]);
 
   return useMemo(
-    () => ({ dragging, startDrag, adjustWithKeyboard }),
-    [dragging, startDrag, adjustWithKeyboard]
+    () => ({
+      dragging: draggingHandle !== null,
+      draggingHandle,
+      startDrag,
+      adjustWithKeyboard,
+    }),
+    [draggingHandle, startDrag, adjustWithKeyboard]
   );
 }
 

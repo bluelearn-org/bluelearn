@@ -99,6 +99,7 @@ export const CommentComposer = ({
         className="rounded-md border border-input bg-background focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30"
       >
         <MDXEditor
+          className="review-comment-editor"
           markdown={initialValue}
           autoFocus={autoFocus ? { preventScroll: true } : false}
           plugins={plugins}

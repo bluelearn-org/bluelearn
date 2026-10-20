@@ -28,6 +28,15 @@ export type Placement = {
   itemCount: number;
 };
 
+// Keep tombstones in storage; count and render only live messages.
+export function liveReplies(thread: ReviewThread) {
+  return thread.replies.filter((reply) => reply.deleted_at === null);
+}
+
+export function liveMessageCount(thread: ReviewThread) {
+  return liveReplies(thread).length + (thread.deleted_at === null ? 1 : 0);
+}
+
 // An anchor goes in the text only while the server calls it current, it
 // belongs to the revision on screen, and the rendered text still reads its
 // quote. Anything else is listed apart and never moves to other text.
@@ -39,10 +48,12 @@ export function placeItems(
   const attached: Array<AnnotationItem> = [];
   const detached: Array<AnnotationItem> = [];
 
+  // Exclude empty threads before deriving badges, passage frames and detached entries.
+  const threads = data.threads.filter((thread) => liveMessageCount(thread) > 0);
   const items: Array<
     AnnotationItem & { revisionId: string; anchorStatus: string }
   > = [
-    ...data.threads.map((thread) => ({
+    ...threads.map((thread) => ({
       type: "thread" as const,
       id: thread.id,
       anchor: thread.anchor,

@@ -448,6 +448,21 @@ The reader checks each quote before it marks a passage.
 If the text changes, the reader shows the original quote separately.
 Comments on changed or missing source text keep their saved quote.
 
+The reader shows a one-pixel outline around the selected blocks.
+Four corner handles and two center handles use three-pixel strokes centered on the outline.
+Each handle has an invisible 44-pixel square target with more padding outside the selection.
+Drag an upper handle to change the start, or a lower handle to change the end.
+Use the arrow keys to adjust a focused handle.
+
+The visible handles respond to hover, keyboard focus, and dragging without changing their target size.
+The toolbar appears in 140 milliseconds, and thread transitions take 180 milliseconds.
+The selection follows the pointer without a position animation.
+Reduced motion removes these animations and keeps the focus and color indicators.
+
+Review comment editors and their link dialogs use the page theme.
+The desktop formatting toolbar is 28 pixels high.
+Touch devices keep 44-pixel formatting buttons.
+
 `review_suggestions` stores a reviewer's proposed replacement for a complete source block.
 Each suggestion has a `pending`, `accepted`, or `rejected` status.
 Only the author of the reviewed revision can accept or reject a suggestion while the case remains open.
@@ -470,7 +485,11 @@ The account must remain active, and the caller must have access to the case.
 The guide author has no additional rights over another person's messages.
 Each edit sets `edited_at`, which the reader shows as an edited marker.
 Deletion clears `body` and sets `deleted_at`.
-The reader shows a deleted-message placeholder and keeps all replies.
+The database keeps deleted rows and all replies.
+The reader hides deleted replies and counts only live messages.
+A deleted root with live replies shows an `Original comment deleted` notice above those replies.
+When no live messages remain, the thread disappears from passages and the detached list.
+Its badge and passage marking disappear with it.
 Repeated deletion preserves the original deletion timestamp.
 Deleted messages cannot be edited.
 

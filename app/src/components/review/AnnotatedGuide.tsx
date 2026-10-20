@@ -94,7 +94,15 @@ export const AnnotatedGuide = ({ children }: { children: ReactNode }) => {
         {children}
         <SelectionOutline />
       </div>
-      <DetachedAnnotations />
+      {/* Stays while the list is empty, so a delete can leave focus here. */}
+      <div
+        data-review-detached
+        tabIndex={-1}
+        role="group"
+        aria-label="Comments on changed text"
+      >
+        <DetachedAnnotations />
+      </div>
       <SelectionCommentAction />
     </>
   );

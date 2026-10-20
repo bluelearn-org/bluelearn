@@ -413,6 +413,93 @@ afterEach(() => {
 });
 
 describe("stored review comments", () => {
+  it("hides empty deleted threads from passages and the detached list", async () => {
+    server.threads = [
+      threadRow("deleted-placed", {
+        anchor: passage(0, 11, "energy"),
+        body: "",
+        deleted_at: NOW,
+      }),
+      threadRow("deleted-detached", {
+        anchor: passage(1, 17, "missing"),
+        body: "",
+        deleted_at: NOW,
+        replies: [threadRow("deleted-reply", { body: "", deleted_at: NOW })],
+      }),
+    ];
+
+    renderCase();
+
+    await screen.findByText(/No comments yet/);
+    expect(
+      document.querySelectorAll("[data-review-annotation-badges]")
+    ).toHaveLength(0);
+    expect(document.querySelectorAll('[id^="review-badge-"]')).toHaveLength(0);
+    expect(
+      screen.queryByRole("heading", { name: "Comments on changed text" })
+    ).toBeNull();
+    expect(screen.queryByText("Original comment deleted")).toBeNull();
+  });
+
+  it("keeps live replies under a compact deleted-root notice and counts only those replies", async () => {
+    server.threads = [
+      threadRow("root-with-replies", {
+        anchor: passage(0, 11, "energy"),
+        body: "",
+        deleted_at: NOW,
+        replies: [
+          threadRow("live-reply", { body: "The surviving answer" }),
+          threadRow("removed-reply", { body: "", deleted_at: NOW }),
+        ],
+      }),
+    ];
+
+    renderCase();
+
+    const badge = await screen.findByRole("button", {
+      name: /Vera Verifier.*1\s*comment$/,
+    });
+    fireEvent.click(badge);
+
+    await screen.findByText("Original comment deleted");
+    expect(screen.getByText("The surviving answer")).toBeTruthy();
+    expect(
+      document.querySelectorAll("#review-card-root-with-replies article")
+    ).toHaveLength(1);
+    expect(screen.queryByText("Comment deleted")).toBeNull();
+  });
+
+  it("keeps a live root and an overlapping suggestion when deleted replies and threads disappear", async () => {
+    server.threads = [
+      threadRow("live-root", {
+        anchor: passage(1, 17, "rigid"),
+        body: "Keep this comment",
+        replies: [threadRow("removed-reply", { body: "", deleted_at: NOW })],
+      }),
+      threadRow("removed-root", {
+        anchor: passage(1, 17, "rigid"),
+        body: "",
+        deleted_at: NOW,
+      }),
+    ];
+    server.suggestions = [suggestionRow({})];
+
+    renderCase();
+
+    const badge = await screen.findByRole("button", {
+      name: /Vera Verifier.*1\s*comment$/,
+    });
+    expect(
+      await screen.findByRole("button", { name: /Edit · Pending/ })
+    ).toBeTruthy();
+    expect(document.getElementById("review-badge-removed-root")).toBeNull();
+    fireEvent.click(badge);
+    expect(await screen.findByText("Keep this comment")).toBeTruthy();
+    expect(
+      document.querySelectorAll("#review-card-live-root article")
+    ).toHaveLength(1);
+  });
+
   it("hangs a comment under its passage and keeps changed text apart", async () => {
     server.permissions = {
       can_comment: false,
@@ -612,7 +699,7 @@ describe("commenting on a selection", () => {
     lastBounds.mockReturnValue(new DOMRect(20, 240, 240, 60));
     fireEvent.click(blockContent(0).querySelector("p")!);
     fireEvent.keyDown(
-      screen.getByRole("button", { name: "Adjust selection end" }),
+      screen.getByRole("button", { name: "Adjust selection end (right)" }),
       { key: "ArrowDown" }
     );
 
@@ -660,7 +747,7 @@ describe("commenting on a selection", () => {
     };
 
     pointer(
-      screen.getByRole("button", { name: "Adjust selection end" }),
+      screen.getByRole("button", { name: "Adjust selection end (right)" }),
       "pointerdown",
       185
     );
@@ -669,7 +756,7 @@ describe("commenting on a selection", () => {
     expect(blockContent(2).hasAttribute("data-review-selected")).toBe(false);
 
     pointer(
-      screen.getByRole("button", { name: "Adjust selection end" }),
+      screen.getByRole("button", { name: "Adjust selection end (right)" }),
       "pointerdown",
       185
     );
@@ -680,7 +767,7 @@ describe("commenting on a selection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
     fireEvent.click(blockContent(1).querySelector("p")!);
     pointer(
-      screen.getByRole("button", { name: "Adjust selection end" }),
+      screen.getByRole("button", { name: "Adjust selection end (right)" }),
       "pointerdown",
       130
     );
@@ -700,17 +787,19 @@ describe("commenting on a selection", () => {
     expect(blockContent(1).hasAttribute("data-review-selected")).toBe(true);
     expect(blockContent(2).hasAttribute("data-review-selected")).toBe(false);
 
-    const end = screen.getByRole("button", { name: "Adjust selection end" });
+    const end = screen.getByRole("button", {
+      name: "Adjust selection end (right)",
+    });
     fireEvent.keyDown(end, { key: "ArrowDown" });
     expect(blockContent(2).hasAttribute("data-review-selected")).toBe(true);
 
     const start = screen.getByRole("button", {
-      name: "Adjust selection start",
+      name: "Adjust selection start (left)",
     });
     fireEvent.keyDown(start, { key: "ArrowDown" });
     expect(blockContent(1).hasAttribute("data-review-selected")).toBe(false);
     fireEvent.keyDown(
-      screen.getByRole("button", { name: "Adjust selection start" }),
+      screen.getByRole("button", { name: "Adjust selection start (left)" }),
       { key: "End" }
     );
     expect(blockContent(2).hasAttribute("data-review-selected")).toBe(true);
@@ -720,7 +809,7 @@ describe("commenting on a selection", () => {
     expect(blockOf(draft)).toBe("2");
     expect(draft.textContent).toContain(RIGID);
     expect(
-      screen.queryByRole("button", { name: "Adjust selection end" })
+      screen.queryByRole("button", { name: "Adjust selection end (right)" })
     ).toBeNull();
   });
 
@@ -736,7 +825,7 @@ describe("commenting on a selection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
     expect(blockContent(1).hasAttribute("data-review-selected")).toBe(false);
     expect(
-      screen.queryByRole("button", { name: "Adjust selection end" })
+      screen.queryByRole("button", { name: "Adjust selection end (right)" })
     ).toBeNull();
   });
 
@@ -1030,13 +1119,15 @@ describe("keyboard focus", () => {
     await screen.findByText(/No comments yet/);
 
     fireEvent.click(blockContent(1).querySelector("p")!);
-    const grip = screen.getByRole("button", { name: "Adjust selection end" });
+    const grip = screen.getByRole("button", {
+      name: "Adjust selection end (right)",
+    });
     grip.focus();
     fireEvent.keyDown(grip, { key: "Escape" });
 
     expect(blockContent(1).hasAttribute("data-review-selected")).toBe(false);
     expect(
-      screen.queryByRole("button", { name: "Adjust selection end" })
+      screen.queryByRole("button", { name: "Adjust selection end (right)" })
     ).toBeNull();
     const block = blockContent(1).closest<HTMLElement>("[data-review-block]")!;
     expect(document.activeElement).toBe(
