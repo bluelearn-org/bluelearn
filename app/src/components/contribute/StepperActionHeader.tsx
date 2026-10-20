@@ -1,7 +1,11 @@
 import { Check, HardDrive, Loader2, Save, Scroll } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { GuideListItem } from "@bluelearn/schemas";
 
-import type { ContributionType } from "@/types/contributions";
+import type {
+  ContributionType,
+  ObjectiveGraphNode,
+} from "@/types/contributions";
 import type { AnyStoredDraft } from "@/lib/contributionStorage";
 
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +13,7 @@ import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
 import { GuideSubmitModal } from "@/components/modals/GuideSubmitModal";
 import { ObjectivePublishModal } from "@/components/modals/ObjectivePublishModal";
 import { getAllStoredDrafts } from "@/lib/contributionStorage";
+import { AddGuideNodeModal } from "@/components/modals/AddGuideNodeModal";
 import {
   Tooltip,
   TooltipContent,
@@ -32,6 +37,13 @@ type PropTypes = {
   isSynced?: boolean;
   onSaveDraft?: () => void | boolean | Promise<void | boolean>;
   onPublish?: () => void;
+  guides?: Array<GuideListItem>;
+  existingGuideBaseIds?: Array<string>;
+  onAddGuideNodes?: (
+    nodes: Array<ObjectiveGraphNode>,
+    options?: { pullPrerequisitesFor: Array<string> }
+  ) => void;
+  confirmBeforePublish?: boolean;
 };
 
 type SaveStatus = "saving" | "unsaved" | "saved-locally" | "saved";
@@ -113,16 +125,31 @@ export const StepperActionHeader = ({
   hideGuidelines,
   onSaveDraft,
   onPublish,
+  guides = [],
+  existingGuideBaseIds = [],
+  onAddGuideNodes,
+  confirmBeforePublish = true,
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [openAddGuideNodeModal, setOpenAddGuideNodeModal] = useState(false);
   const [allStoredDrafts, setAllStoredDrafts] = useState<Array<AnyStoredDraft>>(
     []
   );
 
   const toggleGuidelineModal = () => setOpenGuidelineModal(!openGuidelineModal);
   const toggleSubmitModal = () => setShowSubmitModal(!showSubmitModal);
+  const toggleAddGuideNodeModal = () =>
+    setOpenAddGuideNodeModal((open) => !open);
   const handleSubmit = () => setShowSubmitModal(!showSubmitModal);
+  const submit = () => {
+    if (confirmBeforePublish) {
+      handleSubmit();
+      return;
+    }
+
+    onPublish?.();
+  };
 
   // batch submit feedback so it's more obvious for the user
   const submitLabel = guideCount > 1 ? `Submit All for Review` : publishLabel;
@@ -186,6 +213,16 @@ export const StepperActionHeader = ({
             </button>
           )}
 
+          {type == "objective" && onAddGuideNodes && (
+            <button
+              type="button"
+              className="btn-sec inline-flex items-center gap-2 disabled:pointer-events-none disabled:opacity-50"
+              onClick={() => setOpenAddGuideNodeModal((open) => !open)}
+            >
+              Add Guide
+            </button>
+          )}
+
           {!hideBackBtn && (
             <Stepper.Prev className="btn-sec">Back</Stepper.Prev>
           )}
@@ -195,7 +232,7 @@ export const StepperActionHeader = ({
               type="button"
               className="btn-pri disabled:pointer-events-none disabled:opacity-50"
               disabled={submitting}
-              onClick={handleSubmit}
+              onClick={submit}
             >
               {submitLabel}
             </button>
@@ -260,7 +297,7 @@ export const StepperActionHeader = ({
                 type="button"
                 className="btn-pri inline-flex items-center px-3 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 disabled={submitting}
-                onClick={handleSubmit}
+                onClick={submit}
               >
                 {publishLabel.toLowerCase().startsWith("submit")
                   ? compactSubmitLabel
@@ -282,6 +319,16 @@ export const StepperActionHeader = ({
         open={openGuidelineModal}
         onOpenChange={toggleGuidelineModal}
       />
+
+      {onAddGuideNodes && (
+        <AddGuideNodeModal
+          open={openAddGuideNodeModal}
+          onOpenChange={toggleAddGuideNodeModal}
+          guides={guides}
+          existingGuideBaseIds={existingGuideBaseIds}
+          onAdd={onAddGuideNodes}
+        />
+      )}
 
       {type == "objective" ? (
         <ObjectivePublishModal

@@ -59,10 +59,12 @@ export const objectiveListItemSchema = z.object({
 
 export const objectiveSnapshotNodeSchema = z.object({
   id: z.string(),
-  guide_base_id: z.string(),
-  guide_id: z.string(),
+  guide_base_id: z.string().nullable(),
+  guide_id: z.string().nullable(),
   slug: z.string().nullable(),
   title: z.string().nullable(),
+  summary: z.string().nullable(),
+  request_id: z.string().nullable(),
   is_target: z.boolean(),
   is_included: z.boolean(),
   is_featured: z.boolean(),
@@ -86,6 +88,9 @@ export const objectiveSnapshotSchema = z.object({
   orders: z.array(objectiveSnapshotOrderSchema),
   projected_edges: z.array(objectiveSnapshotEdgeSchema),
   raw_edges: z.array(objectiveSnapshotEdgeSchema),
+  drawn_edges: z.array(
+    z.object({ from_node_id: z.string(), to_node_id: z.string() })
+  ),
 });
 
 export const objectiveRevisionListItemSchema = z.object({
@@ -108,8 +113,9 @@ export const objectiveNodeChangeSchema = z.object({
 // added or removed — a guide that moved shows up as both. `changed` carries
 // the per-step field edits (variant, note, skipped...) that reordering alone
 // cannot express, so a step can be unchanged in `lines` yet listed here.
+// A request target has no guide base, so `guide_base_id` is null for it.
 export const objectiveTargetDiffSchema = z.object({
-  guide_base_id: z.string(),
+  guide_base_id: z.string().nullable(),
   slug: z.string().nullable(),
   title: z.string().nullable(),
   status: z.enum(["added", "removed", "changed", "unchanged"]),
@@ -190,13 +196,9 @@ export const objectiveRevisionDetailResponseSchema = z.strictObject({
   subjects: z.array(subjectTagSchema),
 });
 
-export const objectiveRevisionUpdateResponseSchema = z.strictObject({
-  revision: objectiveRevisionSchema,
-  subjects: z.array(subjectTagSchema),
-});
-
+// updateObjectiveNode is keyed by guide base and returns a guide node only.
 export const objectiveNodeResponseSchema = z.strictObject({
-  node: objectiveSnapshotNodeSchema,
+  node: objectiveSnapshotNodeSchema.omit({ summary: true, request_id: true }),
 });
 
 export const objectiveSlugResponseSchema = z.strictObject({

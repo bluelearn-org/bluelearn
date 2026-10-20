@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { X } from "lucide-react";
+import { useState } from "react";
+import { slugify, subjectNameSchema } from "@bluelearn/schemas";
 import type { Dispatch, SetStateAction } from "react";
 import type { ObjectiveContribution } from "@/types/contributions";
 
@@ -7,18 +9,40 @@ import { cn } from "@/lib/utils";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type SubjectOption = { id: string; name: string };
-type GuideOption = {
-  slug: string | null;
-  title: string | null;
-  summary: string | null;
+
+type NewSubjectErrors = { name?: string; summary?: string };
+
+// The API refuses these names on save with a generic 400, so catch them here
+// with the same schema and slug rule.
+const validateNewSubject = (
+  name: string,
+  summary: string
+): NewSubjectErrors => {
+  const errors: NewSubjectErrors = {};
+
+  const parsedName = subjectNameSchema.safeParse(name);
+  if (!parsedName.success) {
+    errors.name = parsedName.error.issues[0].message;
+  } else if (!slugify(name)) {
+    errors.name = "Subject must contain at least one letter or number.";
+  }
+
+  if (summary === "") {
+    errors.summary = "Subject summary is required.";
+  }
+
+  return errors;
 };
 
 type PropTypes = {
@@ -26,7 +50,6 @@ type PropTypes = {
   objectiveContData: ObjectiveContribution;
   setObjectiveContData: Dispatch<SetStateAction<ObjectiveContribution>>;
   subjects: Array<SubjectOption>;
-  guides: Array<GuideOption>;
   showChangeSummary?: boolean;
   invalidFields?: ReadonlySet<string>;
   hideBackBtn?: boolean;
@@ -41,7 +64,6 @@ export const ObjectiveDetails = ({
   objectiveContData,
   setObjectiveContData,
   subjects,
-  guides,
   showChangeSummary = false,
   invalidFields,
   hideBackBtn,
@@ -53,23 +75,35 @@ export const ObjectiveDetails = ({
   const invalid = (field: string) => invalidFields?.has(field) || undefined;
   const invalidClass = "border-2 border-destructive aria-invalid:ring-0";
 
-  const guideItems = guides
-    .filter((g): g is GuideOption & { slug: string } => !!g.slug)
-    .map((g) => {
-      return {
-        value: g.slug,
-        label: g.title ?? g.slug,
-        description: g.summary ?? undefined,
-      };
-    });
-
-  const targs = useMemo(
-    () =>
-      guideItems.filter((item) =>
-        objectiveContData.targets.includes(item.value)
-      ),
-    [guideItems, objectiveContData.targets]
+  const [newSubject, setNewSubject] = useState<{
+    name: string;
+    summary: string;
+  }>({ name: "", summary: "" });
+  const [newSubjectErrors, setNewSubjectErrors] = useState<NewSubjectErrors>(
+    {}
   );
+
+  const addNewSubject = () => {
+    const name = newSubject.name.trim();
+    const summary = newSubject.summary.trim();
+
+    const errors = validateNewSubject(name, summary);
+    setNewSubjectErrors(errors);
+    if (errors.name || errors.summary) return;
+
+    setObjectiveContData((prev) => ({
+      ...prev,
+      newSubjects: [...prev.newSubjects, { name, summary }],
+    }));
+
+    setNewSubject({ name: "", summary: "" });
+  };
+
+  const removeNewSubject = (index: number) =>
+    setObjectiveContData((prev) => ({
+      ...prev,
+      newSubjects: prev.newSubjects.filter((_, i) => i !== index),
+    }));
 
   return (
     <Stepper.Content step="objective-details">
@@ -84,7 +118,7 @@ export const ObjectiveDetails = ({
         isSynced={isSynced}
       />
 
-      <FieldGroup>
+      <FieldGroup className="gap-8 pt-6">
         {showChangeSummary && (
           <Field className="space-y-2">
             <div className="space-y-1">
@@ -182,7 +216,8 @@ export const ObjectiveDetails = ({
               Subjects
             </FieldLabel>
             <FieldDescription className="text-xs">
-              Select existing subjects for this learning objective.
+              Select existing subjects for this learning objective, or create
+              new ones below.
             </FieldDescription>
           </div>
 
@@ -207,65 +242,103 @@ export const ObjectiveDetails = ({
 
         <Field className="space-y-2">
           <div className="space-y-1">
-            <FieldLabel required className="mono-micro">
-              Target Guides
-            </FieldLabel>
+            <FieldLabel className="mono-micro">New Subjects</FieldLabel>
             <FieldDescription className="text-xs">
-              Select the guides you think would be appropriate for this learning
-              objective.
+              Create a subject if it doesn't exist yet.
             </FieldDescription>
           </div>
 
-          <Combobox
-            multiple
-            invalid={invalid("targets")}
-            items={guideItems}
-            value={objectiveContData.targets}
-            onValueChange={(targets) => {
-              setObjectiveContData((prev) => {
-                const featuredSubObjective = targets.includes(
-                  prev.featuredSubObjective
-                )
-                  ? prev.featuredSubObjective
-                  : "";
-                const subObjectives = prev.subObjectives.filter((sub) =>
-                  targets.includes(sub.targetSlug)
-                );
-                return {
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <Input
+              id="new-subject-name"
+              type="text"
+              maxLength={50}
+              placeholder="Enter subject name."
+              aria-label="New subject name"
+              className={cn(
+                "h-10 rounded-md",
+                newSubjectErrors.name && invalidClass
+              )}
+              aria-invalid={!!newSubjectErrors.name || undefined}
+              aria-describedby={
+                newSubjectErrors.name ? "new-subject-name-error" : undefined
+              }
+              value={newSubject.name}
+              onChange={(e) => {
+                setNewSubject((prev) => ({ ...prev, name: e.target.value }));
+                setNewSubjectErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+            />
+
+            <Input
+              id="new-subject-summary"
+              type="text"
+              maxLength={500}
+              placeholder="Enter summary of new subject."
+              aria-label="New subject summary"
+              className={cn(
+                "h-10 rounded-md",
+                newSubjectErrors.summary && invalidClass
+              )}
+              aria-invalid={!!newSubjectErrors.summary || undefined}
+              aria-describedby={
+                newSubjectErrors.summary
+                  ? "new-subject-summary-error"
+                  : undefined
+              }
+              value={newSubject.summary}
+              onChange={(e) => {
+                setNewSubject((prev) => ({ ...prev, summary: e.target.value }));
+                setNewSubjectErrors((prev) => ({
                   ...prev,
-                  targets,
-                  featuredSubObjective,
-                  subObjectives,
-                };
-              });
-            }}
-          />
-        </Field>
+                  summary: undefined,
+                }));
+              }}
+            />
 
-        <Field className="space-y-2">
-          <div className="space-y-1">
-            <FieldLabel required className="mono-micro">
-              Featured Sub-Objective
-            </FieldLabel>
-            <FieldDescription className="text-xs">
-              {targs.length === 0
-                ? "Select at least one Target Guide above first."
-                : "The primary target guide to showcase on the objective card."}
-            </FieldDescription>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="btn-sec h-10 w-full rounded-md sm:w-24"
+              onClick={addNewSubject}
+            >
+              Add Subject
+            </Button>
           </div>
 
-          <Combobox
-            disabled={targs.length === 0}
-            invalid={invalid("featuredSubObjective")}
-            items={targs}
-            value={objectiveContData.featuredSubObjective}
-            onValueChange={(featuredSubObjective) =>
-              setObjectiveContData((prev) => ({
-                ...prev,
-                featuredSubObjective,
-              }))
-            }
-          />
+          <FieldError id="new-subject-name-error">
+            {newSubjectErrors.name}
+          </FieldError>
+          <FieldError id="new-subject-summary-error">
+            {newSubjectErrors.summary}
+          </FieldError>
+
+          {objectiveContData.newSubjects.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-1">
+              {objectiveContData.newSubjects.map((subject, index) => (
+                <Badge
+                  key={`${subject.name}-${index}`}
+                  variant="outline"
+                  className="gap-1.5"
+                >
+                  {subject.summary
+                    ? `${subject.name} - ${subject.summary}`
+                    : subject.name}
+
+                  <button
+                    type="button"
+                    aria-label={`Remove ${subject.name}`}
+                    title={`Remove ${subject.name}`}
+                    className="rounded-full bg-transparent p-1.5 text-muted-foreground filter transition duration-150 outline-none hover:scale-105 hover:bg-muted/10 hover:text-foreground hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                    onClick={() => removeNewSubject(index)}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
         </Field>
       </FieldGroup>
     </Stepper.Content>

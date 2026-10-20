@@ -7,6 +7,8 @@ const dashboard = client.dashboard;
 
 type FetchOptions = { signal?: AbortSignal };
 
+type TableQuery = Record<string, string | Array<string>>;
+
 export type UserStatus = InferRequestType<
   (typeof dashboard)[":id"]["status"]["$patch"]
 >["json"]["status"];
@@ -36,7 +38,7 @@ export async function getUserStatus(id: string, { signal }: FetchOptions = {}) {
   return status;
 }
 
-// toggle user status from active to inactive
+// toggle user status between active and inactive
 export async function toggleAFK(
   id: string,
   status: UserStatus,
@@ -112,34 +114,37 @@ export async function removeRole(
   await assertOk(res);
 }
 
-// List role data for every user
-export async function fetchRoleTable({ signal }: FetchOptions = {}) {
-  const res = await dashboard.roles.$get({ init: { signal } });
+// List one page of role data for users
+export async function fetchRoleTable(
+  query: TableQuery,
+  { signal }: FetchOptions = {}
+) {
+  const res = await dashboard.roles.$get({ query }, { init: { signal } });
 
   await assertOk(res);
-  const { data: roleTable } = await res.json();
-
-  return roleTable;
+  return res.json();
 }
 
-// List member/profile data for every user
-export async function fetchMembersTable({ signal }: FetchOptions = {}) {
-  const res = await dashboard.members.$get({ init: { signal } });
+// List one page of member/profile data
+export async function fetchMembersTable(
+  query: TableQuery,
+  { signal }: FetchOptions = {}
+) {
+  const res = await dashboard.members.$get({ query }, { init: { signal } });
 
   await assertOk(res);
-  const { data: memberTable } = await res.json();
-
-  return memberTable;
+  return res.json();
 }
 
-// Get data for assignments table
-export async function fetchAssignmentsTable({ signal }: FetchOptions = {}) {
-  const res = await dashboard.assignments.$get({ init: { signal } });
+// Get one page of data for the assignments table
+export async function fetchAssignmentsTable(
+  query: TableQuery,
+  { signal }: FetchOptions = {}
+) {
+  const res = await dashboard.assignments.$get({ query }, { init: { signal } });
 
   await assertOk(res);
-  const { data: assignmentTable } = await res.json();
-
-  return assignmentTable;
+  return res.json();
 }
 
 // Mark user as suspended

@@ -205,6 +205,7 @@ function RouteComponent() {
                 menuItems={guideMenuItems}
                 prerequisites={guide.prerequisites}
                 requests={guide.requests}
+                followUps={guide.follow_ups}
                 isOfficial={guide.is_official}
               />
 

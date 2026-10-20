@@ -415,12 +415,16 @@ export async function archiveGuide(supabase: DB, rawSlug: string) {
   return data[0];
 }
 
-// RLS filters the prerequisite graph and the next level of follow-ups.
-export async function getWalkthrough(supabase: DB, rawSlug: string) {
+export async function getWalkthrough(
+  supabase: DB,
+  rawSlug: string,
+  followUpDepth?: number
+) {
   const baseId = await resolveBaseId(supabase, rawSlug);
 
   const { data, error } = await supabase.rpc("compute_walkthrough", {
     p_guide_base_id: baseId,
+    p_follow_up_depth: followUpDepth,
   });
 
   if (error) {

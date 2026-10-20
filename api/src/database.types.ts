@@ -337,6 +337,13 @@ export type Database = {
             foreignKeyName: "guide_revisions_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revisions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -406,6 +413,13 @@ export type Database = {
             foreignKeyName: "guides_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guides_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -456,6 +470,13 @@ export type Database = {
             foreignKeyName: "media_assets_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -463,34 +484,34 @@ export type Database = {
       }
       objective_revision_edges: {
         Row: {
-          from_guide_base_id: string
+          from_node_id: string
           revision_id: string
-          to_guide_base_id: string
+          to_node_id: string
         }
         Insert: {
-          from_guide_base_id: string
+          from_node_id: string
           revision_id: string
-          to_guide_base_id: string
+          to_node_id: string
         }
         Update: {
-          from_guide_base_id?: string
+          from_node_id?: string
           revision_id?: string
-          to_guide_base_id?: string
+          to_node_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "objective_revision_edges_from_is_node"
-            columns: ["revision_id", "from_guide_base_id"]
+            columns: ["from_node_id", "revision_id"]
             isOneToOne: false
             referencedRelation: "objective_revision_nodes"
-            referencedColumns: ["revision_id", "guide_base_id"]
+            referencedColumns: ["id", "revision_id"]
           },
           {
             foreignKeyName: "objective_revision_edges_to_is_node"
-            columns: ["revision_id", "to_guide_base_id"]
+            columns: ["to_node_id", "revision_id"]
             isOneToOne: false
             referencedRelation: "objective_revision_nodes"
-            referencedColumns: ["revision_id", "guide_base_id"]
+            referencedColumns: ["id", "revision_id"]
           },
         ]
       }
@@ -539,37 +560,46 @@ export type Database = {
       }
       objective_revision_nodes: {
         Row: {
-          guide_base_id: string
-          guide_id: string
+          guide_base_id: string | null
+          guide_id: string | null
           id: string
           is_featured: boolean
           is_included: boolean
           is_target: boolean
           note: string | null
+          request_id: string | null
           revision_id: string
+          summary: string | null
           target_position: number | null
+          title: string | null
         }
         Insert: {
-          guide_base_id: string
-          guide_id: string
+          guide_base_id?: string | null
+          guide_id?: string | null
           id?: string
           is_featured?: boolean
           is_included?: boolean
           is_target?: boolean
           note?: string | null
+          request_id?: string | null
           revision_id: string
+          summary?: string | null
           target_position?: number | null
+          title?: string | null
         }
         Update: {
-          guide_base_id?: string
-          guide_id?: string
+          guide_base_id?: string | null
+          guide_id?: string | null
           id?: string
           is_featured?: boolean
           is_included?: boolean
           is_target?: boolean
           note?: string | null
+          request_id?: string | null
           revision_id?: string
+          summary?: string | null
           target_position?: number | null
+          title?: string | null
         }
         Relationships: [
           {
@@ -585,6 +615,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "guides"
             referencedColumns: ["id", "guide_base_id"]
+          },
+          {
+            foreignKeyName: "objective_revision_nodes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -621,6 +658,7 @@ export type Database = {
       objective_revisions: {
         Row: {
           author_id: string | null
+          based_on_revision_id: string | null
           change_summary: string | null
           created_at: string
           id: string
@@ -633,6 +671,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          based_on_revision_id?: string | null
           change_summary?: string | null
           created_at?: string
           id?: string
@@ -645,6 +684,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          based_on_revision_id?: string | null
           change_summary?: string | null
           created_at?: string
           id?: string
@@ -660,7 +700,21 @@ export type Database = {
             foreignKeyName: "learning_path_revisions_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_path_revisions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_revisions_based_on_revision_id_fkey"
+            columns: ["based_on_revision_id"]
+            isOneToOne: false
+            referencedRelation: "objective_revisions"
             referencedColumns: ["id"]
           },
           {
@@ -702,7 +756,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "learning_paths_created_by_fkey"
+            foreignKeyName: "objectives_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objectives_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -743,6 +804,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["seat_status"]
         }
         Relationships: [
+          {
+            foreignKeyName: "panel_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "panel_members_member_id_fkey"
             columns: ["member_id"]
@@ -832,8 +900,9 @@ export type Database = {
       requests: {
         Row: {
           created_at: string
-          dependent_guide_base_id: string
+          dependent_guide_base_id: string | null
           id: string
+          objective_id: string | null
           resolved_guide_base_id: string | null
           status: Database["public"]["Enums"]["todo_status"]
           summary: string
@@ -841,8 +910,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          dependent_guide_base_id: string
+          dependent_guide_base_id?: string | null
           id?: string
+          objective_id?: string | null
           resolved_guide_base_id?: string | null
           status?: Database["public"]["Enums"]["todo_status"]
           summary: string
@@ -850,8 +920,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          dependent_guide_base_id?: string
+          dependent_guide_base_id?: string | null
           id?: string
+          objective_id?: string | null
           resolved_guide_base_id?: string | null
           status?: Database["public"]["Enums"]["todo_status"]
           summary?: string
@@ -870,6 +941,13 @@ export type Database = {
             columns: ["dependent_guide_base_id"]
             isOneToOne: false
             referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "objectives"
             referencedColumns: ["id"]
           },
           {
@@ -917,6 +995,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "review_cases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "review_cases_created_by_fkey"
             columns: ["created_by"]
@@ -1086,6 +1171,13 @@ export type Database = {
             foreignKeyName: "subjects_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subjects_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1108,6 +1200,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
@@ -1182,6 +1281,13 @@ export type Database = {
             foreignKeyName: "votes_voter_id_fkey"
             columns: ["voter_id"]
             isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "votes_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1189,6 +1295,57 @@ export type Database = {
       }
     }
     Views: {
+      dashboard_assignments: {
+        Row: {
+          case_type: Database["public"]["Enums"]["case_type"] | null
+          change_summary: string | null
+          created_at: string | null
+          expires_at: string | null
+          member_id: string | null
+          member_status: Database["public"]["Enums"]["user_status"] | null
+          panel_id: string | null
+          status: Database["public"]["Enums"]["seat_status"] | null
+          title: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "review_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_members: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          roles: string[] | null
+          status: Database["public"]["Enums"]["user_status"] | null
+          updated_at: string | null
+          username: string | null
+        }
+        Relationships: []
+      }
       guide_vote_tallies: {
         Row: {
           downvotes: number | null
@@ -1230,6 +1387,13 @@ export type Database = {
           word_count: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "guides_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "guides_author_id_fkey"
             columns: ["author_id"]
@@ -1297,6 +1461,7 @@ export type Database = {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      is_active_guide_author: { Args: never; Returns: boolean }
       list_guide_variants_by_score: {
         Args: { p_guide_base_id: string; p_z?: number }
         Returns: {
@@ -1320,6 +1485,15 @@ export type Database = {
         }[]
       }
       promote_canonical_guide: {
+        Args: {
+          p_guide_base_id: string
+          p_margin?: number
+          p_min_votes?: number
+          p_z?: number
+        }
+        Returns: string
+      }
+      promote_canonical_guide_with_thresholds: {
         Args: {
           p_guide_base_id: string
           p_margin?: number
@@ -1408,12 +1582,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1437,11 +1611,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1462,11 +1636,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1487,11 +1661,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1504,11 +1678,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

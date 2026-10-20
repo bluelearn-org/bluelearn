@@ -85,55 +85,108 @@ describe("PATCH /objective-revisions/{id}", () => {
 });
 
 describe("PATCH /objective-revisions/{id} curation", () => {
-  it("seeds the closure, orders the targets, and records the sequence", async () => {
+  type CurationSnapshot = {
+    nodes: Array<{
+      id: string;
+      guide_base_id: string;
+      is_target: boolean;
+      is_featured: boolean;
+      target_position: number | null;
+    }>;
+    orders: Array<{
+      target_node_id: string;
+      node_id: string;
+      position: number;
+    }>;
+  };
+
+  async function drawnDraft(
+    bases: string[],
+    edges: Array<[number, number]> = []
+  ) {
     const { curator, revision } = await curatorDraft();
+    const nodes = bases.map((id) => ({
+      id: crypto.randomUUID(),
+      guide_base_id: id,
+    }));
+    const drawn = await app.request(
+      `/objective-revisions/${revision.id}`,
+      jsonAuth(curator.token, "PATCH", {
+        graph: {
+          nodes,
+          edges: edges.map(([from, to]) => ({
+            from_node_id: nodes[from].id,
+            to_node_id: nodes[to].id,
+          })),
+        },
+      }),
+      env
+    );
+    expect(drawn.status).toBe(200);
+
+    const curate = (targets: unknown) =>
+      app.request(
+        `/objective-revisions/${revision.id}`,
+        jsonAuth(curator.token, "PATCH", { targets }),
+        env
+      );
+    const read = async () => {
+      const res = await app.request(
+        `/objective-revisions/${revision.id}`,
+        auth(curator.token),
+        env
+      );
+      const { snapshot } = (await res.json()) as { snapshot: CurationSnapshot };
+      const byBase = new Map(snapshot.nodes.map((n) => [n.guide_base_id, n]));
+      return { snapshot, byBase };
+    };
+    const nodeIdOf = async (baseId: string) =>
+      (await read()).byBase.get(baseId)!.id;
+
+    const redraw = (basesToKeep: string[]) =>
+      app.request(
+        `/objective-revisions/${revision.id}`,
+        jsonAuth(curator.token, "PATCH", {
+          graph: {
+            nodes: nodes.filter((n) => basesToKeep.includes(n.guide_base_id)),
+            edges: [],
+          },
+        }),
+        env
+      );
+
+    return { curate, read, nodeIdOf, redraw };
+  }
+
+  it("orders the targets and records the sequence", async () => {
     const prereq = await createPublishedGuide();
     const goal = await createPublishedGuide();
     const other = await createPublishedGuide();
     await createPrerequisite(prereq.base.id, goal.base.id);
+    const { curate, read, nodeIdOf } = await drawnDraft([
+      prereq.base.id,
+      goal.base.id,
+      other.base.id,
+    ]);
 
-    const res = await app.request(
-      `/objective-revisions/${revision.id}`,
-      jsonAuth(curator.token, "PATCH", {
-        targets: [
-          {
-            guide_base_id: goal.base.id,
-            sequence: [prereq.base.id, goal.base.id],
-          },
-          { guide_base_id: other.base.id, is_featured: true, sequence: [] },
-        ],
-      }),
-      env
-    );
+    const prereqNode = await nodeIdOf(prereq.base.id);
+    const goalNode = await nodeIdOf(goal.base.id);
+    const res = await curate([
+      {
+        node_id: goalNode,
+        sequence: [prereqNode, goalNode],
+      },
+      {
+        node_id: await nodeIdOf(other.base.id),
+        is_featured: true,
+        sequence: [],
+      },
+    ]);
 
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "PATCH", "/objective-revisions/{id}");
 
-    const snapshot = await app.request(
-      `/objective-revisions/${revision.id}`,
-      {},
-      env
-    );
-    const { snapshot: snap } = (await snapshot.json()) as {
-      snapshot: {
-        nodes: Array<{
-          id: string;
-          guide_base_id: string;
-          is_target: boolean;
-          is_featured: boolean;
-          target_position: number | null;
-        }>;
-        orders: Array<{
-          target_node_id: string;
-          node_id: string;
-          position: number;
-        }>;
-      };
-    };
-
-    const byBase = new Map(snap.nodes.map((n) => [n.guide_base_id, n]));
-    // The prerequisite was never named, only reached.
-    expect(byBase.has(prereq.base.id)).toBe(true);
+    const { snapshot: snap, byBase } = await read();
     expect(byBase.get(goal.base.id)?.target_position).toBe(0);
     expect(byBase.get(other.base.id)?.target_position).toBe(1);
     expect(byBase.get(other.base.id)?.is_featured).toBe(true);
@@ -150,36 +203,155 @@ describe("PATCH /objective-revisions/{id} curation", () => {
     ]);
   });
 
-  it("drops nodes no longer reached once a target leaves", async () => {
-    const { curator, revision } = await curatorDraft();
+  it("clears position and featured on an empty curation, not the target", async () => {
+    const goal = await createPublishedGuide();
+    const { curate, read, nodeIdOf } = await drawnDraft([goal.base.id]);
+    const goalNode = await nodeIdOf(goal.base.id);
+
+    expect((await curate([{ node_id: goalNode }])).status).toBe(200);
+    expect((await read()).byBase.get(goal.base.id)).toEqual(
+      expect.objectContaining({
+        is_target: true,
+        is_featured: true,
+        target_position: 0,
+      })
+    );
+
+    expect((await curate([])).status).toBe(200);
+    expect((await read()).byBase.get(goal.base.id)).toEqual(
+      expect.objectContaining({
+        is_target: true,
+        is_featured: false,
+        target_position: null,
+      })
+    );
+  });
+
+  it("400s an unknown node and drops a node that is no longer a target", async () => {
+    const before = await createPublishedGuide();
+    const goal = await createPublishedGuide();
+    const { curate, nodeIdOf } = await drawnDraft(
+      [before.base.id, goal.base.id],
+      [[0, 1]]
+    );
+
+    const unknown = await curate([{ node_id: crypto.randomUUID() }]);
+    expect(unknown.status).toBe(400);
+    await expectToMatchSpec(unknown, "PATCH", "/objective-revisions/{id}");
+    const body = (await unknown.json()) as { error: string };
+    expect(body.error).toBe("Node is not a target of this revision");
+
+    const beforeNode = await nodeIdOf(before.base.id);
+    const drifted = await curate([
+      { node_id: beforeNode, is_featured: true },
+      { node_id: await nodeIdOf(goal.base.id) },
+    ]);
+    expect(drifted.status).toBe(200);
+    await expectToMatchSpec(drifted, "PATCH", "/objective-revisions/{id}");
+    const { snapshot } = (await drifted.json()) as {
+      snapshot: CurationSnapshot;
+    };
+    const byBase = new Map(snapshot.nodes.map((n) => [n.guide_base_id, n]));
+    expect(byBase.get(before.base.id)).toEqual(
+      expect.objectContaining({
+        id: beforeNode,
+        is_target: false,
+        is_featured: false,
+        target_position: null,
+      })
+    );
+    expect(byBase.get(goal.base.id)).toEqual(
+      expect.objectContaining({ is_target: true, target_position: 0 })
+    );
+  });
+
+  it("clears every target on an empty graph and derives one again", async () => {
     const prereq = await createPublishedGuide();
     const goal = await createPublishedGuide();
-    const kept = await createPublishedGuide();
     await createPrerequisite(prereq.base.id, goal.base.id);
+    const bases = [prereq.base.id, goal.base.id];
+    const { curate, read, nodeIdOf, redraw } = await drawnDraft(bases);
+    const goalNode = await nodeIdOf(goal.base.id);
 
-    const patch = (targets: unknown) =>
-      app.request(
-        `/objective-revisions/${revision.id}`,
-        jsonAuth(curator.token, "PATCH", { targets }),
-        env
+    expect((await curate([{ node_id: goalNode }])).status).toBe(200);
+    expect((await redraw([])).status).toBe(200);
+    expect((await read()).snapshot.nodes).toEqual([]);
+
+    expect((await redraw(bases)).status).toBe(200);
+    const restoredGoal = await nodeIdOf(goal.base.id);
+    expect((await curate([{ node_id: restoredGoal }])).status).toBe(200);
+    expect((await read()).snapshot.nodes.filter((n) => n.is_target)).toEqual([
+      expect.objectContaining({
+        id: restoredGoal,
+        guide_base_id: goal.base.id,
+        is_featured: true,
+        target_position: 0,
+      }),
+    ]);
+  });
+
+  describe("stale sequence rows", () => {
+    it("drops every order row when the graph empties", async () => {
+      const prereq = await createPublishedGuide();
+      const goal = await createPublishedGuide();
+      await createPrerequisite(prereq.base.id, goal.base.id);
+      const { curate, read, nodeIdOf, redraw } = await drawnDraft([
+        prereq.base.id,
+        goal.base.id,
+      ]);
+      const prereqNode = await nodeIdOf(prereq.base.id);
+      const goalNode = await nodeIdOf(goal.base.id);
+
+      expect(
+        (await curate([{ node_id: goalNode, sequence: [prereqNode] }])).status
+      ).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([
+        { target_node_id: goalNode, node_id: prereqNode, position: 0 },
+      ]);
+
+      expect((await redraw([])).status).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([]);
+    });
+
+    it("drops a removed target's rows and keeps the retained target's", async () => {
+      const prereqA = await createPublishedGuide();
+      const a = await createPublishedGuide();
+      const prereqB = await createPublishedGuide();
+      const b = await createPublishedGuide();
+      await createPrerequisite(prereqA.base.id, a.base.id);
+      await createPrerequisite(prereqB.base.id, b.base.id);
+      const { curate, read, nodeIdOf, redraw } = await drawnDraft([
+        prereqA.base.id,
+        a.base.id,
+        prereqB.base.id,
+        b.base.id,
+      ]);
+      const aNode = await nodeIdOf(a.base.id);
+      const bNode = await nodeIdOf(b.base.id);
+      const prereqANode = await nodeIdOf(prereqA.base.id);
+      const prereqBNode = await nodeIdOf(prereqB.base.id);
+
+      expect(
+        (
+          await curate([
+            { node_id: aNode, sequence: [prereqANode] },
+            { node_id: bNode, sequence: [prereqBNode] },
+          ])
+        ).status
+      ).toBe(200);
+      expect((await read()).snapshot.orders).toEqual(
+        expect.arrayContaining([
+          { target_node_id: aNode, node_id: prereqANode, position: 0 },
+          { target_node_id: bNode, node_id: prereqBNode, position: 0 },
+        ])
       );
 
-    await patch([
-      { guide_base_id: goal.base.id },
-      { guide_base_id: kept.base.id },
-    ]);
-    await patch([{ guide_base_id: kept.base.id }]);
-
-    const res = await app.request(
-      `/objective-revisions/${revision.id}`,
-      {},
-      env
-    );
-    const { snapshot } = (await res.json()) as {
-      snapshot: { nodes: Array<{ guide_base_id: string }> };
-    };
-    const bases = snapshot.nodes.map((n) => n.guide_base_id);
-    expect(bases).toEqual([kept.base.id]);
+      expect((await redraw([prereqA.base.id, a.base.id])).status).toBe(200);
+      expect((await curate([{ node_id: aNode }])).status).toBe(200);
+      expect((await read()).snapshot.orders).toEqual([
+        { target_node_id: aNode, node_id: prereqANode, position: 0 },
+      ]);
+    });
   });
 
   it("403s for a non-curator author", async () => {
@@ -189,12 +361,11 @@ describe("PATCH /objective-revisions/{id} curation", () => {
       author_id: author.userId,
       status: "draft",
     });
-    const goal = await createPublishedGuide();
 
     const res = await app.request(
       `/objective-revisions/${revision.id}`,
       jsonAuth(author.token, "PATCH", {
-        targets: [{ guide_base_id: goal.base.id }],
+        targets: [{ node_id: crypto.randomUUID() }],
       }),
       env
     );

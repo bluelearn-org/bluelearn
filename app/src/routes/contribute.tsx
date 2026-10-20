@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 
 import type { ContributionType } from "@/types/contributions";
 import ContributionFlow from "@/components/contribute/ContributionFlow";
@@ -30,7 +34,8 @@ export type ContributeSearch = {
 export function requestsGuideAuthoring(search: ContributeSearch) {
   if (
     search.contributionType === "guide" ||
-    search.contributionType === "variant"
+    search.contributionType === "variant" ||
+    search.contributionType === "guide-request"
   ) {
     return true;
   }
@@ -61,6 +66,7 @@ export const Route = createFileRoute("/contribute")({
     const contributionType =
       search.contributionType === "guide" ||
       search.contributionType === "variant" ||
+      search.contributionType === "guide-request" ||
       search.contributionType === "objective"
         ? search.contributionType
         : undefined;
@@ -128,6 +134,7 @@ function ContributePage() {
     slug,
   } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const router = useRouter();
 
   const type =
     contributionType ?? (edit || kind === "objective" ? "objective" : null);
@@ -143,7 +150,9 @@ function ContributePage() {
             ? "guide-details"
             : newType === "variant"
               ? "variant-details"
-              : "objective-details",
+              : newType === "objective"
+                ? "objective-details"
+                : "guide-request-details",
       }),
       replace: true,
     });
@@ -166,6 +175,15 @@ function ContributePage() {
   };
 
   const handlePublished = () => {
+    if (type === "guide-request") {
+      void router
+        .invalidate()
+        .then(() =>
+          navigate({ to: "/todos", search: { page: 1 }, replace: true })
+        );
+      return;
+    }
+
     navigate({ search: {}, replace: true });
   };
 

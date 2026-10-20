@@ -6,8 +6,7 @@ import {
 } from "@bluelearn/schemas";
 
 import type { AssignmentTable } from "@/lib/api/dashboard";
-import type { DashboardColumn } from "@/lib/dashboardFilters";
-import { useDashboardFilters } from "@/lib/dashboardFilters";
+import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
 import { formatDate } from "@/lib/guideUtils";
 import { deadlineTickMs, formatTimeRemaining } from "@/lib/reviewDeadline";
 
@@ -25,41 +24,29 @@ import {
 
 type AssignmentsTableProps = {
   assignmentsData: AssignmentTable;
+  filters: DashboardFilters;
+  onFiltersChange: (changes: DashboardFilters) => void;
   selectedIds: Set<string>;
   setSelectedIds: (ids: Set<string>) => void;
 };
 
-const columns: Array<
-  DashboardColumn<AssignmentTable[number]> & { width: string }
-> = [
-  {
-    key: "username",
-    label: "Assignee",
-    width: "w-sm",
-    value: (row) => row.username,
-  },
+export const assignmentColumns: Array<DashboardColumn & { width: string }> = [
+  { key: "username", label: "Assignee", width: "w-sm" },
   {
     key: "user_status",
     label: "Assignee Status",
     width: "w-xs",
     kind: "choice",
     options: [...userStatusSchema.options, "No status."],
-    value: (row) => row.user_status ?? "No status.",
+    noneOption: "No status.",
   },
-  {
-    key: "time_left",
-    label: "Time Left",
-    width: "w-sm",
-    kind: "duration",
-    value: (row) => row.time_left,
-  },
+  { key: "time_left", label: "Time Left", width: "w-sm", kind: "duration" },
   {
     key: "status",
     label: "Status",
     width: "w-xs",
     kind: "choice",
     options: reviewSeatStatusSchema.options,
-    value: (row) => row.status,
   },
   {
     key: "type",
@@ -67,37 +54,25 @@ const columns: Array<
     width: "w-xs",
     kind: "choice",
     options: reviewCaseTypeSchema.options,
-    value: (row) => row.type,
   },
-  { key: "title", label: "Title", width: "w-lg", value: (row) => row.title },
-  {
-    key: "change_summary",
-    label: "Change Summary",
-    width: "w-lg",
-    value: (row) => row.change_summary,
-  },
-  {
-    key: "date_created",
-    label: "Date Created",
-    width: "w-sm",
-    kind: "date",
-    value: (row) => row.date_created,
-  },
-  {
-    key: "date_updated",
-    label: "Date Updated",
-    width: "w-sm",
-    kind: "date",
-    value: (row) => row.date_updated,
-  },
+  { key: "title", label: "Title", width: "w-lg" },
+  { key: "change_summary", label: "Change Summary", width: "w-lg" },
+  { key: "date_created", label: "Date Created", width: "w-sm", kind: "date" },
+  { key: "date_updated", label: "Date Updated", width: "w-sm", kind: "date" },
 ];
 
-function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
+function ExpireCell({
+  expiresAt,
+  isCompleted,
+}: {
+  expiresAt: string | null;
+  isCompleted: boolean;
+}) {
   const [now, setNow] = useState(() => Date.now());
   const expiresMs = expiresAt ? new Date(expiresAt).getTime() : null;
 
   useEffect(() => {
-    if (expiresMs === null) return;
+    if (expiresMs === null || isCompleted) return;
 
     const diffMs = expiresMs - Date.now();
 
@@ -106,7 +81,11 @@ function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
     const timer = setTimeout(() => setNow(Date.now()), deadlineTickMs(diffMs));
 
     return () => clearTimeout(timer);
-  }, [expiresMs, now]);
+  }, [expiresMs, now, isCompleted]);
+
+  if (isCompleted) {
+    return <span className="text-success font-mono text-xs">-</span>;
+  }
 
   if (expiresMs === null) {
     return <span className="text-muted-foreground">-</span>;
@@ -122,21 +101,15 @@ function ExpireCell({ expiresAt }: { expiresAt: string | null }) {
 }
 
 export const AssignmentsTable = ({
-  assignmentsData,
+  assignmentsData: visibleRows,
+  filters,
+  onFiltersChange,
   selectedIds,
   setSelectedIds,
 }: AssignmentsTableProps) => {
   function getSelectionKey(assignment: AssignmentTable[number]) {
     return `${assignment.id}:${assignment.panel_id}`;
   }
-
-  const { filters, visibleRows, updateFilters } = useDashboardFilters(
-    assignmentsData,
-    columns,
-    selectedIds,
-    setSelectedIds,
-    getSelectionKey
-  );
 
   const allSelected =
     visibleRows.length > 0 &&
@@ -188,7 +161,7 @@ export const AssignmentsTable = ({
               />
             </TableHead>
 
-            {columns.map((column) => (
+            {assignmentColumns.map((column) => (
               <TableHead
                 key={column.key}
                 className={`${column.width} px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase`}
@@ -196,7 +169,7 @@ export const AssignmentsTable = ({
                 <ColumnFilter
                   column={column}
                   filters={filters}
-                  onChange={updateFilters}
+                  onChange={onFiltersChange}
                 />
               </TableHead>
             ))}
@@ -241,7 +214,10 @@ export const AssignmentsTable = ({
                 </TableCell>
 
                 <TableCell className="mono-micro w-[120px] px-4 py-3 whitespace-pre-line">
-                  <ExpireCell expiresAt={assignment.time_left} />
+                  <ExpireCell
+                    expiresAt={assignment.time_left}
+                    isCompleted={assignment.status === "completed"}
+                  />
                 </TableCell>
 
                 <TableCell className="w-[120px] px-4 py-3">

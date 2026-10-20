@@ -15,18 +15,20 @@ export function SubObjectiveStep({ Stepper, target, objective }: Props) {
         {/* ordered guides */}
         <ol className="m-0 flex w-full list-none flex-col gap-6 p-0">
           {target.guides.map((subobjective: any, index: number) => {
+            const step = subobjective.guide;
+            // A request has no page yet, and neither does a guide whose base
+            // never got a slug.
+            const canOpen = !step.isRequest && step.slug !== null;
+
             const guide = {
-              ...subobjective.guide,
-              stats: [
-                {
-                  label: "Duration",
-                  data: subobjective.guide.duration,
-                },
-              ],
+              ...step,
+              stats: step.isRequest
+                ? undefined
+                : [{ label: "Duration", data: step.duration }],
             };
 
             return (
-              <li key={guide.slug} className="flex items-start gap-6">
+              <li key={step.id} className="flex items-start gap-6">
                 <div className="flex w-9 shrink-0 flex-col items-center self-stretch">
                   <div className="mt-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-badge-border bg-badge font-mono text-sm font-semibold text-badge-foreground">
                     {index + 1}
@@ -40,7 +42,7 @@ export function SubObjectiveStep({ Stepper, target, objective }: Props) {
                 <div className="min-w-0 flex-1">
                   <GuideCard
                     guide={guide}
-                    to={GuideRoute.to}
+                    to={canOpen ? GuideRoute.to : undefined}
                     origin={{
                       type: "objective",
                       title: objective.title,
