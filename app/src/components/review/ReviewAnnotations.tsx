@@ -72,8 +72,6 @@ type AnnotationsContext = {
   blockSelection: boolean;
   selectBlocks: (start: number, end: number) => void;
   selectionControls: ReturnType<typeof useBlockSelection>;
-  activeBlock: number | null;
-  setActiveBlock: (index: number | null) => void;
   // Composer text by draft key. A ref, so typing never re-renders the page.
   drafts: Map<string, string>;
   createThread: (anchor: PassageAnchor, body: string) => Promise<void>;
@@ -151,7 +149,6 @@ export const ReviewAnnotationsProvider = ({
   const [draft, setDraft] = useState<Draft | null>(null);
   const [selection, setSelectionState] = useState<PassageAnchor | null>(null);
   const [blockSelection, setBlockSelection] = useState(false);
-  const [activeBlock, setActiveBlock] = useState<number | null>(null);
 
   const [seatExpired, setSeatExpired] = useState(false);
   const suspensionStatus = useSuspensionStatus();
@@ -241,7 +238,6 @@ export const ReviewAnnotationsProvider = ({
     Dispatch<SetStateAction<PassageAnchor | null>>
   >((next) => {
     setBlockSelection(false);
-    setActiveBlock(null);
     setSelectionState(next);
   }, []);
 
@@ -254,13 +250,15 @@ export const ReviewAnnotationsProvider = ({
     document.getSelection()?.removeAllRanges();
     setBlockSelection(true);
     setSelectionState(anchor);
-    setActiveBlock(null);
   }, []);
 
   const selectionControls = useBlockSelection({
     rootRef,
     selection,
-    enabled: blockSelection && !draft && permissions.can_comment,
+    enabled:
+      blockSelection &&
+      !draft &&
+      (permissions.can_comment || permissions.can_suggest),
     selectBlocks,
     clear: () => setSelection(null),
   });
@@ -305,7 +303,6 @@ export const ReviewAnnotationsProvider = ({
   const openDraft = useCallback(
     (next: Draft) => {
       setDraft(next);
-      setActiveBlock(null);
       setSelection(null);
     },
     [setSelection]
@@ -420,9 +417,6 @@ export const ReviewAnnotationsProvider = ({
       focusAfterPlacement.current = () =>
         document.getElementById(badgeId(threadId)) ??
         document.getElementById(cardId(threadId)) ??
-        place?.querySelector<HTMLElement>(
-          "[data-review-block-actions] button"
-        ) ??
         place;
       if (!(await refresh())) focusAfterPlacement.current = null;
     },
@@ -493,8 +487,6 @@ export const ReviewAnnotationsProvider = ({
       blockSelection,
       selectBlocks,
       selectionControls,
-      activeBlock,
-      setActiveBlock,
       drafts,
       createThread,
       reply,
@@ -520,7 +512,6 @@ export const ReviewAnnotationsProvider = ({
       blockSelection,
       selectBlocks,
       selectionControls,
-      activeBlock,
       drafts,
       createThread,
       reply,

@@ -34,6 +34,7 @@ type EditorProps = {
   // The guide flow waits for a pause in typing. A short form submits right
   // after an edit, and a tap on iOS does not always blur the editor first.
   changeDelayMs?: number;
+  mode?: "guide" | "review";
 };
 
 export default function Editor({
@@ -41,6 +42,7 @@ export default function Editor({
   onChange,
   onUploadImage,
   changeDelayMs = 1000,
+  mode = "guide",
 }: EditorProps) {
   const [initialMarkdown] = useState<string>(() => value ?? "");
   const [markdown, setMarkdown] = useState<string>(() => value ?? "");
@@ -185,6 +187,8 @@ export default function Editor({
         toolbarContents: () => (
           <EditorToolbar
             editorRef={editorRef}
+            overlayContainer={overlayContainer}
+            mode={mode}
             markdown={markdown}
             onImportMarkdown={handleImportMarkdown}
             onH1Attempted={() => {
@@ -198,23 +202,32 @@ export default function Editor({
         ),
       }),
     ],
-    [markdown]
+    [markdown, mode, overlayContainer]
   );
 
   return (
     <div
       id="bluelearn-editor-container"
-      className="editor-only-container transition-all"
+      className={
+        mode === "review"
+          ? "editor-only-container editor-review"
+          : "editor-only-container transition-all"
+      }
     >
       <div className="editor-only-paper flex flex-col">
         {overlayContainer && (
           <MDXEditor
             ref={editorRef}
+            className={mode === "review" ? "review-comment-editor" : undefined}
             markdown={initialMarkdown}
             onChange={handleMarkdownChange}
             onBlur={handleBlur}
             contentEditableClassName="mdxeditor-content"
-            placeholder="What will you teach the world today? Start typing here..."
+            placeholder={
+              mode === "review"
+                ? "Propose an edit..."
+                : "What will you teach the world today? Start typing here..."
+            }
             plugins={plugins}
             overlayContainer={overlayContainer}
           />

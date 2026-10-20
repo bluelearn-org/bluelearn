@@ -96,7 +96,7 @@ export const SelectionCommentAction = () => {
   }, [rootRef, setCandidate, blockSelection]);
 
   if (
-    !permissions.can_comment ||
+    (!permissions.can_comment && !permissions.can_suggest) ||
     !candidate ||
     draft ||
     selectionControls.dragging
@@ -176,19 +176,23 @@ export const SelectionCommentAction = () => {
           </p>
         )}
         <div className="flex flex-wrap justify-center gap-2">
-          <Button
-            type="button"
-            className="min-h-11 rounded-full px-4"
-            disabled={tooLong || textlessRange}
-            {...keepSelection}
-            onClick={() => start("comment")}
-          >
-            <MessageSquarePlus aria-hidden />
-            Comment on selection
-          </Button>
+          {permissions.can_comment && (
+            <Button
+              type="button"
+              data-review-selection-action="comment"
+              className="min-h-11 rounded-full px-4"
+              disabled={tooLong || textlessRange}
+              {...keepSelection}
+              onClick={() => start("comment")}
+            >
+              <MessageSquarePlus aria-hidden />
+              Comment on selection
+            </Button>
+          )}
           {canSuggest && (
             <Button
               type="button"
+              data-review-selection-action="suggestion"
               variant="outline"
               className="min-h-11 rounded-full px-4"
               {...keepSelection}

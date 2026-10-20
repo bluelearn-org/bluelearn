@@ -288,7 +288,7 @@ const guide: ReaderGuide = {
 };
 
 function renderCase({ expiresAt = "2099-01-01T00:00:00Z", body = BODY } = {}) {
-  return render(
+  const rendered = render(
     <ReviewAnnotationsProvider
       caseId="case-1"
       revisionId={REVISION}
@@ -304,6 +304,17 @@ function renderCase({ expiresAt = "2099-01-01T00:00:00Z", body = BODY } = {}) {
       </AnnotatedGuide>
     </ReviewAnnotationsProvider>
   );
+
+  // Popover detachment uses block bounds, not the native text range bounds.
+  rendered.container
+    .querySelectorAll("[data-review-block-content]")
+    .forEach((content, index) => {
+      vi.spyOn(content, "getBoundingClientRect").mockReturnValue(
+        new DOMRect(20, 100 + index * 100, 600, 60)
+      );
+    });
+
+  return rendered;
 }
 
 const blockContent = (index: number) =>
@@ -390,6 +401,12 @@ afterAll(() => {
 });
 
 beforeEach(() => {
+  vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(
+    1024
+  );
+  vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(
+    768
+  );
   Object.assign(server, {
     threads: [],
     suggestions: [],
@@ -410,6 +427,7 @@ beforeEach(() => {
 afterEach(() => {
   document.getSelection()?.removeAllRanges();
   cleanup();
+  vi.restoreAllMocks();
 });
 
 describe("stored review comments", () => {
@@ -598,12 +616,8 @@ describe("stored review comments", () => {
     expect(first.textContent).toBe("Cells make energy in mitochondria.");
     expect(second.textContent).toBe(RIGID);
 
-    const actions = first.closest("[data-review-block]")!;
-    fireEvent.click(
-      within(actions as HTMLElement).getByRole("button", {
-        name: "Comment on block",
-      })
-    );
+    fireEvent.click(first.querySelector("p")!);
+    press(screen.getByRole("button", { name: "Comment on selection" }));
     const draft = screen.getByRole("region", { name: "New comment" });
     expect(blockOf(draft)).toBe("0");
     expect(draft.querySelector("figure p")?.textContent).toBe(
@@ -611,8 +625,12 @@ describe("stored review comments", () => {
     );
     expect(draft.querySelector("figure")?.textContent).not.toContain(RIGID);
     fireEvent.click(within(draft).getByRole("button", { name: "Cancel" }));
-    expect(document.activeElement?.closest("[data-review-block]")).toBe(
-      actions
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(
+          screen.getByRole("toolbar", { name: "Review selected passage" })
+        ).getByRole("button", { name: "Comment on selection" })
+      )
     );
   });
 
@@ -629,12 +647,8 @@ describe("stored review comments", () => {
     ];
     renderCase();
     await screen.findByRole("button", { name: /Vera Verifier/ });
-    const actions = blockContent(0).closest("[data-review-block]")!;
-    fireEvent.click(
-      within(actions as HTMLElement).getByRole("button", {
-        name: "Comment on block",
-      })
-    );
+    fireEvent.click(blockContent(0).querySelector("p")!);
+    press(screen.getByRole("button", { name: "Comment on selection" }));
     const draft = screen.getByRole("region", { name: "New comment" });
     expect(blockOf(draft)).toBe("1");
     expect(draft.querySelector("figure p")?.textContent).toBe(
@@ -642,8 +656,12 @@ describe("stored review comments", () => {
     );
     expect(draft.querySelector("figure")?.textContent).not.toContain(RIGID);
     fireEvent.click(within(draft).getByRole("button", { name: "Cancel" }));
-    expect(document.activeElement?.closest("[data-review-block]")).toBe(
-      actions
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(
+          screen.getByRole("toolbar", { name: "Review selected passage" })
+        ).getByRole("button", { name: "Comment on selection" })
+      )
     );
   });
 
@@ -831,7 +849,7 @@ describe("commenting on a selection", () => {
     ).toBeNull();
   });
 
-  it("keeps every selected block marked when the action takes focus", async () => {
+  it("restores the whole comment selection and draft after cancel", async () => {
     renderCase();
     await screen.findByText(/No comments yet/);
 
@@ -863,8 +881,43 @@ describe("commenting on a selection", () => {
     expect(blockContent(1).hasAttribute("data-review-selected")).toBe(true);
     expect(blockContent(2).hasAttribute("data-review-selected")).toBe(false);
 
+    await waitFor(() =>
+      expect(draft.querySelector('[contenteditable="true"]')).not.toBeNull()
+    );
+    typeInto(draft, "Keep both paragraphs together.");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
     fireEvent.click(within(draft).getByRole("button", { name: "Cancel" }));
-    expect(blockContent(0).hasAttribute("data-review-selected")).toBe(false);
+    expect(screen.queryByRole("region", { name: "New comment" })).toBeNull();
+    expect(blockContent(0).hasAttribute("data-review-selected")).toBe(true);
+    expect(blockContent(1).hasAttribute("data-review-selected")).toBe(true);
+    expect(blockContent(2).hasAttribute("data-review-selected")).toBe(false);
+    expect(
+      screen.getAllByRole("button", { name: /^Adjust selection/ })
+    ).toHaveLength(6);
+    const restoredAction = within(
+      screen.getByRole("toolbar", { name: "Review selected passage" })
+    ).getByRole("button", { name: "Comment on selection" });
+    await waitFor(() => expect(document.activeElement).toBe(restoredAction));
+    expect(screen.queryByRole("button", { name: "Select block" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Comment on block" })
+    ).toBeNull();
+
+    press(restoredAction);
+    const reopened = screen.getByRole("region", { name: "New comment" });
+    await waitFor(() =>
+      expect(
+        reopened.querySelector('[contenteditable="true"]')?.textContent
+      ).toContain("Keep both paragraphs together.")
+    );
+    expect(reopened.querySelector("figure")?.textContent).toContain(
+      "Cells make energy in mitochondria."
+    );
+    expect(reopened.querySelector("figure")?.textContent).toContain(RIGID);
+    expect(blockOf(reopened)).toBe("1");
   });
 
   it("anchors the selected repeat, and keeps the draft through a failed save", async () => {
@@ -1005,25 +1058,43 @@ describe("commenting on a selection", () => {
     expect(
       screen.queryByRole("button", { name: "Comment on selection" })
     ).toBeNull();
+    fireEvent.keyDown(blockContent(1), { key: "Enter" });
     expect(
-      screen.queryAllByRole("button", { name: "Comment on block" })
-    ).toEqual([]);
+      screen.queryByRole("toolbar", { name: "Review selected passage" })
+    ).toBeNull();
   });
 
-  it("offers a whole-block comment to keyboard users", async () => {
-    renderCase();
-    await screen.findByText(/No comments yet/);
+  it.each(["Enter", " "])(
+    "selects a whole block with %j for keyboard users",
+    async (key) => {
+      renderCase();
+      await screen.findByText(/No comments yet/);
 
-    const blockButtons = screen.getAllByRole("button", {
-      name: "Comment on block",
-    });
-    expect(blockButtons).toHaveLength(3);
+      const content = blockContent(1) as HTMLElement;
+      expect(content.tabIndex).toBe(0);
+      content.focus();
+      fireEvent.keyDown(content, { key });
 
-    fireEvent.click(blockButtons[1]);
-    const draft = screen.getByRole("region", { name: "New comment" });
-    expect(draft.textContent).toContain(RIGID);
-    expect(blockOf(draft)).toBe("1");
-  });
+      expect(blockContent(0).hasAttribute("data-review-selected")).toBe(false);
+      expect(content.hasAttribute("data-review-selected")).toBe(true);
+      expect(blockContent(2).hasAttribute("data-review-selected")).toBe(false);
+      expect(
+        screen.getAllByRole("button", { name: /^Adjust selection/ })
+      ).toHaveLength(6);
+      const toolbar = screen.getByRole("toolbar", {
+        name: "Review selected passage",
+      });
+      expect(
+        within(toolbar).getByRole("button", { name: "Suggest edit" })
+      ).toBeTruthy();
+      press(
+        within(toolbar).getByRole("button", { name: "Comment on selection" })
+      );
+      const draft = screen.getByRole("region", { name: "New comment" });
+      expect(draft.textContent).toContain(RIGID);
+      expect(blockOf(draft)).toBe("1");
+    }
+  );
 });
 
 describe("suggested edits", () => {
@@ -1088,7 +1159,8 @@ describe("suggested edits", () => {
     renderCase();
     await screen.findByText(/No comments yet/);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Suggest edit" })[1]);
+    fireEvent.click(blockContent(1).querySelector("p")!);
+    press(screen.getByRole("button", { name: "Suggest edit" }));
     const draft = screen.getByRole("region", { name: "Suggest an edit" });
     await waitFor(() =>
       expect(draft.querySelector('[contenteditable="true"]')).not.toBeNull()
@@ -1127,6 +1199,87 @@ describe("suggested edits", () => {
       },
     ]);
   });
+
+  it("restores the suggestion toolbar and edited draft after cancel", async () => {
+    renderCase();
+    await screen.findByText(/No comments yet/);
+
+    fireEvent.click(blockContent(2).querySelector("p")!);
+    press(
+      within(
+        screen.getByRole("toolbar", { name: "Review selected passage" })
+      ).getByRole("button", { name: "Suggest edit" })
+    );
+    const draft = screen.getByRole("region", { name: "Suggest an edit" });
+    await waitFor(() =>
+      expect(draft.querySelector('[contenteditable="true"]')).not.toBeNull()
+    );
+    expect(draft.querySelector('[contenteditable="true"]')?.textContent).toBe(
+      RIGID
+    );
+    typeInto(draft, STIFF);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    fireEvent.click(within(draft).getByRole("button", { name: "Cancel" }));
+
+    expect(
+      screen.queryByRole("region", { name: "Suggest an edit" })
+    ).toBeNull();
+    expect(blockContent(0).hasAttribute("data-review-selected")).toBe(false);
+    expect(blockContent(1).hasAttribute("data-review-selected")).toBe(false);
+    expect(blockContent(2).hasAttribute("data-review-selected")).toBe(true);
+    expect(
+      screen.getAllByRole("button", { name: /^Adjust selection/ })
+    ).toHaveLength(6);
+    const toolbar = screen.getByRole("toolbar", {
+      name: "Review selected passage",
+    });
+    const suggest = within(toolbar).getByRole("button", {
+      name: "Suggest edit",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(suggest));
+    expect(screen.getAllByRole("button", { name: "Suggest edit" })).toEqual([
+      suggest,
+    ]);
+    expect(screen.queryByRole("button", { name: "Select block" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Comment on block" })
+    ).toBeNull();
+    expect(server.received).toEqual([]);
+
+    press(suggest);
+    const reopened = screen.getByRole("region", { name: "Suggest an edit" });
+    await waitFor(() =>
+      expect(
+        reopened.querySelector('[contenteditable="true"]')?.textContent
+      ).toBe(STIFF)
+    );
+    expect(blockOf(reopened)).toBe("2");
+    fireEvent.click(
+      within(reopened).getByRole("button", { name: "Submit edit" })
+    );
+
+    const badge = await screen.findByRole("button", { name: /Edit · Pending/ });
+    expect(blockOf(badge)).toBe("2");
+    expect(server.received).toEqual([
+      {
+        anchor: {
+          kind: "block",
+          start_block: 2,
+          start_offset: 0,
+          end_block: 2,
+          end_offset: RIGID.length,
+          quote: RIGID,
+          source_start: BODY.lastIndexOf(RIGID),
+          source_end: BODY.lastIndexOf(RIGID) + RIGID.length,
+          revision_id: REVISION,
+        },
+        proposed: STIFF,
+      },
+    ]);
+  });
 });
 
 describe("keyboard focus", () => {
@@ -1134,7 +1287,10 @@ describe("keyboard focus", () => {
     renderCase();
     await screen.findByText(/No comments yet/);
 
-    const suggest = screen.getAllByRole("button", { name: "Suggest edit" })[1];
+    fireEvent.click(blockContent(1).querySelector("p")!);
+    const suggest = within(
+      screen.getByRole("toolbar", { name: "Review selected passage" })
+    ).getByRole("button", { name: "Suggest edit" });
     suggest.focus();
     fireEvent.click(suggest);
 
@@ -1150,9 +1306,8 @@ describe("keyboard focus", () => {
     renderCase();
     await screen.findByText(/No comments yet/);
 
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Comment on block" })[1]
-    );
+    fireEvent.click(blockContent(1).querySelector("p")!);
+    press(screen.getByRole("button", { name: "Comment on selection" }));
     const draft = screen.getByRole("region", { name: "New comment" });
     await waitFor(() =>
       expect(draft.querySelector('[contenteditable="true"]')).not.toBeNull()
@@ -1182,10 +1337,7 @@ describe("keyboard focus", () => {
     expect(
       screen.queryByRole("button", { name: "Adjust selection end (right)" })
     ).toBeNull();
-    const block = blockContent(1).closest<HTMLElement>("[data-review-block]")!;
-    expect(document.activeElement).toBe(
-      within(block).getByRole("button", { name: "Select block" })
-    );
+    await waitFor(() => expect(document.activeElement).toBe(blockContent(1)));
   });
 
   it("keeps focus on each step of an author decision", async () => {

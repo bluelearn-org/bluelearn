@@ -115,12 +115,9 @@ export function useBlockSelection(options: Options) {
       if (event.key === "Escape") {
         event.preventDefault();
         clear();
-        // Clearing removes this grip. Its block's actions take the focus, the
-        // same place a cancelled draft returns it to.
+        // Clearing removes this grip; return to its keyboard-selectable block.
         root
-          .querySelector<HTMLElement>(
-            `[data-review-block="${current}"] [data-review-block-actions] button`
-          )
+          .querySelector<HTMLElement>(`[${BLOCK_CONTENT_ATTR}="${current}"]`)
           ?.focus({ preventScroll: true });
         return;
       }

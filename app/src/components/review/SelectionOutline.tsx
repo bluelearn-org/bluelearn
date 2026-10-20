@@ -6,11 +6,10 @@ import { BLOCK_CONTENT_ATTR } from "@/lib/reviewAnchors";
 type Bounds = { x: number; y: number; width: number; height: number };
 
 export const SelectionOutline = () => {
-  const { rootRef, selection, draft, activeBlock, expanded } =
-    useReviewAnnotations();
+  const { rootRef, selection, draft, expanded } = useReviewAnnotations();
   const anchor = draft?.anchor ?? selection;
-  const start = anchor?.start_block ?? activeBlock;
-  const end = anchor?.end_block ?? activeBlock;
+  const start = anchor?.start_block ?? null;
+  const end = anchor?.end_block ?? null;
   const [bounds, setBounds] = useState<Bounds | null>(null);
 
   useLayoutEffect(() => {

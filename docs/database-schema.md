@@ -458,6 +458,10 @@ Each handle has an invisible 44-pixel square target with more padding outside th
 Drag an upper handle to change the start, or a lower handle to change the end.
 Use the arrow keys to adjust a focused handle.
 
+Press Enter or Space on a focused block to open its review toolbar.
+Cancel restores the selected blocks and focuses the toolbar action for the closed draft.
+The draft keeps unsaved text for reopening.
+
 The visible handles respond to hover, keyboard focus, and dragging without changing their target size.
 The toolbar appears in 140 milliseconds, and thread transitions take 180 milliseconds.
 The selection follows the pointer without a position animation.
@@ -466,6 +470,8 @@ Reduced motion removes these animations and keeps the focus and color indicators
 Review comment editors and their link dialogs use the page theme.
 The desktop formatting toolbar is 28 pixels high.
 Touch devices keep 44-pixel formatting buttons.
+Suggestion drafts use a compact guide editor with the same page colors.
+The guide editor keeps its styles inside its own container, including popup controls.
 
 `review_suggestions` stores a reviewer's proposed replacement for a complete source block.
 Each suggestion has a `pending`, `accepted`, or `rejected` status.

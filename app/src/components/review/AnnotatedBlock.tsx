@@ -1,12 +1,5 @@
-import { useRef } from "react";
 import { flushSync } from "react-dom";
-import {
-  ChevronDown,
-  GripHorizontal,
-  MessageSquare,
-  MessageSquarePlus,
-  PencilLine,
-} from "lucide-react";
+import { ChevronDown, MessageSquare, PencilLine } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import type { GuideBlockProps } from "@/components/GuideReader";
@@ -20,13 +13,11 @@ import { DraftCard } from "@/components/review/DraftCard";
 import { useReviewAnnotations } from "@/components/review/ReviewAnnotations";
 import { SuggestionCard } from "@/components/review/SuggestionCard";
 import { ThreadCard } from "@/components/review/ThreadCard";
-import { Button } from "@/components/ui/button";
 import {
   ANNOTATION_UI_ATTR,
   BLOCK_CONTENT_ATTR,
   BLOCK_SOURCE_END_ATTR,
   BLOCK_SOURCE_START_ATTR,
-  blockAnchor,
   sourceRangeFits,
 } from "@/lib/reviewAnchors";
 import { liveMessageCount } from "@/lib/reviewPlacement";
@@ -170,12 +161,8 @@ export const AnnotatedBlock = ({
     selection,
     blockSelection,
     selectBlocks,
-    openDraft,
     closeDraft,
-    activeBlock,
-    setActiveBlock,
   } = useReviewAnnotations();
-  const actionsRef = useRef<HTMLDivElement>(null);
 
   const items = placed.get(index) ?? [];
   const passage = passages.get(index);
@@ -190,9 +177,10 @@ export const AnnotatedBlock = ({
   const composing = draftEnd === index ? draft : null;
 
   const selectedAnchor = draft?.anchor ?? selection;
-  const selected = selectedAnchor
-    ? index >= selectedAnchor.start_block && index <= selectedAnchor.end_block
-    : activeBlock === index;
+  const selected =
+    !!selectedAnchor &&
+    index >= selectedAnchor.start_block &&
+    index <= selectedAnchor.end_block;
 
   const canSuggest =
     permissions.can_suggest && sourceRangeFits(revisionBody, start, end);
@@ -214,25 +202,24 @@ export const AnnotatedBlock = ({
     selectBlocks(index, index);
   };
 
-  const open = (mode: "comment" | "suggestion") => {
-    const anchor = rootRef.current && blockAnchor(rootRef.current, index);
-    if (anchor) openDraft({ mode, anchor });
-  };
-
-  // Focus goes back to the passage the reader left, not to the page top.
   const cancelDraft = () => {
-    const origin = composing?.anchor.end_block ?? index;
+    if (!composing) return;
+
+    const { anchor, mode } = composing;
     flushSync(() => {
       closeDraft();
-      setActiveBlock(origin);
+      selectBlocks(anchor.start_block, anchor.end_block);
     });
-    const actions =
-      origin === index
-        ? actionsRef.current
-        : rootRef.current?.querySelector(
-            `[data-review-block="${origin}"] [data-review-block-actions]`
-          );
-    actions?.querySelector("button")?.focus({ preventScroll: true });
+    rootRef.current
+      ?.querySelector<HTMLElement>(
+        `[${BLOCK_CONTENT_ATTR}="${anchor.end_block}"]`
+      )
+      ?.focus();
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-review-selection-action="${mode}"]`)
+        ?.focus({ preventScroll: true });
+    });
   };
 
   return (
@@ -266,9 +253,27 @@ export const AnnotatedBlock = ({
             [BLOCK_SOURCE_END_ATTR]: end ?? undefined,
           }}
           data-review-selected={selected ? "" : undefined}
+          tabIndex={hasActions && !draft ? 0 : undefined}
+          role={hasActions ? "group" : undefined}
+          aria-label={
+            hasActions ? `Select block ${index + 1} for review` : undefined
+          }
+          onKeyDown={(event) => {
+            if (!hasActions || draft || event.target !== event.currentTarget)
+              return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+
+            event.preventDefault();
+            selectBlocks(index, index);
+            requestAnimationFrame(() => {
+              document
+                .querySelector<HTMLElement>("[data-review-selection-action]")
+                ?.focus({ preventScroll: true });
+            });
+          }}
           style={{ viewTransitionName: `review-source-${index}` }}
           className={cn(
-            "[view-transition-class:review-motion]",
+            "rounded-md outline-none [view-transition-class:review-motion] focus-visible:ring-2 focus-visible:ring-ring",
             marked && "px-3 [&>:first-child]:mt-0 [&>:last-child]:mb-0",
             marked && (first ? "pt-3" : "pt-2"),
             marked && (last ? "pb-3" : "pb-2")
@@ -276,7 +281,7 @@ export const AnnotatedBlock = ({
         >
           {children}
         </div>
-        {blockSelection && !draft && permissions.can_comment && (
+        {blockSelection && !draft && hasActions && (
           <>
             {selection?.start_block === index && (
               <>
@@ -322,52 +327,6 @@ export const AnnotatedBlock = ({
                 </li>
               ))}
           </ul>
-        )}
-
-        {hasActions && !composing && (
-          <div
-            ref={actionsRef}
-            data-review-block-actions
-            className={cn(
-              "absolute inset-x-0 top-full z-40 flex flex-wrap gap-2 rounded-lg border bg-background p-2 shadow-md",
-              activeBlock !== index &&
-                "pointer-events-none opacity-0 focus-within:pointer-events-auto focus-within:opacity-100"
-            )}
-          >
-            {permissions.can_comment && (
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                onClick={() => selectBlocks(index, index)}
-              >
-                <GripHorizontal aria-hidden />
-                Select block
-              </Button>
-            )}
-            {permissions.can_comment && (
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                onClick={() => open("comment")}
-              >
-                <MessageSquarePlus aria-hidden />
-                Comment on block
-              </Button>
-            )}
-            {canSuggest && (
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                onClick={() => open("suggestion")}
-              >
-                <PencilLine aria-hidden />
-                Suggest edit
-              </Button>
-            )}
-          </div>
         )}
 
         <div className="mr-2 [&>section:first-child]:mt-[5px]">

@@ -98,6 +98,7 @@ const SuggestionDraft = ({ draft, onCancel }: PropTypes) => {
         }
       >
         <Editor
+          mode="review"
           value={initialProposed}
           changeDelayMs={0}
           onChange={(markdown) => {
