@@ -982,6 +982,11 @@ export async function publishObjectiveRevision(
         "A newer revision was published; review it before publishing",
         409
       );
+    if (error.code === "PT409")
+      throw new ServiceError(
+        "A newer revision was published; review it before publishing",
+        409
+      );
     if (error.code === "P0001")
       throw new ServiceError("This would create a cycle", 409);
     throw new ServiceError("Unable to publish revision", 400);

@@ -22,11 +22,22 @@ vi.mock("@tanstack/react-router", () => ({
     children,
     to,
     params,
+    search,
   }: {
     children: ReactNode;
     to: string;
     params?: { slug: string };
-  }) => <a href={params ? to.replace("$slug", params.slug) : to}>{children}</a>,
+    search?: Record<string, string | undefined>;
+  }) => {
+    const path = params ? to.replace("$slug", params.slug) : to;
+    const query = new URLSearchParams(
+      Object.entries(search ?? {}).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+      )
+    ).toString();
+
+    return <a href={query ? `${path}?${query}` : path}>{children}</a>;
+  },
 }));
 
 vi.mock("@/routes/guides/$slug/index", () => ({
@@ -165,7 +176,9 @@ describe("ObjectiveGraph", () => {
     render(<Graph snapshot={snapshot} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Loops" }));
-    expect(openGuide()?.getAttribute("href")).toBe("/guides/loops");
+    expect(openGuide()?.getAttribute("href")).toBe(
+      "/guides/loops?objective=proofs"
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Loop invariants" }));
     expect(
@@ -307,26 +320,66 @@ describe("WalkthroughPanel in a guide walkthrough", () => {
     cleanup();
   });
 
+  const walkthroughNode = (slug: string, title: string) => ({
+    id: "00000000-0000-4000-8000-000000000001",
+    slug,
+    title,
+    summary: null,
+    level: 0,
+    duration_minutes: 5,
+    tags: [],
+  });
+  const backToLoops = () =>
+    screen.getByRole("link", { name: "Back to Loops" }).getAttribute("href");
+
   it("still opens every node it shows and returns to the target guide", () => {
     render(
       <WalkthroughPanel
-        node={{
-          id: "00000000-0000-4000-8000-000000000001",
-          slug: "variables",
-          title: "Variables",
-          summary: null,
-          level: 0,
-          duration_minutes: 5,
-          tags: [],
-        }}
+        node={walkthroughNode("variables", "Variables")}
         targetSlug="loops"
         targetTitle="Loops"
       />
     );
 
     expect(openGuide()?.getAttribute("href")).toBe("/guides/variables");
-    expect(
-      screen.getByRole("link", { name: "Back to Loops" }).getAttribute("href")
-    ).toBe("/guides/loops");
+    expect(backToLoops()).toBe("/guides/loops");
+  });
+
+  describe("reached from a guide inside an objective", () => {
+    const objectiveSearch = { objective: "proofs", target: "request-b" };
+
+    it("hands the objective back on return to the target guide", () => {
+      render(
+        <WalkthroughPanel
+          node={walkthroughNode("loops", "Loops")}
+          targetSlug="loops"
+          targetTitle="Loops"
+          objectiveSearch={objectiveSearch}
+        />
+      );
+
+      expect(backToLoops()).toBe(
+        "/guides/loops?objective=proofs&target=request-b"
+      );
+      expect(openGuide()?.getAttribute("href")).toBe(
+        "/guides/loops?objective=proofs&target=request-b"
+      );
+    });
+
+    it("opens a prerequisite outside the objective's sequence", () => {
+      render(
+        <WalkthroughPanel
+          node={walkthroughNode("variables", "Variables")}
+          targetSlug="loops"
+          targetTitle="Loops"
+          objectiveSearch={objectiveSearch}
+        />
+      );
+
+      expect(openGuide()?.getAttribute("href")).toBe("/guides/variables");
+      expect(backToLoops()).toBe(
+        "/guides/loops?objective=proofs&target=request-b"
+      );
+    });
   });
 });

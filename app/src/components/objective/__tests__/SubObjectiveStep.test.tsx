@@ -15,11 +15,22 @@ vi.mock("@tanstack/react-router", () => ({
     children,
     to,
     params,
+    search,
   }: {
     children: ReactNode;
     to: string;
     params?: { slug: string };
-  }) => <a href={params ? to.replace("$slug", params.slug) : to}>{children}</a>,
+    search?: Record<string, string | undefined>;
+  }) => {
+    const path = params ? to.replace("$slug", params.slug) : to;
+    const query = new URLSearchParams(
+      Object.entries(search ?? {}).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+      )
+    ).toString();
+
+    return <a href={query ? `${path}?${query}` : path}>{children}</a>;
+  },
 }));
 
 vi.mock("@/routes/guides/$slug/index", () => ({
@@ -88,7 +99,7 @@ describe("SubObjectiveStep", () => {
 
     const links = screen.queryAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
-      "/guides/loops",
+      "/guides/loops?objective=proofs&target=request-b",
     ]);
     expect(
       screen.getByRole("heading", { name: "Loop invariants" })

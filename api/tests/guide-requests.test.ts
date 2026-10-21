@@ -102,7 +102,8 @@ describe("listOpenTodos", () => {
         status: "open",
         created_at: "2026-09-20T00:00:00.000Z",
         claims: [{ count: 0 }],
-        base: { status: "draft", slug: "draft-parent", canonical: null },
+        // Filtering the embedded base relation nulls an unpublished parent.
+        base: null,
       },
       {
         id: "request-missing-parent",
@@ -129,6 +130,8 @@ describe("listOpenTodos", () => {
         guide_base_id: null,
         guide_slug: null,
         guide_title: null,
+        objective_slug: null,
+        objective_title: null,
         title: "Standalone",
         summary: "Summary",
         status: "open",
@@ -140,6 +143,8 @@ describe("listOpenTodos", () => {
         guide_base_id: publishedBaseId,
         guide_slug: "published-parent",
         guide_title: "Published Parent",
+        objective_slug: null,
+        objective_title: null,
         title: "Published parent",
         summary: "Summary",
         status: "open",

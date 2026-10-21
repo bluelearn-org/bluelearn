@@ -729,12 +729,14 @@ describe("close_review_panel via cast decision", () => {
   });
 
   it("assigns a slug to the subjects the approved revision proposed", async () => {
+    const token = crypto.randomUUID().slice(0, 8);
+    const expectedSlug = `point-set-topology-${token}`;
     const base = await createGuideBase();
     const guide = await createGuide(base.id);
     const revision = await createGuideRevision(guide.id, { title: "Topology" });
     const subject = await createSubject({
       slug: null,
-      name: "Point Set Topology",
+      name: `Point Set Topology ${token}`,
       status: "draft",
     });
     await tagGuideRevision(revision.id, subject.id);
@@ -754,17 +756,19 @@ describe("close_review_panel via cast decision", () => {
       .eq("id", subject.id)
       .single();
     expect(s?.status).toBe("published");
-    expect(s?.slug).toBe("point-set-topology");
+    expect(s?.slug).toBe(expectedSlug);
   });
 
   it("suffixes a proposed subject slug that is already taken", async () => {
-    await createSubject({ slug: "graph-theory" });
+    const token = crypto.randomUUID().slice(0, 8);
+    const slug = `graph-theory-${token}`;
+    await createSubject({ slug });
     const base = await createGuideBase();
     const guide = await createGuide(base.id);
     const revision = await createGuideRevision(guide.id, { title: "Graphs" });
     const subject = await createSubject({
       slug: null,
-      name: "Graph Theory",
+      name: `Graph Theory ${token}`,
       status: "draft",
     });
     await tagGuideRevision(revision.id, subject.id);
@@ -783,7 +787,7 @@ describe("close_review_panel via cast decision", () => {
       .select("slug")
       .eq("id", subject.id)
       .single();
-    expect(s?.slug).toBe("graph-theory-2");
+    expect(s?.slug).toBe(`${slug}-2`);
   });
 
   it("repoints only current_revision_id on an approved edit", async () => {

@@ -78,9 +78,10 @@ describe("GET /me/drafts", () => {
   });
 });
 
-describe("GET /me/activity", () => {
+describe("GET /profiles/{username} activity", () => {
   it("names the guide base so an edit draft links to its variant", async () => {
     const { token, userId } = await makeUser();
+    const username = await getUsername(userId);
     const { base, guide } = await createPublishedGuide({
       authorId: userId,
       variantSlug: "original",
@@ -90,14 +91,17 @@ describe("GET /me/activity", () => {
       author_id: userId,
     });
 
-    const res = await app.request("/me/activity", auth(token), env);
+    const res = await app.request(`/profiles/${username}`, auth(token), env);
 
     expect(res.status).toBe(200);
-    const rows = (await res.json()) as Array<{
-      revision_id: string | null;
-      base_slug: string | null;
-      target_slug: string | null;
-    }>;
+    await expectToMatchSpec(res, "GET", "/profiles/{username}");
+    const { activity: rows } = (await res.json()) as {
+      activity: Array<{
+        revision_id: string | null;
+        base_slug: string | null;
+        target_slug: string | null;
+      }>;
+    };
     const row = rows.find((r) => r.revision_id === draft.id);
     expect(row?.base_slug).toBe(base.slug);
     expect(row?.target_slug).toBe("original");
@@ -105,6 +109,7 @@ describe("GET /me/activity", () => {
 
   it("names the guide base on a review the caller voted on", async () => {
     const reviewer = await makeUser();
+    const username = await getUsername(reviewer.userId);
     const author = await makeUser();
     const { base, revision } = await createPublishedGuide({
       authorId: author.userId,
@@ -124,13 +129,20 @@ describe("GET /me/activity", () => {
     });
     await createGuideReviewCase(reviewCase.id, revision.id);
 
-    const res = await app.request("/me/activity", auth(reviewer.token), env);
+    const res = await app.request(
+      `/profiles/${username}`,
+      auth(reviewer.token),
+      env
+    );
 
     expect(res.status).toBe(200);
-    const rows = (await res.json()) as Array<{
-      content_kind: string;
-      base_slug: string | null;
-    }>;
+    await expectToMatchSpec(res, "GET", "/profiles/{username}");
+    const { activity: rows } = (await res.json()) as {
+      activity: Array<{
+        content_kind: string;
+        base_slug: string | null;
+      }>;
+    };
     const row = rows.find((r) => r.content_kind === "review");
     expect(row?.base_slug).toBe(base.slug);
   });

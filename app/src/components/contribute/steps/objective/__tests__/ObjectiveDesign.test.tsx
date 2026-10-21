@@ -376,7 +376,7 @@ describe("ObjectiveDesign", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /^delete /i }));
 
-    await act(async () => {
+    await act(() => {
       resolveWalkthrough({
         nodes: [
           walkthroughStep("base-loops", "Loops"),
@@ -384,6 +384,7 @@ describe("ObjectiveDesign", () => {
         ],
         edges: [{ from_id: "base-loops", to_id: "base-rec" }],
       });
+      return Promise.resolve();
     });
 
     expect(screen.queryByText("Loops")).toBeNull();
