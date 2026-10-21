@@ -6,13 +6,16 @@ import type { Walkthrough } from "@bluelearn/schemas";
 import { WalkthroughGraph } from "@/components/graph/WalkthroughGraph";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
 import { getGuideWalkthrough } from "@/lib/api/guides";
+import { parseObjectiveGuideSearch } from "@/lib/objectiveSnapshot";
 
 export const Route = createFileRoute("/guides/$slug/walkthrough")({
+  validateSearch: parseObjectiveGuideSearch,
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const { slug } = Route.useParams();
+  const objectiveSearch = Route.useSearch();
 
   // Carried in from the reader so going back restores the trail the user came by.
   const breadcrumbOrigin = useLocation({
@@ -77,6 +80,7 @@ function RouteComponent() {
             targetSlug={slug}
             targetTitle={targetTitle}
             breadcrumbOrigin={breadcrumbOrigin}
+            objectiveSearch={objectiveSearch}
           />
         ) : (
           <aside className="hidden h-full border-r px-6 py-6 md:block" />

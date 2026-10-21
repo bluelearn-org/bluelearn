@@ -8,6 +8,8 @@ import {
 import {
   ArrowBigDown,
   ArrowBigUp,
+  ArrowLeft,
+  ArrowRight,
   Ellipsis,
   House,
   Pencil,
@@ -19,7 +21,12 @@ import { Button } from "@/components/ui/button";
 
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
 import { getGuide } from "@/lib/api/guides";
+import { getObjective } from "@/lib/api/objectives";
 import { buildGuideMeta } from "@/lib/guideUtils";
+import {
+  findGuideNeighbours,
+  parseObjectiveGuideSearch,
+} from "@/lib/objectiveSnapshot";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
@@ -41,23 +48,67 @@ import { useSuspensionStatus } from "@/lib/authContext";
 import { GuideMobileMenu } from "@/components/GuideMobileMenu";
 
 export const Route = createFileRoute("/guides/$slug/")({
-  loader: async ({ params, abortController }) => {
-    try {
-      return await getGuide(params.slug, { signal: abortController.signal });
-    } catch {
-      throw notFound();
-    }
+  validateSearch: parseObjectiveGuideSearch,
+
+  loaderDeps: ({ search }) => ({
+    objective: search.objective,
+    target: search.target,
+  }),
+
+  loader: async ({ params, deps, abortController }) => {
+    const [guide, sequence] = await Promise.all([
+      getGuide(params.slug, { signal: abortController.signal }).catch(() => {
+        throw notFound();
+      }),
+      deps.objective
+        ? loadSequence(
+            deps.objective,
+            params.slug,
+            deps.target,
+            abortController.signal
+          )
+        : null,
+    ]);
+    return { guide, sequence };
   },
   head: ({ loaderData }) => ({
-    meta: loaderData ? buildGuideMeta(loaderData) : [], // Metadata
+    meta: loaderData ? buildGuideMeta(loaderData.guide) : [], // Metadata
   }),
   component: RouteComponent,
 });
 
+// A missing objective, or one that does not hold this guide, just leaves the
+// reader without Prev/Next.
+async function loadSequence(
+  objectiveSlug: string,
+  guideSlug: string,
+  targetId: string | undefined,
+  signal: AbortSignal
+) {
+  try {
+    const { objective, snapshot } = await getObjective(objectiveSlug, {
+      signal,
+    });
+    const neighbours = findGuideNeighbours(snapshot, guideSlug, targetId);
+    if (!neighbours) return null;
+
+    return {
+      objective: {
+        slug: objectiveSlug,
+        title: objective.title ?? "Untitled objective",
+      },
+      ...neighbours,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function RouteComponent() {
   const canAuthor = useSuspensionStatus() === "active";
   const { slug } = Route.useParams();
-  const guide = Route.useLoaderData();
+  const { guide, sequence } = Route.useLoaderData();
+  const search = Route.useSearch();
 
   const { vote, tally, submitting, upvote, downvote, removeVote } = useVote(
     guide.variant_id
@@ -85,7 +136,16 @@ function RouteComponent() {
     });
   }
 
-  const breadcrumbs = buildBreadcrumbs(guide.title, breadcrumbOrigin);
+  const breadcrumbs = buildBreadcrumbs(
+    guide.title,
+    sequence
+      ? {
+          type: "objective",
+          title: sequence.objective.title,
+          path: `/objectives/${sequence.objective.slug}`,
+        }
+      : breadcrumbOrigin
+  );
 
   return (
     <div className="mx-auto max-w-7xl bg-background">
@@ -142,6 +202,7 @@ function RouteComponent() {
               <Link
                 to={GuideWalkthroughRoute.to}
                 params={{ slug: slug }}
+                search={search}
                 state={{ breadcrumbOrigin }}
                 className="btn-outline"
               >
@@ -250,6 +311,44 @@ function RouteComponent() {
             showToc
             isOfficial={guide.is_official}
           />
+
+          {sequence && (sequence.prev || sequence.next) && (
+            <nav
+              aria-label="Objective guides"
+              className="mt-12 mb-8 flex items-center justify-between gap-4 border-t pt-6"
+            >
+              {sequence.prev ? (
+                <Link
+                  to={Route.to}
+                  params={{ slug: sequence.prev.slug }}
+                  search={{
+                    objective: sequence.objective.slug,
+                    target: sequence.targetId,
+                  }}
+                  className="btn-outline min-w-0"
+                >
+                  <ArrowLeft className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{sequence.prev.title}</span>
+                </Link>
+              ) : (
+                <span />
+              )}
+              {sequence.next && (
+                <Link
+                  to={Route.to}
+                  params={{ slug: sequence.next.slug }}
+                  search={{
+                    objective: sequence.objective.slug,
+                    target: sequence.targetId,
+                  }}
+                  className="btn-outline min-w-0"
+                >
+                  <span className="truncate">{sequence.next.title}</span>
+                  <ArrowRight className="h-4 w-4 shrink-0" />
+                </Link>
+              )}
+            </nav>
+          )}
         </main>
       </section>
     </div>

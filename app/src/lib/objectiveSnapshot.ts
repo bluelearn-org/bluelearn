@@ -37,6 +37,66 @@ export function buildSubObjectives(
     }));
 }
 
+// Opened from an objective, a guide's URL names it (and the sub-objective) so
+// the reader can rebuild the sequence for Prev/Next on any load, shared or not.
+// The walkthrough carries it too, so a round trip keeps the position.
+export type ObjectiveGuideSearch = {
+  objective?: string;
+  target?: string;
+};
+
+export function parseObjectiveGuideSearch(
+  search: Record<string, unknown>
+): ObjectiveGuideSearch {
+  return {
+    objective:
+      typeof search.objective === "string" ? search.objective : undefined,
+    target: typeof search.target === "string" ? search.target : undefined,
+  };
+}
+
+export type GuideNeighbour = { slug: string; title: string };
+
+// The guides either side of a guide in its sub-objective's sequence, the same
+// order the linear view lists. Requests have no page, so they are skipped. A
+// guide can sit in several sub-objectives; without a target, the first one
+// holding it is used.
+export function findGuideNeighbours(
+  snapshot: Pick<ObjectiveSnapshot, "nodes" | "orders">,
+  guideSlug: string,
+  targetId?: string
+) {
+  const subObjectives = buildSubObjectives(snapshot);
+  const holdsGuide = (steps: Array<ObjectiveSnapshotNode>) =>
+    steps.some((node) => node.slug === guideSlug);
+
+  const subObjective =
+    subObjectives.find(
+      ({ target, steps }) => target.id === targetId && holdsGuide(steps)
+    ) ?? subObjectives.find(({ steps }) => holdsGuide(steps));
+  if (!subObjective) return null;
+
+  // A stored sequence can already end with the target, which
+  // buildSubObjectives appends again; a repeat would point Next at itself.
+  const seen = new Set<string>();
+  const openable: Array<GuideNeighbour> = subObjective.steps.flatMap((node) => {
+    if (seen.has(node.id)) return [];
+    seen.add(node.id);
+
+    return node.guide_base_id !== null && node.slug !== null
+      ? [{ slug: node.slug, title: nodeLabel(node) }]
+      : [];
+  });
+  const index = openable.findIndex((guide) => guide.slug === guideSlug);
+  if (index === -1) return null;
+
+  return {
+    targetId: subObjective.target.id,
+    prev: index > 0 ? openable[index - 1] : null,
+    next: index < openable.length - 1 ? openable[index + 1] : null,
+  };
+}
+
 export function buildObjectiveFlow(
   snapshot: Pick<ObjectiveSnapshot, "nodes" | "orders">,
   guides: Array<GuideListItem>
