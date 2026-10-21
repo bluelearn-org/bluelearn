@@ -26,9 +26,13 @@ export function buildSubObjectives(
     .sort((a, b) => (a.target_position ?? 0) - (b.target_position ?? 0))
     .map((target) => ({
       target,
+      // A stored sequence can already end with the target; it is appended
+      // here once, so a repeat would list it twice.
       steps: [
         ...snapshot.orders
-          .filter((o) => o.target_node_id === target.id)
+          .filter(
+            (o) => o.target_node_id === target.id && o.node_id !== target.id
+          )
           .sort((a, b) => a.position - b.position)
           .map((o) => nodeById.get(o.node_id))
           .filter((node) => node !== undefined),
@@ -55,6 +59,33 @@ export function parseObjectiveGuideSearch(
   };
 }
 
+// The objective page keeps its view and open sub-objective in the URL, so a
+// learner coming back from a guide, by the breadcrumb or the browser, lands
+// where they left. The graph is the default view and is left out.
+export type ObjectivePageSearch = {
+  view?: "linear";
+  target?: string;
+};
+
+export function parseObjectivePageSearch(
+  search: Record<string, unknown>
+): ObjectivePageSearch {
+  return {
+    view: search.view === "linear" ? "linear" : undefined,
+    target: typeof search.target === "string" ? search.target : undefined,
+  };
+}
+
+// The hash that marks a guide's step on the objective page. The router
+// scrolls it into view, and the graph opens on it.
+export function guideAnchor(slug: string) {
+  return `guide-${slug}`;
+}
+
+export function guideSlugFromAnchor(hash: string) {
+  return hash.startsWith("guide-") ? hash.slice("guide-".length) : undefined;
+}
+
 export type GuideNeighbour = { slug: string; title: string };
 
 // The guides either side of a guide in its sub-objective's sequence, the same
@@ -76,17 +107,11 @@ export function findGuideNeighbours(
     ) ?? subObjectives.find(({ steps }) => holdsGuide(steps));
   if (!subObjective) return null;
 
-  // A stored sequence can already end with the target, which
-  // buildSubObjectives appends again; a repeat would point Next at itself.
-  const seen = new Set<string>();
-  const openable: Array<GuideNeighbour> = subObjective.steps.flatMap((node) => {
-    if (seen.has(node.id)) return [];
-    seen.add(node.id);
-
-    return node.guide_base_id !== null && node.slug !== null
+  const openable: Array<GuideNeighbour> = subObjective.steps.flatMap((node) =>
+    node.guide_base_id !== null && node.slug !== null
       ? [{ slug: node.slug, title: nodeLabel(node) }]
-      : [];
-  });
+      : []
+  );
   const index = openable.findIndex((guide) => guide.slug === guideSlug);
   if (index === -1) return null;
 
