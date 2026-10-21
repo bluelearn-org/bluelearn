@@ -9,6 +9,8 @@ import {
 } from "./factories/guides";
 import { createPublishedObjective } from "./factories/objectives";
 import { createPrerequisite, createTodo } from "./factories/graph";
+import { createSubject, tagGuideRevision } from "./factories/subjects";
+import { createPublishedObjective } from "./factories/objectives";
 import { expectToMatchSpec } from "./openapi";
 import { createRequestSchema } from "@bluelearn/schemas";
 
@@ -124,6 +126,20 @@ describe("GET /todos", () => {
     expect(ids).not.toContain(resolved.id);
   });
 
+  it("carries the requesting guide's subjects and objectives", async () => {
+    const { userId } = await makeUser();
+    const full = await createPublishedGuide({
+      title: "Calculus 1",
+      authorId: userId,
+    });
+    const subject = await createSubject({ name: "Mathematics" });
+    await tagGuideRevision(full.revision.id, subject.id);
+    const objective = await createPublishedObjective(
+      userId,
+      { base: full.base, guide: full.guide },
+      { title: "Calculus Track" }
+    );
+    const todo = await createTodo(full.base.id, { title: "Vectors" });
   it("lists objective-raised requests beside guide-raised ones", async () => {
     const { userId } = await makeUser();
     const { from } = await seedAuthoredBases(userId);
@@ -148,6 +164,15 @@ describe("GET /todos", () => {
     const body = (await res.json()) as {
       todos: Array<{
         id: string;
+        subjects: Array<{ slug: string; name: string }>;
+        objectives: Array<{ slug: string; title: string }>;
+      }>;
+    };
+    const row = body.todos.find((t) => t.id === todo.id);
+    expect(row?.subjects).toEqual([{ slug: subject.slug, name: subject.name }]);
+    expect(row?.objectives).toEqual([
+      { slug: objective.objective.slug, title: "Calculus Track" },
+    ]);
         guide_slug: string | null;
         objective_slug: string | null;
         objective_title: string | null;
