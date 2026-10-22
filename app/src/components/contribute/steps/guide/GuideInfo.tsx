@@ -8,6 +8,7 @@ import { Content } from "@/components/contribute/steps/Content";
 import { CustomTabs } from "@/components/Tabs";
 import { GuideDetails } from "@/components/contribute/steps/guide/GuideDetails";
 import { EditorSidebar } from "@/components/sidebar/EditorSidebar";
+import { MobileDraftSwitcher } from "@/components/sidebar/MobileDraftSwitcher";
 
 type SubjectOption = {
   id: string;
@@ -137,7 +138,15 @@ export const GuideInfo = ({
           onDeleteGuide={onDeleteGuide}
         />
 
-        <div className="min-h-[calc(100vh-65px)] min-w-0 flex-1 pt-4 md:border-l md:pl-5">
+        <div className="min-h-[calc(100vh-65px)] min-w-0 flex-1 pt-4 md:block md:border-l md:pl-5">
+          <MobileDraftSwitcher
+            guides={guides}
+            activeGuideId={activeGuideId}
+            onSelectGuide={onSelectGuide}
+            onAddGuide={onAddGuide}
+            onDeleteGuide={onDeleteGuide}
+          />
+
           <CustomTabs tabs={tabs} />
         </div>
       </div>
