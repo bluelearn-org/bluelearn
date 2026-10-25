@@ -44,7 +44,7 @@ export const DecisionList = ({
                     : "text-green-700 dark:text-green-400"
                 )}
               >
-                {rejected ? "Rejected" : "Approved"}
+                {rejected ? "Changes requested" : "Approved"}
               </span>
               <span className="mono-micro text-muted-foreground">
                 {formatDate(new Date(d.created_at))}
