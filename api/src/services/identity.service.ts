@@ -1,9 +1,28 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { UpdateProfileInput } from "@bluelearn/schemas";
+import type { DeleteDraftsInput, UpdateProfileInput } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 
 type DB = SupabaseClient<Database>;
+
+export async function deleteMyDrafts(supabase: DB, input: DeleteDraftsInput) {
+  const { error } = await supabase.rpc("delete_own_drafts", {
+    p_guide_revision_ids: input.guide_revision_ids,
+    p_objective_revision_ids: input.objective_revision_ids,
+  });
+  if (!error) return;
+  if (error.code === "P0002") {
+    throw new ServiceError(
+      "One or more drafts are no longer available. Refresh your profile and try again. No drafts were deleted.",
+      404
+    );
+  }
+  console.error(error);
+  throw new ServiceError(
+    "Unable to confirm draft deletion. Refresh your profile before trying again.",
+    500
+  );
+}
 
 type GuideDraft = {
   revision_id: string;
