@@ -33,7 +33,7 @@ describe("validateReviewDecision", () => {
   it("asks for a decision before anything else", () => {
     expect(
       validateReviewDecision({ decision: "", notes: "", reasons: [] })
-    ).toBe("Choose approve or reject before submitting");
+    ).toBe("Choose approve or request changes before submitting");
   });
 
   it("lets an approval through without notes or reasons", () => {
@@ -50,10 +50,10 @@ describe("validateReviewDecision", () => {
 
   it("rejects a note with no readable text", () => {
     expect(validateReviewDecision(rejection("   "))).toBe(
-      "Rejections require a note"
+      "Change requests require a note"
     );
     expect(validateReviewDecision(rejection("..."))).toBe(
-      "Rejections require a note"
+      "Change requests require a note"
     );
   });
 
@@ -64,12 +64,12 @@ describe("validateReviewDecision", () => {
         notes: "Needs work.",
         reasons: [],
       })
-    ).toBe("Rejections require at least one reason");
+    ).toBe("Change requests require at least one reason");
   });
 
   it("reports both problems together", () => {
     expect(
       validateReviewDecision({ decision: "reject", notes: " ", reasons: [] })
-    ).toBe("Rejections require at least one reason and a note");
+    ).toBe("Change requests require at least one reason and a note");
   });
 });
