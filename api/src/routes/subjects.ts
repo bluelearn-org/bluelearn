@@ -8,11 +8,22 @@ import {
   subjectListResponseSchema,
   subjectObjectivesResponseSchema,
   subjectResponseSchema,
+  subjectFollowResponseSchema,
 } from "@bluelearn/schemas";
-import { errorResponses, jsonContent, validate } from "../lib/openapi";
+import {
+  errorResponses,
+  errorSchema,
+  jsonContent,
+  validate,
+} from "../lib/openapi";
 import type { HonoEnv } from "../types";
+import { requireUser } from "../middleware/auth.middleware";
+import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
+import { CONTRIBUTION } from "../middleware/rateLimits";
 import {
   getSubjectBySlug,
+  getSubjectFollow,
+  setSubjectFollow,
   listGroupedSubjects,
   listSubjectGuides,
   listSubjectObjectives,
@@ -22,6 +33,94 @@ import {
 const slugParamSchema = z.object({ slug: z.string() });
 
 export const subjectsRouter = new Hono<HonoEnv>()
+  .get(
+    "/:slug/follow",
+    describeRoute({
+      tags: ["subjects"],
+      summary: "Whether the caller follows this subject",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          subjectFollowResponseSchema,
+          "The caller's follow state"
+        ),
+        ...errorResponses(400, 401, 404),
+        500: jsonContent(errorSchema, "Failed to load subject follow"),
+      },
+    }),
+    requireUser,
+    validate("param", slugParamSchema),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      return c.json(
+        await getSubjectFollow(
+          c.get("supabase"),
+          c.get("user").id,
+          c.req.valid("param").slug
+        )
+      );
+    }
+  )
+  .put(
+    "/:slug/follow",
+    describeRoute({
+      tags: ["subjects"],
+      summary: "Follow a subject for the caller",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          subjectFollowResponseSchema,
+          "The subject is followed"
+        ),
+        ...errorResponses(400, 401, 403, 404, 429),
+        500: jsonContent(errorSchema, "Failed to update subject follow"),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "subject-follow" }),
+    validate("param", slugParamSchema),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      return c.json(
+        await setSubjectFollow(
+          c.get("supabase"),
+          c.get("user").id,
+          c.req.valid("param").slug,
+          true
+        )
+      );
+    }
+  )
+  .delete(
+    "/:slug/follow",
+    describeRoute({
+      tags: ["subjects"],
+      summary: "Unfollow a subject for the caller",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          subjectFollowResponseSchema,
+          "The subject is not followed"
+        ),
+        ...errorResponses(400, 401, 403, 404, 429),
+        500: jsonContent(errorSchema, "Failed to update subject follow"),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...CONTRIBUTION, bucket: "subject-follow" }),
+    validate("param", slugParamSchema),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      return c.json(
+        await setSubjectFollow(
+          c.get("supabase"),
+          c.get("user").id,
+          c.req.valid("param").slug,
+          false
+        )
+      );
+    }
+  )
   // List all subjects
   .get(
     "/",
