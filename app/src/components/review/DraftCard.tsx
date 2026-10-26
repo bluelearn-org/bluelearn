@@ -131,7 +131,8 @@ const SuggestionDraft = ({ draft, onCancel }: PropTypes) => {
         <Button
           type="button"
           variant="outline"
-          className="min-h-11"
+          size="lg"
+          className="btn-sec"
           disabled={submitting}
           onClick={onCancel}
         >
@@ -139,7 +140,8 @@ const SuggestionDraft = ({ draft, onCancel }: PropTypes) => {
         </Button>
         <Button
           type="button"
-          className="min-h-11"
+          size="lg"
+          className="btn-pri"
           disabled={submitting}
           onClick={submit}
         >

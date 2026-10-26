@@ -162,7 +162,7 @@ export const SelectionCommentAction = () => {
           // A page swipe must scroll without discarding the snapped range.
           if (blockSelection) event.preventDefault();
         }}
-        className="w-max max-w-[calc(100vw-1.5rem)] gap-2 rounded-xl border border-border/60 bg-background p-1.5 shadow-sm ring-0 data-open:animate-[review-selection-toolbar_140ms_ease-out]! motion-reduce:data-open:animate-none! motion-reduce:data-closed:animate-none!"
+        className="w-max max-w-[calc(100vw-1.5rem)] gap-2 rounded-xl border border-border/60 bg-background p-3 shadow-sm ring-0 data-open:animate-[review-selection-toolbar_140ms_ease-out]! motion-reduce:data-open:animate-none! motion-reduce:data-closed:animate-none!"
       >
         {tooLong && (
           <p role="status" className="px-3 py-2 text-xs">
@@ -175,12 +175,27 @@ export const SelectionCommentAction = () => {
             selection.
           </p>
         )}
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {canSuggest && (
+            <Button
+              type="button"
+              data-review-selection-action="suggestion"
+              variant="outline"
+              size="lg"
+              className="btn-sec"
+              {...keepSelection}
+              onClick={() => start("suggestion")}
+            >
+              <PencilLine aria-hidden />
+              Suggest edit
+            </Button>
+          )}
           {permissions.can_comment && (
             <Button
               type="button"
               data-review-selection-action="comment"
-              className="min-h-11 rounded-full px-4"
+              size="lg"
+              className="btn-pri"
               disabled={tooLong || textlessRange}
               {...keepSelection}
               onClick={() => start("comment")}
@@ -189,24 +204,11 @@ export const SelectionCommentAction = () => {
               Comment on selection
             </Button>
           )}
-          {canSuggest && (
-            <Button
-              type="button"
-              data-review-selection-action="suggestion"
-              variant="outline"
-              className="min-h-11 rounded-full px-4"
-              {...keepSelection}
-              onClick={() => start("suggestion")}
-            >
-              <PencilLine aria-hidden />
-              Suggest edit
-            </Button>
-          )}
           {blockSelection && (
             <Button
               type="button"
               variant="ghost"
-              className="size-11 rounded-full"
+              size="icon-lg"
               aria-label="Clear selection"
               onClick={() => setCandidate(null)}
             >

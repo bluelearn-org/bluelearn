@@ -194,24 +194,26 @@ const ThreadMessage = ({ threadId, message, identity }: MessageProps) => {
               ? "Delete this comment? Its text is removed, but its replies stay. You cannot undo this."
               : "Delete this reply? Its text is removed. You cannot undo this."}
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="destructive"
-              className="min-h-11"
-              disabled={deleting}
-              onClick={confirmDelete}
-            >
-              {deleting ? "Deleting..." : `Delete ${noun}`}
-            </Button>
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
               variant="outline"
-              className="min-h-11"
+              size="lg"
+              className="btn-sec"
               disabled={deleting}
               onClick={cancelDelete}
             >
               Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="lg"
+              className="btn-danger"
+              disabled={deleting}
+              onClick={confirmDelete}
+            >
+              {deleting ? "Deleting..." : `Delete ${noun}`}
             </Button>
           </div>
           {error && (

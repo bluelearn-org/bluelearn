@@ -24,7 +24,8 @@ const AnnotationStatus = () => {
         <Button
           type="button"
           variant="outline"
-          className="min-h-11"
+          size="lg"
+          className="btn-sec"
           onClick={reload}
         >
           <RotateCw aria-hidden />

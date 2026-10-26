@@ -147,25 +147,28 @@ export const SuggestionCard = ({
       <DecisionLine suggestion={suggestion} />
 
       {canDecide && !confirming && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            ref={acceptButton}
-            type="button"
-            className="min-h-11"
-            onClick={() => ask("accepted")}
-          >
-            <Check aria-hidden />
-            Accept edit
-          </Button>
+        <div className="flex flex-wrap justify-end gap-2">
           <Button
             ref={rejectButton}
             type="button"
             variant="outline"
-            className="min-h-11"
+            size="lg"
+            className="btn-reject"
             onClick={() => ask("rejected")}
           >
             <X aria-hidden />
             Reject edit
+          </Button>
+          <Button
+            ref={acceptButton}
+            type="button"
+            variant="outline"
+            size="lg"
+            className="btn-approve"
+            onClick={() => ask("accepted")}
+          >
+            <Check aria-hidden />
+            Accept edit
           </Button>
         </div>
       )}
@@ -183,11 +186,22 @@ export const SuggestionCard = ({
               ? "Accept this edit? It goes into the guide when the guide publishes. You cannot change this decision."
               : "Reject this edit? It never goes into the guide. You cannot change this decision."}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="btn-sec"
+              disabled={busy}
+              onClick={cancel}
+            >
+              Cancel
+            </Button>
             <Button
               type="button"
               variant={confirming === "accepted" ? "default" : "destructive"}
-              className="min-h-11"
+              size="lg"
+              className={confirming === "accepted" ? "btn-pri" : "btn-danger"}
               disabled={busy}
               onClick={() => confirm(confirming)}
             >
@@ -196,15 +210,6 @@ export const SuggestionCard = ({
                 : confirming === "accepted"
                   ? "Confirm accept"
                   : "Confirm reject"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11"
-              disabled={busy}
-              onClick={cancel}
-            >
-              Cancel
             </Button>
           </div>
         </div>
