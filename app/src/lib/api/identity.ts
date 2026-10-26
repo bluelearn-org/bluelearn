@@ -35,7 +35,7 @@ export async function getProfilePage(
 ) {
   const res = await client.profiles[":username"].$get(
     { param: { username } },
-    { init: { signal } }
+    { init: { signal, cache: "no-store" } }
   );
   await assertOk(res);
 
