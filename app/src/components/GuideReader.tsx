@@ -7,12 +7,15 @@ import remarkMath from "remark-math";
 import remarkDirective from "remark-directive";
 
 import { Calendar, Clock, ShieldCheck, User } from "lucide-react";
-import { createElement } from "react";
-import type { ReactElement } from "react";
+import { createElement, useMemo } from "react";
+import type { Components } from "react-markdown";
+import type { ComponentType, ReactElement, ReactNode } from "react";
 import type { Guide } from "@bluelearn/schemas";
 import type { GuideType } from "@/types/guides";
-import { remarkCallout } from "@/lib/remarkCallout";
+import type { ReviewBlockProperties } from "@/lib/rehypeReviewBlocks";
 import { remarkIndentedCodeAsParagraph } from "@/lib/remarkIndentedCodeAsParagraph";
+import { rehypeReviewBlocks } from "@/lib/rehypeReviewBlocks";
+import { remarkCallout } from "@/lib/remarkCallout";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { CodeBlock } from "@/components/CodeBlock";
@@ -40,23 +43,58 @@ export type ReaderGuide = Omit<
   tags: Array<ReaderTag>;
 };
 
+export type GuideBlockProps = ReviewBlockProperties & { children?: ReactNode };
+
 type PropTypes = {
   guide: ReaderGuide;
   guideType?: GuideType;
   showToc?: boolean;
   isOfficial?: boolean;
+  // Wraps each top-level body block. The review page hangs passage comments
+  // under the block they quote.
+  BlockWrapper?: ComponentType<GuideBlockProps>;
 };
 
-export const GuideReader = ({
-  guide,
-  guideType,
-  showToc = false,
-  isOfficial = false,
-}: PropTypes) => {
-  const created = new Date(guide.created_at);
-  const createdLabel = Number.isNaN(created.getTime())
-    ? guide.created_at
-    : formatDate(created);
+type GuideMarkdownProps = {
+  markdown: string;
+  // Comment bodies render inside the guide page, so their headings must not
+  // take the ids that the table of contents links to.
+  anchorHeadings?: boolean;
+  BlockWrapper?: ComponentType<GuideBlockProps>;
+};
+
+// The sanitizing renderer for guide bodies and review comments.
+export const GuideMarkdown = ({
+  markdown,
+  anchorHeadings = true,
+  BlockWrapper,
+}: GuideMarkdownProps) => {
+  // Only the block wrapper keeps its component across renders, so paragraphs
+  // stay mounted. Headings, code blocks, and callouts remount on each render.
+  const blockComponents = useMemo(
+    () =>
+      BlockWrapper
+        ? {
+            "review-block": ({
+              node,
+              children,
+            }: {
+              node?: { properties: ReviewBlockProperties };
+              children?: ReactNode;
+            }) => (
+              <BlockWrapper
+                index={node!.properties.index}
+                start={node!.properties.start}
+                end={node!.properties.end}
+              >
+                {children}
+              </BlockWrapper>
+            ),
+          }
+        : {},
+    [BlockWrapper]
+  );
+
   const headingIds = new Map<string, number>();
 
   const renderHeading =
@@ -90,6 +128,87 @@ export const GuideReader = ({
         children
       );
     };
+
+  const headingComponents = anchorHeadings
+    ? {
+        h1: renderHeading(1),
+        h2: renderHeading(2),
+        h3: renderHeading(3),
+        h4: renderHeading(4),
+        h5: renderHeading(5),
+        h6: renderHeading(6),
+      }
+    : {};
+
+  // Its own literal: inside a spread object the custom callout key could slip
+  // past the excess-property check that the expect-error below relies on.
+  const baseComponents: Components = {
+    pre({ children }) {
+      const child = children as ReactElement<{
+        className?: string;
+        children?: React.ReactNode;
+      }>;
+
+      const code = String(child.props.children).replace(/\n$/, "");
+      const language = child.props.className?.replace("language-", "");
+
+      return <CodeBlock code={code} language={language} />;
+    },
+
+    code({ children, className }) {
+      if (className) {
+        return <code className={className}>{children}</code>;
+      }
+
+      return (
+        <code className="rounded bg-muted px-1 py-0.5 font-mono">
+          {children}
+        </code>
+      );
+    },
+    // @ts-expect-error custom component callout
+    callout({ node, children, ...props }: any) {
+      return <Callout type={props.type}>{children}</Callout>;
+    },
+  };
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={[
+        remarkGfm,
+        remarkMath,
+        remarkDirective,
+        remarkCallout,
+        remarkIndentedCodeAsParagraph,
+      ]}
+      rehypePlugins={[
+        rehypeRaw,
+        [rehypeSanitize, sanitizeSchema],
+        rehypeKatex,
+        ...(BlockWrapper ? [rehypeReviewBlocks] : []),
+      ]}
+      components={{
+        ...headingComponents,
+        ...baseComponents,
+        ...blockComponents,
+      }}
+    >
+      {markdown}
+    </ReactMarkdown>
+  );
+};
+
+export const GuideReader = ({
+  guide,
+  guideType,
+  showToc = false,
+  isOfficial = false,
+  BlockWrapper,
+}: PropTypes) => {
+  const created = new Date(guide.created_at);
+  const createdLabel = Number.isNaN(created.getTime())
+    ? guide.created_at
+    : formatDate(created);
 
   return (
     <>
@@ -163,57 +282,10 @@ export const GuideReader = ({
       <Separator className="mb-8" />
 
       <article className="markdown">
-        <ReactMarkdown
-          remarkPlugins={[
-            remarkGfm,
-            remarkMath,
-            remarkDirective,
-            remarkCallout,
-            remarkIndentedCodeAsParagraph,
-          ]}
-          rehypePlugins={[
-            rehypeRaw,
-            [rehypeSanitize, sanitizeSchema],
-            rehypeKatex,
-          ]}
-          components={{
-            h1: renderHeading(1),
-            h2: renderHeading(2),
-            h3: renderHeading(3),
-            h4: renderHeading(4),
-            h5: renderHeading(5),
-            h6: renderHeading(6),
-            pre({ children }) {
-              const child = children as ReactElement<{
-                className?: string;
-                children?: React.ReactNode;
-              }>;
-
-              const code = String(child.props.children).replace(/\n$/, "");
-              const language = child.props.className?.replace("language-", "");
-
-              return <CodeBlock code={code} language={language} />;
-            },
-
-            code({ children, className }) {
-              if (className) {
-                return <code className={className}>{children}</code>;
-              }
-
-              return (
-                <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                  {children}
-                </code>
-              );
-            },
-            // @ts-expect-error custom component callout
-            callout({ node, children, ...props }: any) {
-              return <Callout type={props.type}>{children}</Callout>;
-            },
-          }}
-        >
-          {guide.body ?? ""}
-        </ReactMarkdown>
+        <GuideMarkdown
+          markdown={guide.body ?? ""}
+          BlockWrapper={BlockWrapper}
+        />
       </article>
     </>
   );

@@ -32,8 +32,22 @@ export const decisionReasonSchema = z.enum([
   "missing_required_information",
 ]);
 
+// "passage" is a text selection; "block" is a whole top-level block, the path
+// for keyboards, screen readers, and images.
+export const reviewAnchorKindSchema = z.enum(["passage", "block"]);
+
+export const reviewSuggestionStatusSchema = z.enum([
+  "pending",
+  "accepted",
+  "rejected",
+]);
+
 export type ReviewCaseStatus = z.infer<typeof reviewCaseStatusSchema>;
 export type ReviewCaseType = z.infer<typeof reviewCaseTypeSchema>;
 export type ReviewOutcome = z.infer<typeof reviewOutcomeSchema>;
 export type ReviewSeatStatus = z.infer<typeof reviewSeatStatusSchema>;
 export type DecisionReason = z.infer<typeof decisionReasonSchema>;
+export type ReviewAnchorKind = z.infer<typeof reviewAnchorKindSchema>;
+export type ReviewSuggestionStatus = z.infer<
+  typeof reviewSuggestionStatusSchema
+>;
