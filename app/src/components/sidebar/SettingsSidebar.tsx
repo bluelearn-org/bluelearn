@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Palette, Settings, User } from "lucide-react";
+import { Bell, Palette, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
@@ -18,6 +18,11 @@ const items = [
     label: "Appearance",
     to: "/settings/appearance",
     icon: Palette,
+  },
+  {
+    label: "Notifications",
+    to: "/settings/notifications",
+    icon: Bell,
   },
 ];
 
