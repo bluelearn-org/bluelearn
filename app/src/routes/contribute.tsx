@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 
 import type { ContributionType } from "@/types/contributions";
 import ContributionFlow from "@/components/contribute/ContributionFlow";
@@ -19,6 +23,7 @@ export type ContributeSearch = {
   todoTitle?: string;
   todoSummary?: string;
   todos?: string;
+  slug?: string;
 };
 
 // True when the URL itself asks for guide or variant authoring: a picked type,
@@ -29,7 +34,8 @@ export type ContributeSearch = {
 export function requestsGuideAuthoring(search: ContributeSearch) {
   if (
     search.contributionType === "guide" ||
-    search.contributionType === "variant"
+    search.contributionType === "variant" ||
+    search.contributionType === "guide-request"
   ) {
     return true;
   }
@@ -60,6 +66,7 @@ export const Route = createFileRoute("/contribute")({
     const contributionType =
       search.contributionType === "guide" ||
       search.contributionType === "variant" ||
+      search.contributionType === "guide-request" ||
       search.contributionType === "objective"
         ? search.contributionType
         : undefined;
@@ -72,6 +79,7 @@ export const Route = createFileRoute("/contribute")({
     const todoSummary =
       typeof search.todoSummary === "string" ? search.todoSummary : undefined;
     const todos = typeof search.todos === "string" ? search.todos : undefined;
+    const slug = typeof search.slug === "string" ? search.slug : undefined;
 
     return {
       draft,
@@ -83,6 +91,7 @@ export const Route = createFileRoute("/contribute")({
       todoTitle,
       todoSummary,
       todos,
+      slug,
     };
   },
   errorComponent: ErrorFallback,
@@ -122,8 +131,10 @@ function ContributePage() {
     todoTitle,
     todoSummary,
     todos,
+    slug,
   } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const router = useRouter();
 
   const type =
     contributionType ?? (edit || kind === "objective" ? "objective" : null);
@@ -139,7 +150,9 @@ function ContributePage() {
             ? "guide-details"
             : newType === "variant"
               ? "variant-details"
-              : "objective-details",
+              : newType === "objective"
+                ? "objective-details"
+                : "guide-request-details",
       }),
       replace: true,
     });
@@ -162,6 +175,15 @@ function ContributePage() {
   };
 
   const handlePublished = () => {
+    if (type === "guide-request") {
+      void router
+        .invalidate()
+        .then(() =>
+          navigate({ to: "/todos", search: { page: 1 }, replace: true })
+        );
+      return;
+    }
+
     navigate({ search: {}, replace: true });
   };
 
@@ -186,6 +208,7 @@ function ContributePage() {
             todoTitle={draft ? undefined : todoTitle}
             todoSummary={draft ? undefined : todoSummary}
             todoIds={todoIds}
+            slug={slug}
           />
         </div>
         {draft && <RejectionFeedback draftId={draft} />}

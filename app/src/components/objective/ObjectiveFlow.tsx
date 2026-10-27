@@ -7,9 +7,17 @@ import { SubObjectiveStep } from "@/components/objective/SubObjectiveStep";
 type Props = {
   objective: any;
   targets: any;
+  // Revision node id of the open target, shared with the graph view.
+  targetId: string | null;
+  onSelectTarget: (id: string) => void;
 };
 
-export default function ObjectiveFlow({ objective, targets }: Props) {
+export default function ObjectiveFlow({
+  objective,
+  targets,
+  targetId,
+  onSelectTarget,
+}: Props) {
   const StepperInstance = useMemo(() => {
     return defineStepper(
       targets.map((target: any) => ({
@@ -20,8 +28,22 @@ export default function ObjectiveFlow({ objective, targets }: Props) {
   }, [targets]);
   const { Stepper } = StepperInstance;
 
+  // Steps stay keyed by slug for SubObjectiveStep; selection crosses views by
+  // node id.
+  const active =
+    targets.find((target: any) => target.id === targetId) ?? targets[0];
+
   return (
-    <Stepper.Root className="flex min-h-0 w-full flex-1 flex-col gap-8">
+    <Stepper.Root
+      className="flex min-h-0 w-full flex-1 flex-col gap-8"
+      step={active?.slug}
+      onStepChange={(slug: string) => {
+        const selectedTarget = targets.find(
+          (target: any) => target.slug === slug
+        );
+        if (selectedTarget) onSelectTarget(selectedTarget.id);
+      }}
+    >
       <Inner Stepper={Stepper} targets={targets} objective={objective} />
     </Stepper.Root>
   );

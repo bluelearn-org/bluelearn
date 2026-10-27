@@ -53,17 +53,23 @@ export default function Editor({
   const latestRef = useRef<string | null>(null);
 
   // debounce so we don't re-render the flow on every keystroke
-  const handleMarkdownChange = useCallback((newMarkdown: string) => {
-    setMarkdown(newMarkdown);
-    latestRef.current = newMarkdown;
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      onChangeRef.current?.(newMarkdown);
-      saveTimeoutRef.current = null;
-    }, 1000);
-  }, []);
+  const handleMarkdownChange = useCallback(
+    (newMarkdown: string, initialMarkdownNormalize: boolean) => {
+      setMarkdown(newMarkdown);
+      // MDXEditor re-serializes `value` on mount (e.g. `_a_` -> `*a*`). That
+      // isn't an edit, so don't push the rewritten text back to the parent.
+      if (initialMarkdownNormalize) return;
+      latestRef.current = newMarkdown;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        onChangeRef.current?.(newMarkdown);
+        saveTimeoutRef.current = null;
+      }, 1000);
+    },
+    []
+  );
 
   // MDXEditor's imperative setMarkdown() does NOT fire the editor's onChange,
   // so an imported file would otherwise never reach `markdown` or the parent's

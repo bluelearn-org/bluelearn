@@ -8,6 +8,8 @@ import type {
   ContributionType,
   GuideContribution,
   ObjectiveContribution,
+  ObjectiveGraphData,
+  ObjectiveGraphNode,
   VariantContribution,
 } from "@/types/contributions";
 
@@ -21,11 +23,18 @@ import { VariantInfo } from "@/components/contribute/steps/variant/VariantInfo";
 import { PreviewVariant } from "@/components/contribute/steps/variant/PreviewVariant";
 
 import { ObjectiveDetails } from "@/components/contribute/steps/objective/ObjectiveDetails";
+import { ObjectiveDesign } from "@/components/contribute/steps/objective/ObjectiveDesign";
 import { OrderObjectiveGuides } from "@/components/contribute/steps/objective/OrderObjectiveGuides";
 import { OrderTargetGuides } from "@/components/contribute/steps/objective/OrderTargetGuides";
 import { PreviewObjective } from "@/components/contribute/steps/objective/PreviewObjective";
+import { GuideRequestDetails } from "@/components/contribute/steps/GuideRequestDetails";
 
-import { addGuideVariant, createGuide, listGuides } from "@/lib/api/guides";
+import {
+  addGuideVariant,
+  createGuide,
+  getGuide,
+  listGuides,
+} from "@/lib/api/guides";
 import { listSubjects } from "@/lib/api/subjects";
 import { flows, typeStep } from "@/lib/contributionFlow";
 import { uploadMedia } from "@/lib/api/media";
@@ -40,6 +49,13 @@ import {
   submitObjectiveRevision,
   updateObjectiveRevision,
 } from "@/lib/api/objectiveRevisions";
+import {
+  adoptSavedSnapshot,
+  drawnEdgeId,
+  graphToApi,
+  guideEdgeId,
+  withLiveTargets,
+} from "@/lib/objectiveGraphEdits";
 
 import {
   clearStoredDraft,
@@ -66,6 +82,7 @@ type PropTypes = {
   todoTitle?: string;
   todoSummary?: string;
   todoIds: Array<string>;
+  slug?: string;
 };
 
 type MultiGuide = GuideContribution & {
@@ -114,44 +131,103 @@ const createObjectiveContData = (): ObjectiveContribution => ({
   featuredSubObjective: "",
   subObjectives: [],
   subjects: [],
+  newSubjects: [],
+  graph: { nodes: [], edges: [] },
 });
 
 type ObjectiveRevisionData = Awaited<ReturnType<typeof getObjectiveRevision>>;
 
+const objectiveGraphFromSnapshot = (
+  snapshot: ObjectiveRevisionData["snapshot"]
+): ObjectiveGraphData => {
+  const nodeIdByBaseId = new Map<string, string>();
+  const nodes: Array<ObjectiveGraphNode> = [];
+
+  for (const n of snapshot.nodes) {
+    if (n.guide_base_id === null) {
+      nodes.push({
+        id: n.id,
+        type: "guide_request",
+        title: n.title ?? "",
+        summary: n.summary ?? "",
+      });
+      continue;
+    }
+
+    nodeIdByBaseId.set(n.guide_base_id, n.id);
+    nodes.push({
+      id: n.id,
+      type: "guide",
+      guideBaseId: n.guide_base_id,
+      guideSlug: n.slug ?? "",
+      title: n.title ?? n.slug ?? "",
+    });
+  }
+
+  const drawnEdges = snapshot.drawn_edges.map((e) => ({
+    id: drawnEdgeId(e.from_node_id, e.to_node_id),
+    source: e.from_node_id,
+    target: e.to_node_id,
+  }));
+  const drawnIds = new Set(drawnEdges.map((e) => e.id));
+
+  const guideEdges = snapshot.raw_edges.flatMap((e) => {
+    const source = nodeIdByBaseId.get(e.from_id);
+    const target = nodeIdByBaseId.get(e.to_id);
+    if (!source || !target) return [];
+    if (drawnIds.has(drawnEdgeId(source, target))) return [];
+
+    return [{ id: guideEdgeId(source, target), source, target }];
+  });
+
+  return { nodes, edges: [...drawnEdges, ...guideEdges] };
+};
+
 const objectiveDataFromRevision = (
   data: ObjectiveRevisionData
 ): ObjectiveContribution => {
-  const slugByNodeId = new Map(data.snapshot.nodes.map((n) => [n.id, n.slug]));
-
   const targetNodes = data.snapshot.nodes
-    .filter((n): n is typeof n & { slug: string } => n.is_target && !!n.slug)
-    .sort((a, b) => (a.target_position ?? 0) - (b.target_position ?? 0));
+    .filter((n) => n.is_target)
+    .sort(
+      (a, b) =>
+        (a.target_position ?? Number.POSITIVE_INFINITY) -
+        (b.target_position ?? Number.POSITIVE_INFINITY)
+    );
+
+  // Saved curation leaves order rows or excluded prerequisites. Preserve
+  // empty target sequences once that persisted choice exists.
+  const curated =
+    data.snapshot.orders.length > 0 ||
+    data.snapshot.nodes.some((n) => !n.is_included);
 
   return {
     title: data.revision.title ?? "",
     summary: data.revision.summary ?? "",
     changeSummary: data.revision.change_summary ?? "",
-    targets: targetNodes.map((n) => n.slug),
-    featuredSubObjective: targetNodes.find((n) => n.is_featured)?.slug ?? "",
-    subObjectives: targetNodes.flatMap((n) => {
-      const sequence = data.snapshot.orders
-        .filter((o) => o.target_node_id === n.id)
-        .map((o) => slugByNodeId.get(o.node_id))
-        .filter((slug): slug is string => !!slug);
+    targets: targetNodes.map((n) => n.id),
+    featuredSubObjective: targetNodes.find((n) => n.is_featured)?.id ?? "",
+    subObjectives: curated
+      ? targetNodes.map((n) => {
+          const sequence = data.snapshot.orders
+            .filter((o) => o.target_node_id === n.id)
+            .map((o) => o.node_id);
 
-      if (sequence.length === 0) {
-        return [];
-      }
+          return {
+            targetNodeId: n.id,
+            selectedNodeIds: sequence,
+            curatedSequence: sequence,
+          };
+        })
+      : [],
 
-      return [
-        {
-          targetSlug: n.slug,
-          selectedSlugs: sequence,
-          curatedSequence: sequence,
-        },
-      ];
-    }),
-    subjects: data.subjects.map((s) => s.id),
+    subjects: data.subjects
+      .filter((s) => s.status === "published")
+      .map((s) => s.id),
+    newSubjects: data.subjects
+      .filter((s) => s.status !== "published")
+      .map((s) => ({ id: s.id, name: s.name, summary: s.summary ?? "" })),
+
+    graph: objectiveGraphFromSnapshot(data.snapshot),
   };
 };
 
@@ -185,6 +261,7 @@ export default function ContributionFlow({
   todoTitle,
   todoSummary,
   todoIds,
+  slug,
 }: PropTypes) {
   const [guideContData, setGuideContData] = useState<Array<MultiGuide>>(() => {
     if (draftId || todoTitle) {
@@ -244,6 +321,14 @@ export default function ContributionFlow({
       return storedVariants[0]?.data ?? createVariantContData();
     }
   );
+
+  useEffect(() => {
+    if (slug && !variantContData.baseGuide) {
+      getGuide(slug).then((guide) =>
+        setVariantContData((prev) => ({ ...prev, baseGuide: guide.slug }))
+      );
+    }
+  });
 
   const [objectiveLocalDraftId] = useState<string>(() => createLocalDraftId());
 
@@ -804,32 +889,56 @@ function Inner({
     newSubjects: unsavedSubjects(variantContData.newSubjects),
   });
 
-  const baseIdForSlug = (slug: string) => {
-    const guide = guideOptions.find((g) => g.slug === slug);
+  const objectiveTagFields = () => ({
+    tags: [
+      ...objectiveContData.subjects,
+      ...existingTagIds(objectiveContData.newSubjects),
+    ],
+    newSubjects: unsavedSubjects(objectiveContData.newSubjects),
+  });
 
-    if (!guide) {
-      throw new Error(`Target guide not found: ${slug}`);
-    }
+  const objectiveTargets = () => {
+    // A sequence can still name a card deleted from the canvas since.
+    const onCanvas = new Set(objectiveContData.graph.nodes.map((n) => n.id));
 
-    return guide.id;
-  };
-
-  const objectiveTargets = () =>
-    objectiveContData.targets.map((slug) => {
+    return objectiveContData.targets.map((nodeId) => {
       const sub = objectiveContData.subObjectives.find(
-        (s) => s.targetSlug === slug
+        (s) => s.targetNodeId === nodeId
       );
 
       return {
-        guide_base_id: baseIdForSlug(slug),
-        is_featured: objectiveContData.featuredSubObjective === slug,
+        node_id: nodeId,
+        is_featured: objectiveContData.featuredSubObjective === nodeId,
         ...(sub
-          ? {
-              sequence: sub.curatedSequence.map(baseIdForSlug),
-            }
+          ? { sequence: sub.curatedSequence.filter((id) => onCanvas.has(id)) }
           : {}),
       };
     });
+  };
+
+  const adoptedRef = useRef(false);
+  const adoptSaved = ({
+    snapshot,
+  }: Awaited<ReturnType<typeof updateObjectiveRevision>>) => {
+    adoptedRef.current = true;
+    setObjectiveContData((prev) => adoptSavedSnapshot(prev, snapshot));
+  };
+
+  // objectiveSave marks itself synced without a render, so ask for one.
+  const [, rerenderAfterAdopt] = useState(0);
+  useEffect(() => {
+    if (!adoptedRef.current) return;
+    adoptedRef.current = false;
+    storeContributionDraft(
+      "objective",
+      objectiveContData,
+      objectiveLocalDraftId,
+      revisionId,
+      step
+    );
+    objectiveSave.cancel();
+    rerenderAfterAdopt((n) => n + 1);
+  });
 
   // prevent two simultaneous create requests
   const creatingRef = useRef<Promise<string> | null>(null);
@@ -863,21 +972,27 @@ function Inner({
   // server persistence - guide revisionId lives on the active guide itself
   const persistDraft = async () => {
     if (type === "objective") {
-      const target_ids = objectiveContData.targets.map(baseIdForSlug);
-
-      if (target_ids.length === 0) {
-        throw new Error(
-          "Learning objectives require at least one target guide."
-        );
-      }
+      // An empty graph would delete every node, so it is not sent.
+      const sendsGraph = objectiveContData.graph.nodes.length > 0;
+      const graphField = sendsGraph
+        ? { graph: graphToApi(objectiveContData.graph) }
+        : {};
+      const saveRevision = async (
+        id: string,
+        body: Parameters<typeof updateObjectiveRevision>[1]
+      ) => {
+        const saved = await updateObjectiveRevision(id, body);
+        if (sendsGraph) adoptSaved(saved);
+      };
 
       if (revisionId) {
-        await updateObjectiveRevision(revisionId, {
+        await saveRevision(revisionId, {
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
           change_summary: objectiveContData.changeSummary || null,
-          tags: objectiveContData.subjects,
+          ...objectiveTagFields(),
           targets: objectiveTargets(),
+          ...graphField,
         });
 
         return revisionId;
@@ -887,12 +1002,13 @@ function Inner({
         if (!creatingRef.current) {
           creatingRef.current = createObjectiveRevision(editSlug)
             .then(async (id) => {
-              await updateObjectiveRevision(id, {
+              await saveRevision(id, {
                 title: objectiveContData.title || undefined,
                 summary: objectiveContData.summary || undefined,
                 change_summary: objectiveContData.changeSummary || null,
-                tags: objectiveContData.subjects,
+                ...objectiveTagFields(),
                 targets: objectiveTargets(),
+                ...graphField,
               });
 
               setRevisionId(id);
@@ -911,12 +1027,16 @@ function Inner({
         creatingRef.current = createObjective({
           title: objectiveContData.title || undefined,
           summary: objectiveContData.summary || undefined,
-          target_ids,
-          tags: objectiveContData.subjects,
+          ...objectiveTagFields(),
         })
           .then(async (id) => {
-            await updateObjectiveRevision(id, { targets: objectiveTargets() });
+            await saveRevision(id, {
+              targets: objectiveTargets(),
+              ...graphField,
+            });
+
             setRevisionId(id);
+
             return id;
           })
           .finally(() => {
@@ -1032,7 +1152,9 @@ function Inner({
           step
         );
 
-        objectiveSave.markSynced();
+        // after a graph save the adopted answer marks itself synced
+        if (objectiveContData.graph.nodes.length === 0)
+          objectiveSave.markSynced();
       }
 
       toast.success("Draft saved");
@@ -1072,7 +1194,10 @@ function Inner({
       });
     }
 
-    if (objectiveContData.subjects.length === 0) {
+    if (
+      objectiveContData.subjects.length === 0 &&
+      objectiveContData.newSubjects.length === 0
+    ) {
       missing.push({
         field: "subjects",
         label: "a subject",
@@ -1083,11 +1208,6 @@ function Inner({
       missing.push({
         field: "targets",
         label: "a target guide",
-      });
-    } else if (!objectiveContData.featuredSubObjective) {
-      missing.push({
-        field: "featuredSubObjective",
-        label: "a featured sub-objective",
       });
     }
 
@@ -1193,7 +1313,10 @@ function Inner({
         if (missing.length > 0) {
           setPublishAttempted(true);
 
-          stepper.goTo("objective-details");
+          const onlyTargetMissing = missing.every((m) => m.field === "targets");
+          stepper.goTo(
+            onlyTargetMissing ? "objective-design" : "objective-details"
+          );
 
           throw new Error(
             `Your objective is missing ${missing.map((m) => m.label).join(", ")}`
@@ -1362,7 +1485,6 @@ function Inner({
           objectiveContData={objectiveContData}
           setObjectiveContData={setObjectiveContData}
           subjects={subjectOptions}
-          guides={guideOptions}
           showChangeSummary={showChangeSummary}
           invalidFields={invalidObjectiveFields}
           hideBackBtn={skipTypeStep}
@@ -1383,6 +1505,25 @@ function Inner({
           guides={guideOptions}
         />
 
+        <ObjectiveDesign
+          Stepper={Stepper}
+          type={type}
+          guides={guideOptions}
+          objectiveGraph={objectiveContData.graph}
+          onSaveDraft={saveDraft}
+          submitting={submitting}
+          isDirty={isDirty}
+          isSynced={isSynced}
+          setObjectiveGraph={(update) =>
+            setObjectiveContData((prev) =>
+              withLiveTargets(
+                prev,
+                typeof update === "function" ? update(prev.graph) : update
+              )
+            )
+          }
+        />
+
         <OrderObjectiveGuides
           Stepper={Stepper}
           objectiveContData={objectiveContData}
@@ -1397,6 +1538,7 @@ function Inner({
         <PreviewObjective
           Stepper={Stepper}
           objectiveContData={objectiveContData}
+          setObjectiveContData={setObjectiveContData}
           onSaveDraft={saveDraft}
           onPublish={publish}
           submitting={submitting}
@@ -1405,6 +1547,8 @@ function Inner({
           guideOptions={guideOptions}
           subjectOptions={subjectOptions}
         />
+
+        <GuideRequestDetails Stepper={Stepper} onSubmitted={onPublished} />
       </div>
     </div>
   );

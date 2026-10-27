@@ -118,9 +118,10 @@ describe("Editor .md import", () => {
     expect(getByTestId("preview-body").textContent).toBe(IMPORTED_MARKDOWN);
 
     // Navigate back to Content: Editor remounts and re-seeds from `body`.
+    // Wait out the 1s change debounce so a re-serialized `body` would land.
     await act(async () => {
       getByTestId("toggle-step").click();
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 1100));
     });
 
     expect(getByTestId("preview-body").textContent).toBe(IMPORTED_MARKDOWN);

@@ -13,6 +13,8 @@ import {
   loadRevisionTags,
   replaceRevisionTags,
   requireCurator,
+  requireSubjectHandles,
+  resolveNewSubjects,
 } from "./objective-revision.service";
 import { selectInBatches } from "../lib/batch";
 import { loadUsernames } from "./identity.service";
@@ -153,7 +155,7 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
       supabase
         .from("objective_revision_nodes")
         .select(
-          "revision_id, id, guide_base_id, guide_id, is_featured, is_included"
+          "revision_id, id, guide_base_id, guide_id, title, is_featured, is_included"
         )
         .in("revision_id", batch)
     ),
@@ -175,9 +177,25 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
   }
 
   const nodeRows = nodesRes.data ?? [];
-  const allBaseIds = [...new Set(nodeRows.map((n) => n.guide_base_id))];
+  const allBaseIds = [
+    ...new Set(
+      nodeRows
+        .filter(
+          (n): n is typeof n & { guide_base_id: string } =>
+            n.guide_base_id !== null
+        )
+        .map((n) => n.guide_base_id)
+    ),
+  ];
   const guideIds = [
-    ...new Set(nodeRows.filter((n) => n.is_included).map((n) => n.guide_id)),
+    ...new Set(
+      nodeRows
+        .filter(
+          (n): n is typeof n & { guide_id: string } =>
+            n.is_included && n.guide_id !== null
+        )
+        .map((n) => n.guide_id)
+    ),
   ];
 
   const [baseMeta, wordsByGuide] = await Promise.all([
@@ -189,8 +207,12 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
     const revisionNodes = nodeRows.filter((n) => n.revision_id === revisionId);
     const nodes: CardNode[] = revisionNodes.map((n) => ({
       id: n.id,
-      slug: baseMeta.get(n.guide_base_id)?.slug ?? null,
-      title: baseMeta.get(n.guide_base_id)?.title ?? null,
+      slug: n.guide_base_id
+        ? (baseMeta.get(n.guide_base_id)?.slug ?? null)
+        : null,
+      title: n.guide_base_id
+        ? (baseMeta.get(n.guide_base_id)?.title ?? null)
+        : n.title,
       is_featured: n.is_featured,
     }));
     const orders = (ordersRes.data ?? []).filter(
@@ -198,7 +220,11 @@ async function loadObjectiveCards(supabase: DB, revisionIds: string[]) {
     );
     const words = revisionNodes
       .filter((n) => n.is_included)
-      .reduce((sum, n) => sum + (wordsByGuide.get(n.guide_id) ?? 0), 0);
+      .reduce(
+        (sum, n) =>
+          sum + (n.guide_id ? (wordsByGuide.get(n.guide_id) ?? 0) : 0),
+        0
+      );
 
     cards.set(revisionId, {
       guides_total: revisionNodes.filter((n) => n.is_included).length,
@@ -278,16 +304,17 @@ export async function listPublishedObjectives(
   };
 }
 
-// Create a objective: bundles the objective shell + revision 1 + the targets' prerequisite
-// closure as the initial node set in one transaction via the create_objective
-// RPC (RLS still applies, SECURITY INVOKER). Returns the draft revision id so the
-// client routes straight to its editor.
+// create_objective is SECURITY INVOKER, so RLS still applies. The draft starts
+// empty until the first graph save places its nodes.
 export async function createObjective(
   supabase: DB,
+  userId: string,
   input: CreateObjectiveInput
 ) {
+  requireSubjectHandles(input.newSubjects);
+
   const { data: revision_id, error } = await supabase.rpc("create_objective", {
-    p_targets: input.target_ids,
+    p_targets: [],
     p_title: input.title ?? undefined,
     p_summary: input.summary ?? undefined,
   });
@@ -300,8 +327,16 @@ export async function createObjective(
     throw new ServiceError("Failed to create objective", 500);
   }
 
-  if (input.tags && input.tags.length > 0) {
-    await replaceRevisionTags(supabase, revision_id, input.tags);
+  const proposedIds = await resolveNewSubjects(
+    supabase,
+    userId,
+    revision_id,
+    input.newSubjects
+  );
+
+  const tagIds = [...input.tags, ...proposedIds];
+  if (tagIds.length > 0) {
+    await replaceRevisionTags(supabase, revision_id, tagIds);
   }
 
   return { revision_id };
@@ -342,6 +377,7 @@ export async function createObjectiveRevision(
     .from("objective_revisions")
     .insert({
       objective_id: objective.id,
+      based_on_revision_id: objective.current_revision_id,
       title: source?.title ?? null,
       summary: source?.summary ?? null,
       author_id: authorId,

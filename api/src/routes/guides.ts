@@ -88,6 +88,14 @@ const variantSlugParamSchema = z.object({
 });
 const idParamSchema = z.object({ id: z.uuid() });
 const diffParamSchema = z.object({ id: z.uuid(), otherId: z.uuid() });
+const walkthroughQuerySchema = z.object({
+  followUpDepth: z
+    .string()
+    .regex(/^\d+$/)
+    .refine((value) => Number(value) <= 2147483647)
+    .transform(Number)
+    .optional(),
+});
 
 export const guidesRouter = new Hono<HonoEnv>()
   // Returns published guides as { guides }.
@@ -192,7 +200,6 @@ export const guidesRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Returns transitive prerequisites and direct follow-ups as { nodes, edges }.
   .get(
     "/:slug/walkthrough",
     describeRoute({
@@ -200,14 +207,18 @@ export const guidesRouter = new Hono<HonoEnv>()
       summary: "Guide walkthrough with follow-up context",
       responses: {
         200: jsonContent(walkthroughSchema, "The walkthrough graph"),
-        ...errorResponses(404),
+        ...errorResponses(400, 404),
       },
     }),
     validate("param", slugParamSchema),
+    validate("query", walkthroughQuerySchema),
     async (c) => {
+      const { slug } = c.req.valid("param");
+      const { followUpDepth } = c.req.valid("query");
       const walkthrough = await getWalkthrough(
         c.get("supabase"),
-        c.req.valid("param").slug
+        slug,
+        followUpDepth
       );
       return c.json(walkthrough);
     }

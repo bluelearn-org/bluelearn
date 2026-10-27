@@ -15,12 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-export function ColumnFilter<T>({
+export function ColumnFilter({
   column,
   filters,
   onChange,
 }: {
-  column: DashboardColumn<T>;
+  column: DashboardColumn;
   filters: DashboardFilters;
   onChange: (changes: DashboardFilters) => void;
 }) {

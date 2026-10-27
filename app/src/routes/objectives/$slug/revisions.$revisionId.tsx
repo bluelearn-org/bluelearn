@@ -4,6 +4,7 @@ import { ArrowLeft, GitCommit } from "lucide-react";
 
 import type { ObjectiveRevisionDiff as ObjectiveRevisionDiffData } from "@bluelearn/schemas";
 import ObjectiveFlow from "@/components/objective/ObjectiveFlow";
+import { useObjectiveSelection } from "@/components/objective/ObjectiveGraph";
 import { ObjectiveRevisionDiff } from "@/components/objective/ObjectiveRevisionDiff";
 import { Separator } from "@/components/ui/separator";
 
@@ -61,6 +62,7 @@ export const Route = createFileRoute("/objectives/$slug/revisions/$revisionId")(
 function RouteComponent() {
   const { slug, revisionId } = Route.useParams();
   const { entry, previousId, detail, guides } = Route.useLoaderData();
+  const selection = useObjectiveSelection(detail.snapshot);
 
   const [view, setView] = useState<"objective" | "changes">("objective");
   const [diff, setDiff] = useState<ObjectiveRevisionDiffData | null>(null);
@@ -113,7 +115,7 @@ function RouteComponent() {
       // The objective did not exist before, so every sub-objective and every
       // step of its sequence reads as an addition.
       targets: buildSubObjectives(detail.snapshot).map(({ target, steps }) => ({
-        guide_base_id: target.guide_base_id,
+        guide_base_id: target.guide_base_id!,
         slug: target.slug,
         title: target.title,
         status: "added" as const,
@@ -183,6 +185,8 @@ function RouteComponent() {
             <ObjectiveFlow
               objective={{ ...detail.revision, slug }}
               targets={targets}
+              targetId={selection.targetId}
+              onSelectTarget={selection.select}
             />
           )}
         </div>
