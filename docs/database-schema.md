@@ -373,6 +373,45 @@ The manifest of object-storage assets, so a purge can delete media reliably inst
 - `revision_id`: FK to `guide_revisions`.
 - `asset_id`: FK to `media_assets`. The pair `(revision_id, asset_id)` is the primary key.
 
+### `notification_types`, `notifications`, and `notification_preferences`
+
+In-app notifications. The function `public.notify()` is the only writer of `notifications`. It runs inside the transaction of the event, so a notification commits or rolls back with that event.
+
+`notification_types` is the registry. It has one row for each type:
+
+- `type`: primary key, for example `guide_upvotes`.
+- `category`: one of `guide_statuses`, `variant_statuses`, `community_engagement`, `review_workflows`. The settings page and the inbox filter use it.
+- `default_enabled`: applies until the user saves a preference.
+
+`notifications`:
+
+- `recipient_id`: FK to `profiles.id`. Only the recipient can read the row.
+- `type`: FK to `notification_types`.
+- `actor_id`: FK to `profiles.id`. It is null for system events, for example a panel outcome.
+- `group_key`: events with the same key share one unread row. A null key gives each event its own row.
+- `group_count`: the number of events in the row.
+- `data`: ids, slugs, and titles that the app needs to show and link the row. Store only text that the recipient can already read.
+- `occurred_at`: the time of the latest event in the row.
+- `read_at`: null while the row is unread.
+
+`notification_preferences`:
+
+- `user_id`, `type`, `channel`: the composite primary key. `channel` is `in_app` now. Email adds a value to the enum.
+- `enabled`: the choice of the user. A missing row means the type default applies.
+
+Constraints:
+
+- A partial unique index on `(recipient_id, type, group_key)` covers unread rows only. `notify()` adds to the open row. When the recipient reads that row, the next event starts a new row.
+- `notify()` skips a recipient who is also the actor. It also skips a recipient who turned the type off. It raises an error for a type that is not in the registry.
+- Clients cannot run `notify()`. A recipient can update only `read_at`.
+
+To add a type:
+
+1. Insert one row into `notification_types`.
+2. Call `notify()` where the event happens. Use a trigger on the table that records the event, or call it from the RPC that owns the event.
+3. Add the type to `notificationTypeSchema` in `packages/schemas`.
+4. Add a renderer in `app/src/lib/notifications.ts`. The settings page enables the toggle of a type when the type has a renderer.
+
 ### `review_cases`, `review_panels`, and `review_decisions`
 
 Verifier gates, post-publish re-reviews, disputes, and appeals all share the same shape: an odd-numbered random panel, a majority outcome, and an independent written justification per member. They share one root object (`review_cases`) plus one panel table and one decision table. Type-specific fields hang off the root in **specialized tables** (`guide_review_cases`, `re_review_cases`, `disputes`, `appeals`), each keyed 1:1 on `case_id`. The root carries what every workflow has in common (lifecycle, who opened it, timestamps); the satellite carries only what that one case type needs.

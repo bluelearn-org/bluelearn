@@ -33,6 +33,7 @@ import { reviewsRouter } from "./routes/reviews";
 import { mediaRouter } from "./routes/media";
 import { searchRouter } from "./routes/search";
 import { dashboardRouter } from "./routes/dashboard";
+import { notificationsRouter } from "./routes/notifications";
 
 let specHandler: MiddlewareHandler<HonoEnv> | undefined;
 const openApiHandler: MiddlewareHandler<HonoEnv> = (c, next) => {
@@ -63,7 +64,8 @@ const app = new Hono<HonoEnv>()
   .route("/reviews", reviewsRouter)
   .route("/media", mediaRouter)
   .route("/search", searchRouter)
-  .route("/dashboard", dashboardRouter);
+  .route("/dashboard", dashboardRouter)
+  .route("/notifications", notificationsRouter);
 
 // Services throw ServiceError to signal HTTP-meaningful failures; map them to
 // JSON here so handlers stay free of repeated `if (error) return c.json(...)`.
