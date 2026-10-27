@@ -1,4 +1,4 @@
-import { lexical } from "@mdxeditor/editor";
+import { NESTED_EDITOR_UPDATED_COMMAND, lexical } from "@mdxeditor/editor";
 import React from "react";
 import { MathLiveComponent } from "./MathLivePlugin";
 
@@ -94,15 +94,23 @@ export class MathNode extends DecoratorNode<unknown> {
       latex: this.__equation,
       inline: this.__inline,
       onChange: (latex: string) => {
-        editor.update(() => {
-          const node = $getNodeByKey(nodeKey);
-          if ($isMathNode(node)) {
-            node.setEquation(latex);
-          }
-        });
+        editor.update(
+          () => {
+            const node = $getNodeByKey(nodeKey);
+            if ($isMathNode(node)) {
+              node.setEquation(latex);
+            }
+          },
+          { discrete: true }
+        );
+        notifyNestedEditorUpdated(editor);
       },
     });
   }
+}
+
+export function notifyNestedEditorUpdated(editor: LexicalEditor): void {
+  editor.dispatchCommand(NESTED_EDITOR_UPDATED_COMMAND, undefined);
 }
 
 export function $createMathNode(

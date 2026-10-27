@@ -9,10 +9,12 @@ import {
   ListsToggle,
   StrikeThroughSupSubToggles,
   UndoRedo,
+  activeEditor$,
   activePlugins$,
   allowedHeadingLevels$,
   convertSelectionToNode$,
   currentBlockType$,
+  editorInTable$,
   insertDirective$,
   viewMode$,
 } from "@mdxeditor/editor";
@@ -252,6 +254,18 @@ export default function EditorToolbar({
   const inlineMathRef = useRef<HTMLSpanElement>(null);
   const blockMathRef = useRef<HTMLSpanElement>(null);
   const insertDirective = usePublisher(insertDirective$);
+  // Table cells only support inline equations.
+  const isInTable = useCellValue(editorInTable$);
+  const activeEditor = useCellValue(activeEditor$);
+  // MDXEditor's focus() always targets the root editor, which would pull the
+  // caret out of a table cell and insert below the table instead.
+  const focusActiveEditor = () => {
+    if (isInTable && activeEditor) {
+      activeEditor.focus();
+    } else {
+      editorRef.current?.focus();
+    }
+  };
 
   // Source / Rich-text mode toggle (diffSourcePlugin)
   const viewMode = useCellValue(viewMode$);
@@ -383,7 +397,7 @@ export default function EditorToolbar({
                 type="button"
                 className="toolbar-popover-item"
                 onClick={() => {
-                  editorRef.current?.focus();
+                  focusActiveEditor();
                   setTimeout(() => {
                     inlineMathRef.current?.querySelector("button")?.click();
                   }, 10);
@@ -397,7 +411,15 @@ export default function EditorToolbar({
               <button
                 type="button"
                 className="toolbar-popover-item"
+                disabled={isInTable}
+                aria-disabled={isInTable}
+                title={
+                  isInTable
+                    ? "Block equations aren't supported in tables. Use an inline equation."
+                    : undefined
+                }
                 onClick={() => {
+                  if (isInTable) return;
                   editorRef.current?.focus();
                   setTimeout(() => {
                     blockMathRef.current?.querySelector("button")?.click();

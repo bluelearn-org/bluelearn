@@ -60,10 +60,12 @@ export default function Editor({
 
   // debounce so we don't re-render the flow on every keystroke
   const handleMarkdownChange = useCallback(
-    (newMarkdown: string) => {
+    (newMarkdown: string, initialMarkdownNormalize: boolean) => {
       setMarkdown(newMarkdown);
+      // MDXEditor re-serializes `value` on mount (e.g. `_a_` -> `*a*`). That
+      // isn't an edit, so don't push the rewritten text back to the parent.
+      if (initialMarkdownNormalize) return;
       latestRef.current = newMarkdown;
-
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
