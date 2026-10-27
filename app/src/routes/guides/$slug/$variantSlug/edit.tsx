@@ -129,6 +129,7 @@ function EditGuidePage() {
 
     prereqs: snapshot.prerequisites,
     requests: snapshot.todos,
+    followUps: snapshot.followUps,
     disclaimers: snapshot.disclaimers,
   }));
 

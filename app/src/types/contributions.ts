@@ -32,6 +32,7 @@ export const guideContributionSchema = z.object({
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
   prereqs: z.array(z.string()),
+  followUps: z.array(z.string()),
   requests: z.array(z.object({ title: z.string(), summary: z.string() })),
   disclaimers: z.array(disclaimerSlugSchema),
 });
@@ -43,6 +44,11 @@ export const variantContributionSchema = z.object({
   baseGuide: z.string(),
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
+  prereqs: z.array(z.string()).optional(),
+  followUps: z.array(z.string()).optional(),
+  requests: z
+    .array(z.object({ title: z.string(), summary: z.string() }))
+    .optional(),
   body: z.string(),
   disclaimers: z.array(disclaimerSlugSchema),
 });

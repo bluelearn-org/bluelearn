@@ -246,6 +246,89 @@ export type Database = {
           },
         ]
       }
+      guide_revision_edges: {
+        Row: {
+          edge_type: Database["public"]["Enums"]["new_edge_type"]
+          guide_revision_id: string
+          new_edge_id: string
+        }
+        Insert: {
+          edge_type: Database["public"]["Enums"]["new_edge_type"]
+          guide_revision_id: string
+          new_edge_id: string
+        }
+        Update: {
+          edge_type?: Database["public"]["Enums"]["new_edge_type"]
+          guide_revision_id?: string
+          new_edge_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_revision_edges_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_edges_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+          {
+            foreignKeyName: "guide_revision_edges_new_edge_id_fkey"
+            columns: ["new_edge_id"]
+            isOneToOne: false
+            referencedRelation: "guide_bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_edges_new_edge_id_fkey"
+            columns: ["new_edge_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_revision_requests: {
+        Row: {
+          guide_revision_id: string
+          id: string
+          summary: string
+          title: string
+        }
+        Insert: {
+          guide_revision_id: string
+          id?: string
+          summary: string
+          title: string
+        }
+        Update: {
+          guide_revision_id?: string
+          id?: string
+          summary?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_revision_requests_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_requests_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+        ]
+      }
       guide_revision_subjects: {
         Row: {
           guide_revision_id: string
@@ -1405,6 +1488,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_revision_edges_and_requests: {
+        Args: { p_base_id: string; p_revision_id: string }
+        Returns: undefined
+      }
       assemble_review_panel: {
         Args: { p_case_id: string; p_policy_default: number }
         Returns: string
@@ -1558,6 +1645,7 @@ export type Database = {
         | "scope_creep"
       edge_type: "prerequisite" | "related"
       knowledge_type: "theoretical" | "practical"
+      new_edge_type: "prereq" | "follow-up"
       node_status: "draft" | "published" | "archived"
       objective_revision_status: "draft" | "published"
       review_outcome: "approved" | "rejected"
@@ -1725,6 +1813,7 @@ export const Constants = {
       ],
       edge_type: ["prerequisite", "related"],
       knowledge_type: ["theoretical", "practical"],
+      new_edge_type: ["prereq", "follow-up"],
       node_status: ["draft", "published", "archived"],
       objective_revision_status: ["draft", "published"],
       review_outcome: ["approved", "rejected"],

@@ -14,18 +14,6 @@ import {
   voteDirectionSchema,
 } from "./enums";
 
-// The editable content of a revision.
-const revisionContentSchema = z.object({
-  title: guideTitleSchema,
-  summary: guideSummarySchema.nullish(),
-  body: guideBodySchema.nullish(),
-});
-
-export const newSubjectSchema = z.object({
-  name: subjectNameSchema,
-  summary: subjectSummarySchema.nullish(),
-});
-
 export const requestSchema = z.object({
   title: z
     .string()
@@ -39,6 +27,22 @@ export const requestSchema = z.object({
     .max(500, "Summary must be 500 characters or less"),
 });
 
+// The editable content of a revision.
+const revisionContentSchema = z.object({
+  title: guideTitleSchema,
+  summary: guideSummarySchema.nullish(),
+  body: guideBodySchema.nullish(),
+  prerequisites: z.array(guideSlugSchema).default([]),
+  follow_ups: z.array(guideSlugSchema).default([]),
+  requests: z.array(requestSchema).default([]),
+  todoPrereqs: z.array(requestSchema).default([]),
+});
+
+export const newSubjectSchema = z.object({
+  name: subjectNameSchema,
+  summary: subjectSummarySchema.nullish(),
+});
+
 export const createGuideSchema = z
   .object({
     knowledge_type: knowledgeTypeSchema.default("theoretical"),
@@ -47,6 +51,7 @@ export const createGuideSchema = z
     body: guideBodySchema.nullish(),
     tags: z.array(z.uuid()).default([]),
     prerequisites: z.array(guideSlugSchema).default([]),
+    follow_ups: z.array(guideSlugSchema).default([]),
     newSubjects: z.array(newSubjectSchema).default([]),
     requests: z.array(requestSchema).optional(),
     requestClaims: z.array(z.uuid()).optional(),
@@ -76,11 +81,12 @@ export const updateRevisionSchema = revisionContentSchema
     title: guideTitleSchema.nullish(),
     change_summary: guideChangeSummarySchema.nullish(),
     tags: z.array(z.uuid()),
-    prerequisites: z.array(guideSlugSchema),
     newSubjects: z.array(newSubjectSchema),
-    requests: z.array(requestSchema),
-    todoPrereqs: z.array(requestSchema),
     disclaimers: z.array(disclaimerSchema),
+    prerequisites: z.array(guideSlugSchema).default([]),
+    follow_ups: z.array(guideSlugSchema).default([]),
+    requests: z.array(requestSchema).default([]),
+    todoPrereqs: z.array(requestSchema).default([]),
   })
   .partial()
   .transform(({ todoPrereqs, ...revision }) => ({

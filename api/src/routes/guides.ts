@@ -587,6 +587,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
         variant_slug,
         prerequisites,
         todos,
+        followUps,
         revised_from_case_id,
         disclaimers,
       } = await getRevision(c.get("supabase"), c.req.valid("param").id);
@@ -598,6 +599,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
         base_slug,
         variant_slug,
         prerequisites,
+        followUps,
         todos,
         revised_from_case_id,
         disclaimers,

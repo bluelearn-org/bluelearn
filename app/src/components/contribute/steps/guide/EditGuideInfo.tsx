@@ -77,7 +77,7 @@ export const EditGuideInfo = ({
           guides={guides}
           hideBackBtn={hideBackBtn}
           onSaveDraft={onSaveDraft}
-          showBaseFields={false}
+          showBaseFields={true}
           changeSummary={changeSummary}
           onChangeSummaryChange={onChangeSummaryChange}
         />

@@ -84,6 +84,7 @@ const guide: GuideContribution = {
   newSubjects: [],
   prereqs: [],
   requests: [],
+  followUps: [],
   disclaimers: [],
 };
 
