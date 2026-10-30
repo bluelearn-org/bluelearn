@@ -6,9 +6,9 @@ import type {
   SubjectGroup,
   SubjectListItem,
 } from "@bluelearn/schemas";
+import { slugify } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
-import { slugify } from "../lib/slug";
 import { buildGuideListItems, PUBLISHED_GUIDE_SELECT } from "./guide.service";
 import { buildObjectiveListItems } from "./objective.service";
 
@@ -252,6 +252,7 @@ export async function listSubjectGuides(
     .select(PUBLISHED_GUIDE_SELECT, { count: "exact" })
     .contains("subject_ids", [subject.id])
     .order("title")
+    .order("id")
     .range(from, to);
 
   if (guideError) {

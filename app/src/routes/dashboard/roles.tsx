@@ -18,30 +18,43 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RolesTable } from "@/components/tables/RolesTable";
+import { RolesTable, roleColumns } from "@/components/tables/RolesTable";
+import { DashboardPagination } from "@/components/tables/DashboardPagination";
 import {
   addRole,
   fetchRoleTable,
   removeRole,
   toggleAFK,
 } from "@/lib/api/dashboard";
+import {
+  dashboardQuery,
+  parseDashboardSearch,
+  useDashboardSearch,
+  usePageSelection,
+} from "@/lib/dashboardFilters";
 
-// same enum as `:roleName`
-// so you can't offer a role the server rejects (hopefully)
+// Use the API enum so the role picker cannot offer an unsupported role.
 const ROLE_OPTIONS: ReadonlyArray<UserRole> = userRoleSchema.options;
 
 export const Route = createFileRoute("/dashboard/roles")({
-  loader: async ({ abortController }) => {
-    const data = await fetchRoleTable({ signal: abortController.signal });
-    return { data };
-  },
+  validateSearch: parseDashboardSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps, abortController }) =>
+    fetchRoleTable(dashboardQuery(roleColumns, deps), {
+      signal: abortController.signal,
+    }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const roles = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const router = useRouter();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { filters, updateFilters } = useDashboardSearch(search, (next) =>
+    navigate({ search: next, replace: true })
+  );
+  const [selectedIds, setSelectedIds] = usePageSelection(roles);
   const [submittingChange, setSubmittingChange] = useState(false);
 
   // Role for "add role"/"remove role"
@@ -182,10 +195,19 @@ function RouteComponent() {
         <div className="overflow-x-auto">
           <RolesTable
             roleData={roles.data}
+            filters={filters}
+            onFiltersChange={updateFilters}
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
           />
         </div>
+        <DashboardPagination
+          page={search.page ?? 1}
+          total={roles.total}
+          onPageChange={(page) =>
+            navigate({ search: (prev) => ({ ...prev, page }) })
+          }
+        />
       </section>
     </div>
   );

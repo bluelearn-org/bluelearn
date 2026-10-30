@@ -23,6 +23,7 @@ import {
   addSyntaxExtension$,
   addTableCellEditorChild$,
   addToMarkdownExtension$,
+  editorInTable$,
   insertDecoratorNode$,
   lexical,
   realmPlugin,
@@ -32,11 +33,19 @@ import { useCellValue } from "@mdxeditor/gurx";
 import { math } from "micromark-extension-math";
 import { mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
 import { MathExportVisitor, MathImportVisitor } from "./MathVisitors";
-import { $createMathNode, MathNode } from "./MathNode";
+import {
+  $createMathNode,
+  MathNode,
+  notifyNestedEditorUpdated,
+} from "./MathNode";
 import {
   $insertBlockMathInQuote,
   $replaceTextWithBlockMathInQuote,
 } from "./MathInsertion";
+import {
+  $insertParagraphAfterMathQuote,
+  $insertParagraphAfterSelectedMathQuote,
+} from "./MathQuoteNavigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +67,7 @@ const {
   $setSelection,
   createCommand,
   COMMAND_PRIORITY_NORMAL,
+  KEY_ENTER_COMMAND,
 } = lexical;
 
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -340,6 +350,18 @@ export function SingletonMathEditor() {
       });
   }, [payload, closeEditor]);
 
+  const finishEditing = (continueWriting: boolean) => {
+    const mf = mfRef.current;
+    if (mf && payload) commitLatex(mf.value, payload.onChange);
+    closeEditor();
+    if (continueWriting && payload) {
+      editor.update(() => {
+        $insertParagraphAfterMathQuote($getNodeByKey(payload.nodeKey));
+      });
+    }
+    editor.focus();
+  };
+
   const isVisible = !!payload;
   const portalNode = typeof document !== "undefined" ? document.body : null;
   if (!portalNode) return null;
@@ -377,12 +399,8 @@ export function SingletonMathEditor() {
           onKeyDown={(e: any) => {
             if (e.key === "Enter" || e.key === "Escape") {
               e.preventDefault();
-              const mf = mfRef.current;
-              if (mf && payload) {
-                commitLatex(mf.value, payload.onChange);
-              }
-              closeEditor();
-              editor.focus();
+              e.stopPropagation();
+              finishEditing(e.key === "Enter");
             }
           }}
         />
@@ -419,7 +437,7 @@ export function SingletonMathEditor() {
             variant="default"
             size="sm"
             className="h-7 rounded-md px-3 text-xs"
-            onClick={closeEditor}
+            onClick={() => finishEditing(true)}
           >
             Done
           </Button>
@@ -443,12 +461,16 @@ export function MathLiveComponent({
   const [isRangeSelected, setIsRangeSelected] = useState(false);
 
   const removeNode = useCallback(() => {
-    editor.update(() => {
-      const node = $getNodeByKey(nodeKey);
-      if (node) {
-        node.remove();
-      }
-    });
+    editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (node) {
+          node.remove();
+        }
+      },
+      { discrete: true }
+    );
+    notifyNestedEditorUpdated(editor);
   }, [editor, nodeKey]);
 
   useEffect(() => {
@@ -629,8 +651,26 @@ function findMathInText(text: string) {
   return null;
 }
 
-export function MathShortcutTypeListener() {
+export function MathShortcutTypeListener({
+  inlineOnly = false,
+}: {
+  // Table cells hold a single line, so `$$...$$` becomes an inline equation.
+  inlineOnly?: boolean;
+}) {
   const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      KEY_ENTER_COMMAND,
+      (event) => {
+        if (event?.shiftKey || editor.isComposing()) return false;
+        if (!$insertParagraphAfterSelectedMathQuote()) return false;
+        event?.preventDefault();
+        return true;
+      },
+      COMMAND_PRIORITY_NORMAL
+    );
+  }, [editor]);
 
   useEffect(() => {
     return editor.registerCommand(
@@ -701,7 +741,13 @@ export function MathShortcutTypeListener() {
             }
           }
 
-          scheduledInsert = { startIdx, endIdx, equation, isInline, anchorKey };
+          scheduledInsert = {
+            startIdx,
+            endIdx,
+            equation,
+            isInline: isInline || inlineOnly,
+            anchorKey,
+          };
         });
 
         if (scheduledInsert) {
@@ -746,7 +792,7 @@ export function MathShortcutTypeListener() {
         }
       }
     );
-  }, [editor]);
+  }, [editor, inlineOnly]);
 
   return null;
 }
@@ -767,7 +813,7 @@ export const mathPlugin = realmPlugin({
         </>
       ),
       [addNestedEditorChild$]: () => <MathShortcutTypeListener />,
-      [addTableCellEditorChild$]: () => <MathShortcutTypeListener />,
+      [addTableCellEditorChild$]: () => <MathShortcutTypeListener inlineOnly />,
     });
   },
 });
@@ -791,10 +837,13 @@ export function InsertInlineMath() {
 export function InsertBlockMath() {
   const insertDecoratorNode = usePublisher(insertDecoratorNode$);
   const activeEditor = useCellValue(activeEditor$);
+  const isInTable = useCellValue(editorInTable$);
   return (
     <button
       type="button"
+      disabled={isInTable}
       onClick={() => {
+        if (isInTable) return;
         const insertedInQuote =
           activeEditor?.dispatchCommand(INSERT_BLOCK_MATH_COMMAND, undefined) ??
           false;

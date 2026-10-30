@@ -21,7 +21,7 @@ export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
         hideGuidelines={true}
       />
       <div
-        className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-2 ${isCurator && !suspended ? "lg:grid-cols-3" : ""}`}
+        className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-2 ${isCurator && !suspended ? "lg:grid-cols-4" : ""}`}
       >
         {!suspended && (
           <button
@@ -33,6 +33,19 @@ export const SelectType = ({ pickType, type, Stepper }: PropTypes) => {
             onClick={() => pickType("guide")}
           >
             Guide
+          </button>
+        )}
+
+        {!suspended && (
+          <button
+            className="mono-micro rounded-full border border-badge-border p-4 tracking-[0.08em] text-badge-foreground"
+            style={{
+              backgroundColor:
+                type == "guide-request" ? "var(--badge-bg)" : "var(--muted-bg)",
+            }}
+            onClick={() => pickType("guide-request")}
+          >
+            Guide Request
           </button>
         )}
 

@@ -1,8 +1,7 @@
 import { userRoleSchema, userStatusSchema } from "@bluelearn/schemas";
 import { Checkbox } from "../ui/checkbox";
 import type { DashboardRoleRow } from "@/lib/api/dashboard";
-import type { DashboardColumn } from "@/lib/dashboardFilters";
-import { useDashboardFilters } from "@/lib/dashboardFilters";
+import type { DashboardColumn, DashboardFilters } from "@/lib/dashboardFilters";
 import { ColumnFilter } from "@/components/tables/ColumnFilter";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,53 +16,39 @@ import { formatDate } from "@/lib/guideUtils";
 
 type RolesTableProps = {
   roleData: DashboardRoleRow;
+  filters: DashboardFilters;
+  onFiltersChange: (changes: DashboardFilters) => void;
   selectedIds: Set<string>;
   setSelectedIds: (ids: Set<string>) => void;
 };
 
-const columns: Array<DashboardColumn<DashboardRoleRow[number]>> = [
-  { key: "username", label: "Username", value: (row) => row.username },
+export const roleColumns: Array<DashboardColumn> = [
+  { key: "username", label: "Username" },
   {
     key: "roles",
     label: "Roles",
     kind: "choice",
     options: [...userRoleSchema.options, "No roles"],
-    value: (row) => (row.roles.length ? row.roles : ["No roles"]),
+    noneOption: "No roles",
   },
-  {
-    key: "date_created",
-    label: "Date Created",
-    kind: "date",
-    value: (row) => row.date_created,
-  },
-  {
-    key: "date_updated",
-    label: "Date Updated",
-    kind: "date",
-    value: (row) => row.date_updated,
-  },
+  { key: "date_created", label: "Date Created", kind: "date" },
+  { key: "date_updated", label: "Date Updated", kind: "date" },
   {
     key: "status",
     label: "Status",
     kind: "choice",
     options: [...userStatusSchema.options, "No status"],
-    value: (row) => row.status ?? "No status",
+    noneOption: "No status",
   },
 ];
 
 export const RolesTable = ({
-  roleData,
+  roleData: visibleRows,
+  filters,
+  onFiltersChange,
   selectedIds,
   setSelectedIds,
 }: RolesTableProps) => {
-  const { filters, visibleRows, updateFilters } = useDashboardFilters(
-    roleData,
-    columns,
-    selectedIds,
-    setSelectedIds,
-    (row) => row.id
-  );
-
   const allSelected =
     visibleRows.length > 0 &&
     visibleRows.every((profile) => selectedIds.has(profile.id));
@@ -101,7 +86,7 @@ export const RolesTable = ({
             />
           </TableHead>
 
-          {columns.map((column) => (
+          {roleColumns.map((column) => (
             <TableHead
               key={column.key}
               className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase"
@@ -109,7 +94,7 @@ export const RolesTable = ({
               <ColumnFilter
                 column={column}
                 filters={filters}
-                onChange={updateFilters}
+                onChange={onFiltersChange}
               />
             </TableHead>
           ))}
