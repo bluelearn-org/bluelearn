@@ -1,13 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { UpdateRevisionInput } from "@bluelearn/schemas";
-import type { DisclaimerSlug } from "@bluelearn/schemas";
+import type { DisclaimerSlug, UpdateRevisionInput } from "@bluelearn/schemas";
+import { disclaimerSlugs } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
-import { diffField } from "../lib/diff";
+import { diffField, diffSet } from "../lib/diff";
 import { createSubject } from "./subject.service";
 import { createPrerequisite } from "./prerequisite.service";
 import { createTodo } from "./todo.service";
-import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
+import {
+  loadRevisionDisclaimers,
+  replaceRevisionDisclaimers,
+} from "./disclaimer.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -234,7 +237,7 @@ export async function syncDraftTagsAndEdges(
   }
 }
 
-// Gets knowledge type, prerequisites, todos, disclaimers, and whether the guide is a variant.
+// Gets knowledge type, prerequisites, todos, and whether the guide is a variant.
 async function loadDraftContext(supabase: DB, guideId: string) {
   const empty = {
     knowledge_type: null,
@@ -243,7 +246,6 @@ async function loadDraftContext(supabase: DB, guideId: string) {
     variant_slug: null,
     prerequisites: [],
     todos: [],
-    disclaimers: [] as DisclaimerSlug[],
   };
   const { data: guide, error: guideError } = await supabase
     .from("guides")
@@ -257,7 +259,7 @@ async function loadDraftContext(supabase: DB, guideId: string) {
   if (!guide) return empty;
   const baseId = guide.guide_base_id;
 
-  const [baseRes, edgeRes, todoRes, disclaimers] = await Promise.all([
+  const [baseRes, edgeRes, todoRes] = await Promise.all([
     supabase
       .from("guide_bases")
       .select("knowledge_type, slug, canonical_guide_id")
@@ -273,7 +275,6 @@ async function loadDraftContext(supabase: DB, guideId: string) {
       .select("title, summary")
       .eq("dependent_guide_base_id", baseId)
       .eq("status", "open"),
-    loadDisclaimers(supabase, baseId),
   ]);
 
   if (baseRes.error || edgeRes.error || todoRes.error) {
@@ -295,7 +296,6 @@ async function loadDraftContext(supabase: DB, guideId: string) {
       title: t.title,
       summary: t.summary,
     })),
-    disclaimers,
   };
 }
 
@@ -320,8 +320,8 @@ async function loadRevisedFromCaseId(
   return data?.case_id ?? null;
 }
 
-// Includes revision with subject tags, and draft context (knowledge type,
-// prerequisites, todos).
+// Includes revision with subject tags and proposed disclaimers, and draft
+// context (knowledge type, prerequisites, todos).
 export async function getRevision(supabase: DB, id: string) {
   const { data, error } = await supabase
     .from("guide_revisions")
@@ -336,9 +336,10 @@ export async function getRevision(supabase: DB, id: string) {
   if (!data) throw new ServiceError("Revision not found", 404);
   const { revised_from_revision_id, ...revision } = data;
   const subjects = await loadRevisionTags(supabase, id);
-  const [context, revised_from_case_id] = await Promise.all([
+  const [context, revised_from_case_id, disclaimers] = await Promise.all([
     loadDraftContext(supabase, revision.guide_id),
     loadRevisedFromCaseId(supabase, revised_from_revision_id),
+    loadRevisionDisclaimers(supabase, id),
   ]);
   const {
     knowledge_type,
@@ -347,7 +348,6 @@ export async function getRevision(supabase: DB, id: string) {
     variant_slug,
     prerequisites,
     todos,
-    disclaimers,
   } = context;
   return {
     revision,
@@ -450,15 +450,9 @@ export async function updateRevision(
     requests,
   });
 
+  // Proposed on the revision; approval copies them onto the guide base.
   if (disclaimers !== undefined) {
-    const base = await resolveRevisionBase(supabase, id);
-    if (base.status !== "draft") {
-      throw new ServiceError(
-        "Disclaimers can't be changed from a revision once the guide is published",
-        422
-      );
-    }
-    await replaceDisclaimers(supabase, base.id, disclaimers);
+    await replaceRevisionDisclaimers(supabase, id, disclaimers);
   }
 
   const subjects = await loadRevisionTags(supabase, id);
@@ -546,9 +540,10 @@ export async function submitRevision(supabase: DB, id: string) {
 // hidden revision 404s. Each versioned text field (title/summary/body) is
 // compared with strict equality; when changed, `diff` carries a unified-diff
 // style string (lines starting with " " are unchanged, "-" only in `from`,
-// "+" only in `to`). null === null is treated as unchanged.
+// "+" only in `to`). null === null is treated as unchanged. Disclaimers are
+// compared as a set.
 export async function diffRevisions(supabase: DB, id: string, otherId: string) {
-  const [fromRes, toRes] = await Promise.all([
+  const [fromRes, toRes, fromDisclaimers, toDisclaimers] = await Promise.all([
     supabase
       .from("guide_revisions")
       .select(DIFF_REVISION_DETAIL)
@@ -559,6 +554,8 @@ export async function diffRevisions(supabase: DB, id: string, otherId: string) {
       .select(DIFF_REVISION_DETAIL)
       .eq("id", otherId)
       .maybeSingle(),
+    loadRevisionDisclaimers(supabase, id),
+    loadRevisionDisclaimers(supabase, otherId),
   ]);
 
   if (fromRes.error) {
@@ -583,6 +580,10 @@ export async function diffRevisions(supabase: DB, id: string, otherId: string) {
       summary: diffField(from.summary, to.summary),
       body: diffField(from.body, to.body),
     },
+    disclaimers: diffSet(
+      sortDisclaimers(fromDisclaimers),
+      sortDisclaimers(toDisclaimers)
+    ),
   };
 }
 
@@ -623,6 +624,13 @@ export async function diffWithPrevious(supabase: DB, id: string) {
   if (!prev) throw new ServiceError("No previous revision found", 404);
 
   return diffRevisions(supabase, prev.id, id);
+}
+
+// Canonical slug order, so a diff reads the same whichever order rows came back.
+function sortDisclaimers(slugs: DisclaimerSlug[]) {
+  return [...slugs].sort(
+    (a, b) => disclaimerSlugs.indexOf(a) - disclaimerSlugs.indexOf(b)
+  );
 }
 
 // Project a revision row down to the RevisionRef shape used in diff headers.

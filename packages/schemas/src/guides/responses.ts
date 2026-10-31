@@ -223,6 +223,14 @@ export const reviewCaseIdResponseSchema = z.strictObject({
   review_case_id: z.uuid(),
 });
 
+// Disclaimers are a set, so they diff as membership rather than as lines.
+export const disclaimerDiffSchema = z.object({
+  changed: z.boolean(),
+  added: z.array(disclaimerSchema),
+  removed: z.array(disclaimerSchema),
+  unchanged: z.array(disclaimerSchema),
+});
+
 export const guideRevisionDiffResponseSchema = z.strictObject({
   from: revisionRefSchema,
   to: revisionRefSchema,
@@ -231,8 +239,10 @@ export const guideRevisionDiffResponseSchema = z.strictObject({
     summary: fieldDiffSchema,
     body: fieldDiffSchema,
   }),
+  disclaimers: disclaimerDiffSchema,
 });
 
 export type Variant = z.infer<typeof variantSchema>;
 export type Vote = z.infer<typeof voteSchema>;
 export type GuideRevision = z.infer<typeof guideRevisionSchema>;
+export type DisclaimerDiff = z.infer<typeof disclaimerDiffSchema>;

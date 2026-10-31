@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
+import { DisclaimersField } from "@/components/contribute/DisclaimersField";
 
 type SubjectOption = {
   id: string;
@@ -30,14 +31,6 @@ type GuideOption = {
   title: string | null;
   summary: string | null;
 };
-
-const DISCLAIMER_OPTIONS = [
-  { value: "medical", label: "Medical" },
-  { value: "financial", label: "Financial" },
-  { value: "legal", label: "Legal" },
-  { value: "mature", label: "Mature age-restricted 18+ content" },
-  { value: "profanity", label: "Profanity" },
-];
 
 /**
  * A guide being edited inside the contribution flow.
@@ -180,28 +173,10 @@ export const GuideDetails = ({
           </>
         )}
 
-        <Field className="py-2">
-          <div className="space-y-1">
-            <FieldLabel className="font-mono text-[14px] tracking-[0.08em] uppercase">
-              Disclaimers
-            </FieldLabel>
-
-            <FieldDescription className="text-xs">
-              Select content-category disclaimers that apply to this guide.
-            </FieldDescription>
-          </div>
-
-          <Combobox
-            multiple
-            items={DISCLAIMER_OPTIONS}
-            value={guideContData.disclaimers}
-            onValueChange={(disclaimers) =>
-              onGuideChange({
-                disclaimers: disclaimers as GuideContribution["disclaimers"],
-              })
-            }
-          />
-        </Field>
+        <DisclaimersField
+          value={guideContData.disclaimers}
+          onChange={(disclaimers) => onGuideChange({ disclaimers })}
+        />
 
         <Field className="space-y-2">
           <div className="space-y-1">

@@ -41,6 +41,7 @@ export type RevisionDraftSnapshot = {
   body: string | null;
   change_summary: string | null;
   subjectIds: Array<string>;
+  disclaimers: Array<string>;
 };
 
 // The fields a revision draft carries at submit time. Mirrors the shape the
@@ -52,11 +53,12 @@ export type RevisionDraft = {
   change_summary: string | null;
   tags: Array<string>;
   newSubjects: Array<{ name: string; summary: string | null }>;
+  disclaimers: Array<string>;
 };
 
 // True when the draft is byte-for-byte identical to the live revision it was
 // seeded from (change summary included), so a submit with no real edits can be
-// blocked. Tag order is ignored; new subjects count as a change.
+// blocked. Tag and disclaimer order is ignored; new subjects count as a change.
 export function isRevisionDraftUnchanged(
   original: RevisionDraftSnapshot,
   draft: RevisionDraft
@@ -64,17 +66,21 @@ export function isRevisionDraftUnchanged(
   const sameField = (a: string | null, b: string | null) =>
     (a ?? "") === (b ?? "");
 
-  const originalTags = [...original.subjectIds].sort();
-  const draftTags = [...draft.tags].sort();
-  const sameTags =
-    originalTags.length === draftTags.length &&
-    originalTags.every((id, i) => id === draftTags[i]);
+  const sameSet = (a: Array<string>, b: Array<string>) => {
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return (
+      sortedA.length === sortedB.length &&
+      sortedA.every((item, i) => item === sortedB[i])
+    );
+  };
 
   return (
     sameField(original.title, draft.title) &&
     sameField(original.summary, draft.summary) &&
     sameField(original.body, draft.body) &&
-    sameTags &&
+    sameSet(original.subjectIds, draft.tags) &&
+    sameSet(original.disclaimers, draft.disclaimers) &&
     draft.newSubjects.length === 0
   );
 }
