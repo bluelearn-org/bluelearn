@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { userRoleSchema } from "../dashboard/enums";
 
-export const roleSchema = z.enum(["verifier", "moderator", "admin"]);
+export const roleSchema = userRoleSchema;
 
 export const activityContentKindSchema = z.enum([
   "guide",
