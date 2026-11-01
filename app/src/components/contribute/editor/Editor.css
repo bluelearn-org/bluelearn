@@ -680,6 +680,14 @@ math-field::part(menu-toggle):hover {
   color: var(--foreground) !important;
 }
 
+.toolbar-popover-item:disabled,
+.toolbar-popover-item:disabled:hover {
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  cursor: not-allowed !important;
+  opacity: 0.5 !important;
+}
+
 .toolbar-popover-header {
   font-size: 0.625rem !important;
   text-transform: uppercase !important;
