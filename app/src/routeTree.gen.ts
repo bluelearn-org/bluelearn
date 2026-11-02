@@ -32,6 +32,7 @@ import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings.appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings.account'
 import { Route as ReviewCaseIdRouteImport } from './routes/review.$caseId'
@@ -164,6 +165,11 @@ const SettingsProfileRoute = SettingsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -350,6 +358,7 @@ export interface FileRoutesById {
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -393,6 +402,7 @@ export interface FileRouteTypes {
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/subjects/$slug'
     | '/dashboard/'
@@ -427,6 +437,7 @@ export interface FileRouteTypes {
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/subjects/$slug'
     | '/dashboard'
@@ -468,6 +479,7 @@ export interface FileRouteTypes {
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/subjects/$slug'
     | '/dashboard/'
@@ -668,6 +680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsProfileRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/appearance': {
       id: '/settings/appearance'
       path: '/appearance'
@@ -857,6 +876,7 @@ const ReviewRouteWithChildren =
 interface SettingsRouteChildren {
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -864,6 +884,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsProfileRoute: SettingsProfileRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }

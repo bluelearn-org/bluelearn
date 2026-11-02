@@ -660,3 +660,12 @@ export async function sweepExpiredReviewSeats(supabase: DB) {
     console.error(error);
   }
 }
+
+export async function notifyReviewDeadlines(supabase: DB) {
+  const { error } = await supabase.rpc("notify_review_deadlines");
+
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to send review deadline notifications", 500);
+  }
+}
