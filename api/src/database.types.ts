@@ -1144,6 +1144,46 @@ export type Database = {
           },
         ]
       }
+      review_deadline_notifications: {
+        Row: {
+          expires_at: string
+          member_id: string
+          seat_id: string
+        }
+        Insert: {
+          expires_at: string
+          member_id: string
+          seat_id: string
+        }
+        Update: {
+          expires_at?: string
+          member_id?: string
+          seat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_deadline_notifications_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_deadline_notifications_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_deadline_notifications_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "panel_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_decision_reasons: {
         Row: {
           decision_id: string
@@ -1614,6 +1654,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_review_deadlines: { Args: never; Returns: undefined }
       objective_closure: {
         Args: { p_targets: string[] }
         Returns: {

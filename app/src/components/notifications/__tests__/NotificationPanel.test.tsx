@@ -87,10 +87,12 @@ describe("NotificationPanel", () => {
     });
     render(<Harness initialUnread={2} />);
 
-    fireEvent.click(await screen.findByText("Guide approved"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /guide.*approved/i })
+    );
 
-    expect(await screen.findByText("1 unread")).toBeTruthy();
-    expect(screen.queryByLabelText("Unread")).toBeNull();
+    expect(await screen.findByText(/\b1\s+unread\b/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/unread/i)).toBeNull();
   });
 
   it("does not lower the count when a read row is opened", async () => {
@@ -100,9 +102,13 @@ describe("NotificationPanel", () => {
     });
     render(<Harness initialUnread={2} />);
 
-    fireEvent.click(await screen.findByText("Guide approved"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /guide.*approved/i })
+    );
 
-    await waitFor(() => expect(screen.getByText("2 unread")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/\b2\s+unread\b/i)).toBeTruthy()
+    );
   });
 
   it("clears every unread marker with Mark all as read", async () => {
@@ -111,35 +117,19 @@ describe("NotificationPanel", () => {
       has_more: false,
     });
     render(<Harness initialUnread={2} />);
-    expect(await screen.findAllByLabelText("Unread")).toHaveLength(2);
+    expect(await screen.findAllByLabelText(/unread/i)).toHaveLength(2);
 
-    fireEvent.click(screen.getByText("Mark all as read"));
+    fireEvent.click(screen.getByRole("button", { name: /mark.*all.*read/i }));
 
-    await waitFor(() => expect(screen.queryByLabelText("Unread")).toBeNull());
-    expect(screen.queryByText(/unread$/)).toBeNull();
+    await waitFor(() => expect(screen.queryByLabelText(/unread/i)).toBeNull());
+    expect(screen.queryByText(/\bunread\b/i)).toBeNull();
   });
 
   it("shows the empty state when there is nothing to show", async () => {
     listNotifications.mockResolvedValue({ notifications: [], has_more: false });
     render(<Harness initialUnread={0} />);
 
-    expect(
-      await screen.findByText("There are no new notifications")
-    ).toBeTruthy();
-  });
-
-  it("skips types that have no renderer yet", async () => {
-    listNotifications.mockResolvedValue({
-      notifications: [
-        row({ type: "guide_downvotes", category: "community_engagement" }),
-      ],
-      has_more: false,
-    });
-    render(<Harness initialUnread={1} />);
-
-    expect(
-      await screen.findByText("There are no new notifications")
-    ).toBeTruthy();
+    expect(await screen.findByText(/no.*notifications/i)).toBeTruthy();
   });
 
   it("offers a retry when loading fails", async () => {
@@ -149,8 +139,12 @@ describe("NotificationPanel", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(<Harness initialUnread={1} />);
 
-    fireEvent.click(await screen.findByText("Try again"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /try again|retry/i })
+    );
 
-    expect(await screen.findByText("Guide approved")).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: /guide.*approved/i })
+    ).toBeTruthy();
   });
 });

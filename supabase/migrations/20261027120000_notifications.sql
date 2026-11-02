@@ -1,5 +1,3 @@
--- In-app notifications.
---
 -- public.notify() is the only writer. It runs inside the transaction that
 -- caused the event, so a notification commits or rolls back with its event.
 -- To add a notification type, follow "To add a type" in
@@ -88,7 +86,6 @@ as $$
 declare
   v_enabled boolean;
 begin
-  -- Nobody hears about their own actions.
   if p_recipient_id is null or p_recipient_id = p_actor_id then
     return;
   end if;
@@ -229,7 +226,6 @@ create trigger votes_notify_guide_upvote
   when (new.direction = 'up')
   execute function public.notify_guide_upvote();
 
--- Row-level security policies
 alter table public.notification_types enable row level security;
 alter table public.notifications enable row level security;
 alter table public.notification_preferences enable row level security;

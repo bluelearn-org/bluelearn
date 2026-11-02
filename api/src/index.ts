@@ -13,6 +13,7 @@ import { ServiceError } from "./lib/service-error";
 import {
   assemblePendingPanels,
   sweepExpiredReviewSeats,
+  notifyReviewDeadlines,
 } from "./services/review.service";
 import { promoteAllCanonicals } from "./services/promotion.service";
 import type { Database } from "./database.types";
@@ -88,6 +89,7 @@ async function scheduled(event: ScheduledController, env: Bindings) {
     await Promise.allSettled([
       assemblePendingPanels(supabase),
       sweepExpiredReviewSeats(supabase),
+      notifyReviewDeadlines(supabase),
     ]);
   }
   if (event.cron === "0 */12 * * *") await promoteAllCanonicals(supabase);

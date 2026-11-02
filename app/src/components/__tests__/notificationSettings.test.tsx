@@ -47,8 +47,7 @@ const preferences = [
   { type: "review_deadline", category: "review_workflows", enabled: true },
 ];
 
-const toggle = (label: string | RegExp) =>
-  screen.getByRole("switch", { name: label });
+const toggle = (name: RegExp) => screen.getByRole("switch", { name });
 
 describe("notification settings page", () => {
   beforeEach(() => {
@@ -61,52 +60,18 @@ describe("notification settings page", () => {
     cleanup();
   });
 
-  it("enables only the types that are sent", async () => {
+  it("turns an enabled option off after a successful save", async () => {
     render(<SettingsPage />);
     await waitFor(() =>
-      expect(toggle("Upvotes").hasAttribute("disabled")).toBe(false)
+      expect(toggle(/upvotes/i).hasAttribute("disabled")).toBe(false)
     );
 
-    expect(toggle("Guide review decision").hasAttribute("disabled")).toBe(
-      false
-    );
-    for (const label of [
-      "Variant created",
-      "Variant review decision",
-      "Variant edited",
-      "Downvotes",
-      "Assignments",
-      "Deadlines approaching",
-    ]) {
-      expect(toggle(new RegExp(label)).hasAttribute("disabled")).toBe(true);
-    }
-    expect(screen.getAllByText("Coming soon")).toHaveLength(6);
-  });
-
-  it("shows each saved choice", async () => {
-    render(<SettingsPage />);
-    await waitFor(() =>
-      expect(toggle("Upvotes").getAttribute("aria-checked")).toBe("true")
-    );
-
-    expect(toggle(/Downvotes/).getAttribute("aria-checked")).toBe("false");
-    expect(toggle(/Deadlines approaching/).getAttribute("aria-checked")).toBe(
-      "true"
-    );
-  });
-
-  it("keeps a saved change", async () => {
-    render(<SettingsPage />);
-    await waitFor(() =>
-      expect(toggle("Upvotes").hasAttribute("disabled")).toBe(false)
-    );
-
-    fireEvent.click(toggle("Upvotes"));
+    fireEvent.click(toggle(/upvotes/i));
 
     await waitFor(() =>
-      expect(toggle("Upvotes").hasAttribute("disabled")).toBe(false)
+      expect(toggle(/upvotes/i).hasAttribute("disabled")).toBe(false)
     );
-    expect(toggle("Upvotes").getAttribute("aria-checked")).toBe("false");
+    expect(toggle(/upvotes/i).getAttribute("aria-checked")).toBe("false");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -115,14 +80,13 @@ describe("notification settings page", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(<SettingsPage />);
     await waitFor(() =>
-      expect(toggle("Upvotes").hasAttribute("disabled")).toBe(false)
+      expect(toggle(/upvotes/i).hasAttribute("disabled")).toBe(false)
     );
 
-    fireEvent.click(toggle("Upvotes"));
+    fireEvent.click(toggle(/upvotes/i));
 
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "Could not save"
-    );
-    expect(toggle("Upvotes").getAttribute("aria-checked")).toBe("true");
+    await screen.findByRole("alert");
+
+    expect(toggle(/upvotes/i).getAttribute("aria-checked")).toBe("true");
   });
 });

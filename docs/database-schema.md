@@ -375,7 +375,7 @@ The manifest of object-storage assets, so a purge can delete media reliably inst
 
 ### `notification_types`, `notifications`, and `notification_preferences`
 
-In-app notifications. The function `public.notify()` is the only writer of `notifications`. It runs inside the transaction of the event, so a notification commits or rolls back with that event.
+The function `public.notify()` is the only writer of in-app notifications. Each notification commits or rolls back with its event.
 
 `notification_types` is the registry. It has one row for each type:
 
@@ -404,6 +404,27 @@ Constraints:
 - A partial unique index on `(recipient_id, type, group_key)` covers unread rows only. `notify()` adds to the open row. When the recipient reads that row, the next event starts a new row.
 - `notify()` skips a recipient who is also the actor. It also skips a recipient who turned the type off. It raises an error for a type that is not in the registry.
 - Clients cannot run `notify()`. A recipient can update only `read_at`.
+
+Events:
+
+| Type | Event | Recipient |
+| --- | --- | --- |
+| `guide_review_decision` | A panel approves or rejects a canonical guide revision. | The revision author. |
+| `variant_created` | A variant becomes public for the first time. | The canonical guide author. |
+| `variant_review_decision` | A panel approves or rejects a variant revision. | The revision author. |
+| `variant_edited` | A new revision becomes the public revision of a variant. | The original variant author. |
+| `guide_upvotes` | A vote becomes an upvote. | The guide author. |
+| `guide_downvotes` | A vote becomes a downvote. | The guide author. |
+| `review_assignment` | A reviewer gets a new seat or replaces another reviewer in an existing seat. | The assigned reviewer. |
+| `review_deadline` | An assigned seat has an expiry within the next 48 hours. | The assigned reviewer. |
+
+Draft changes do not send variant notifications. Upvotes and downvotes use separate unread groups for each guide.
+
+The five-minute worker calls `notify_review_deadlines()`. The function skips expired seats, completed seats, replaced seats, closed panels, and cases outside review.
+
+`review_deadline_notifications` records each processed reminder. Its primary key is `(seat_id, member_id, expires_at)`. Only the service role can read or change these records.
+
+The reminder record and its notification share one transaction. A repeated call cannot send the same reminder after the recipient reads or removes the notification. A new assignee or expiry permits a new reminder. A disabled preference consumes the reminder without a notification. Enabling that preference later does not replay the event.
 
 To add a type:
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createClient } from "@supabase/supabase-js";
+import type { NotificationsResponse } from "@bluelearn/schemas";
 import app from "../src/index";
 import type { Database } from "../src/database.types";
 import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
@@ -18,23 +19,12 @@ import {
 } from "./factories/reviews";
 import { expectToMatchSpec } from "./openapi";
 
-type ListBody = {
-  notifications: Array<{
-    id: string;
-    type: string;
-    category: string;
-    actor: { id: string; username: string } | null;
-    count: number;
-    data: Record<string, unknown>;
-    read_at: string | null;
-  }>;
-  has_more: boolean;
-};
-
 async function list(token: string, query = "") {
   const res = await app.request(`/notifications${query}`, auth(token), env);
+
   expect(res.status).toBe(200);
-  return (await res.json()) as ListBody;
+
+  return (await res.json()) as NotificationsResponse;
 }
 
 async function unreadCount(token: string) {
@@ -43,7 +33,9 @@ async function unreadCount(token: string) {
     auth(token),
     env
   );
+
   expect(res.status).toBe(200);
+
   return ((await res.json()) as { count: number }).count;
 }
 
@@ -66,6 +58,7 @@ async function seedCaseForAuthor(authorId: string, title: string) {
   });
   await createPanelMember(panel.id, panelist.userId);
   await createGuideReviewCase(reviewCase.id, revision.id);
+
   return { reviewCase, panelist };
 }
 
@@ -85,6 +78,7 @@ async function decide(
     ),
     env
   );
+
   expect(res.status).toBe(200);
 }
 
@@ -112,6 +106,7 @@ describe("guide_review_decision", () => {
     await decide(panelist.token, reviewCase.id, "approved");
 
     const body = await list(author.token);
+
     expect(body.notifications).toHaveLength(1);
     expect(body.notifications[0]).toMatchObject({
       type: "guide_review_decision",
@@ -137,6 +132,7 @@ describe("guide_review_decision", () => {
     await decide(panelist.token, reviewCase.id, "rejected");
 
     const body = await list(author.token);
+
     expect(body.notifications.map((n) => n.data.outcome)).toEqual(["rejected"]);
   });
 
@@ -184,6 +180,7 @@ describe("guide_upvotes", () => {
     await createVote(second.userId, guide.id);
 
     const body = await list(author.token);
+
     expect(body.notifications).toHaveLength(1);
     expect(body.notifications[0]).toMatchObject({
       type: "guide_upvotes",
@@ -219,6 +216,7 @@ describe("guide_upvotes", () => {
     await createVote((await makeUser()).userId, guide.id);
 
     const body = await list(author.token);
+
     expect(body.notifications).toHaveLength(2);
     expect(body.notifications[0]).toMatchObject({ count: 1, read_at: null });
     expect(body.notifications[1].id).toBe(read.id);
@@ -250,6 +248,7 @@ describe("guide_upvotes", () => {
       .throwOnError();
 
     const body = await list(author.token);
+
     expect(body.notifications.map((n) => n.count)).toEqual([1]);
   });
 });
@@ -257,6 +256,7 @@ describe("guide_upvotes", () => {
 describe("GET /notifications", () => {
   it("401s without a token", async () => {
     const res = await app.request("/notifications", {}, env);
+
     expect(res.status).toBe(401);
     await expectToMatchSpec(res, "GET", "/notifications");
   });
@@ -277,7 +277,7 @@ describe("GET /notifications", () => {
       env
     );
     await expectToMatchSpec(res, "GET", "/notifications");
-    const first = (await res.json()) as ListBody;
+    const first = (await res.json()) as NotificationsResponse;
     const second = await list(author.token, "?limit=2&page=2");
 
     expect(first.has_more).toBe(true);
@@ -303,6 +303,7 @@ describe("GET /notifications", () => {
       author.token,
       "?category=community_engagement"
     );
+
     expect(community.notifications.map((n) => n.type)).toEqual([
       "guide_upvotes",
     ]);
@@ -313,6 +314,7 @@ describe("GET /notifications", () => {
       env
     );
     const unread = await list(author.token, "?filter=unread");
+
     expect(unread.notifications.map((n) => n.type)).toEqual([
       "guide_review_decision",
     ]);
@@ -500,18 +502,20 @@ describe("database guards", () => {
     expect(forged.error?.code).toBe("42501");
     expect(read.error).toBeNull();
     const [after] = (await list(author.token)).notifications;
+
     expect(after.data.title).toBe(target.data.title);
     expect(after.read_at).not.toBeNull();
   });
 
   it("refuses an unknown type inside notify()", async () => {
-    const { userId } = await makeUser();
+    const { userId, token } = await makeUser();
 
     const { error } = await admin.rpc("notify", {
       p_recipient_id: userId,
       p_type: "carrier_pigeon",
     });
 
-    expect(error?.message).toContain("Unknown notification type");
+    expect(error?.code).toBe("22023");
+    expect(await unreadCount(token)).toBe(0);
   });
 });

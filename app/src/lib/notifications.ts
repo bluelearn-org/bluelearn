@@ -1,4 +1,13 @@
-import { CircleCheck, CircleX, ThumbsUp } from "lucide-react";
+import {
+  CircleCheck,
+  CircleX,
+  ClipboardList,
+  Clock,
+  GitBranch,
+  Pencil,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
   Notification,
@@ -6,9 +15,8 @@ import type {
   NotificationType,
 } from "@bluelearn/schemas";
 
-// The app half of a notification type. The database half is a row in
-// public.notification_types and a public.notify() call. A type without a
-// renderer is not sent yet: the bell skips it and its setting is disabled.
+// Each type pairs a database registry entry and event source with a renderer.
+// The bell hides types without a renderer, and settings disables their toggles.
 
 export type NotificationTarget =
   | { to: "/review/$caseId"; params: { caseId: string } }
@@ -31,43 +39,58 @@ type Renderer = (notification: Notification) => NotificationView;
 export const notificationRenderers: Partial<
   Record<NotificationType, Renderer>
 > = {
-  guide_review_decision: ({ data }) => {
-    const approved = data.outcome === "approved";
-    const guideTitle = text(data.title) ?? "Untitled";
-    const caseId = text(data.case_id);
+  guide_review_decision: (notification) =>
+    reviewDecision(notification, "guide"),
+  variant_review_decision: (notification) =>
+    reviewDecision(notification, "variant"),
+  guide_upvotes: (notification) => votes(notification, "up"),
+  guide_downvotes: (notification) => votes(notification, "down"),
+
+  variant_created: ({ data, actor }) => ({
+    title: "New variant",
+    body: `${actorName(actor)} published a variant "${text(data.title) ?? "Untitled"}" of your guide`,
+    target: guideTarget(data),
+    icon: GitBranch,
+  }),
+
+  variant_edited: ({ data, actor }) => ({
+    title: "Variant edited",
+    body: `${actorName(actor)} edited your variant "${text(data.title) ?? "Untitled"}"`,
+    target: guideTarget(data),
+    icon: Pencil,
+  }),
+
+  review_assignment: ({ data }) => ({
+    title: "Review assigned",
+    body: `You have been assigned to review "${text(data.title) ?? "Untitled"}"`,
+    target: reviewTarget(data),
+    icon: ClipboardList,
+  }),
+
+  review_deadline: ({ data }) => {
+    const title = text(data.title) ?? "Untitled";
+    const expiresAt = text(data.expires_at);
+    const expiry = expiresAt ? new Date(expiresAt) : null;
+
+    const deadline =
+      expiry && Number.isFinite(expiry.getTime())
+        ? expiry.toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZoneName: "short",
+          })
+        : null;
 
     return {
-      title: approved ? "Guide approved" : "Guide rejected",
-      body: approved
-        ? `Your guide "${guideTitle}" has been approved`
-        : `Your guide "${guideTitle}" was not approved`,
-      target: caseId ? { to: "/review/$caseId", params: { caseId } } : null,
-      icon: approved ? CircleCheck : CircleX,
-    };
-  },
-
-  guide_upvotes: ({ data, actor, count }) => {
-    const guideTitle = text(data.title) ?? "your guide";
-    const slug = text(data.base_slug);
-    const variantSlug = text(data.variant_slug);
-    const who = actor ? `@${actor.username}` : "Someone";
-    const others = count - 1;
-    const otherVoters = others === 1 ? "1 other" : `${others} others`;
-
-    return {
-      title: count === 1 ? "New upvote" : `${count} new upvotes`,
-      body:
-        others === 0
-          ? `${who} upvoted "${guideTitle}"`
-          : `${who} and ${otherVoters} upvoted "${guideTitle}"`,
-      target:
-        slug && variantSlug
-          ? {
-              to: "/guides/$slug/$variantSlug",
-              params: { slug, variantSlug },
-            }
-          : null,
-      icon: ThumbsUp,
+      title: "Review deadline approaching",
+      body: deadline
+        ? `Your review of "${title}" is due ${deadline}`
+        : `The deadline for your review of "${title}" is approaching`,
+      target: reviewTarget(data),
+      icon: Clock,
     };
   },
 };
@@ -78,6 +101,71 @@ export function renderNotification(notification: Notification) {
 
 export function isNotificationTypeLive(type: NotificationType) {
   return type in notificationRenderers;
+}
+
+function reviewDecision(
+  { data }: Notification,
+  kind: "guide" | "variant"
+): NotificationView {
+  const approved = data.outcome === "approved";
+  const title = text(data.title) ?? "Untitled";
+  const label = kind === "guide" ? "Guide" : "Variant";
+
+  return {
+    title: `${label} ${approved ? "approved" : "rejected"}`,
+    body: approved
+      ? `Your ${kind} "${title}" has been approved`
+      : `Your ${kind} "${title}" was not approved`,
+    target: reviewTarget(data),
+    icon: approved ? CircleCheck : CircleX,
+  };
+}
+
+function votes(
+  { data, actor, count }: Notification,
+  direction: "up" | "down"
+): NotificationView {
+  const title = text(data.title) ?? "your guide";
+  const who = actorName(actor);
+  const others = count - 1;
+  const otherVoters = others === 1 ? "1 other" : `${others} others`;
+  const verb = `${direction}voted`;
+
+  return {
+    title:
+      count === 1 ? `New ${direction}vote` : `${count} new ${direction}votes`,
+    body:
+      others === 0
+        ? `${who} ${verb} "${title}"`
+        : `${who} and ${otherVoters} ${verb} "${title}"`,
+    target: guideTarget(data),
+    icon: direction === "up" ? ThumbsUp : ThumbsDown,
+  };
+}
+
+function actorName(actor: Notification["actor"]) {
+  const username = text(actor?.username);
+
+  return username ? `@${username}` : "Someone";
+}
+
+function guideTarget(data: Notification["data"]): NotificationTarget | null {
+  const slug = text(data.base_slug);
+  const variantSlug = text(data.variant_slug);
+
+  return slug && variantSlug
+    ? { to: "/guides/$slug/$variantSlug", params: { slug, variantSlug } }
+    : null;
+}
+
+function reviewTarget(data: Notification["data"]): NotificationTarget | null {
+  const caseId = text(data.case_id);
+
+  return caseId ? { to: "/review/$caseId", params: { caseId } } : null;
+}
+
+function text(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 // Settings page order and wording, from the design in issue #531.
@@ -119,7 +207,3 @@ export const notificationSections: Array<{
     ],
   },
 ];
-
-function text(value: unknown) {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
