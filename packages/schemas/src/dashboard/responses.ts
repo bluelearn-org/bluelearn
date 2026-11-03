@@ -62,3 +62,17 @@ export const assignmentsTableResponseSchema = z.object({
   data: z.array(assignmentRowSchema),
   total: z.number().int(),
 });
+
+export const dashboardSubjectSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  summary: z.string().nullable(),
+  slug: z.string().nullable(),
+  status: z.enum(["draft", "published"]),
+  date_created: z.string(),
+});
+export const subjectsTableResponseSchema = z.object({
+  data: z.array(dashboardSubjectSchema),
+  total: z.number().int(),
+});
+export type DashboardSubject = z.infer<typeof dashboardSubjectSchema>;
