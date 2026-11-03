@@ -20,7 +20,10 @@ import {
 import { claimTodos } from "./todo.service";
 import { readingMinutes } from "../lib/reading";
 import { loadUsernames } from "./identity.service";
-import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
+import {
+  loadDisclaimers,
+  replaceRevisionDisclaimers,
+} from "./disclaimer.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -235,9 +238,9 @@ export async function createGuide(
     requests,
   });
 
+  // Proposed on the draft; approval copies them onto the new guide base.
   if (disclaimers.length > 0) {
-    const base = await resolveRevisionBase(supabase, revision_id);
-    await replaceDisclaimers(supabase, base.id, disclaimers);
+    await replaceRevisionDisclaimers(supabase, revision_id, disclaimers);
   }
 
   if (requestClaims.length > 0) {
@@ -581,6 +584,12 @@ export async function addGuideVariant(
     tags: input.tags,
     newSubjects: input.newSubjects,
   });
+
+  // The draft starts from the base's disclaimers; only an explicit set replaces
+  // them.
+  if (input.disclaimers !== undefined) {
+    await replaceRevisionDisclaimers(supabase, revision_id, input.disclaimers);
+  }
 
   return { revision_id };
 }

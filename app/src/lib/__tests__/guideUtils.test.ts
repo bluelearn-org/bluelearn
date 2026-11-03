@@ -9,6 +9,7 @@ const snapshot: RevisionDraftSnapshot = {
   body: "# Binary Search\n\nHalve the range each step.",
   change_summary: null,
   subjectIds: ["sub-1", "sub-2"],
+  disclaimers: ["legal", "medical"],
 };
 
 const identicalDraft: RevisionDraft = {
@@ -18,6 +19,7 @@ const identicalDraft: RevisionDraft = {
   change_summary: null,
   tags: ["sub-2", "sub-1"],
   newSubjects: [],
+  disclaimers: ["medical", "legal"],
 };
 
 describe("isRevisionDraftUnchanged", () => {
@@ -66,6 +68,24 @@ describe("isRevisionDraftUnchanged", () => {
       isRevisionDraftUnchanged(snapshot, {
         ...identicalDraft,
         tags: ["sub-1"],
+      })
+    ).toBe(false);
+  });
+
+  it("returns false when a disclaimer was added", () => {
+    expect(
+      isRevisionDraftUnchanged(snapshot, {
+        ...identicalDraft,
+        disclaimers: ["legal", "medical", "financial"],
+      })
+    ).toBe(false);
+  });
+
+  it("returns false when a disclaimer was removed", () => {
+    expect(
+      isRevisionDraftUnchanged(snapshot, {
+        ...identicalDraft,
+        disclaimers: ["legal"],
       })
     ).toBe(false);
   });

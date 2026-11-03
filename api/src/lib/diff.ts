@@ -28,6 +28,20 @@ export function diffField(from: string | null, to: string | null): FieldDiff {
   };
 }
 
+// Compare two unordered sets, keeping each side in `from`/`to` order.
+export function diffSet<T>(from: T[], to: T[]) {
+  const fromSet = new Set(from);
+  const toSet = new Set(to);
+  const added = to.filter((item) => !fromSet.has(item));
+  const removed = from.filter((item) => !toSet.has(item));
+  return {
+    changed: added.length > 0 || removed.length > 0,
+    added,
+    removed,
+    unchanged: from.filter((item) => toSet.has(item)),
+  };
+}
+
 // LCS-based diff over any two ordered sequences, producing a
 // structured token list.
 export function diffSequences<T>(

@@ -269,7 +269,8 @@ function EditGuidePage() {
   /*
    * Only revision fields are persisted when editing
    * Type, prerequisites and TODO prerequisites belong to
-   * guide base and not submitted as part of a revision
+   * guide base and not submitted as part of a revision.
+   * Disclaimers are proposed on the revision and applied on approval.
    */
   const draftFields = () => ({
     title: guideContData.title || null,
@@ -294,6 +295,8 @@ function EditGuidePage() {
         name: subject.name,
         summary: subject.summary || null,
       })),
+
+    disclaimers: guideContData.disclaimers,
   });
 
   // revent multiple simultaneous revision creations
@@ -387,6 +390,7 @@ function EditGuidePage() {
             body: snapshot.revision.body,
             change_summary: snapshot.revision.change_summary,
             subjectIds: snapshot.subjects.map((subject) => subject.id),
+            disclaimers: snapshot.disclaimers,
           },
           fields
         )

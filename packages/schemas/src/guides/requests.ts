@@ -67,6 +67,8 @@ export const createVariantSchema = revisionContentSchema.extend({
   title: guideTitleSchema.nullish(),
   tags: z.array(z.uuid()).default([]),
   newSubjects: z.array(newSubjectSchema).default([]),
+  // Omitted keeps the base guide's disclaimers.
+  disclaimers: z.array(disclaimerSchema).optional(),
 });
 
 // Edits to a draft revision before it goes for review. Send only the fields you

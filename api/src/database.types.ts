@@ -246,6 +246,43 @@ export type Database = {
           },
         ]
       }
+      guide_revision_disclaimers: {
+        Row: {
+          disclaimer_id: string
+          guide_revision_id: string
+        }
+        Insert: {
+          disclaimer_id: string
+          guide_revision_id: string
+        }
+        Update: {
+          disclaimer_id?: string
+          guide_revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_revision_disclaimers_disclaimer_id_fkey"
+            columns: ["disclaimer_id"]
+            isOneToOne: false
+            referencedRelation: "disclaimers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_disclaimers_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "guide_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_revision_disclaimers_guide_revision_id_fkey"
+            columns: ["guide_revision_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["revision_id"]
+          },
+        ]
+      }
       guide_revision_subjects: {
         Row: {
           guide_revision_id: string
