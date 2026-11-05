@@ -9,6 +9,7 @@ import type {
 import {
   clearAllStoredDrafts,
   clearStoredDraft,
+  clearStoredDraftsForRevisions,
   createLocalDraftId,
   getStoredDraft,
   hasStoredDraft,
@@ -81,6 +82,68 @@ describe("contributionStorage", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("clears matching guide, variant and objective copies without removing other drafts", () => {
+    setStoredDraft({
+      localDraftId: "guide",
+      type: "guide",
+      data: sampleGuide,
+      revisionId: "guide-rev",
+      updatedAt: 1,
+    });
+    setStoredDraft({
+      localDraftId: "variant",
+      type: "variant",
+      data: sampleVariant,
+      revisionId: "guide-rev",
+      updatedAt: 1,
+    });
+    setStoredDraft({
+      localDraftId: "objective",
+      type: "objective",
+      data: sampleObjective,
+      revisionId: "objective-rev",
+      updatedAt: 1,
+    });
+    setStoredDraft({
+      localDraftId: "unsaved",
+      type: "guide",
+      data: sampleGuide,
+      revisionId: null,
+      updatedAt: 1,
+    });
+    setStoredDraft({
+      localDraftId: "other",
+      type: "guide",
+      data: sampleGuide,
+      revisionId: "other-rev",
+      updatedAt: 1,
+    });
+    clearStoredDraftsForRevisions({
+      guide_revision_ids: ["guide-rev"],
+      objective_revision_ids: ["objective-rev"],
+    });
+    expect(hasStoredDraft("guide")).toBe(false);
+    expect(hasStoredDraft("variant")).toBe(false);
+    expect(hasStoredDraft("objective")).toBe(false);
+    expect(hasStoredDraft("unsaved")).toBe(true);
+    expect(hasStoredDraft("other")).toBe(true);
+  });
+
+  it("matches both revision id and contribution kind when clearing local copies", () => {
+    setStoredDraft({
+      localDraftId: "objective",
+      type: "objective",
+      data: sampleObjective,
+      revisionId: "shared-id",
+      updatedAt: 1,
+    });
+    clearStoredDraftsForRevisions({
+      guide_revision_ids: ["shared-id"],
+      objective_revision_ids: [],
+    });
+    expect(hasStoredDraft("objective")).toBe(true);
   });
 
   it("saves and retrieves a guide draft from localStorage", () => {
