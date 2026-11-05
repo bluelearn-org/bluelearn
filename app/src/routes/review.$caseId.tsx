@@ -5,6 +5,9 @@ import type { ReaderGuide } from "@/components/GuideReader";
 import type { RevisionDiffData } from "@/components/RevisionDiff";
 import { GuideReader } from "@/components/GuideReader";
 import { RevisionDiff } from "@/components/RevisionDiff";
+import { AnnotatedBlock } from "@/components/review/AnnotatedBlock";
+import { AnnotatedGuide } from "@/components/review/AnnotatedGuide";
+import { ReviewAnnotationsProvider } from "@/components/review/ReviewAnnotations";
 
 import { ApiError } from "@/lib/api/apiHelpers";
 import { getReviewCase } from "@/lib/api/reviews";
@@ -105,55 +108,74 @@ function RouteComponent() {
       <GuideReader
         guide={guide}
         guideType={revision.knowledge_type ?? undefined}
+        BlockWrapper={AnnotatedBlock}
       />
     );
   }, [revision]);
 
+  const page = (
+    <section className="flex flex-1 flex-col border-b md:grid md:grid-cols-[320px_1fr]">
+      <ReviewSidebar
+        caseId={caseId}
+        revision={revision}
+        revisionData={revisionData}
+      />
+
+      {/* MAIN */}
+      <main className="min-w-0 px-4 pt-8 pb-6 md:px-10 lg:px-16">
+        {isEdit && revision && (
+          <div className="mb-6 inline-flex gap-1 border-b">
+            {(["guide", "changes"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={cn(
+                  "mono-micro -mb-px border-b-2 border-transparent px-3 py-1.5 tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-foreground",
+                  view === tab &&
+                    "border-brand-bright-blue text-brand-bright-blue"
+                )}
+                onClick={() => setView(tab)}
+              >
+                {tab === "guide" ? "Guide" : "Changes"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className={cn(view !== "guide" && "hidden")}>
+          {guideContent ? (
+            <AnnotatedGuide>{guideContent}</AnnotatedGuide>
+          ) : (
+            <p className="font-mono text-[11px] tracking-[0.08em] text-red-500 uppercase">
+              No guide revision found to display.
+            </p>
+          )}
+        </div>
+
+        {isEdit && (
+          <div className={cn(view !== "changes" && "hidden")}>
+            <DiffPane diff={diff} failed={diffFailed} />
+          </div>
+        )}
+      </main>
+    </section>
+  );
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-65px)] max-w-7xl flex-col bg-background">
-      <section className="flex flex-1 flex-col border-b md:grid md:grid-cols-[320px_1fr]">
-        <ReviewSidebar
+      {revision ? (
+        <ReviewAnnotationsProvider
+          key={revision.id}
           caseId={caseId}
-          revision={revision}
-          revisionData={revisionData}
-        />
-
-        {/* MAIN */}
-        <main className="min-w-0 px-4 pt-8 pb-6 md:px-10 lg:px-16">
-          {isEdit && revision && (
-            <div className="mb-6 inline-flex gap-1 border-b">
-              {(["guide", "changes"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={cn(
-                    "mono-micro -mb-px border-b-2 border-transparent px-3 py-1.5 tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-foreground",
-                    view === tab &&
-                      "border-brand-bright-blue text-brand-bright-blue"
-                  )}
-                  onClick={() => setView(tab)}
-                >
-                  {tab === "guide" ? "Guide" : "Changes"}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className={cn(view !== "guide" && "hidden")}>
-            {guideContent ?? (
-              <p className="font-mono text-[11px] tracking-[0.08em] text-red-500 uppercase">
-                No guide revision found to display.
-              </p>
-            )}
-          </div>
-
-          {isEdit && (
-            <div className={cn(view !== "changes" && "hidden")}>
-              <DiffPane diff={diff} failed={diffFailed} />
-            </div>
-          )}
-        </main>
-      </section>
+          revisionId={revision.id}
+          revisionBody={revision.body ?? ""}
+          viewerExpiresAt={revisionData.viewer_expires_at}
+        >
+          {page}
+        </ReviewAnnotationsProvider>
+      ) : (
+        page
+      )}
     </div>
   );
 }

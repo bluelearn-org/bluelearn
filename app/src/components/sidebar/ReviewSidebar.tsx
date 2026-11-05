@@ -1,5 +1,12 @@
 import { toast } from "sonner";
-import { Check, ExternalLink, Scroll, ShieldCheck, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Scroll,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 
@@ -19,6 +26,7 @@ import { castDecision } from "@/lib/api/reviews";
 import { getRevision, reviseRevision } from "@/lib/api/guideRevisions";
 import { GuidelinesModal } from "@/components/modals/GuidelinesModal";
 import { useSuspensionStatus } from "@/lib/authContext";
+import { PublicationGateNotice } from "@/components/review/PublicationGateNotice";
 
 export type Review = {
   decision: string;
@@ -51,6 +59,8 @@ export const ReviewSidebar = ({
   revisionData,
 }: PropTypes) => {
   const [openGuidelineModal, setOpenGuidelineModal] = useState(false);
+  // Phones show the guide first; the details open on request.
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [revising, setRevising] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -99,6 +109,7 @@ export const ReviewSidebar = ({
   }, [seatLive, expiresMs, now, router]);
 
   const diffMs = seatLive && expiresMs !== null ? expiresMs - now : null;
+
   const timedOut =
     seatStatus === "replaced" || (diffMs !== null && diffMs <= 0);
 
@@ -114,6 +125,7 @@ export const ReviewSidebar = ({
     abortControllerRef.current = controller;
 
     const missingFields = validateReview();
+
     if (missingFields.length !== 0) {
       toast.error(missingFields);
       return;
@@ -202,7 +214,32 @@ export const ReviewSidebar = ({
 
   return (
     <aside className="border-b md:border-r md:border-b-0">
-      <div className="sticky top-[65px] max-h-[calc(100vh-65px)] space-y-4 overflow-y-auto px-6 py-6">
+      <button
+        type="button"
+        aria-expanded={detailsOpen}
+        aria-controls="review-sidebar-details"
+        className="flex min-h-11 w-full items-center justify-between px-6 py-2 md:hidden"
+        onClick={() => setDetailsOpen((open) => !open)}
+      >
+        <span className="mono-micro">Review details</span>
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "size-4 transition-transform",
+            detailsOpen && "rotate-180"
+          )}
+        />
+      </button>
+
+      <div
+        id="review-sidebar-details"
+        className={cn(
+          "sticky top-[65px] max-h-[calc(100vh-65px)] space-y-4 overflow-y-auto px-6 py-6",
+          !detailsOpen && "max-md:hidden"
+        )}
+      >
+        <PublicationGateNotice viewerRole={revisionData.viewer_role} />
+
         <CollapsibleSection
           defaultOpen={true}
           title={<p className="ml-auto">Submission Details</p>}
