@@ -370,7 +370,7 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
       loadPrerequisites(supabase, guide.id),
       loadRequests(supabase, guide.id),
       loadFollowUps(supabase, guide.id),
-      loadDisclaimers(supabase, guide.id),
+      loadDisclaimers(supabase, canonical?.id ?? null),
     ]);
   const authorId = canonical?.author_id ?? null;
   const usernames = await loadUsernames(supabase, [authorId]);
@@ -585,8 +585,9 @@ export async function addGuideVariant(
     newSubjects: input.newSubjects,
   });
 
-  // The draft starts from the base's disclaimers; only an explicit set replaces
-  // them.
+  // The draft starts from the canonical guide's disclaimers; only an explicit
+  // set replaces them. Either way the variant gets its own set, so approving it
+  // never changes the other guides under this base.
   if (input.disclaimers !== undefined) {
     await replaceRevisionDisclaimers(supabase, revision_id, input.disclaimers);
   }
@@ -632,7 +633,7 @@ export async function getVariantBySlug(
         .maybeSingle(),
       loadCanonicalTags(supabase, variant.current?.id ?? null),
       loadUsernames(supabase, [variant.author_id]),
-      loadDisclaimers(supabase, variant.guide_base_id),
+      loadDisclaimers(supabase, variant.id),
     ]);
 
   if (tallyError) {

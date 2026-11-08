@@ -6,7 +6,11 @@ import {
   replaceRevisionDisclaimers,
 } from "../src/services/disclaimer.service";
 import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
-import { createGuideRevision, createPublishedGuide } from "./factories/guides";
+import {
+  createGuide,
+  createGuideRevision,
+  createPublishedGuide,
+} from "./factories/guides";
 import {
   createGuideReviewCase,
   createReviewCase,
@@ -14,11 +18,11 @@ import {
 } from "./factories/reviews";
 import { expectToMatchSpec } from "./openapi";
 
-async function baseDisclaimers(baseId: string) {
+async function guideDisclaimers(guideId: string) {
   const { data } = await admin
     .from("guide_disclaimers")
     .select("disclaimers!inner(slug)")
-    .eq("guide_base_id", baseId)
+    .eq("guide_id", guideId)
     .throwOnError();
   return (data ?? []).map((r) => r.disclaimers.slug).sort();
 }
@@ -32,14 +36,24 @@ async function revisionDisclaimers(revisionId: string) {
   return (data ?? []).map((r) => r.disclaimers.slug).sort();
 }
 
-// A published guide whose base carries `disclaimers`, plus a draft revision of
-// it by `authorId`.
+async function revisionGuideId(revisionId: string) {
+  const { data } = await admin
+    .from("guide_revisions")
+    .select("guide_id")
+    .eq("id", revisionId)
+    .single()
+    .throwOnError();
+  return data.guide_id;
+}
+
+// A published guide carrying `disclaimers`, plus a draft revision of it by
+// `authorId`.
 async function publishedWithDraft(
   authorId: string,
   disclaimers: DisclaimerSlug[]
 ) {
   const published = await createPublishedGuide({ authorId });
-  await replaceDisclaimers(admin, published.base.id, disclaimers);
+  await replaceDisclaimers(admin, published.guide.id, disclaimers);
   const draft = await createGuideRevision(published.guide.id, {
     status: "draft",
     author_id: authorId,
@@ -64,7 +78,7 @@ async function approve(caseType: "guide_edit" | "guide_publish", id: string) {
 }
 
 describe("revision disclaimers", () => {
-  it("start from the base's disclaimers", async () => {
+  it("start from their guide's disclaimers", async () => {
     const author = await makeUser();
     const { draft } = await publishedWithDraft(author.userId, ["medical"]);
 
@@ -73,7 +87,7 @@ describe("revision disclaimers", () => {
 
   it("save on a published guide's draft without touching the live guide", async () => {
     const author = await makeUser();
-    const { base, draft } = await publishedWithDraft(author.userId, [
+    const { guide, draft } = await publishedWithDraft(author.userId, [
       "medical",
     ]);
 
@@ -86,7 +100,7 @@ describe("revision disclaimers", () => {
     expect(res.status).toBe(200);
     await expectToMatchSpec(res, "PATCH", "/guide-revisions/{id}");
     expect(await revisionDisclaimers(draft.id)).toEqual(["financial", "legal"]);
-    expect(await baseDisclaimers(base.id)).toEqual(["medical"]);
+    expect(await guideDisclaimers(guide.id)).toEqual(["medical"]);
   });
 
   it("come back with the revision", async () => {
@@ -122,37 +136,31 @@ describe("revision disclaimers", () => {
 });
 
 describe("disclaimers on approval", () => {
-  it("replace the base's set when an edit is approved", async () => {
+  it("replace the guide's set when an edit is approved", async () => {
     const author = await makeUser();
-    const { base, guide } = await publishedWithDraft(author.userId, [
-      "medical",
-    ]);
+    const { guide } = await publishedWithDraft(author.userId, ["medical"]);
     const edit = await createGuideRevision(guide.id, { title: "Edited" });
     await replaceRevisionDisclaimers(admin, edit.id, ["legal"]);
 
     await approve("guide_edit", edit.id);
 
-    expect(await baseDisclaimers(base.id)).toEqual(["legal"]);
+    expect(await guideDisclaimers(guide.id)).toEqual(["legal"]);
   });
 
-  it("clear the base's set when the approved edit removed them all", async () => {
+  it("clear the guide's set when the approved edit removed them all", async () => {
     const author = await makeUser();
-    const { base, guide } = await publishedWithDraft(author.userId, [
-      "medical",
-    ]);
+    const { guide } = await publishedWithDraft(author.userId, ["medical"]);
     const edit = await createGuideRevision(guide.id, { title: "Edited" });
     await replaceRevisionDisclaimers(admin, edit.id, []);
 
     await approve("guide_edit", edit.id);
 
-    expect(await baseDisclaimers(base.id)).toEqual([]);
+    expect(await guideDisclaimers(guide.id)).toEqual([]);
   });
 
-  it("leave the base alone when the edit is rejected", async () => {
+  it("leave the guide alone when the edit is rejected", async () => {
     const author = await makeUser();
-    const { base, guide } = await publishedWithDraft(author.userId, [
-      "medical",
-    ]);
+    const { guide } = await publishedWithDraft(author.userId, ["medical"]);
     const edit = await createGuideRevision(guide.id, { title: "Edited" });
     await replaceRevisionDisclaimers(admin, edit.id, ["legal"]);
     const { reviewCase, panelists } = await seedSeatedReviewCase({
@@ -178,7 +186,7 @@ describe("disclaimers on approval", () => {
       .eq("id", reviewCase.id)
       .single();
     expect(c?.status).toBe("rejected");
-    expect(await baseDisclaimers(base.id)).toEqual(["medical"]);
+    expect(await guideDisclaimers(guide.id)).toEqual(["medical"]);
   });
 });
 
@@ -198,13 +206,8 @@ describe("disclaimers on creation", () => {
     const { revision_id } = (await res.json()) as { revision_id: string };
     expect(await revisionDisclaimers(revision_id)).toEqual(["medical"]);
 
-    const { data: rev } = await admin
-      .from("guide_revisions")
-      .select("guides!guide_revisions_guide_id_fkey!inner(guide_base_id)")
-      .eq("id", revision_id)
-      .single();
-    const baseId = rev!.guides.guide_base_id;
-    expect(await baseDisclaimers(baseId)).toEqual([]);
+    const guideId = await revisionGuideId(revision_id);
+    expect(await guideDisclaimers(guideId)).toEqual([]);
 
     await admin
       .from("guide_revisions")
@@ -213,12 +216,14 @@ describe("disclaimers on creation", () => {
       .throwOnError();
     await approve("guide_publish", revision_id);
 
-    expect(await baseDisclaimers(baseId)).toEqual(["medical"]);
+    expect(await guideDisclaimers(guideId)).toEqual(["medical"]);
   });
 
-  it("let a new variant change the base guide's set", async () => {
+  it("let a new variant propose its own set", async () => {
     const author = await makeUser();
-    const { base } = await publishedWithDraft(author.userId, ["medical"]);
+    const { base, guide } = await publishedWithDraft(author.userId, [
+      "medical",
+    ]);
 
     const res = await app.request(
       `/guides/${base.slug}/variants`,
@@ -232,10 +237,10 @@ describe("disclaimers on creation", () => {
     expect(res.status).toBe(201);
     const { revision_id } = (await res.json()) as { revision_id: string };
     expect(await revisionDisclaimers(revision_id)).toEqual(["legal"]);
-    expect(await baseDisclaimers(base.id)).toEqual(["medical"]);
+    expect(await guideDisclaimers(guide.id)).toEqual(["medical"]);
   });
 
-  it("keep the base guide's set when a new variant sends none", async () => {
+  it("start a new variant from the canonical guide's set when it sends none", async () => {
     const author = await makeUser();
     const { base } = await publishedWithDraft(author.userId, ["medical"]);
 
@@ -248,6 +253,139 @@ describe("disclaimers on creation", () => {
     expect(res.status).toBe(201);
     const { revision_id } = (await res.json()) as { revision_id: string };
     expect(await revisionDisclaimers(revision_id)).toEqual(["medical"]);
+  });
+});
+
+// Approving a variant must not touch the banners of the original guide or any
+// other variant under the same base.
+describe("disclaimers across variants", () => {
+  async function submitVariant(
+    token: string,
+    baseSlug: string,
+    disclaimers: DisclaimerSlug[]
+  ) {
+    const res = await app.request(
+      `/guides/${baseSlug}/variants`,
+      jsonAuth(token, "POST", { title: "Joins, visually", disclaimers }),
+      env
+    );
+    expect(res.status).toBe(201);
+    const { revision_id } = (await res.json()) as { revision_id: string };
+    await admin
+      .from("guide_revisions")
+      .update({ status: "submitted" })
+      .eq("id", revision_id)
+      .throwOnError();
+    return revision_id;
+  }
+
+  it("approving a variant that adds one leaves the original guide alone", async () => {
+    const author = await makeUser();
+    const { base, guide } = await publishedWithDraft(author.userId, [
+      "medical",
+    ]);
+
+    const revisionId = await submitVariant(author.token, base.slug!, [
+      "medical",
+      "legal",
+    ]);
+    await approve("guide_publish", revisionId);
+
+    const variantId = await revisionGuideId(revisionId);
+    expect(await guideDisclaimers(variantId)).toEqual(["legal", "medical"]);
+    expect(await guideDisclaimers(guide.id)).toEqual(["medical"]);
+  });
+
+  it("approving a variant that removes one leaves the original guide alone", async () => {
+    const author = await makeUser();
+    const { base, guide } = await publishedWithDraft(author.userId, [
+      "medical",
+    ]);
+
+    const revisionId = await submitVariant(author.token, base.slug!, []);
+    await approve("guide_publish", revisionId);
+
+    const variantId = await revisionGuideId(revisionId);
+    expect(await guideDisclaimers(variantId)).toEqual([]);
+    expect(await guideDisclaimers(guide.id)).toEqual(["medical"]);
+  });
+
+  it("approving a variant leaves sibling variants alone", async () => {
+    const author = await makeUser();
+    const { base } = await publishedWithDraft(author.userId, ["medical"]);
+    const sibling = await createGuide(base.id, {
+      status: "published",
+      slug: "sibling",
+      author_id: author.userId,
+    });
+    await replaceDisclaimers(admin, sibling.id, ["financial"]);
+
+    const revisionId = await submitVariant(author.token, base.slug!, ["legal"]);
+    await approve("guide_publish", revisionId);
+
+    expect(await guideDisclaimers(sibling.id)).toEqual(["financial"]);
+  });
+
+  it("approving an edit to the original leaves its variants alone", async () => {
+    const author = await makeUser();
+    const { base, guide } = await publishedWithDraft(author.userId, [
+      "medical",
+    ]);
+    const variantRevisionId = await submitVariant(author.token, base.slug!, [
+      "medical",
+    ]);
+    await approve("guide_publish", variantRevisionId);
+    const variantId = await revisionGuideId(variantRevisionId);
+
+    const edit = await createGuideRevision(guide.id, { title: "Edited" });
+    await replaceRevisionDisclaimers(admin, edit.id, ["legal"]);
+    await approve("guide_edit", edit.id);
+
+    expect(await guideDisclaimers(guide.id)).toEqual(["legal"]);
+    expect(await guideDisclaimers(variantId)).toEqual(["medical"]);
+  });
+
+  it("start an edit of a variant from the variant's set", async () => {
+    const author = await makeUser();
+    const { base } = await publishedWithDraft(author.userId, ["medical"]);
+    const variantRevisionId = await submitVariant(author.token, base.slug!, [
+      "legal",
+    ]);
+    await approve("guide_publish", variantRevisionId);
+    const variantId = await revisionGuideId(variantRevisionId);
+
+    const edit = await createGuideRevision(variantId, { status: "draft" });
+
+    expect(await revisionDisclaimers(edit.id)).toEqual(["legal"]);
+  });
+
+  it("show each guide's own set on the guide and variant pages", async () => {
+    const author = await makeUser();
+    const { base } = await publishedWithDraft(author.userId, ["medical"]);
+    const revisionId = await submitVariant(author.token, base.slug!, ["legal"]);
+    await approve("guide_publish", revisionId);
+    const { data: variant } = await admin
+      .from("guides")
+      .select("slug")
+      .eq("id", await revisionGuideId(revisionId))
+      .single()
+      .throwOnError();
+
+    const guideRes = await app.request(`/guides/${base.slug}`, {}, env);
+    const variantRes = await app.request(
+      `/guides/${base.slug}/${variant.slug}`,
+      {},
+      env
+    );
+
+    expect(guideRes.status).toBe(200);
+    expect(variantRes.status).toBe(200);
+    const guideBody = (await guideRes.json()) as { disclaimers: string[] };
+    const variantBody = (await variantRes.json()) as {
+      variant: { disclaimers: string[] };
+    };
+    expect(guideBody.disclaimers).toEqual(["medical"]);
+    expect(variantBody.variant.disclaimers).toEqual(["legal"]);
   });
 });
 

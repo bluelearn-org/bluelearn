@@ -5,15 +5,17 @@ import { ServiceError } from "../lib/service-error";
 
 type DB = SupabaseClient<Database>;
 
-// Load disclaimer slugs for a guide base.
+// Load the live disclaimer slugs of a guide (the original or a variant).
 export async function loadDisclaimers(
   supabase: DB,
-  baseId: string
+  guideId: string | null
 ): Promise<DisclaimerSlug[]> {
+  if (!guideId) return [];
+
   const { data, error } = await supabase
     .from("guide_disclaimers")
     .select("disclaimers!inner(slug)")
-    .eq("guide_base_id", baseId);
+    .eq("guide_id", guideId);
 
   if (error) {
     console.error(error);
@@ -24,7 +26,7 @@ export async function loadDisclaimers(
     .filter((s): s is DisclaimerSlug => s != null);
 }
 
-// Load the disclaimer slugs a revision proposes for its guide base.
+// Load the disclaimer slugs a revision proposes for its guide.
 export async function loadRevisionDisclaimers(
   supabase: DB,
   revisionId: string
@@ -61,10 +63,10 @@ async function resolveDisclaimerIds(supabase: DB, slugs: DisclaimerSlug[]) {
   return data.map((d) => d.id);
 }
 
-// Replace a guide base's disclaimer set.
+// Replace a guide's live disclaimer set.
 export async function replaceDisclaimers(
   supabase: DB,
-  baseId: string,
+  guideId: string,
   slugs: DisclaimerSlug[]
 ) {
   const ids = await resolveDisclaimerIds(supabase, [...new Set(slugs)]);
@@ -72,7 +74,7 @@ export async function replaceDisclaimers(
   const { error: delError } = await supabase
     .from("guide_disclaimers")
     .delete()
-    .eq("guide_base_id", baseId);
+    .eq("guide_id", guideId);
   if (delError) {
     console.error(delError);
     throw new ServiceError("Unable to update disclaimers", 400);
@@ -82,7 +84,7 @@ export async function replaceDisclaimers(
 
   const { error: insError } = await supabase.from("guide_disclaimers").insert(
     ids.map((id) => ({
-      guide_base_id: baseId,
+      guide_id: guideId,
       disclaimer_id: id,
     }))
   );
@@ -93,7 +95,7 @@ export async function replaceDisclaimers(
 }
 
 // Replace the disclaimer set a draft revision proposes. Approval copies it onto
-// the guide base.
+// the revision's guide.
 export async function replaceRevisionDisclaimers(
   supabase: DB,
   revisionId: string,

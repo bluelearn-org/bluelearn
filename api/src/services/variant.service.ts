@@ -66,7 +66,7 @@ export async function getVariant(supabase: DB, id: string) {
 
   const [variantWithVotes, disclaimers] = await Promise.all([
     withVotes(supabase, variant),
-    loadDisclaimers(supabase, variant.guide_base_id),
+    loadDisclaimers(supabase, variant.id),
   ]);
 
   return { variant: { ...variantWithVotes, disclaimers } };

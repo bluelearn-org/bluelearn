@@ -116,15 +116,15 @@ export type Database = {
       guide_disclaimers: {
         Row: {
           disclaimer_id: string
-          guide_base_id: string
+          guide_id: string
         }
         Insert: {
           disclaimer_id: string
-          guide_base_id: string
+          guide_id: string
         }
         Update: {
           disclaimer_id?: string
-          guide_base_id?: string
+          guide_id?: string
         }
         Relationships: [
           {
@@ -135,18 +135,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "guide_disclaimers_guide_base_id_fkey"
-            columns: ["guide_base_id"]
+            foreignKeyName: "guide_disclaimers_guide_id_fkey"
+            columns: ["guide_id"]
             isOneToOne: false
-            referencedRelation: "guide_bases"
+            referencedRelation: "guides"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "guide_disclaimers_guide_base_id_fkey"
-            columns: ["guide_base_id"]
+            foreignKeyName: "guide_disclaimers_guide_id_fkey"
+            columns: ["guide_id"]
             isOneToOne: false
             referencedRelation: "published_guides"
-            referencedColumns: ["id"]
+            referencedColumns: ["guide_id"]
           },
         ]
       }
