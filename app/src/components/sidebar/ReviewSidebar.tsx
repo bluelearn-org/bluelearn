@@ -389,7 +389,7 @@ export const ReviewSidebar = ({
                       }}
                     >
                       <X />
-                      Reject
+                      Request Changes
                     </Button>
                     <Button
                       variant="outline"
