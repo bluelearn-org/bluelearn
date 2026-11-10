@@ -18,7 +18,7 @@ export function hasMeaningfulText(value: string): boolean {
  */
 export function validateReviewDecision(review: ReviewDecisionInput): string {
   if (review.decision === "")
-    return "Choose approve or reject before submitting";
+    return "Choose approve or request changes before submitting";
   if (review.decision === "approve") return "";
 
   const missing = [];
@@ -27,5 +27,5 @@ export function validateReviewDecision(review: ReviewDecisionInput): string {
 
   return missing.length === 0
     ? ""
-    : `Rejections require ${missing.join(" and ")}`;
+    : `Change requests require ${missing.join(" and ")}`;
 }
