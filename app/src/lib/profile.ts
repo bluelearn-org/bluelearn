@@ -45,7 +45,7 @@ const STATUS_LABELS: Record<ActivityRow["status"], string> = {
   pending: "Pending",
   in_review: "In review",
   approved: "Approved",
-  rejected: "Rejected",
+  rejected: "Changes requested",
   published: "Published",
 };
 
@@ -71,7 +71,7 @@ export const ACTIVITY_STATUS_FILTERS: Array<{
   { value: "draft", label: "Draft" },
   { value: "in_review", label: "In review" },
   { value: "published", label: "Published" },
-  { value: "rejected", label: "Rejected" },
+  { value: "rejected", label: "Changes requested" },
 ];
 
 // Derive unique subjects present in a set of activity rows, sorted by name.

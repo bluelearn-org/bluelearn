@@ -510,10 +510,22 @@ declare
     'aaaaaaaa-0000-4000-8000-000000000404',
     'aaaaaaaa-0000-4000-8000-000000000405'
   ];
+
+  -- A second objective over the same guides, split into three sub-objectives,
+  -- so a guide can be opened from one that is not the first.
+  v_platformer      uuid := 'aaaaaaaa-0000-4000-8000-000000000030';
+  v_platformer_rev  uuid := 'aaaaaaaa-0000-4000-8000-000000000031';
+  platformer_nodes uuid[] := array[
+    'aaaaaaaa-0000-4000-8000-000000000501',
+    'aaaaaaaa-0000-4000-8000-000000000502',
+    'aaaaaaaa-0000-4000-8000-000000000503',
+    'aaaaaaaa-0000-4000-8000-000000000504',
+    'aaaaaaaa-0000-4000-8000-000000000505'
+  ];
   i int;
 begin
   -- Clear prior demo rows (children cascade off these).
-  delete from public.objectives where id = v_objective;
+  delete from public.objectives where id in (v_objective, v_platformer);
   delete from public.guide_bases where id = any(gb);
   delete from public.subjects where id = v_subject;
 
@@ -592,6 +604,50 @@ begin
       (revision_id, target_node_id, node_id, position)
     values (v_orev, node_ids[5], node_ids[i], i - 1);
   end loop;
+
+  -- "Make a 2D Platformer": three sub-objectives in this order.
+  --   1. Setting Up Your Project (featured, so it opens first)
+  --        Intro to Game Engines -> Setting Up Your Project
+  --   2. Player Movement and Physics
+  --        Sprites and Assets -> Player Movement and Physics
+  --   3. Shipping Your First Game
+  --        Intro to Game Engines -> Sprites and Assets -> Shipping Your First Game
+  -- Sprites and Assets sits only in the second and third, so opening it and
+  -- coming back shows whether the page returns to the right one.
+  insert into public.objectives (id, slug, created_by, status, current_revision_id)
+  values (v_platformer, 'make-a-2d-platformer', v_author, 'published', v_platformer_rev);
+
+  insert into public.objective_revisions
+    (id, objective_id, title, summary, author_id, status, published_at)
+  values (
+    v_platformer_rev, v_platformer,
+    'Make a 2D Platformer',
+    'Set up a project, make a character move, then ship it: three milestones on the way to a platformer.',
+    v_author, 'published', now()
+  );
+
+  for i in 1..5 loop
+    insert into public.objective_revision_nodes
+      (id, revision_id, guide_base_id, guide_id, is_target, is_featured, target_position)
+    values (
+      platformer_nodes[i], v_platformer_rev, gb[i], gd[i],
+      i in (2, 4, 5),
+      i = 2,
+      case i when 2 then 0 when 4 then 1 when 5 then 2 end
+    );
+  end loop;
+
+  insert into public.objective_revision_subjects (objective_revision_id, subject_id)
+  values (v_platformer_rev, v_subject);
+
+  -- Each sequence lists the guides before its target, not the target itself.
+  insert into public.objective_revision_node_orders
+    (revision_id, target_node_id, node_id, position)
+  values
+    (v_platformer_rev, platformer_nodes[2], platformer_nodes[1], 0),
+    (v_platformer_rev, platformer_nodes[4], platformer_nodes[3], 0),
+    (v_platformer_rev, platformer_nodes[5], platformer_nodes[1], 0),
+    (v_platformer_rev, platformer_nodes[5], platformer_nodes[3], 1);
 end $$;
 
 
