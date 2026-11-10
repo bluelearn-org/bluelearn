@@ -26,11 +26,18 @@ type ObjectiveGraphProps = {
 };
 
 // Inspecting a prerequisite must not change the reader's active target.
+// The initial ids restore a place the learner left; an id that is not a
+// target falls back to the default like any other.
 export function useObjectiveSelection(
-  snapshot: Pick<ObjectiveSnapshot, "nodes">
+  snapshot: Pick<ObjectiveSnapshot, "nodes">,
+  initial: { selectedId?: string | null; targetId?: string | null } = {}
 ) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [chosenTargetId, setChosenTargetId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initial.selectedId ?? null
+  );
+  const [chosenTargetId, setChosenTargetId] = useState<string | null>(
+    initial.targetId ?? null
+  );
 
   const isTarget = (id: string) =>
     snapshot.nodes.some(

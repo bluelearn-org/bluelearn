@@ -115,4 +115,19 @@ describe("SubObjectiveStep", () => {
     );
     expect(keyWarnings).toHaveLength(0);
   });
+
+  it("anchors each openable guide so a return can scroll to it", () => {
+    const { targets } = buildObjectiveFlow(snapshot, []);
+
+    const { container } = render(
+      <SubObjectiveStep
+        Stepper={Stepper}
+        target={targets[0]}
+        objective={{ slug: "proofs", title: "Proofs" }}
+      />
+    );
+
+    const anchored = container.querySelectorAll("li[id]");
+    expect(Array.from(anchored, (item) => item.id)).toEqual(["guide-loops"]);
+  });
 });
