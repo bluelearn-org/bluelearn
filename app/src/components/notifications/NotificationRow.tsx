@@ -41,25 +41,28 @@ export function NotificationRow({
         </AvatarFallback>
       </Avatar>
 
-      <div className="min-w-0 flex-1">
-        <p className="font-mono text-xs tracking-[0.08em] uppercase">
+      <span className="block min-w-0 flex-1">
+        <span className="block font-mono text-xs tracking-[0.08em] uppercase">
           {view.title}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{view.body}</p>
-      </div>
+        </span>
+        <span className="mt-0.5 line-clamp-3 text-xs text-muted-foreground">
+          {view.body}
+        </span>
+      </span>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <span className="flex shrink-0 items-center gap-2">
         <time dateTime={occurred_at} className="text-xs text-muted-foreground">
           {dateFormat.format(new Date(occurred_at))}
         </time>
         <span
-          aria-label={read_at ? undefined : "Unread"}
+          aria-hidden
           className={cn(
             "h-2 w-2 rounded-full",
             read_at ? "bg-transparent" : "bg-brand-burnt-orange"
           )}
         />
-      </div>
+        {!read_at && <span className="sr-only">Unread</span>}
+      </span>
     </button>
   );
 }

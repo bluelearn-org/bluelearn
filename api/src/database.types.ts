@@ -543,6 +543,43 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_voters: {
+        Row: {
+          notification_id: string
+          voter_id: string
+        }
+        Insert: {
+          notification_id: string
+          voter_id: string
+        }
+        Update: {
+          notification_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_voters_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_voters_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_voters_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_id: string | null
@@ -1652,7 +1689,7 @@ export type Database = {
           p_recipient_id: string
           p_type: string
         }
-        Returns: undefined
+        Returns: string
       }
       notify_review_deadlines: { Args: never; Returns: undefined }
       objective_closure: {

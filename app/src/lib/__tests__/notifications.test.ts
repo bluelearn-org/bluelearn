@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationType } from "@bluelearn/schemas";
 import { notificationSections, renderNotification } from "@/lib/notifications";
+
+// The reason labels come from the vote API module, whose client needs env
+// vars on import.
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 
 function notification(
   type: NotificationType,
@@ -70,24 +74,21 @@ describe.each([
   );
 });
 
-describe.each([
-  ["guide_upvotes", /upvot/i, /downvot/i],
-  ["guide_downvotes", /downvot/i, /upvot/i],
-] as const)("%s", (type, direction, opposite) => {
+describe("guide_upvotes", () => {
   it.each([
     { count: 1, otherVoters: null },
     { count: 2, otherVoters: /\b1\s+other\b/i },
     { count: 5, otherVoters: /\b4\s+others\b/i },
   ])(
-    "shows the direction and voters for $count events",
+    "names the latest voter and counts the others for $count events",
     ({ count, otherVoters }) => {
       const view = renderNotification(
-        notification(type, guideData, { actor, count })
+        notification("guide_upvotes", guideData, { actor, count })
       );
 
-      expect(view?.title).toMatch(direction);
-      expect(view?.body).toMatch(direction);
-      expect(view?.body).not.toMatch(opposite);
+      expect(view?.title).toMatch(/upvot/i);
+      expect(view?.body).toMatch(/upvot/i);
+      expect(view?.body).not.toMatch(/downvot/i);
       expect(view?.body).toMatch(/@mira\b/i);
       expect(view?.body).toMatch(/sorting/i);
       expect(view?.target).toEqual(guideTarget);
@@ -100,8 +101,47 @@ describe.each([
       }
     }
   );
+});
 
-  it("keeps the vote direction when actor and title details are absent", () => {
+describe("guide_downvotes", () => {
+  it("shows the reason and note without naming the voter", () => {
+    const view = renderNotification(
+      notification(
+        "guide_downvotes",
+        { ...guideData, reason: "missing_step", note: "Step 3 skips setup." },
+        { actor }
+      )
+    );
+
+    expect(view?.title).toMatch(/downvot/i);
+    expect(view?.body).toMatch(/sorting/i);
+    expect(view?.body).toContain("Missing Step");
+    expect(view?.body).toContain("Step 3 skips setup.");
+    expect(view?.body).not.toMatch(/missing_step|@|mira|someone/i);
+    expect(view?.target).toEqual(guideTarget);
+  });
+
+  it("leaves out an unknown reason and a missing note", () => {
+    const view = renderNotification(
+      notification("guide_downvotes", {
+        ...guideData,
+        reason: "not_a_reason",
+        note: null,
+      })
+    );
+
+    expect(view?.body).toMatch(/downvot/i);
+    expect(view?.body).toMatch(/sorting/i);
+    expect(view?.body).not.toMatch(/not_a_reason|downvoted:|null|""/i);
+    expect(view?.target).toEqual(guideTarget);
+  });
+});
+
+describe.each([
+  ["guide_upvotes", /upvot/i],
+  ["guide_downvotes", /downvot/i],
+] as const)("%s with missing details", (type, direction) => {
+  it("keeps the vote direction without a voter, title, or target", () => {
     const view = renderNotification(notification(type));
 
     expect(view?.body).toMatch(direction);

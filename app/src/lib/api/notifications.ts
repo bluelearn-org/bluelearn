@@ -12,18 +12,25 @@ type FetchOptions = { signal?: AbortSignal };
 
 export type NotificationsPageQuery = {
   page?: number;
+  limit?: number;
   filter?: NotificationFilter;
   category?: NotificationCategory;
 };
 
 export async function listNotifications(
-  { page = 1, filter = "all", category }: NotificationsPageQuery = {},
+  {
+    page = 1,
+    limit = 20,
+    filter = "all",
+    category,
+  }: NotificationsPageQuery = {},
   { signal }: FetchOptions = {}
 ) {
   const res = await notifications.$get(
     {
       query: {
         page: String(page),
+        limit: String(limit),
         filter,
         ...(category ? { category } : {}),
       },

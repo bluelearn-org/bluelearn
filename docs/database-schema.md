@@ -387,10 +387,10 @@ The function `public.notify()` is the only writer of in-app notifications. Each 
 
 - `recipient_id`: FK to `profiles.id`. Only the recipient can read the row.
 - `type`: FK to `notification_types`.
-- `actor_id`: FK to `profiles.id`. It is null for system events, for example a panel outcome.
+- `actor_id`: FK to `profiles.id`. It is null for system events, for example a panel outcome. It is also null for downvotes, so the author cannot see who downvoted.
 - `group_key`: events with the same key share one unread row. A null key gives each event its own row.
-- `group_count`: the number of events in the row.
-- `data`: ids, slugs, and titles that the app needs to show and link the row. Store only text that the recipient can already read.
+- `group_count`: the number of events in the row. A vote row counts each voter once.
+- `data`: ids, slugs, and titles that the app needs to show and link the row. Store only text that the recipient can already read. A downvote row also gives the guide author the reason and note of the vote.
 - `occurred_at`: the time of the latest event in the row.
 - `read_at`: null while the row is unread.
 
@@ -402,7 +402,7 @@ The function `public.notify()` is the only writer of in-app notifications. Each 
 Constraints:
 
 - A partial unique index on `(recipient_id, type, group_key)` covers unread rows only. `notify()` adds to the open row. When the recipient reads that row, the next event starts a new row.
-- `notify()` skips a recipient who is also the actor. It also skips a recipient who turned the type off. It raises an error for a type that is not in the registry.
+- `notify()` skips a recipient who is also the actor. It also skips a recipient who turned the type off. It raises an error for a type that is not in the registry. It returns the id of the row it writes, or null when it skips.
 - Clients cannot run `notify()`. A recipient can update only `read_at`.
 
 Events:
@@ -418,13 +418,15 @@ Events:
 | `review_assignment` | A reviewer gets a new seat or replaces another reviewer in an existing seat. | The assigned reviewer. |
 | `review_deadline` | An assigned seat has an expiry within the next 48 hours. | The assigned reviewer. |
 
-Draft changes do not send variant notifications. Upvotes and downvotes use separate unread groups for each guide.
+Draft changes do not send variant notifications. Upvotes on a guide share one unread row, which names the latest voter. Each downvote gets its own row with the reason and note of the vote. A downvote row has no actor, so the author learns why but not who. The author's own vote sends nothing.
+
+`notification_voters` records the voters of each vote row. A downvote row keeps its voter only here. Its primary key is `(notification_id, voter_id)`. While a row is unread, a voter who votes again in the same direction does not raise the upvote count or add another downvote row. Only the service role can read or change these records.
 
 The five-minute worker calls `notify_review_deadlines()`. The function skips expired seats, completed seats, replaced seats, closed panels, and cases outside review.
 
 `review_deadline_notifications` records each processed reminder. Its primary key is `(seat_id, member_id, expires_at)`. Only the service role can read or change these records.
 
-The reminder record and its notification share one transaction. A repeated call cannot send the same reminder after the recipient reads or removes the notification. A new assignee or expiry permits a new reminder. A disabled preference consumes the reminder without a notification. Enabling that preference later does not replay the event.
+The reminder record and its notification share one transaction. A repeated call cannot send the same reminder after the recipient reads the notification. A new assignee or expiry permits a new reminder. A disabled preference consumes the reminder without a notification. Enabling that preference later does not replay the event.
 
 To add a type:
 

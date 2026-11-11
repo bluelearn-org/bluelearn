@@ -1,7 +1,4 @@
-drop trigger review_cases_notify_guide_decision on public.review_cases;
-drop function public.notify_guide_review_decision();
-
-create function public.notify_review_decision()
+create or replace function public.notify_review_decision()
 returns trigger
 language plpgsql
 security definer
@@ -60,7 +57,7 @@ create trigger review_cases_notify_decision
 
 -- Draft autosaves do not change the live revision. First publication and
 -- later published edits notify through the same transaction as publication.
-create function public.notify_variant_publication()
+create or replace function public.notify_variant_publication()
 returns trigger
 language plpgsql
 security definer
@@ -125,11 +122,23 @@ create trigger guides_notify_variant_publication
   )
   execute function public.notify_variant_publication();
 
--- Votes of either direction form separate unread groups for each guide.
-drop trigger votes_notify_guide_upvote on public.votes;
-drop function public.notify_guide_upvote();
+-- Each open vote row counts a voter once. The voters stay in this table, which
+-- clients cannot read, because a downvote must not name its voter.
+create table public.notification_voters (
+  notification_id uuid not null
+    references public.notifications (id) on delete cascade,
+  voter_id uuid not null references public.profiles (id) on delete cascade,
+  primary key (notification_id, voter_id)
+);
 
-create function public.notify_guide_vote()
+alter table public.notification_voters enable row level security;
+revoke all on public.notification_voters from public, anon, authenticated;
+grant all on public.notification_voters to service_role;
+
+-- Upvotes on a guide share one unread row that names the latest voter. Each
+-- downvote gets its own row with the reason and note but no actor, so the
+-- author learns why the guide was downvoted but not who downvoted it.
+create or replace function public.notify_guide_vote()
 returns trigger
 language plpgsql
 security definer
@@ -138,6 +147,8 @@ as $$
 declare
   v_guide record;
   v_type text;
+  v_data jsonb;
+  v_notification_id uuid;
 begin
   if tg_op = 'UPDATE' and old.direction = new.direction then
     return null;
@@ -155,18 +166,48 @@ begin
     else 'guide_downvotes'
   end;
 
-  perform public.notify(
-    v_guide.author_id,
-    v_type,
-    new.voter_id,
-    jsonb_build_object(
-      'guide_id', new.guide_id,
-      'title', v_guide.title,
-      'base_slug', v_guide.base_slug,
-      'variant_slug', v_guide.variant_slug
-    ),
-    new.guide_id::text
+  -- notify() cannot skip the author's own downvote, which has no actor.
+  if new.voter_id = v_guide.author_id or exists (
+    select 1
+      from public.notifications n
+      join public.notification_voters nv on nv.notification_id = n.id
+     where n.recipient_id = v_guide.author_id
+       and n.type = v_type
+       and n.data ->> 'guide_id' = new.guide_id::text
+       and n.read_at is null
+       and nv.voter_id = new.voter_id
+  ) then
+    return null;
+  end if;
+
+  v_data := jsonb_build_object(
+    'guide_id', new.guide_id,
+    'title', v_guide.title,
+    'base_slug', v_guide.base_slug,
+    'variant_slug', v_guide.variant_slug
   );
+
+  if new.direction = 'up' then
+    v_notification_id := public.notify(
+      v_guide.author_id,
+      v_type,
+      new.voter_id,
+      v_data,
+      new.guide_id::text
+    );
+  else
+    v_notification_id := public.notify(
+      v_guide.author_id,
+      v_type,
+      null,
+      v_data || jsonb_build_object('reason', new.reason, 'note', new.note)
+    );
+  end if;
+
+  if v_notification_id is not null then
+    insert into public.notification_voters (notification_id, voter_id)
+    values (v_notification_id, new.voter_id);
+  end if;
 
   return null;
 end;
@@ -180,7 +221,7 @@ create trigger votes_notify_guide_vote
   for each row
   execute function public.notify_guide_vote();
 
-create function public.notify_review_assignment()
+create or replace function public.notify_review_assignment()
 returns trigger
 language plpgsql
 security definer
@@ -234,8 +275,8 @@ create trigger panel_members_notify_assignment
   when (new.status = 'assigned')
   execute function public.notify_review_assignment();
 
--- Keep the claim after the inbox row is read or removed. A new assignee or
--- expiry permits one new reminder. A disabled preference consumes this event too.
+-- Keep the claim after the inbox row is read. A new assignee or expiry permits
+-- one new reminder. A disabled preference consumes this event too.
 create table public.review_deadline_notifications (
   seat_id uuid not null references public.panel_members (id) on delete cascade,
   member_id uuid not null references public.profiles (id) on delete cascade,
@@ -247,7 +288,7 @@ alter table public.review_deadline_notifications enable row level security;
 revoke all on public.review_deadline_notifications from public, anon, authenticated;
 grant all on public.review_deadline_notifications to service_role;
 
-create function public.notify_review_deadlines()
+create or replace function public.notify_review_deadlines()
 returns void
 language plpgsql
 security definer

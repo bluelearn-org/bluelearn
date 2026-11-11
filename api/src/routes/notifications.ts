@@ -142,7 +142,7 @@ export const notificationsRouter = new Hono<HonoEnv>()
       summary: "Turn one notification type on or off",
       responses: {
         200: jsonContent(successResponseSchema, "Saved"),
-        ...errorResponses(400, 401, 404),
+        ...errorResponses(400, 401),
       },
     }),
     requireUser,

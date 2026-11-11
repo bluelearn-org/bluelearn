@@ -14,6 +14,7 @@ import type {
   NotificationCategory,
   NotificationType,
 } from "@bluelearn/schemas";
+import { downvoteReasonItems } from "@/lib/api/votes";
 
 // Each type pairs a database registry entry and event source with a renderer.
 // The bell hides types without a renderer, and settings disables their toggles.
@@ -43,8 +44,26 @@ export const notificationRenderers: Partial<
     reviewDecision(notification, "guide"),
   variant_review_decision: (notification) =>
     reviewDecision(notification, "variant"),
-  guide_upvotes: (notification) => votes(notification, "up"),
-  guide_downvotes: (notification) => votes(notification, "down"),
+  guide_upvotes: upvotes,
+
+  // Downvoters stay private, so these rows never carry an actor.
+  guide_downvotes: ({ data }) => {
+    const title = text(data.title) ?? "Untitled";
+    const reason = downvoteReasonItems.find(
+      (item) => item.value === data.reason
+    )?.label;
+    const note = text(data.note);
+    const downvoted = reason
+      ? `"${title}" was downvoted: ${reason}`
+      : `"${title}" was downvoted`;
+
+    return {
+      title: "New downvote",
+      body: note ? `${downvoted}. "${note}"` : downvoted,
+      target: guideTarget(data),
+      icon: ThumbsDown,
+    };
+  },
 
   variant_created: ({ data, actor }) => ({
     title: "New variant",
@@ -121,25 +140,20 @@ function reviewDecision(
   };
 }
 
-function votes(
-  { data, actor, count }: Notification,
-  direction: "up" | "down"
-): NotificationView {
+function upvotes({ data, actor, count }: Notification): NotificationView {
   const title = text(data.title) ?? "your guide";
   const who = actorName(actor);
   const others = count - 1;
   const otherVoters = others === 1 ? "1 other" : `${others} others`;
-  const verb = `${direction}voted`;
 
   return {
-    title:
-      count === 1 ? `New ${direction}vote` : `${count} new ${direction}votes`,
+    title: count === 1 ? "New upvote" : `${count} new upvotes`,
     body:
       others === 0
-        ? `${who} ${verb} "${title}"`
-        : `${who} and ${otherVoters} ${verb} "${title}"`,
+        ? `${who} upvoted "${title}"`
+        : `${who} and ${otherVoters} upvoted "${title}"`,
     target: guideTarget(data),
-    icon: direction === "up" ? ThumbsUp : ThumbsDown,
+    icon: ThumbsUp,
   };
 }
 

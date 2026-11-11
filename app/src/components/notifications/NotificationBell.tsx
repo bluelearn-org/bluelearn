@@ -11,8 +11,7 @@ import {
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 
 // The count updates once a minute and on window focus, so a new notification
-// can take up to a minute to show. Push updates (a Durable Object or a queue
-// consumer) when that delay is too slow or the poll load matters.
+// can take up to a minute to show.
 const POLL_MS = 60_000;
 
 export function NotificationBell() {
@@ -70,6 +69,7 @@ export function NotificationBell() {
 
       <PopoverContent
         align="end"
+        aria-label="Notifications"
         sideOffset={8}
         className="flex h-[min(32rem,calc(100svh-6rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden p-0"
       >

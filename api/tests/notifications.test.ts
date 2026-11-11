@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createClient } from "@supabase/supabase-js";
 import type { NotificationsResponse } from "@bluelearn/schemas";
 import app from "../src/index";
-import type { Database } from "../src/database.types";
-import { admin, auth, env, jsonAuth, makeUser } from "./helpers";
+import { admin, auth, env, jsonAuth, makeUser, userClient } from "./helpers";
 import {
   createGuide,
   createGuideBase,
@@ -80,19 +78,6 @@ async function decide(
   );
 
   expect(res.status).toBe(200);
-}
-
-// A client that acts as the user directly against PostgREST, the way a
-// hostile browser could, without the API in between.
-function userClient(token: string) {
-  return createClient<Database>(
-    env.SUPABASE_URL,
-    env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    }
-  );
 }
 
 describe("guide_review_decision", () => {
@@ -251,6 +236,40 @@ describe("guide_upvotes", () => {
 
     expect(body.notifications.map((n) => n.count)).toEqual([1]);
   });
+
+  it("counts each voter once when they flip back to an upvote", async () => {
+    const author = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const flipper = await makeUser();
+    const other = await makeUser();
+
+    await createVote(flipper.userId, guide.id);
+    await admin
+      .from("votes")
+      .update({ direction: "down", reason: "unclear" })
+      .eq("voter_id", flipper.userId)
+      .eq("guide_id", guide.id)
+      .throwOnError();
+    await admin
+      .from("votes")
+      .update({ direction: "up", reason: null })
+      .eq("voter_id", flipper.userId)
+      .eq("guide_id", guide.id)
+      .throwOnError();
+
+    const flipped = await list(author.token);
+
+    expect(flipped.notifications).toEqual([
+      expect.objectContaining({ type: "guide_upvotes", count: 1 }),
+    ]);
+
+    await createVote(other.userId, guide.id);
+    const grouped = await list(author.token);
+
+    expect(grouped.notifications).toEqual([
+      expect.objectContaining({ id: flipped.notifications[0].id, count: 2 }),
+    ]);
+  });
 });
 
 describe("GET /notifications", () => {
@@ -280,8 +299,10 @@ describe("GET /notifications", () => {
     const first = (await res.json()) as NotificationsResponse;
     const second = await list(author.token, "?limit=2&page=2");
 
-    expect(first.has_more).toBe(true);
-    expect(second.has_more).toBe(false);
+    expect(first.total).toBe(3);
+    expect(first.notifications).toHaveLength(2);
+    expect(second.total).toBe(3);
+    expect(second.notifications).toHaveLength(1);
     expect(
       [...first.notifications, ...second.notifications].map(
         (n) => n.data.guide_id
@@ -307,6 +328,7 @@ describe("GET /notifications", () => {
     expect(community.notifications.map((n) => n.type)).toEqual([
       "guide_upvotes",
     ]);
+    expect(community.total).toBe(1);
 
     await app.request(
       `/notifications/${community.notifications[0].id}/read`,
@@ -318,6 +340,8 @@ describe("GET /notifications", () => {
     expect(unread.notifications.map((n) => n.type)).toEqual([
       "guide_review_decision",
     ]);
+    expect(unread.total).toBe(1);
+    expect((await list(author.token)).total).toBe(2);
   });
 
   it("never shows another user's notifications", async () => {

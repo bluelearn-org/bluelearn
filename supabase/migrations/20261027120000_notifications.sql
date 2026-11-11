@@ -41,7 +41,8 @@ create table public.notifications (
   group_key text,
   group_count integer not null default 1,
   -- Ids, slugs and titles that the app needs to show and link the row.
-  -- Store only text that the recipient can already read.
+  -- Store only text that the recipient can already read. A downvote row also
+  -- gives the guide author the reason and note of the vote.
   data jsonb not null default '{}'::jsonb,
   -- The time of the latest event in the row.
   occurred_at timestamptz not null default now(),
@@ -78,16 +79,17 @@ create or replace function public.notify(
   p_data jsonb default '{}'::jsonb,
   p_group_key text default null
 )
-returns void
+returns uuid
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
   v_enabled boolean;
+  v_id uuid;
 begin
   if p_recipient_id is null or p_recipient_id = p_actor_id then
-    return;
+    return null;
   end if;
 
   select coalesce(p.enabled, t.default_enabled)
@@ -104,7 +106,7 @@ begin
       using errcode = '22023';
   end if;
   if not v_enabled then
-    return;
+    return null;
   end if;
 
   insert into public.notifications
@@ -117,7 +119,10 @@ begin
     group_count = public.notifications.group_count + 1,
     actor_id = excluded.actor_id,
     data = excluded.data,
-    occurred_at = now();
+    occurred_at = now()
+  returning id into v_id;
+
+  return v_id;
 end;
 $$;
 
@@ -127,104 +132,6 @@ revoke execute on function public.notify(uuid, text, uuid, jsonb, text)
   from public, anon, authenticated;
 grant execute on function public.notify(uuid, text, uuid, jsonb, text)
   to service_role;
-
--- guide_review_decision: the revision author hears the panel outcome.
--- close_review_panel sets the case status, so this trigger sees every outcome.
-create or replace function public.notify_guide_review_decision()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_author_id uuid;
-  v_title text;
-begin
-  select gr.author_id, gr.title
-    into v_author_id, v_title
-    from public.guide_review_cases grc
-    join public.guide_revisions gr on gr.id = grc.guide_revision_id
-   where grc.case_id = new.id;
-
-  if not found then
-    return null;
-  end if;
-
-  perform public.notify(
-    v_author_id,
-    'guide_review_decision',
-    null,
-    jsonb_build_object(
-      'case_id', new.id,
-      'outcome', new.status,
-      'title', v_title
-    )
-  );
-  return null;
-end;
-$$;
-
-revoke execute on function public.notify_guide_review_decision()
-  from public, anon, authenticated;
-
-create trigger review_cases_notify_guide_decision
-  after update of status on public.review_cases
-  for each row
-  when (
-    new.status in ('approved', 'rejected')
-    and old.status is distinct from new.status
-  )
-  execute function public.notify_guide_review_decision();
-
--- guide_upvotes: the guide author hears about new upvotes, one row per guide.
-create or replace function public.notify_guide_upvote()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_author_id uuid;
-  v_title text;
-  v_base_slug text;
-  v_variant_slug text;
-begin
-  -- Re-voting overwrites the row. Only a change to 'up' is a new upvote.
-  if tg_op = 'UPDATE' and old.direction = 'up' then
-    return null;
-  end if;
-
-  select g.author_id, gr.title, b.slug, g.slug
-    into v_author_id, v_title, v_base_slug, v_variant_slug
-    from public.guides g
-    join public.guide_bases b on b.id = g.guide_base_id
-    left join public.guide_revisions gr on gr.id = g.current_revision_id
-   where g.id = new.guide_id;
-
-  perform public.notify(
-    v_author_id,
-    'guide_upvotes',
-    new.voter_id,
-    jsonb_build_object(
-      'guide_id', new.guide_id,
-      'title', v_title,
-      'base_slug', v_base_slug,
-      'variant_slug', v_variant_slug
-    ),
-    new.guide_id::text
-  );
-  return null;
-end;
-$$;
-
-revoke execute on function public.notify_guide_upvote()
-  from public, anon, authenticated;
-
-create trigger votes_notify_guide_upvote
-  after insert or update of direction on public.votes
-  for each row
-  when (new.direction = 'up')
-  execute function public.notify_guide_upvote();
 
 alter table public.notification_types enable row level security;
 alter table public.notifications enable row level security;

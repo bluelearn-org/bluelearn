@@ -35,7 +35,7 @@ export async function listNotifications(
 
   let request = supabase
     .from("notifications")
-    .select(NOTIFICATION_COLUMNS)
+    .select(NOTIFICATION_COLUMNS, { count: "exact" })
     .eq("recipient_id", userId)
     .order("occurred_at", { ascending: false })
     .order("id", { ascending: false });
@@ -44,28 +44,28 @@ export async function listNotifications(
   if (query.category)
     request = request.eq("notification_types.category", query.category);
 
-  // Read one extra row to learn whether another page exists.
-  const { data, error } = await request.range(first, first + query.limit);
+  const { data, count, error } = await request.range(
+    first,
+    first + query.limit - 1
+  );
 
   if (error) {
     console.error(error);
     throw new ServiceError("Failed to load notifications", 500);
   }
 
-  const notifications: Notification[] = data
-    .slice(0, query.limit)
-    .map((row) => ({
-      id: row.id,
-      type: row.type as NotificationType,
-      category: row.notification_types.category,
-      actor: row.actor,
-      count: row.group_count,
-      data: row.data as Record<string, unknown>,
-      occurred_at: row.occurred_at,
-      read_at: row.read_at,
-    }));
+  const notifications: Notification[] = data.map((row) => ({
+    id: row.id,
+    type: row.type as NotificationType,
+    category: row.notification_types.category,
+    actor: row.actor,
+    count: row.group_count,
+    data: row.data as Record<string, unknown>,
+    occurred_at: row.occurred_at,
+    read_at: row.read_at,
+  }));
 
-  return { notifications, has_more: data.length > query.limit };
+  return { notifications, total: count ?? 0 };
 }
 
 export async function countUnreadNotifications(supabase: DB, userId: string) {
@@ -200,9 +200,6 @@ export async function setNotificationPreference(
     );
 
   if (error) {
-    // 23503: the type is not in public.notification_types.
-    if (error.code === "23503")
-      throw new ServiceError("Unknown notification type", 404);
     console.error(error);
     throw new ServiceError("Failed to save the notification preference", 500);
   }

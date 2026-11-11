@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Settings } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   Notification,
   NotificationCategory,
@@ -40,6 +40,8 @@ const CATEGORY_VIEWS: Array<View> = notificationSections.map((section) => ({
   category: section.category,
 }));
 
+const PAGE_SIZE = 20;
+
 type NotificationPanelProps = {
   unread: number;
   onUnreadChange: (unread: number) => void;
@@ -60,15 +62,28 @@ export function NotificationPanel({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  // Starting any load aborts the one before it, so a late page from an old
+  // view never lands in the new one.
+  const controllerRef = useRef<AbortController | null>(null);
 
   const load = useCallback(
-    async (nextPage: number, signal?: AbortSignal) => {
+    async (nextPage: number) => {
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      const { signal } = controller;
+
       setLoading(true);
       setFailed(false);
 
       try {
         const result = await listNotifications(
-          { page: nextPage, filter: view.filter, category: view.category },
+          {
+            page: nextPage,
+            limit: PAGE_SIZE,
+            filter: view.filter,
+            category: view.category,
+          },
           { signal }
         );
         // A row can move to the next page when a new event arrives, so drop
@@ -82,23 +97,22 @@ export function NotificationPanel({
           ];
         });
         setPage(nextPage);
-        setHasMore(result.has_more);
+        setHasMore(nextPage * PAGE_SIZE < result.total);
       } catch (error) {
-        if (signal?.aborted) return;
+        if (signal.aborted) return;
 
         console.error(error);
         setFailed(true);
       } finally {
-        if (!signal?.aborted) setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     },
     [view]
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-    void load(1, controller.signal);
-    return () => controller.abort();
+    void load(1);
+    return () => controllerRef.current?.abort();
   }, [load]);
 
   const open = async (item: Notification) => {

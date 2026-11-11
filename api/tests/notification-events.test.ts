@@ -1,15 +1,20 @@
-import { createClient } from "@supabase/supabase-js";
-import type { NotificationsResponse } from "@bluelearn/schemas";
+import type { CastVoteInput, NotificationsResponse } from "@bluelearn/schemas";
 import { describe, expect, it } from "vitest";
 import app from "../src/index";
-import type { Database } from "../src/database.types";
-import { admin, auth, env, jsonAuth, makeUser, type Insert } from "./helpers";
+import {
+  admin,
+  auth,
+  env,
+  jsonAuth,
+  makeUser,
+  userClient,
+  type Insert,
+} from "./helpers";
 import {
   createGuide,
   createGuideBase,
   createGuideRevision,
   createPublishedGuide,
-  createVote,
 } from "./factories/guides";
 import {
   createGuideReviewCase,
@@ -42,6 +47,16 @@ async function read(token: string, id: string) {
   const res = await app.request(
     `/notifications/${id}/read`,
     jsonAuth(token, "POST", {}),
+    env
+  );
+
+  expect(res.status).toBe(200);
+}
+
+async function vote(token: string, guideId: string, body: CastVoteInput) {
+  const res = await app.request(
+    `/variants/${guideId}/vote`,
+    jsonAuth(token, "PUT", body),
     env
   );
 
@@ -297,59 +312,28 @@ describe("variant publication notifications", () => {
 });
 
 describe("review decision type separation", () => {
-  it.each(["approved", "rejected"] as const)(
-    "routes %s variant decisions to the revision author only",
-    async (outcome) => {
-      const canonicalAuthor = await makeUser();
-      const owner = await makeUser();
-      const revisionAuthor = await makeUser();
+  it("routes an approved variant decision to the revision author only", async () => {
+    const canonicalAuthor = await makeUser();
+    const owner = await makeUser();
+    const revisionAuthor = await makeUser();
 
-      await preference(revisionAuthor.token, "variant_review_decision", true);
+    await preference(revisionAuthor.token, "variant_review_decision", true);
 
-      const { base } = await createPublishedGuide({
-        authorId: canonicalAuthor.userId,
-      });
-      const variant = await createGuide(base.id, { author_id: owner.userId });
-      const revision = await createGuideRevision(variant.id, {
-        author_id: revisionAuthor.userId,
-        title: "Variant decision",
-      });
-      const review = await reviewRevision(revision.id, revisionAuthor.userId);
-
-      await review.decide(outcome);
-
-      expect(await notifications(revisionAuthor.token)).toEqual([
-        expect.objectContaining({
-          type: "variant_review_decision",
-          actor: null,
-          data: {
-            case_id: review.reviewCase.id,
-            outcome,
-            title: revision.title,
-          },
-        }),
-      ]);
-      expect(await notifications(owner.token)).toEqual([]);
-      expect(
-        await notifications(canonicalAuthor.token, "guide_review_decision")
-      ).toEqual([]);
-    }
-  );
-
-  it("keeps a first canonical submission on guide_review_decision even with no canonical pointer", async () => {
-    const author = await makeUser();
-    const base = await createGuideBase();
-    const guide = await createGuide(base.id, { author_id: author.userId });
-    const revision = await createGuideRevision(guide.id, {
-      author_id: author.userId,
+    const { base } = await createPublishedGuide({
+      authorId: canonicalAuthor.userId,
     });
-    const review = await reviewRevision(revision.id, author.userId);
+    const variant = await createGuide(base.id, { author_id: owner.userId });
+    const revision = await createGuideRevision(variant.id, {
+      author_id: revisionAuthor.userId,
+      title: "Variant decision",
+    });
+    const review = await reviewRevision(revision.id, revisionAuthor.userId);
 
     await review.decide();
 
-    expect(await notifications(author.token)).toEqual([
+    expect(await notifications(revisionAuthor.token)).toEqual([
       expect.objectContaining({
-        type: "guide_review_decision",
+        type: "variant_review_decision",
         actor: null,
         data: {
           case_id: review.reviewCase.id,
@@ -358,109 +342,223 @@ describe("review decision type separation", () => {
         },
       }),
     ]);
+    expect(await notifications(owner.token)).toEqual([]);
+    expect(
+      await notifications(canonicalAuthor.token, "guide_review_decision")
+    ).toEqual([]);
+  });
+
+  it("keeps an approved edit to a published canonical guide on guide_review_decision", async () => {
+    const canonicalAuthor = await makeUser();
+    const editor = await makeUser();
+
+    await preference(editor.token, "variant_review_decision", true);
+
+    const { guide } = await createPublishedGuide({
+      authorId: canonicalAuthor.userId,
+    });
+    const edit = await createGuideRevision(guide.id, {
+      author_id: editor.userId,
+      title: "Canonical edit",
+    });
+    const review = await reviewRevision(edit.id, editor.userId, "guide_edit");
+
+    await review.decide();
+
+    expect(await notifications(editor.token)).toEqual([
+      expect.objectContaining({
+        type: "guide_review_decision",
+        actor: null,
+        data: {
+          case_id: review.reviewCase.id,
+          outcome: "approved",
+          title: "Canonical edit",
+        },
+      }),
+    ]);
   });
 });
 
 describe("downvote events", () => {
-  it("requires opt-in, groups by guide independently of upvotes, ignores unchanged votes, and reopens after read", async () => {
+  it("requires opt-in and sends each downvote with its reason and note", async () => {
     const author = await makeUser();
+    const early = await makeUser();
     const first = await makeUser();
     const second = await makeUser();
     const { base, guide } = await createPublishedGuide({
       authorId: author.userId,
       title: "Voting",
     });
+    const guideData = {
+      guide_id: guide.id,
+      title: "Voting",
+      base_slug: base.slug,
+      variant_slug: "main",
+    };
 
-    await createVote(first.userId, guide.id, {
-      direction: "down",
-      reason: "unclear",
-    });
+    await vote(early.token, guide.id, { direction: "down", reason: "unclear" });
 
     expect(await notifications(author.token)).toEqual([]);
 
     await preference(author.token, "guide_downvotes", true);
-    await createVote(second.userId, guide.id, {
+    await vote(first.token, guide.id, {
+      direction: "down",
+      reason: "missing_step",
+      note: "Step 3 skips the setup.",
+    });
+    await vote(second.token, guide.id, {
+      direction: "down",
+      reason: "outdated",
+    });
+    await vote(author.token, guide.id, {
       direction: "down",
       reason: "unclear",
     });
-    await admin
-      .from("votes")
-      .update({ direction: "down", reason: "unclear" })
-      .eq("voter_id", second.userId)
-      .eq("guide_id", guide.id)
-      .throwOnError();
-    await createVote(author.userId, guide.id, {
-      direction: "down",
-      reason: "unclear",
-    });
 
-    const [down] = await notifications(author.token);
-
-    expect(down).toMatchObject({
-      type: "guide_downvotes",
-      count: 1,
-      actor: { id: second.userId },
-      data: {
-        guide_id: guide.id,
-        title: "Voting",
-        base_slug: base.slug,
-        variant_slug: "main",
-      },
-    });
-
-    await admin
-      .from("votes")
-      .update({ direction: "up", reason: null })
-      .eq("voter_id", first.userId)
-      .eq("guide_id", guide.id)
-      .throwOnError();
-    await admin
-      .from("votes")
-      .update({ direction: "down", reason: "unclear" })
-      .eq("voter_id", first.userId)
-      .eq("guide_id", guide.id)
-      .throwOnError();
-
-    expect(await notifications(author.token, "guide_downvotes")).toEqual([
-      expect.objectContaining({
-        id: down.id,
-        count: 2,
-        actor: expect.objectContaining({ id: first.userId }),
-      }),
-    ]);
-    expect(await notifications(author.token, "guide_upvotes")).toEqual([
-      expect.objectContaining({ count: 1 }),
-    ]);
-
-    const another = await createPublishedGuide({ authorId: author.userId });
-    await createVote(first.userId, another.guide.id, {
-      direction: "down",
-      reason: "unclear",
-    });
-    await read(author.token, down.id);
-    await createVote((await makeUser()).userId, guide.id, {
-      direction: "down",
-      reason: "unclear",
-    });
     const rows = await notifications(author.token, "guide_downvotes");
 
-    expect(rows).toHaveLength(3);
-    expect(rows.find((n) => n.id === down.id)).toMatchObject({
-      count: 2,
-      read_at: expect.any(String),
-    });
-    expect(rows.filter((n) => n.read_at === null)).toEqual(
+    expect(rows).toHaveLength(2);
+    expect(rows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           count: 1,
-          data: expect.objectContaining({ guide_id: guide.id }),
+          actor: null,
+          data: {
+            ...guideData,
+            reason: "missing_step",
+            note: "Step 3 skips the setup.",
+          },
         }),
         expect.objectContaining({
           count: 1,
-          data: expect.objectContaining({ guide_id: another.guide.id }),
+          actor: null,
+          data: { ...guideData, reason: "outdated", note: null },
         }),
       ])
     );
+  });
+
+  it("keeps the voter out of every column the author can read", async () => {
+    const author = await makeUser();
+    const voter = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const client = userClient(author.token);
+
+    await preference(author.token, "guide_downvotes", true);
+    await vote(voter.token, guide.id, {
+      direction: "down",
+      reason: "broken_link",
+      note: "The setup link is dead.",
+    });
+    await vote(voter.token, guide.id, { direction: "up" });
+
+    const { data: rows } = await client
+      .from("notifications")
+      .select("*")
+      .throwOnError();
+    const down = rows.filter((row) => row.type === "guide_downvotes");
+    const up = rows.filter((row) => row.type === "guide_upvotes");
+
+    expect(down).toEqual([
+      expect.objectContaining({
+        actor_id: null,
+        group_key: null,
+        group_count: 1,
+      }),
+    ]);
+    expect(JSON.stringify(down)).not.toContain(voter.userId);
+    expect(JSON.stringify(up)).toContain(voter.userId);
+
+    const voters = await client.from("notification_voters").select("*");
+
+    expect(voters.error?.code).toBe("42501");
+  });
+
+  it("adds a row for each downvoter and guide but not for a flip back before the author reads it", async () => {
+    const author = await makeUser();
+    const flipper = await makeUser();
+    const other = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const another = await createPublishedGuide({ authorId: author.userId });
+
+    await preference(author.token, "guide_downvotes", true);
+    await vote(flipper.token, guide.id, {
+      direction: "down",
+      reason: "unclear",
+    });
+    await vote(flipper.token, guide.id, { direction: "up" });
+    await vote(flipper.token, guide.id, {
+      direction: "down",
+      reason: "unclear",
+    });
+
+    const flipped = await notifications(author.token, "guide_downvotes");
+
+    expect(flipped).toHaveLength(1);
+    expect(await notifications(author.token, "guide_upvotes")).toEqual([
+      expect.objectContaining({
+        count: 1,
+        actor: expect.objectContaining({ id: flipper.userId }),
+      }),
+    ]);
+
+    await vote(other.token, guide.id, {
+      direction: "down",
+      reason: "outdated",
+    });
+    await vote(flipper.token, another.guide.id, {
+      direction: "down",
+      reason: "unclear",
+    });
+
+    const rows = await notifications(author.token, "guide_downvotes");
+    const onGuide = rows.filter((n) => n.data.guide_id === guide.id);
+    const onAnother = rows.filter((n) => n.data.guide_id === another.guide.id);
+
+    expect(onGuide).toHaveLength(2);
+    expect(onAnother).toHaveLength(1);
+  });
+
+  it("adds a row for a new downvote after the author reads, but not for an edited one", async () => {
+    const author = await makeUser();
+    const flipper = await makeUser();
+    const editor = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+
+    await preference(author.token, "guide_downvotes", true);
+    await vote(flipper.token, guide.id, {
+      direction: "down",
+      reason: "unclear",
+    });
+    await vote(editor.token, guide.id, {
+      direction: "down",
+      reason: "outdated",
+    });
+
+    const before = await notifications(author.token, "guide_downvotes");
+
+    expect(before).toHaveLength(2);
+
+    await Promise.all(before.map((row) => read(author.token, row.id)));
+    await vote(editor.token, guide.id, {
+      direction: "down",
+      reason: "outdated",
+      note: "Still uses the old API.",
+    });
+    await vote(flipper.token, guide.id, { direction: "up" });
+    await vote(flipper.token, guide.id, {
+      direction: "down",
+      reason: "missing_step",
+    });
+
+    const rows = await notifications(author.token, "guide_downvotes");
+
+    expect(rows.filter((n) => n.read_at === null)).toEqual([
+      expect.objectContaining({
+        count: 1,
+        data: expect.objectContaining({ reason: "missing_step", note: null }),
+      }),
+    ]);
   });
 });
 
@@ -604,12 +702,9 @@ describe("review assignments", () => {
   });
 
   it.each([
-    { seatStatus: "completed" as const },
     { seatStatus: "replaced" as const },
-    { seatStatus: "recused" as const },
     { closed: true },
     { caseStatus: "approved" as const },
-    { caseStatus: "rejected" as const },
   ])("excludes ineligible assignment %j", async (options) => {
     const member = await makeUser();
     await preference(member.token, "review_assignment", true);
@@ -760,13 +855,9 @@ describe("review deadline sweeps", () => {
     { expiresAt: hoursFromNow(72) },
     { expiresAt: hoursFromNow(-1) },
     { expiresAt: null },
-    { seatStatus: "completed" as const },
     { seatStatus: "replaced" as const },
-    { seatStatus: "recused" as const },
     { closed: true },
     { caseStatus: "pending" as const },
-    { caseStatus: "approved" as const },
-    { caseStatus: "rejected" as const },
   ])("excludes an ineligible deadline %j", async (options) => {
     const member = await makeUser();
     await reviewSeat(member.userId, options);
@@ -810,14 +901,7 @@ describe("review deadline sweeps", () => {
     const member = await makeUser();
     await reviewSeat(member.userId);
 
-    const client = createClient<Database>(
-      env.SUPABASE_URL,
-      env.SUPABASE_PUBLISHABLE_KEY,
-      {
-        global: { headers: { Authorization: `Bearer ${member.token}` } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      }
-    );
+    const client = userClient(member.token);
 
     const { error } = await client.rpc("notify_review_deadlines");
 

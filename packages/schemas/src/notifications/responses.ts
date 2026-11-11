@@ -20,9 +20,11 @@ export const notificationSchema = z.object({
   read_at: z.iso.datetime({ offset: true }).nullable(),
 });
 
+const totalSchema = z.number().int().min(0);
+
 export const notificationsResponseSchema = z.strictObject({
   notifications: z.array(notificationSchema),
-  has_more: z.boolean(),
+  total: totalSchema,
 });
 
 export const unreadNotificationCountResponseSchema = z.strictObject({

@@ -26,6 +26,8 @@ vi.mock("@/lib/api/notifications", () => ({
   setNotificationPreference,
 }));
 
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
+
 const SettingsPage = Route.options.component as ComponentType;
 
 const preferences = [
@@ -58,6 +60,7 @@ describe("notification settings page", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it("turns an enabled option off after a successful save", async () => {
@@ -72,6 +75,10 @@ describe("notification settings page", () => {
       expect(toggle(/upvotes/i).hasAttribute("disabled")).toBe(false)
     );
     expect(toggle(/upvotes/i).getAttribute("aria-checked")).toBe("false");
+    expect(setNotificationPreference).toHaveBeenCalledWith(
+      "guide_upvotes",
+      false
+    );
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -88,5 +95,16 @@ describe("notification settings page", () => {
     await screen.findByRole("alert");
 
     expect(toggle(/upvotes/i).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("reports a failed load and keeps every option disabled", async () => {
+    getNotificationPreferences.mockRejectedValue(new Error("offline"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<SettingsPage />);
+
+    expect((await screen.findByRole("alert")).textContent).toMatch(/load/i);
+    for (const option of screen.getAllByRole("switch")) {
+      expect(option.hasAttribute("disabled")).toBe(true);
+    }
   });
 });
