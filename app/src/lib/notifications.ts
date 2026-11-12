@@ -24,7 +24,8 @@ export type NotificationTarget =
   | {
       to: "/guides/$slug/$variantSlug";
       params: { slug: string; variantSlug: string };
-    };
+    }
+  | { to: "/profile/notifications"; hash: string };
 
 export type NotificationView = {
   title: string;
@@ -33,6 +34,9 @@ export type NotificationView = {
   target: NotificationTarget | null;
   // Shown in place of the avatar when nobody acted, such as a panel outcome.
   icon: LucideIcon;
+  // Each downvote reason and note in the row, newest first, for the
+  // notifications page.
+  feedback?: Array<{ reason: string | null; note: string | null }>;
 };
 
 type Renderer = (notification: Notification) => NotificationView;
@@ -46,22 +50,22 @@ export const notificationRenderers: Partial<
     reviewDecision(notification, "variant"),
   guide_upvotes: upvotes,
 
-  // Downvoters stay private, so these rows never carry an actor.
-  guide_downvotes: ({ data }) => {
+  // Downvoters stay private, so these rows never carry an actor. The reasons
+  // and notes show on the notifications page, which the row opens.
+  guide_downvotes: ({ id, data, count }) => {
     const title = text(data.title) ?? "Untitled";
-    const reason = downvoteReasonItems.find(
-      (item) => item.value === data.reason
-    )?.label;
-    const note = text(data.note);
-    const downvoted = reason
-      ? `"${title}" was downvoted: ${reason}`
-      : `"${title}" was downvoted`;
+    const votes = voteTotal(data) ?? count;
+    const downvoted =
+      votes === 1
+        ? `A downvote on "${title}"`
+        : `${votes} downvotes on "${title}"`;
 
     return {
-      title: "New downvote",
-      body: note ? `${downvoted}. "${note}"` : downvoted,
-      target: guideTarget(data),
+      title: "Downvote",
+      body: `${downvoted}. Click to see why.`,
+      target: { to: "/profile/notifications", hash: notificationAnchor(id) },
       icon: ThumbsDown,
+      feedback: downvoteFeedback(data),
     };
   },
 
@@ -122,6 +126,11 @@ export function isNotificationTypeLive(type: NotificationType) {
   return type in notificationRenderers;
 }
 
+// The id of a row on the notifications page, and the link hash that opens it.
+export function notificationAnchor(id: string) {
+  return `notification-${id}`;
+}
+
 function reviewDecision(
   { data }: Notification,
   kind: "guide" | "variant"
@@ -142,19 +151,50 @@ function reviewDecision(
 
 function upvotes({ data, actor, count }: Notification): NotificationView {
   const title = text(data.title) ?? "your guide";
+  const total = voteTotal(data);
   const who = actorName(actor);
   const others = count - 1;
   const otherVoters = others === 1 ? "1 other" : `${others} others`;
 
   return {
-    title: count === 1 ? "New upvote" : `${count} new upvotes`,
-    body:
-      others === 0
+    title: "Upvote",
+    body: total
+      ? `${total} upvotes on "${title}"`
+      : others === 0
         ? `${who} upvoted "${title}"`
         : `${who} and ${otherVoters} upvoted "${title}"`,
     target: guideTarget(data),
     icon: ThumbsUp,
   };
+}
+
+// A row after the live tier shows the guide's total instead of its own count.
+function voteTotal(data: Notification["data"]) {
+  return typeof data.total === "number" &&
+    Number.isInteger(data.total) &&
+    data.total > 0
+    ? data.total
+    : null;
+}
+
+// One { reason, note } entry per downvote, newest first. A reason the app
+// does not know keeps its note.
+function downvoteFeedback(data: Notification["data"]) {
+  const entries = Array.isArray(data.feedback)
+    ? data.feedback.filter(
+        (entry): entry is Record<string, unknown> =>
+          typeof entry === "object" && entry !== null
+      )
+    : [];
+
+  return entries.flatMap((entry) => {
+    const reason =
+      downvoteReasonItems.find((item) => item.value === entry.reason)?.label ??
+      null;
+    const note = text(entry.note);
+
+    return reason || note ? [{ reason, note }] : [];
+  });
 }
 
 function actorName(actor: Notification["actor"]) {

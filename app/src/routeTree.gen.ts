@@ -27,6 +27,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as ReviewIndexRouteImport } from './routes/review.index'
+import { Route as ProfileIndexRouteImport } from './routes/profile.index'
 import { Route as ObjectivesIndexRouteImport } from './routes/objectives.index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
@@ -36,6 +37,7 @@ import { Route as SettingsNotificationsRouteImport } from './routes/settings.not
 import { Route as SettingsAppearanceRouteImport } from './routes/settings.appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings.account'
 import { Route as ReviewCaseIdRouteImport } from './routes/review.$caseId'
+import { Route as ProfileNotificationsRouteImport } from './routes/profile.notifications'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as ObjectivesSlugRouteImport } from './routes/objectives/$slug'
 import { Route as GuidesSlugRouteImport } from './routes/guides/$slug'
@@ -140,6 +142,11 @@ const ReviewIndexRoute = ReviewIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ReviewRoute,
 } as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProfileRoute,
+} as any)
 const ObjectivesIndexRoute = ObjectivesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -184,6 +191,11 @@ const ReviewCaseIdRoute = ReviewCaseIdRouteImport.update({
   id: '/$caseId',
   path: '/$caseId',
   getParentRoute: () => ReviewRoute,
+} as any)
+const ProfileNotificationsRoute = ProfileNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => ProfileRoute,
 } as any)
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   id: '/$username',
@@ -277,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
+  '/profile/notifications': typeof ProfileNotificationsRoute
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -286,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
@@ -303,7 +317,6 @@ export interface FileRoutesByTo {
   '/contribute': typeof ContributeRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/profile': typeof ProfileRouteWithChildren
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/todos': typeof TodosRoute
@@ -312,6 +325,7 @@ export interface FileRoutesByTo {
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/profile/notifications': typeof ProfileNotificationsRoute
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -321,6 +335,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/guides': typeof GuidesIndexRoute
   '/objectives': typeof ObjectivesIndexRoute
+  '/profile': typeof ProfileIndexRoute
   '/review': typeof ReviewIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/subjects': typeof SubjectsIndexRoute
@@ -355,6 +370,7 @@ export interface FileRoutesById {
   '/guides/$slug': typeof GuidesSlugRouteWithChildren
   '/objectives/$slug': typeof ObjectivesSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
+  '/profile/notifications': typeof ProfileNotificationsRoute
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -364,6 +380,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
@@ -399,6 +416,7 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/objectives/$slug'
     | '/profile/$username'
+    | '/profile/notifications'
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
@@ -408,6 +426,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/guides/'
     | '/objectives/'
+    | '/profile/'
     | '/review/'
     | '/settings/'
     | '/subjects/'
@@ -425,7 +444,6 @@ export interface FileRouteTypes {
     | '/contribute'
     | '/forgot-password'
     | '/login'
-    | '/profile'
     | '/register'
     | '/reset-password'
     | '/todos'
@@ -434,6 +452,7 @@ export interface FileRouteTypes {
     | '/dashboard/members'
     | '/dashboard/roles'
     | '/profile/$username'
+    | '/profile/notifications'
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
@@ -443,6 +462,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guides'
     | '/objectives'
+    | '/profile'
     | '/review'
     | '/settings'
     | '/subjects'
@@ -476,6 +496,7 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/objectives/$slug'
     | '/profile/$username'
+    | '/profile/notifications'
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
@@ -485,6 +506,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/guides/'
     | '/objectives/'
+    | '/profile/'
     | '/review/'
     | '/settings/'
     | '/subjects/'
@@ -645,6 +667,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewIndexRouteImport
       parentRoute: typeof ReviewRoute
     }
+    '/profile/': {
+      id: '/profile/'
+      path: '/'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof ProfileRoute
+    }
     '/objectives/': {
       id: '/objectives/'
       path: '/'
@@ -707,6 +736,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/review/$caseId'
       preLoaderRoute: typeof ReviewCaseIdRouteImport
       parentRoute: typeof ReviewRoute
+    }
+    '/profile/notifications': {
+      id: '/profile/notifications'
+      path: '/notifications'
+      fullPath: '/profile/notifications'
+      preLoaderRoute: typeof ProfileNotificationsRouteImport
+      parentRoute: typeof ProfileRoute
     }
     '/profile/$username': {
       id: '/profile/$username'
@@ -851,10 +887,14 @@ const ObjectivesRouteWithChildren = ObjectivesRoute._addFileChildren(
 
 interface ProfileRouteChildren {
   ProfileUsernameRoute: typeof ProfileUsernameRoute
+  ProfileNotificationsRoute: typeof ProfileNotificationsRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
 }
 
 const ProfileRouteChildren: ProfileRouteChildren = {
   ProfileUsernameRoute: ProfileUsernameRoute,
+  ProfileNotificationsRoute: ProfileNotificationsRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
 }
 
 const ProfileRouteWithChildren =

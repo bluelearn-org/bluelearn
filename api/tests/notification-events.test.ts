@@ -15,6 +15,7 @@ import {
   createGuideBase,
   createGuideRevision,
   createPublishedGuide,
+  createVote,
 } from "./factories/guides";
 import {
   createGuideReviewCase,
@@ -380,7 +381,7 @@ describe("review decision type separation", () => {
 });
 
 describe("downvote events", () => {
-  it("requires opt-in and sends each downvote with its reason and note", async () => {
+  it("requires opt-in and collects every reason and note on one row, newest first", async () => {
     const author = await makeUser();
     const early = await makeUser();
     const first = await makeUser();
@@ -415,32 +416,25 @@ describe("downvote events", () => {
       reason: "unclear",
     });
 
-    const rows = await notifications(author.token, "guide_downvotes");
-
-    expect(rows).toHaveLength(2);
-    expect(rows).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          count: 1,
-          actor: null,
-          data: {
-            ...guideData,
-            reason: "missing_step",
-            note: "Step 3 skips the setup.",
-          },
-        }),
-        expect.objectContaining({
-          count: 1,
-          actor: null,
-          data: { ...guideData, reason: "outdated", note: null },
-        }),
-      ])
-    );
+    expect(await notifications(author.token, "guide_downvotes")).toEqual([
+      expect.objectContaining({
+        count: 2,
+        actor: null,
+        data: {
+          ...guideData,
+          feedback: [
+            { reason: "outdated", note: null },
+            { reason: "missing_step", note: "Step 3 skips the setup." },
+          ],
+        },
+      }),
+    ]);
   });
 
   it("keeps the voter out of every column the author can read", async () => {
     const author = await makeUser();
     const voter = await makeUser();
+    const other = await makeUser();
     const { guide } = await createPublishedGuide({ authorId: author.userId });
     const client = userClient(author.token);
 
@@ -449,6 +443,10 @@ describe("downvote events", () => {
       direction: "down",
       reason: "broken_link",
       note: "The setup link is dead.",
+    });
+    await vote(other.token, guide.id, {
+      direction: "down",
+      reason: "outdated",
     });
     await vote(voter.token, guide.id, { direction: "up" });
 
@@ -462,19 +460,22 @@ describe("downvote events", () => {
     expect(down).toEqual([
       expect.objectContaining({
         actor_id: null,
-        group_key: null,
-        group_count: 1,
+        group_key: guide.id,
+        group_count: 2,
       }),
     ]);
     expect(JSON.stringify(down)).not.toContain(voter.userId);
+    expect(JSON.stringify(down)).not.toContain(other.userId);
     expect(JSON.stringify(up)).toContain(voter.userId);
 
     const voters = await client.from("notification_voters").select("*");
+    const tallies = await client.from("notification_vote_tallies").select("*");
 
     expect(voters.error?.code).toBe("42501");
+    expect(tallies.error?.code).toBe("42501");
   });
 
-  it("adds a row for each downvoter and guide but not for a flip back before the author reads it", async () => {
+  it("counts each downvoter once per guide, even after a flip back", async () => {
     const author = await makeUser();
     const flipper = await makeUser();
     const other = await makeUser();
@@ -489,12 +490,9 @@ describe("downvote events", () => {
     await vote(flipper.token, guide.id, { direction: "up" });
     await vote(flipper.token, guide.id, {
       direction: "down",
-      reason: "unclear",
+      reason: "outdated",
     });
 
-    const flipped = await notifications(author.token, "guide_downvotes");
-
-    expect(flipped).toHaveLength(1);
     expect(await notifications(author.token, "guide_upvotes")).toEqual([
       expect.objectContaining({
         count: 1,
@@ -504,7 +502,7 @@ describe("downvote events", () => {
 
     await vote(other.token, guide.id, {
       direction: "down",
-      reason: "outdated",
+      reason: "broken_link",
     });
     await vote(flipper.token, another.guide.id, {
       direction: "down",
@@ -515,50 +513,182 @@ describe("downvote events", () => {
     const onGuide = rows.filter((n) => n.data.guide_id === guide.id);
     const onAnother = rows.filter((n) => n.data.guide_id === another.guide.id);
 
-    expect(onGuide).toHaveLength(2);
-    expect(onAnother).toHaveLength(1);
+    expect(onGuide).toEqual([
+      expect.objectContaining({
+        count: 2,
+        data: expect.objectContaining({
+          feedback: [
+            { reason: "broken_link", note: null },
+            { reason: "unclear", note: null },
+          ],
+        }),
+      }),
+    ]);
+    expect(onAnother).toEqual([expect.objectContaining({ count: 1 })]);
   });
 
-  it("adds a row for a new downvote after the author reads, but not for an edited one", async () => {
+  it("adds a new downvote to the read row, but not an edited one", async () => {
     const author = await makeUser();
-    const flipper = await makeUser();
     const editor = await makeUser();
+    const newcomer = await makeUser();
     const { guide } = await createPublishedGuide({ authorId: author.userId });
 
     await preference(author.token, "guide_downvotes", true);
-    await vote(flipper.token, guide.id, {
-      direction: "down",
-      reason: "unclear",
-    });
     await vote(editor.token, guide.id, {
       direction: "down",
       reason: "outdated",
     });
 
-    const before = await notifications(author.token, "guide_downvotes");
+    const [row] = await notifications(author.token, "guide_downvotes");
 
-    expect(before).toHaveLength(2);
-
-    await Promise.all(before.map((row) => read(author.token, row.id)));
+    await read(author.token, row.id);
     await vote(editor.token, guide.id, {
       direction: "down",
       reason: "outdated",
       note: "Still uses the old API.",
     });
-    await vote(flipper.token, guide.id, { direction: "up" });
-    await vote(flipper.token, guide.id, {
+
+    expect(await notifications(author.token, "guide_downvotes")).toEqual([
+      expect.objectContaining({
+        id: row.id,
+        count: 1,
+        read_at: expect.any(String),
+        data: expect.objectContaining({
+          feedback: [{ reason: "outdated", note: null }],
+        }),
+      }),
+    ]);
+
+    await vote(newcomer.token, guide.id, {
       direction: "down",
       reason: "missing_step",
     });
 
-    const rows = await notifications(author.token, "guide_downvotes");
-
-    expect(rows.filter((n) => n.read_at === null)).toEqual([
+    expect(await notifications(author.token, "guide_downvotes")).toEqual([
       expect.objectContaining({
-        count: 1,
-        data: expect.objectContaining({ reason: "missing_step", note: null }),
+        id: row.id,
+        count: 2,
+        read_at: null,
+        data: expect.objectContaining({
+          feedback: [
+            { reason: "missing_step", note: null },
+            { reason: "outdated", note: null },
+          ],
+        }),
       }),
     ]);
+  });
+
+  it("keeps one row and every reason when downvotes arrive at once", async () => {
+    const author = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const voters = [];
+    for (let i = 0; i < 9; i++) {
+      voters.push(await makeUser());
+    }
+    const notes = voters.map((_, i) => `Note ${i}`);
+    const [first, ...rest] = voters;
+    const castDownvote = (voterId: string, i: number) =>
+      createVote(voterId, guide.id, {
+        direction: "down",
+        reason: "unclear",
+        note: notes[i],
+      });
+
+    await preference(author.token, "guide_downvotes", true);
+    // The first vote creates the tally row. Later votes race on that row,
+    // which only its lock serializes.
+    await castDownvote(first.userId, 0);
+    // Open the connections first, so the votes reach the database together.
+    await Promise.all(
+      rest.map(() => admin.from("notification_types").select("type"))
+    );
+    await Promise.all(
+      rest.map((voter, i) => castDownvote(voter.userId, i + 1))
+    );
+
+    const rows = await notifications(author.token, "guide_downvotes");
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        count: voters.length,
+        data: expect.objectContaining({
+          feedback: expect.arrayContaining(
+            notes.map((note) => ({ reason: "unclear", note }))
+          ),
+        }),
+      }),
+    ]);
+    expect(rows[0].data.feedback).toHaveLength(voters.length);
+  });
+
+  it("adds a row with the total and every reason since the previous row after the live tier", async () => {
+    const author = await makeUser();
+    const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const client = userClient(author.token);
+    const reasons = [
+      "outdated",
+      "missing_step",
+      "broken_link",
+      "prereq_gap",
+      "wrong_level",
+    ] as const;
+    const voters = [];
+    for (let i = 0; i <= reasons.length; i++) {
+      voters.push(await makeUser());
+    }
+
+    await preference(author.token, "guide_downvotes", true);
+    await vote(voters[0].token, guide.id, {
+      direction: "down",
+      reason: "unclear",
+    });
+    const [live] = await notifications(author.token, "guide_downvotes");
+
+    await admin
+      .from("notification_vote_tallies")
+      .update({
+        started_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+      })
+      .eq("guide_id", guide.id)
+      .eq("type", "guide_downvotes")
+      .throwOnError();
+    for (const [i, reason] of reasons.entries()) {
+      await vote(voters[i + 1].token, guide.id, {
+        direction: "down",
+        reason,
+        note: `Note ${i}`,
+      });
+    }
+
+    expect(await notifications(author.token, "guide_downvotes")).toEqual([
+      expect.objectContaining({
+        count: 1,
+        actor: null,
+        data: expect.objectContaining({
+          total: voters.length,
+          feedback: reasons
+            .map((reason, i) => ({ reason, note: `Note ${i}` }))
+            .reverse(),
+        }),
+      }),
+      expect.objectContaining({
+        id: live.id,
+        count: 1,
+        data: expect.objectContaining({
+          feedback: [{ reason: "unclear", note: null }],
+        }),
+      }),
+    ]);
+
+    const { data: rows } = await client
+      .from("notifications")
+      .select("*")
+      .throwOnError();
+
+    for (const voter of voters) {
+      expect(JSON.stringify(rows)).not.toContain(voter.userId);
+    }
   });
 });
 

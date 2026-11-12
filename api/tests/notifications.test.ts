@@ -80,6 +80,20 @@ async function decide(
   expect(res.status).toBe(200);
 }
 
+// Moves the start of a guide's upvote tiers back by `hours`. A total stands in
+// for earlier voters, as if the latest notification showed it.
+async function ageUpvotes(guideId: string, hours: number, total?: number) {
+  await admin
+    .from("notification_vote_tallies")
+    .update({
+      started_at: new Date(Date.now() - hours * 60 * 60 * 1000).toISOString(),
+      ...(total === undefined ? {} : { total, notified_total: total }),
+    })
+    .eq("guide_id", guideId)
+    .eq("type", "guide_upvotes")
+    .throwOnError();
+}
+
 describe("guide_review_decision", () => {
   it("tells the revision author when the panel approves", async () => {
     const author = await makeUser();
@@ -187,9 +201,11 @@ describe("guide_upvotes", () => {
     expect(await unreadCount(author.token)).toBe(2);
   });
 
-  it("starts a new row after the author reads the group", async () => {
+  it("reopens a read row and moves it to the top when another upvote joins", async () => {
     const author = await makeUser();
     const { guide } = await createPublishedGuide({ authorId: author.userId });
+    const other = await createPublishedGuide({ authorId: author.userId });
+    const latest = await makeUser();
     await createVote((await makeUser()).userId, guide.id);
     const [read] = (await list(author.token)).notifications;
 
@@ -198,14 +214,74 @@ describe("guide_upvotes", () => {
       jsonAuth(author.token, "POST", {}),
       env
     );
-    await createVote((await makeUser()).userId, guide.id);
+    await createVote((await makeUser()).userId, other.guide.id);
+    await createVote(latest.userId, guide.id);
 
     const body = await list(author.token);
 
     expect(body.notifications).toHaveLength(2);
-    expect(body.notifications[0]).toMatchObject({ count: 1, read_at: null });
-    expect(body.notifications[1].id).toBe(read.id);
+    expect(body.notifications[0]).toMatchObject({
+      id: read.id,
+      count: 2,
+      read_at: null,
+      actor: { id: latest.userId },
+    });
   });
+
+  it.each([
+    { age: 23, counts: [2] },
+    { age: 25, counts: [1] },
+  ])(
+    "adds an upvote to the live row only in the first 24 hours ($age hours in)",
+    async ({ age, counts }) => {
+      const author = await makeUser();
+      const { guide } = await createPublishedGuide({ authorId: author.userId });
+      await createVote((await makeUser()).userId, guide.id);
+
+      await ageUpvotes(guide.id, age);
+      await createVote((await makeUser()).userId, guide.id);
+
+      const body = await list(author.token);
+
+      expect(body.notifications.map((n) => n.count)).toEqual(counts);
+    }
+  );
+
+  it.each([
+    { days: 2, voters: 4, total: null },
+    { days: 2, voters: 5, total: 8 },
+    { days: 6, voters: 3, total: null },
+    { days: 8, voters: 3, total: 6 },
+    { days: 8, voters: 2, total: null },
+  ])(
+    "adds a row with the new total at each milestone ($voters new voters on day $days)",
+    async ({ days, voters, total }) => {
+      const author = await makeUser();
+      const { guide } = await createPublishedGuide({ authorId: author.userId });
+      await createVote((await makeUser()).userId, guide.id);
+      const [live] = (await list(author.token)).notifications;
+
+      await ageUpvotes(guide.id, days * 24, 3);
+      for (let i = 0; i < voters; i++) {
+        await createVote((await makeUser()).userId, guide.id);
+      }
+
+      const body = await list(author.token);
+      const added = body.notifications.filter((n) => n.id !== live.id);
+
+      expect(added).toEqual(
+        total
+          ? [
+              expect.objectContaining({
+                count: 1,
+                actor: null,
+                data: expect.objectContaining({ total }),
+              }),
+            ]
+          : []
+      );
+    }
+  );
 
   it("ignores downvotes, self-votes, and re-saving an upvote", async () => {
     const author = await makeUser();

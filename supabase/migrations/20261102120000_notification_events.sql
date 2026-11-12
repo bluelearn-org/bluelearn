@@ -122,22 +122,50 @@ create trigger guides_notify_variant_publication
   )
   execute function public.notify_variant_publication();
 
--- Each open vote row counts a voter once. The voters stay in this table, which
--- clients cannot read, because a downvote must not name its voter.
-create table public.notification_voters (
-  notification_id uuid not null
-    references public.notifications (id) on delete cascade,
-  voter_id uuid not null references public.profiles (id) on delete cascade,
-  primary key (notification_id, voter_id)
+-- One row per guide author, guide, and vote direction. The vote tiers count
+-- from started_at.
+create table public.notification_vote_tallies (
+  author_id uuid not null references public.profiles (id) on delete cascade,
+  guide_id uuid not null references public.guides (id) on delete cascade,
+  type text not null references public.notification_types (type) on delete cascade,
+  -- The first counted vote.
+  started_at timestamptz not null default now(),
+  -- Distinct voters so far.
+  total integer not null default 0,
+  -- The total at the latest notification. A disabled preference still moves it.
+  notified_total integer not null default 0,
+  -- Downvote reasons and notes since the latest notification, newest first.
+  feedback jsonb not null default '[]'::jsonb,
+  primary key (author_id, guide_id, type)
 );
+
+-- Each tally counts a voter once. The voters stay in this table, which clients
+-- cannot read, because a downvote must not name its voter.
+create table public.notification_voters (
+  author_id uuid not null,
+  guide_id uuid not null,
+  type text not null,
+  voter_id uuid not null references public.profiles (id) on delete cascade,
+  primary key (author_id, guide_id, type, voter_id),
+  foreign key (author_id, guide_id, type)
+    references public.notification_vote_tallies on delete cascade
+);
+
+alter table public.notification_vote_tallies enable row level security;
+revoke all on public.notification_vote_tallies from public, anon, authenticated;
+grant all on public.notification_vote_tallies to service_role;
 
 alter table public.notification_voters enable row level security;
 revoke all on public.notification_voters from public, anon, authenticated;
 grant all on public.notification_voters to service_role;
 
--- Upvotes on a guide share one unread row that names the latest voter. Each
--- downvote gets its own row with the reason and note but no actor, so the
--- author learns why the guide was downvoted but not who downvoted it.
+-- Votes notify the guide author in tiers, timed from the first counted vote in
+-- each direction. In the live tier every vote joins one row, and an upvote
+-- names its voter. After it, votes count silently, and a new row shows the
+-- total once enough new voters arrive. A downvote row carries the reason and
+-- note of each downvote since the previous row, newest first, but no actor, so
+-- the author learns why the guide was downvoted but not who downvoted it. A
+-- disabled preference consumes the row that would have been sent.
 create or replace function public.notify_guide_vote()
 returns trigger
 language plpgsql
@@ -147,8 +175,11 @@ as $$
 declare
   v_guide record;
   v_type text;
+  v_tally record;
+  v_total integer;
+  v_milestone integer;
+  v_feedback jsonb;
   v_data jsonb;
-  v_notification_id uuid;
 begin
   if tg_op = 'UPDATE' and old.direction = new.direction then
     return null;
@@ -161,25 +192,39 @@ begin
     left join public.guide_revisions gr on gr.id = g.current_revision_id
    where g.id = new.guide_id;
 
+  -- A vote counts only toward another user's guide.
+  if v_guide.author_id is null or new.voter_id = v_guide.author_id then
+    return null;
+  end if;
+
   v_type := case new.direction
     when 'up' then 'guide_upvotes'
     else 'guide_downvotes'
   end;
 
-  -- notify() cannot skip the author's own downvote, which has no actor.
-  if new.voter_id = v_guide.author_id or exists (
-    select 1
-      from public.notifications n
-      join public.notification_voters nv on nv.notification_id = n.id
-     where n.recipient_id = v_guide.author_id
-       and n.type = v_type
-       and n.data ->> 'guide_id' = new.guide_id::text
-       and n.read_at is null
-       and nv.voter_id = new.voter_id
-  ) then
+  insert into public.notification_vote_tallies (author_id, guide_id, type)
+  values (v_guide.author_id, new.guide_id, v_type)
+  on conflict do nothing;
+
+  -- Concurrent votes on the guide wait for this lock, so none is lost.
+  select *
+    into v_tally
+    from public.notification_vote_tallies t
+   where t.author_id = v_guide.author_id
+     and t.guide_id = new.guide_id
+     and t.type = v_type
+     for update;
+
+  insert into public.notification_voters (author_id, guide_id, type, voter_id)
+  values (v_guide.author_id, new.guide_id, v_type, new.voter_id)
+  on conflict do nothing;
+
+  if not found then
     return null;
   end if;
 
+  v_total := v_tally.total + 1;
+  v_feedback := v_tally.feedback;
   v_data := jsonb_build_object(
     'guide_id', new.guide_id,
     'title', v_guide.title,
@@ -187,27 +232,70 @@ begin
     'variant_slug', v_guide.variant_slug
   );
 
-  if new.direction = 'up' then
-    v_notification_id := public.notify(
+  if new.direction = 'down' then
+    v_feedback := jsonb_build_array(
+      jsonb_build_object('reason', new.reason, 'note', new.note)
+    ) || v_feedback;
+  end if;
+
+  -- Tune the tiers here.
+  v_milestone := case
+    when now() < v_tally.started_at + interval '7 days'
+      then v_tally.notified_total + 5
+    else v_tally.notified_total * 2
+  end;
+
+  if now() < v_tally.started_at + interval '24 hours' then
+    if new.direction = 'down' then
+      v_data := v_data || jsonb_build_object(
+        'feedback',
+        v_feedback || coalesce(
+          (select n.data -> 'feedback'
+             from public.notifications n
+            where n.recipient_id = v_guide.author_id
+              and n.type = v_type
+              and n.group_key = new.guide_id::text),
+          '[]'::jsonb
+        )
+      );
+    end if;
+
+    perform public.notify(
       v_guide.author_id,
       v_type,
-      new.voter_id,
+      case new.direction when 'up' then new.voter_id end,
       v_data,
       new.guide_id::text
     );
-  else
-    v_notification_id := public.notify(
+  elsif v_total >= v_milestone then
+    if new.direction = 'down' then
+      v_data := v_data || jsonb_build_object('feedback', v_feedback);
+    end if;
+
+    perform public.notify(
       v_guide.author_id,
       v_type,
       null,
-      v_data || jsonb_build_object('reason', new.reason, 'note', new.note)
+      v_data || jsonb_build_object('total', v_total)
     );
+  else
+    update public.notification_vote_tallies
+       set total = v_total,
+           feedback = v_feedback
+     where author_id = v_guide.author_id
+       and guide_id = new.guide_id
+       and type = v_type;
+
+    return null;
   end if;
 
-  if v_notification_id is not null then
-    insert into public.notification_voters (notification_id, voter_id)
-    values (v_notification_id, new.voter_id);
-  end if;
+  update public.notification_vote_tallies
+     set total = v_total,
+         notified_total = v_total,
+         feedback = '[]'::jsonb
+   where author_id = v_guide.author_id
+     and guide_id = new.guide_id
+     and type = v_type;
 
   return null;
 end;

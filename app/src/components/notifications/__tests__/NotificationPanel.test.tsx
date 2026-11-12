@@ -21,6 +21,8 @@ const { listNotifications, markNotificationRead, markAllNotificationsRead } =
     markAllNotificationsRead: vi.fn(),
   }));
 
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
+
 vi.mock("@/lib/api/notifications", () => ({
   listNotifications,
   markNotificationRead,
@@ -29,19 +31,28 @@ vi.mock("@/lib/api/notifications", () => ({
 
 vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 
+// Keep link destinations visible without mounting the application router.
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
+    to,
     onClick,
   }: {
     children: ReactNode;
+    to: string;
     onClick?: () => void;
   }) => (
-    <a href="#settings" onClick={onClick}>
+    <a
+      href={to}
+      onClick={(event) => {
+        event.preventDefault();
+        onClick?.();
+      }}
+    >
       {children}
     </a>
   ),
-  useNavigate: () => () => Promise.resolve(),
+  useNavigate: () => navigate,
 }));
 
 type ListQuery = {
@@ -51,6 +62,7 @@ type ListQuery = {
 };
 
 const refreshUnread = vi.fn();
+const closePanel = vi.fn();
 
 const row = (overrides: Partial<Notification>): Notification => ({
   id: crypto.randomUUID(),
@@ -66,6 +78,18 @@ const row = (overrides: Partial<Notification>): Notification => ({
 
 const titled = (title: string) =>
   row({ data: { outcome: "approved", title, case_id: "c1" } });
+
+const vote = (type: "guide_upvotes" | "guide_downvotes") =>
+  row({
+    type,
+    category: "community_engagement",
+    count: 2,
+    data: {
+      title: "Sorting",
+      base_slug: "sorting",
+      variant_slug: "alternative",
+    },
+  });
 
 const envelope = (
   notifications: Array<Notification>,
@@ -92,7 +116,7 @@ function Harness({ initialUnread }: { initialUnread: number }) {
       unread={unread}
       onUnreadChange={setUnread}
       onRefreshUnread={refreshUnread}
-      onNavigate={() => {}}
+      onNavigate={closePanel}
     />
   );
 }
@@ -265,5 +289,50 @@ describe("NotificationPanel", () => {
     expect(
       await screen.findByRole("button", { name: /guide.*approved/i })
     ).toBeTruthy();
+  });
+
+  it("opens a downvote row on the notifications page at that row", async () => {
+    const downvote = vote("guide_downvotes");
+    listNotifications.mockResolvedValue(envelope([downvote]));
+    render(<Harness initialUnread={1} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /click to see why/i })
+    );
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/profile/notifications",
+        hash: `notification-${downvote.id}`,
+      })
+    );
+    expect(markNotificationRead).toHaveBeenCalledWith(downvote.id);
+    expect(unreadMarkers()).toHaveLength(0);
+    expect(closePanel).toHaveBeenCalled();
+  });
+
+  it("keeps the guide page for an upvote row", async () => {
+    listNotifications.mockResolvedValue(envelope([vote("guide_upvotes")]));
+    render(<Harness initialUnread={1} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /upvoted/i }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/guides/$slug/$variantSlug",
+        params: { slug: "sorting", variantSlug: "alternative" },
+      })
+    );
+  });
+
+  it("links every notification from the footer and closes the panel", async () => {
+    listNotifications.mockResolvedValue(envelope([row({})]));
+    render(<Harness initialUnread={0} />);
+    const viewAll = await screen.findByRole("link", { name: /view all/i });
+
+    fireEvent.click(viewAll);
+
+    expect(viewAll.getAttribute("href")).toBe("/profile/notifications");
+    expect(closePanel).toHaveBeenCalledTimes(1);
   });
 });

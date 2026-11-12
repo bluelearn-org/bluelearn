@@ -2,6 +2,7 @@ import { Bell } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { getUnreadNotificationCount } from "@/lib/api/notifications";
+import { NOTIFICATIONS_READ_EVENT } from "@/lib/useNotificationList";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -10,8 +11,9 @@ import {
 } from "@/components/ui/popover";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 
-// The count updates once a minute and on window focus, so a new notification
-// can take up to a minute to show.
+// The count updates once a minute, on window focus, and after the
+// notifications page marks rows read, so a new notification can take up to a
+// minute to show.
 const POLL_MS = 60_000;
 
 export function NotificationBell() {
@@ -37,11 +39,13 @@ export function NotificationBell() {
     poll();
     const timer = window.setInterval(poll, POLL_MS);
     window.addEventListener("focus", poll);
+    window.addEventListener(NOTIFICATIONS_READ_EVENT, poll);
 
     return () => {
       controller.abort();
       window.clearInterval(timer);
       window.removeEventListener("focus", poll);
+      window.removeEventListener(NOTIFICATIONS_READ_EVENT, poll);
     };
   }, [refreshCount]);
 

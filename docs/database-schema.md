@@ -388,9 +388,9 @@ The function `public.notify()` is the only writer of in-app notifications. Each 
 - `recipient_id`: FK to `profiles.id`. Only the recipient can read the row.
 - `type`: FK to `notification_types`.
 - `actor_id`: FK to `profiles.id`. It is null for system events, for example a panel outcome. It is also null for downvotes, so the author cannot see who downvoted.
-- `group_key`: events with the same key share one unread row. A null key gives each event its own row.
+- `group_key`: events with the same key share one row. A null key gives each event its own row.
 - `group_count`: the number of events in the row. A vote row counts each voter once.
-- `data`: ids, slugs, and titles that the app needs to show and link the row. Store only text that the recipient can already read. A downvote row also gives the guide author the reason and note of the vote.
+- `data`: ids, slugs, and titles that the app needs to show and link the row. Store only text that the recipient can already read. A downvote row also gives the guide author the reason and note of each downvote it covers in `feedback`, newest first. A vote row after the live tier also holds the vote `total`.
 - `occurred_at`: the time of the latest event in the row.
 - `read_at`: null while the row is unread.
 
@@ -401,7 +401,7 @@ The function `public.notify()` is the only writer of in-app notifications. Each 
 
 Constraints:
 
-- A partial unique index on `(recipient_id, type, group_key)` covers unread rows only. `notify()` adds to the open row. When the recipient reads that row, the next event starts a new row.
+- A partial unique index on `(recipient_id, type, group_key)` covers rows with a key. `notify()` adds an event to the row with the same key. The event marks the row unread and moves it to the top, so reading a row does not close its group.
 - `notify()` skips a recipient who is also the actor. It also skips a recipient who turned the type off. It raises an error for a type that is not in the registry. It returns the id of the row it writes, or null when it skips.
 - Clients cannot run `notify()`. A recipient can update only `read_at`.
 
@@ -418,9 +418,17 @@ Events:
 | `review_assignment` | A reviewer gets a new seat or replaces another reviewer in an existing seat. | The assigned reviewer. |
 | `review_deadline` | An assigned seat has an expiry within the next 48 hours. | The assigned reviewer. |
 
-Draft changes do not send variant notifications. Upvotes on a guide share one unread row, which names the latest voter. Each downvote gets its own row with the reason and note of the vote. A downvote row has no actor, so the author learns why but not who. The author's own vote sends nothing.
+Draft changes do not send variant notifications. Votes notify the guide author in tiers. The tiers count from the first counted vote in each direction:
 
-`notification_voters` records the voters of each vote row. A downvote row keeps its voter only here. Its primary key is `(notification_id, voter_id)`. While a row is unread, a voter who votes again in the same direction does not raise the upvote count or add another downvote row. Only the service role can read or change these records.
+- For the first 24 hours, every vote joins one live row. Its group key is the guide id. An upvote row names the latest voter.
+- Until day 7, votes count silently. Each time 5 new voters arrive, a new row shows the new total.
+- After day 7, a new row shows the total each time it reaches double the total of the previous row.
+
+A downvote row lists the reason and note of each downvote since the previous downvote row, newest first. It has no actor, so the author learns why but not who. Rows after the live tier have no actor. The author's own vote counts for nothing. A disabled preference consumes a due row, and enabling the preference later does not replay it.
+
+`notification_vote_tallies` keeps the tiers of each guide author, guide, and direction: `started_at` is the first counted vote, `total` counts distinct voters, `notified_total` is the total at the latest notification, and `feedback` holds the downvote reasons since then. A vote locks its tally row, so concurrent votes on one guide wait for each other.
+
+`notification_voters` records the counted voters of each tally. A downvoter is kept only here. Its primary key is `(author_id, guide_id, type, voter_id)`. A voter who votes again in the same direction adds nothing, even after a flip. Only the service role can read or change these records and the tallies.
 
 The five-minute worker calls `notify_review_deadlines()`. The function skips expired seats, completed seats, replaced seats, closed panels, and cases outside review.
 

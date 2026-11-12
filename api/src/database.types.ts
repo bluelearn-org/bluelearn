@@ -543,26 +543,98 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_vote_tallies: {
+        Row: {
+          author_id: string
+          feedback: Json
+          guide_id: string
+          notified_total: number
+          started_at: string
+          total: number
+          type: string
+        }
+        Insert: {
+          author_id: string
+          feedback?: Json
+          guide_id: string
+          notified_total?: number
+          started_at?: string
+          total?: number
+          type: string
+        }
+        Update: {
+          author_id?: string
+          feedback?: Json
+          guide_id?: string
+          notified_total?: number
+          started_at?: string
+          total?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_vote_tallies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["guide_id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_type_fkey"
+            columns: ["type"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["type"]
+          },
+        ]
+      }
       notification_voters: {
         Row: {
-          notification_id: string
+          author_id: string
+          guide_id: string
+          type: string
           voter_id: string
         }
         Insert: {
-          notification_id: string
+          author_id: string
+          guide_id: string
+          type: string
           voter_id: string
         }
         Update: {
-          notification_id?: string
+          author_id?: string
+          guide_id?: string
+          type?: string
           voter_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "notification_voters_notification_id_fkey"
-            columns: ["notification_id"]
+            foreignKeyName: "notification_voters_author_id_guide_id_type_fkey"
+            columns: ["author_id", "guide_id", "type"]
             isOneToOne: false
-            referencedRelation: "notifications"
-            referencedColumns: ["id"]
+            referencedRelation: "notification_vote_tallies"
+            referencedColumns: ["author_id", "guide_id", "type"]
           },
           {
             foreignKeyName: "notification_voters_voter_id_fkey"

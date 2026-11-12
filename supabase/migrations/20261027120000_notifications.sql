@@ -36,13 +36,13 @@ create table public.notifications (
   type text not null references public.notification_types (type) on delete cascade,
   -- Null for system events, such as a panel outcome.
   actor_id uuid references public.profiles (id) on delete set null,
-  -- Events with the same key share one unread row and raise its count.
+  -- Events with the same key share one row and raise its count.
   -- A null key gives every event its own row.
   group_key text,
   group_count integer not null default 1,
   -- Ids, slugs and titles that the app needs to show and link the row.
   -- Store only text that the recipient can already read. A downvote row also
-  -- gives the guide author the reason and note of the vote.
+  -- gives the guide author the reason and note of each downvote it covers.
   data jsonb not null default '{}'::jsonb,
   -- The time of the latest event in the row.
   occurred_at timestamptz not null default now(),
@@ -50,11 +50,11 @@ create table public.notifications (
   constraint notifications_group_count_positive check (group_count > 0)
 );
 
--- One open row per group. Reading the row closes the group, so the next event
--- starts a new row.
-create unique index notifications_open_group_idx
+-- One row per group. Reading the row does not close the group: the next event
+-- marks it unread again.
+create unique index notifications_group_idx
   on public.notifications (recipient_id, type, group_key)
-  where read_at is null and group_key is not null;
+  where group_key is not null;
 
 create index notifications_recipient_occurred_idx
   on public.notifications (recipient_id, occurred_at desc);
@@ -114,12 +114,13 @@ begin
   values
     (p_recipient_id, p_type, p_actor_id, p_group_key, coalesce(p_data, '{}'::jsonb))
   on conflict (recipient_id, type, group_key)
-    where read_at is null and group_key is not null
+    where group_key is not null
   do update set
     group_count = public.notifications.group_count + 1,
     actor_id = excluded.actor_id,
     data = excluded.data,
-    occurred_at = now()
+    occurred_at = now(),
+    read_at = null
   returning id into v_id;
 
   return v_id;

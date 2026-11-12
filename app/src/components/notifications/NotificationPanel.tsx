@@ -1,46 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronDown, Settings } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type {
-  Notification,
-  NotificationCategory,
-  NotificationFilter,
-} from "@bluelearn/schemas";
+import { Settings } from "lucide-react";
 
-import {
-  listNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/lib/api/notifications";
-import { notificationSections, renderNotification } from "@/lib/notifications";
+import type { NotificationListRow } from "@/lib/useNotificationList";
+import { useNotificationList } from "@/lib/useNotificationList";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { NotificationFeed } from "@/components/notifications/NotificationFeed";
 import { NotificationRow } from "@/components/notifications/NotificationRow";
-
-type View = {
-  label: string;
-  filter: NotificationFilter;
-  category?: NotificationCategory;
-};
-
-const FILTER_VIEWS: Array<View> = [
-  { label: "All", filter: "all" },
-  { label: "Unread", filter: "unread" },
-];
-
-const CATEGORY_VIEWS: Array<View> = notificationSections.map((section) => ({
-  label: section.label,
-  filter: "all",
-  category: section.category,
-}));
-
-const PAGE_SIZE = 20;
+import { NotificationViewMenu } from "@/components/notifications/NotificationViewMenu";
 
 type NotificationPanelProps = {
   unread: number;
@@ -56,139 +22,30 @@ export function NotificationPanel({
   onNavigate,
 }: NotificationPanelProps) {
   const navigate = useNavigate();
-  const [view, setView] = useState<View>(FILTER_VIEWS[0]);
-  const [items, setItems] = useState<Array<Notification>>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  // Starting any load aborts the one before it, so a late page from an old
-  // view never lands in the new one.
-  const controllerRef = useRef<AbortController | null>(null);
+  const list = useNotificationList();
 
-  const load = useCallback(
-    async (nextPage: number) => {
-      controllerRef.current?.abort();
-      const controller = new AbortController();
-      controllerRef.current = controller;
-      const { signal } = controller;
-
-      setLoading(true);
-      setFailed(false);
-
-      try {
-        const result = await listNotifications(
-          {
-            page: nextPage,
-            limit: PAGE_SIZE,
-            filter: view.filter,
-            category: view.category,
-          },
-          { signal }
-        );
-        // A row can move to the next page when a new event arrives, so drop
-        // repeats by id.
-        setItems((current) => {
-          const kept = nextPage === 1 ? [] : current;
-          const seen = new Set(kept.map((item) => item.id));
-          return [
-            ...kept,
-            ...result.notifications.filter((item) => !seen.has(item.id)),
-          ];
-        });
-        setPage(nextPage);
-        setHasMore(nextPage * PAGE_SIZE < result.total);
-      } catch (error) {
-        if (signal.aborted) return;
-
-        console.error(error);
-        setFailed(true);
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    },
-    [view]
-  );
-
-  useEffect(() => {
-    void load(1);
-    return () => controllerRef.current?.abort();
-  }, [load]);
-
-  const open = async (item: Notification) => {
-    const target = renderNotification(item)?.target;
-
+  const open = async ({ item, rendered }: NotificationListRow) => {
     if (!item.read_at) {
-      const readAt = new Date().toISOString();
-      setItems((current) =>
-        current.map((row) =>
-          row.id === item.id ? { ...row, read_at: readAt } : row
-        )
-      );
-      onUnreadChange(Math.max(0, unread - 1));
       // The page opens even if this fails; the next count poll corrects the
       // badge.
-      markNotificationRead(item.id).catch((error: unknown) => {
-        console.error(error);
-      });
+      void list.markRead(item);
+      onUnreadChange(Math.max(0, unread - 1));
     }
 
-    if (target) {
+    if (rendered.target) {
       onNavigate();
-      await navigate(target);
+      await navigate(rendered.target);
     }
   };
 
   const markAll = async () => {
-    try {
-      await markAllNotificationsRead(view.category);
-    } catch (error) {
-      console.error(error);
-      return;
-    }
-
-    const readAt = new Date().toISOString();
-    setItems((current) =>
-      current.map((row) => (row.read_at ? row : { ...row, read_at: readAt }))
-    );
-    await onRefreshUnread();
+    if (await list.markAll()) await onRefreshUnread();
   };
-
-  const viewItem = (option: View) => (
-    <DropdownMenuItem
-      key={option.label}
-      className="text-xs"
-      onSelect={() => setView(option)}
-    >
-      {option.label}
-    </DropdownMenuItem>
-  );
-
-  const shown = items.flatMap((item) => {
-    const rendered = renderNotification(item);
-    return rendered ? [{ item, rendered }] : [];
-  });
-  const isEmpty = shown.length === 0 && !loading;
 
   return (
     <>
       <div className="flex items-center gap-3 border-b px-4 py-3">
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1 font-mono text-xs font-bold tracking-[0.08em] uppercase"
-            >
-              {view.label}
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-52 font-mono">
-            {FILTER_VIEWS.map(viewItem)}
-            <DropdownMenuSeparator />
-            {CATEGORY_VIEWS.map(viewItem)}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationViewMenu view={list.view} onViewChange={list.setView} />
 
         {unread > 0 && (
           <span className="text-xs text-brand-burnt-orange">
@@ -223,55 +80,26 @@ export function NotificationPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {failed && (
-          <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
-            <p>Could not load your notifications.</p>
-            <Button variant="outline" size="sm" onClick={() => load(1)}>
-              Try again
-            </Button>
-          </div>
+      <NotificationFeed
+        list={list}
+        className="min-h-0 flex-1 overflow-y-auto"
+        renderRow={(row) => (
+          <NotificationRow
+            notification={row.item}
+            view={row.rendered}
+            onOpen={() => open(row)}
+          />
         )}
+      />
 
-        {!failed && isEmpty && (
-          <div className="flex h-full flex-col items-center justify-center gap-6 p-6">
-            <img
-              src="/assets/notifications/notifications-empty.png"
-              alt=""
-              className="w-56 max-w-full"
-            />
-            <p className="text-sm font-semibold">
-              There are no new notifications
-            </p>
-          </div>
-        )}
-
-        {!failed && !isEmpty && (
-          <ul>
-            {shown.map(({ item, rendered }) => (
-              <li key={item.id}>
-                <NotificationRow
-                  notification={item}
-                  view={rendered}
-                  onOpen={() => open(item)}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {hasMore && !failed && (
-          <div className="p-3 text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={loading}
-              onClick={() => load(page + 1)}
-            >
-              Show older
-            </Button>
-          </div>
-        )}
+      <div className="border-t px-4 py-2 text-center">
+        <Link
+          to="/profile/notifications"
+          onClick={onNavigate}
+          className="text-xs font-semibold text-brand-bright-blue hover:underline"
+        >
+          View all
+        </Link>
       </div>
     </>
   );

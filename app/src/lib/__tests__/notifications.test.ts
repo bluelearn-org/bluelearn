@@ -45,6 +45,10 @@ const reviewTarget = {
   to: "/review/$caseId",
   params: { caseId: "c1" },
 };
+const notificationsPage = {
+  to: "/profile/notifications",
+  hash: "notification-00000000-0000-4000-8000-000000000001",
+};
 
 describe.each([
   ["guide_review_decision", /\bguide\b/i],
@@ -94,59 +98,156 @@ describe("guide_upvotes", () => {
       expect(view?.target).toEqual(guideTarget);
 
       if (otherVoters) {
-        expect(view?.title).toMatch(new RegExp(`\\b${count}\\b`));
         expect(view?.body).toMatch(otherVoters);
       } else {
         expect(view?.body).not.toMatch(/\bothers?\b/i);
       }
     }
   );
+
+  it("shows the guide's total instead of the voter after the live tier", () => {
+    const view = renderNotification(
+      notification("guide_upvotes", { ...guideData, total: 12 }, { actor })
+    );
+
+    expect(view?.title).toMatch(/upvot/i);
+    expect(view?.body).toMatch(/\b12\s+upvotes\b/i);
+    expect(view?.body).toMatch(/sorting/i);
+    expect(view?.body).not.toMatch(/@|mira|someone|\bothers?\b/i);
+    expect(view?.target).toEqual(guideTarget);
+  });
+
+  it.each([0, -3, 2.5, "12", null])(
+    "names the voter instead of an invalid total %j",
+    (total) => {
+      const view = renderNotification(
+        notification("guide_upvotes", { ...guideData, total }, { actor })
+      );
+
+      expect(view?.body).toMatch(/@mira\b/i);
+      expect(view?.body).not.toMatch(/\d\s+upvotes/i);
+    }
+  );
 });
 
 describe("guide_downvotes", () => {
-  it("shows the reason and note without naming the voter", () => {
+  it.each([
+    { count: 1, total: undefined, body: 'A downvote on "Sorting".' },
+    { count: 3, total: undefined, body: '3 downvotes on "Sorting".' },
+    { count: 1, total: 12, body: '12 downvotes on "Sorting".' },
+  ])(
+    "counts $count downvotes, or the guide's total, and opens the notifications page to see why",
+    ({ count, total, body }) => {
+      const view = renderNotification(
+        notification(
+          "guide_downvotes",
+          {
+            ...guideData,
+            total,
+            feedback: [{ reason: "missing_step", note: "Step 3 skips setup." }],
+          },
+          { actor, count }
+        )
+      );
+
+      expect(view?.title).toMatch(/downvot/i);
+      expect(view?.body).toBe(`${body} Click to see why.`);
+      expect(view?.target).toEqual(notificationsPage);
+    }
+  );
+
+  it("keeps the reasons, notes, and voter out of the short body", () => {
     const view = renderNotification(
       notification(
         "guide_downvotes",
-        { ...guideData, reason: "missing_step", note: "Step 3 skips setup." },
+        {
+          ...guideData,
+          feedback: [{ reason: "missing_step", note: "Step 3 skips setup." }],
+        },
         { actor }
       )
     );
 
-    expect(view?.title).toMatch(/downvot/i);
-    expect(view?.body).toMatch(/sorting/i);
-    expect(view?.body).toContain("Missing Step");
-    expect(view?.body).toContain("Step 3 skips setup.");
-    expect(view?.body).not.toMatch(/missing_step|@|mira|someone/i);
-    expect(view?.target).toEqual(guideTarget);
+    expect(view?.body).not.toMatch(/missing|step 3|@|mira|someone/i);
   });
 
-  it("leaves out an unknown reason and a missing note", () => {
+  it("lists every reason with its note, newest first, for the notifications page", () => {
     const view = renderNotification(
-      notification("guide_downvotes", {
-        ...guideData,
-        reason: "not_a_reason",
-        note: null,
-      })
+      notification(
+        "guide_downvotes",
+        {
+          ...guideData,
+          feedback: [
+            { reason: "outdated", note: null },
+            { reason: "missing_step", note: "Step 3 skips setup." },
+            { reason: "outdated", note: "Uses the old API." },
+          ],
+        },
+        { count: 3 }
+      )
     );
 
-    expect(view?.body).toMatch(/downvot/i);
-    expect(view?.body).toMatch(/sorting/i);
-    expect(view?.body).not.toMatch(/not_a_reason|downvoted:|null|""/i);
-    expect(view?.target).toEqual(guideTarget);
+    expect(view?.feedback).toEqual([
+      { reason: "Outdated", note: null },
+      { reason: "Missing Step", note: "Step 3 skips setup." },
+      { reason: "Outdated", note: "Uses the old API." },
+    ]);
   });
+
+  it("keeps the note of an unknown reason and drops entries with nothing to show", () => {
+    const view = renderNotification(
+      notification(
+        "guide_downvotes",
+        {
+          ...guideData,
+          feedback: [
+            { reason: "not_a_reason", note: "Uses the old API." },
+            { reason: "not_a_reason", note: null },
+            { reason: "outdated", note: " " },
+          ],
+        },
+        { count: 3 }
+      )
+    );
+
+    expect(view?.feedback).toEqual([
+      { reason: null, note: "Uses the old API." },
+      { reason: "Outdated", note: null },
+    ]);
+  });
+
+  it.each([
+    undefined,
+    null,
+    "outdated",
+    [null, 42, "outdated", { reason: 42, note: 7 }],
+  ])(
+    "keeps the count without inventing reasons for feedback %j",
+    (feedback) => {
+      const view = renderNotification(
+        notification(
+          "guide_downvotes",
+          { ...guideData, feedback },
+          { count: 2 }
+        )
+      );
+
+      expect(view?.body).toBe('2 downvotes on "Sorting". Click to see why.');
+      expect(view?.feedback).toEqual([]);
+    }
+  );
 });
 
 describe.each([
-  ["guide_upvotes", /upvot/i],
-  ["guide_downvotes", /downvot/i],
-] as const)("%s with missing details", (type, direction) => {
-  it("keeps the vote direction without a voter, title, or target", () => {
+  ["guide_upvotes", /upvot/i, null],
+  ["guide_downvotes", /downvot/i, notificationsPage],
+] as const)("%s with missing details", (type, direction, target) => {
+  it("keeps the vote direction without a voter or title", () => {
     const view = renderNotification(notification(type));
 
     expect(view?.body).toMatch(direction);
     expect(view?.body).not.toMatch(/undefined|null/i);
-    expect(view?.target).toBeNull();
+    expect(view?.target).toEqual(target);
   });
 });
 
