@@ -17,7 +17,9 @@ import {
   useNotificationList,
 } from "@/lib/useNotificationList";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { ProfileTabs } from "@/components/ProfileTabs";
 import { NotificationFeed } from "@/components/notifications/NotificationFeed";
 import { NotificationRow } from "@/components/notifications/NotificationRow";
@@ -56,7 +58,9 @@ function RouteComponent() {
 
   const open = async ({ item, rendered }: NotificationListRow) => {
     markOpened(item);
-    if (rendered.target) await navigate(rendered.target);
+    const target =
+      rendered.pageTarget === undefined ? rendered.target : rendered.pageTarget;
+    if (target) await navigate(target);
   };
 
   const markAll = async () => {
@@ -84,11 +88,19 @@ function RouteComponent() {
 
   return (
     <div className="mx-auto max-w-7xl bg-background">
-      <section className="border-b px-4 py-8 sm:px-8 sm:py-10 lg:px-16">
+      <section className="border-b px-8 py-8 lg:px-16">
         {currentProfile && <ProfileTabs username={currentProfile.username} />}
 
-        <div className="max-w-3xl">
-          <div className="flex items-center gap-3 border-b px-4 pb-3">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="font-mono text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
+            Notifications
+          </h1>
+        </div>
+
+        <Separator className="mb-4 bg-border" />
+
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="flex flex-wrap items-center gap-3 border-b px-4 pb-4">
             <NotificationViewMenu
               view={list.view}
               onViewChange={list.setView}
@@ -96,19 +108,20 @@ function RouteComponent() {
 
             <div className="ml-auto flex items-center gap-2">
               {hasUnread && (
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="btn-sec"
                   onClick={markAll}
-                  className="text-xs font-semibold text-brand-bright-blue hover:underline"
                 >
                   Mark all as read
-                </button>
+                </Button>
               )}
               <Button
                 asChild
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-md"
+                className="h-9 w-9 rounded-md"
               >
                 <Link
                   to="/settings/notifications"
@@ -130,7 +143,7 @@ function RouteComponent() {
                 <div
                   id={anchor}
                   className={cn(
-                    "scroll-mt-24",
+                    "scroll-mt-24 border-b",
                     anchor === hash && "bg-muted/50"
                   )}
                 >
@@ -142,15 +155,23 @@ function RouteComponent() {
                   {feedback.length > 0 && (
                     <ul
                       aria-label="Downvote reasons"
-                      className="space-y-2 pr-4 pb-3 pl-16 text-xs"
+                      className="space-y-2 pr-4 pb-3 pl-16"
                     >
                       {feedback.map((entry, index) => (
-                        <li key={index}>
+                        <li
+                          key={index}
+                          className="flex flex-col items-start gap-1 sm:flex-row sm:gap-2"
+                        >
                           {entry.reason && (
-                            <p className="font-semibold">{entry.reason}</p>
+                            <Badge
+                              variant="outline"
+                              className="mono-micro shrink-0 rounded-full border border-badge-border bg-badge tracking-[0.08em] text-badge-foreground"
+                            >
+                              {entry.reason}
+                            </Badge>
                           )}
                           {entry.note && (
-                            <p className="text-muted-foreground">
+                            <p className="min-w-0 text-sm break-words text-muted-foreground">
                               {entry.note}
                             </p>
                           )}

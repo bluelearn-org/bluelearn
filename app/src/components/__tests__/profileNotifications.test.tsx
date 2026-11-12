@@ -120,7 +120,7 @@ describe("profile notifications page", () => {
     vi.restoreAllMocks();
   });
 
-  it("lists every reason and note of a downvote row, newest first", async () => {
+  it("lists every reason with its note, or the reason alone, newest first", async () => {
     const downvoted = downvote();
     const upvoted = downvote({
       type: "guide_upvotes",
@@ -143,6 +143,41 @@ describe("profile notifications page", () => {
     expect(
       screen.getAllByRole("list", { name: /downvote reasons/i })
     ).toHaveLength(1);
+  });
+
+  it("opens the guide from a downvote row and marks it read, without the bell's hint", async () => {
+    const downvoted = downvote();
+    listNotifications.mockResolvedValue(envelope([downvoted]));
+    render(<NotificationsPage />);
+
+    const opened = await screen.findByRole("button", {
+      name: /2 downvotes on "Sorting"/i,
+    });
+    expect(opened.textContent).not.toMatch(/click to see why/i);
+    fireEvent.click(opened);
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/guides/$slug/$variantSlug",
+        params: { slug: "sorting", variantSlug: "alternative" },
+      })
+    );
+    expect(markNotificationRead).toHaveBeenCalledWith(downvoted.id);
+  });
+
+  it("marks a downvote row read without leaving when its guide is unknown", async () => {
+    const downvoted = downvote({ data: { title: "Sorting" } });
+    listNotifications.mockResolvedValue(envelope([downvoted]));
+    render(<NotificationsPage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /2 downvotes on "Sorting"/i })
+    );
+
+    await waitFor(() =>
+      expect(markNotificationRead).toHaveBeenCalledWith(downvoted.id)
+    );
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("brings in older rows until the linked row shows, then scrolls to it and marks it read", async () => {

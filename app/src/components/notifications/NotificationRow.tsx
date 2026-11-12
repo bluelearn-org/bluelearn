@@ -14,12 +14,15 @@ type NotificationRowProps = {
   notification: Notification;
   view: NotificationView;
   onOpen: () => void;
+  // The bell panel shows the view's hint; the notifications page does not.
+  showHint?: boolean;
 };
 
 export function NotificationRow({
   notification,
   view,
   onOpen,
+  showHint = false,
 }: NotificationRowProps) {
   const { actor, occurred_at, read_at } = notification;
 
@@ -48,6 +51,11 @@ export function NotificationRow({
         <span className="mt-0.5 line-clamp-3 text-xs text-muted-foreground">
           {view.body}
         </span>
+        {showHint && view.hint && (
+          <span className="block text-xs text-muted-foreground">
+            {view.hint}
+          </span>
+        )}
       </span>
 
       <span className="flex shrink-0 items-center gap-2">

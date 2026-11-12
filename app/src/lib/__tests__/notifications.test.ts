@@ -132,11 +132,11 @@ describe("guide_upvotes", () => {
 
 describe("guide_downvotes", () => {
   it.each([
-    { count: 1, total: undefined, body: 'A downvote on "Sorting".' },
-    { count: 3, total: undefined, body: '3 downvotes on "Sorting".' },
-    { count: 1, total: 12, body: '12 downvotes on "Sorting".' },
+    { count: 1, total: undefined, body: 'A downvote on "Sorting"' },
+    { count: 3, total: undefined, body: '3 downvotes on "Sorting"' },
+    { count: 1, total: 12, body: '12 downvotes on "Sorting"' },
   ])(
-    "counts $count downvotes, or the guide's total, and opens the notifications page to see why",
+    "counts $count downvotes, or the guide's total, and points the bell at the notifications page to see why",
     ({ count, total, body }) => {
       const view = renderNotification(
         notification(
@@ -151,10 +151,30 @@ describe("guide_downvotes", () => {
       );
 
       expect(view?.title).toMatch(/downvot/i);
-      expect(view?.body).toBe(`${body} Click to see why.`);
+      expect(view?.body).toBe(body);
+      expect(view?.hint).toBe("Click to see why.");
       expect(view?.target).toEqual(notificationsPage);
+      expect(view?.pageTarget).toEqual(guideTarget);
     }
   );
+
+  it("opens nothing from the notifications page when the guide is unknown", () => {
+    const view = renderNotification(
+      notification("guide_downvotes", { title: "Sorting" })
+    );
+
+    expect(view?.target).toEqual(notificationsPage);
+    expect(view?.pageTarget).toBeNull();
+  });
+
+  it("leaves the hint and page target to downvotes", () => {
+    const view = renderNotification(
+      notification("guide_upvotes", guideData, { actor })
+    );
+
+    expect(view?.hint).toBeUndefined();
+    expect(view?.pageTarget).toBeUndefined();
+  });
 
   it("keeps the reasons, notes, and voter out of the short body", () => {
     const view = renderNotification(
@@ -232,7 +252,7 @@ describe("guide_downvotes", () => {
         )
       );
 
-      expect(view?.body).toBe('2 downvotes on "Sorting". Click to see why.');
+      expect(view?.body).toBe('2 downvotes on "Sorting"');
       expect(view?.feedback).toEqual([]);
     }
   );

@@ -88,6 +88,7 @@ export function NotificationPanel({
             notification={row.item}
             view={row.rendered}
             onOpen={() => open(row)}
+            showHint
           />
         )}
       />

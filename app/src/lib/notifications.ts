@@ -30,8 +30,13 @@ export type NotificationTarget =
 export type NotificationView = {
   title: string;
   body: string;
+  // Shown under the body in the bell panel only, such as a pointer to the
+  // notifications page.
+  hint?: string;
   // Null when the data no longer names a page to open.
   target: NotificationTarget | null;
+  // Where the notifications page opens the row, when target is that page.
+  pageTarget?: NotificationTarget | null;
   // Shown in place of the avatar when nobody acted, such as a panel outcome.
   icon: LucideIcon;
   // Each downvote reason and note in the row, newest first, for the
@@ -50,20 +55,22 @@ export const notificationRenderers: Partial<
     reviewDecision(notification, "variant"),
   guide_upvotes: upvotes,
 
-  // Downvoters stay private, so these rows never carry an actor. The reasons
-  // and notes show on the notifications page, which the row opens.
+  // Downvoters stay private, so these rows never carry an actor. The bell
+  // opens the notifications page, which shows the reasons and notes; there
+  // the row opens the guide.
   guide_downvotes: ({ id, data, count }) => {
     const title = text(data.title) ?? "Untitled";
     const votes = voteTotal(data) ?? count;
-    const downvoted =
-      votes === 1
-        ? `A downvote on "${title}"`
-        : `${votes} downvotes on "${title}"`;
 
     return {
       title: "Downvote",
-      body: `${downvoted}. Click to see why.`,
+      body:
+        votes === 1
+          ? `A downvote on "${title}"`
+          : `${votes} downvotes on "${title}"`,
+      hint: "Click to see why.",
       target: { to: "/profile/notifications", hash: notificationAnchor(id) },
+      pageTarget: guideTarget(data),
       icon: ThumbsDown,
       feedback: downvoteFeedback(data),
     };
