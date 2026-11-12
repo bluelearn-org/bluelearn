@@ -67,6 +67,8 @@ export const createVariantSchema = revisionContentSchema.extend({
   title: guideTitleSchema.nullish(),
   tags: z.array(z.uuid()).default([]),
   newSubjects: z.array(newSubjectSchema).default([]),
+  // Omitted starts the variant from the canonical guide's disclaimers.
+  disclaimers: z.array(disclaimerSchema).optional(),
 });
 
 // Edits to a draft revision before it goes for review. Send only the fields you

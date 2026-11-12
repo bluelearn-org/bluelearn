@@ -123,6 +123,12 @@ function RouteComponent() {
         summary: addedField(detail.revision.summary),
         body: addedField(detail.revision.body),
       },
+      disclaimers: {
+        changed: detail.disclaimers.length > 0,
+        added: detail.disclaimers,
+        removed: [],
+        unchanged: [],
+      },
     };
   }, [hasPrevious, revisionId, publishedAt, detail]);
 
