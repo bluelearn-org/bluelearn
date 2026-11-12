@@ -1,3 +1,4 @@
+import type { DeleteDraftsInput } from "@bluelearn/schemas";
 import { client } from "@/lib/api/apiClient";
 import { assertOk } from "@/lib/api/apiHelpers";
 
@@ -14,6 +15,11 @@ export async function getMyIdentity({ signal }: FetchOptions = {}) {
 
 export async function deleteMyAccount() {
   const res = await me.$delete();
+  await assertOk(res);
+}
+
+export async function deleteMyDrafts(input: DeleteDraftsInput) {
+  const res = await me.drafts.$delete({ json: input });
   await assertOk(res);
 }
 

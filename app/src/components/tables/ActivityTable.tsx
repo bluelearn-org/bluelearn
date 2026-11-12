@@ -1,4 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import type { ProfileActivitySearch } from "@bluelearn/schemas";
 import type { ProfilePageData } from "@/lib/profile";
 import {
@@ -28,10 +31,25 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { deleteMyDrafts } from "@/lib/api/identity";
+import { clearStoredDraftsForRevisions } from "@/lib/contributionStorage";
 
 const PAGE_SIZE = 10;
 
 type ActivityRow = ProfilePageData["activity"][number];
+
+const draftKey = (row: ActivityRow) => `${row.content_kind}:${row.revision_id}`;
+const isDraft = (row: ActivityRow) =>
+  row.status === "draft" && row.content_kind !== "review" && !!row.revision_id;
 
 function rowTarget(row: ActivityRow) {
   if (row.content_kind === "review")
@@ -82,6 +100,8 @@ type ActivityTableProps = {
   search: ProfileActivitySearch;
   setFilters: (next: Partial<ProfileActivitySearch>) => void;
   onPageChange: (page: number) => void;
+  canDeleteDrafts?: boolean;
+  onDeleted?: () => Promise<void>;
 };
 
 export function ActivityTable({
@@ -89,10 +109,23 @@ export function ActivityTable({
   search,
   setFilters,
   onPageChange,
+  canDeleteDrafts = false,
+  onDeleted,
 }: ActivityTableProps) {
   const navigate = useNavigate();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleted, setDeleted] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const filtered = filterActivity(activity, search);
+  useEffect(() => {
+    setSelected(new Set());
+  }, [search]);
+
+  const filtered = filterActivity(activity, search).filter(
+    (row) => !deleted.has(draftKey(row))
+  );
   const hasFilters = Boolean(
     search.type?.length ||
     search.status?.length ||
@@ -126,8 +159,143 @@ export function ActivityTable({
   // available subject choices are always visible, even when other filters are active.
   const subjectOptions = getActivitySubjectOptions(activity);
 
+  const selectedDrafts = canDeleteDrafts
+    ? pageRows.filter((row) => isDraft(row) && selected.has(draftKey(row)))
+    : [];
+
+  function draftCheckbox(row: ActivityRow) {
+    if (!canDeleteDrafts || !isDraft(row)) return null;
+    const key = draftKey(row);
+    return (
+      <Checkbox
+        aria-label={`Select draft: ${row.title}`}
+        checked={selected.has(key)}
+        disabled={deleting}
+        onClick={(event) => event.stopPropagation()}
+        onCheckedChange={(checked) =>
+          setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked === true) next.add(key);
+            else next.delete(key);
+            return next;
+          })
+        }
+      />
+    );
+  }
+
+  async function handleDelete() {
+    if (deleting || selectedDrafts.length === 0) return;
+    const input = {
+      guide_revision_ids: selectedDrafts
+        .filter((row) => row.content_kind === "guide")
+        .map((row) => row.revision_id!),
+      objective_revision_ids: selectedDrafts
+        .filter((row) => row.content_kind === "objective")
+        .map((row) => row.revision_id!),
+    };
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteMyDrafts(input);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete drafts. Please try again."
+      );
+      setDeleting(false);
+      return;
+    }
+    clearStoredDraftsForRevisions(input);
+    setDeleted((prev) => new Set([...prev, ...selectedDrafts.map(draftKey)]));
+    setSelected(new Set());
+    setConfirmOpen(false);
+    toast.success(
+      selectedDrafts.length === 1
+        ? "Draft deleted"
+        : `${selectedDrafts.length} drafts deleted`
+    );
+    try {
+      await onDeleted?.();
+    } catch {
+      toast.error(
+        "Drafts were deleted, but your profile couldn't refresh. Please reload the page."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <>
+      <div className="mx-auto mb-5 flex max-w-5xl items-center justify-between gap-4">
+        <h2 className="editorial-heading text-xl">Contributions</h2>
+        {canDeleteDrafts && (
+          <Button
+            variant="destructive"
+            disabled={deleting || selectedDrafts.length === 0}
+            onClick={() => {
+              setDeleteError(null);
+              setConfirmOpen(true);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            Delete drafts
+            {selectedDrafts.length > 0 ? ` (${selectedDrafts.length})` : ""}
+          </Button>
+        )}
+      </div>
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!deleting) setConfirmOpen(open);
+        }}
+      >
+        <DialogContent showCloseButton={!deleting}>
+          <DialogHeader>
+            <DialogTitle>
+              Delete{" "}
+              {selectedDrafts.length === 1
+                ? "this draft"
+                : `these ${selectedDrafts.length} drafts`}
+              ?
+            </DialogTitle>
+            <DialogDescription>
+              This permanently deletes the selected drafts and their saved
+              copies in this browser. You can't undo this.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="max-h-48 list-disc overflow-y-auto pl-5">
+            {selectedDrafts.map((row) => (
+              <li key={draftKey(row)} className="break-words">
+                {row.title}
+              </li>
+            ))}
+          </ul>
+          {deleteError && (
+            <p role="alert" className="text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={deleting}
+              onClick={() => setConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting || selectedDrafts.length === 0}
+              onClick={handleDelete}
+            >
+              {deleting ? "Deleting..." : "Delete permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="md:hidden">
         <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3 font-mono text-[13px] font-bold tracking-[0.08em] uppercase">
           <ChoiceColumnFilter
@@ -186,6 +354,7 @@ export function ActivityTable({
                   onClick={target ? () => navigate(target) : undefined}
                 >
                   <div className="flex items-start justify-between gap-3">
+                    {draftCheckbox(row)}
                     <span className="data-label">{activityTypeLabel(row)}</span>
                     <Badge
                       variant="outline"
@@ -248,6 +417,11 @@ export function ActivityTable({
         <Table className="mx-auto w-full max-w-5xl">
           <TableHeader>
             <TableRow>
+              {canDeleteDrafts && (
+                <TableHead className="w-12 px-4">
+                  <span className="sr-only">Select drafts</span>
+                </TableHead>
+              )}
               <TableHead className="px-4 py-3 font-mono text-[14px] font-bold tracking-[0.08em] uppercase">
                 <ChoiceColumnFilter
                   label="Type"
@@ -307,7 +481,7 @@ export function ActivityTable({
             {pageRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={canDeleteDrafts ? 8 : 7}
                   className="px-4 py-6 text-center text-sm text-muted-foreground"
                 >
                   {emptyMessage}
@@ -322,6 +496,11 @@ export function ActivityTable({
                     className={target ? "cursor-pointer" : undefined}
                     onClick={target ? () => navigate(target) : undefined}
                   >
+                    {canDeleteDrafts && (
+                      <TableCell className="px-4 py-3">
+                        {draftCheckbox(row)}
+                      </TableCell>
+                    )}
                     <TableCell className="px-4 py-3">
                       {activityTypeLabel(row)}
                     </TableCell>
