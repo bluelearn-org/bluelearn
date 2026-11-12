@@ -438,6 +438,77 @@ Links a decision to one or more rubric reasons → a reviewer can cite several a
 
 A `rejected` decision must have at least one row here; an `approved` has none. 
 
+#### Passage comments and suggested edits
+
+`review_threads` stores comments on passages or whole blocks of a guide revision.
+Each thread records its reviewer, quoted text, rendered text offsets, and optional source offsets.
+Source offsets use UTF-16 code units, as JavaScript strings do.
+`review_thread_replies` stores replies from the author and panelists with a live seat.
+The reader checks each quote before it marks a passage.
+If the text changes, the reader shows the original quote separately.
+Comments on changed or missing source text keep their saved quote.
+
+Text selections include the complete blocks that contain the selected text.
+The comment preview uses the guide renderer and preserves block formatting without a line limit.
+Saved quotes use their stored source when available, or their saved plain text when no source remains.
+
+The reader shows a one-pixel outline around the selected blocks.
+Four corner handles and two center handles use three-pixel strokes centered on the outline.
+Each handle has an invisible 44-pixel square target with more padding outside the selection.
+Drag an upper handle to change the start, or a lower handle to change the end.
+Use the arrow keys to adjust a focused handle.
+
+Press Enter or Space on a focused block to open its review toolbar.
+Cancel restores the selected blocks and focuses the toolbar action for the closed draft.
+The draft keeps unsaved text for reopening.
+
+The visible handles respond to hover, keyboard focus, and dragging without changing their target size.
+The toolbar appears in 140 milliseconds, and thread transitions take 180 milliseconds.
+The selection follows the pointer without a position animation.
+Reduced motion removes these animations and keeps the focus and color indicators.
+
+Review comment editors and their link dialogs use the page theme.
+The desktop formatting toolbar is 28 pixels high.
+Touch devices keep 44-pixel formatting buttons.
+Suggestion drafts use a compact guide editor with the same page colors.
+The guide editor keeps its styles inside its own container, including popup controls.
+
+`review_suggestions` stores a reviewer's proposed replacement for a complete source block.
+Each suggestion has a `pending`, `accepted`, or `rejected` status.
+Only the author of the reviewed revision can accept or reject a suggestion while the case remains open.
+The database refuses accepted edits that overlap.
+
+An approving majority waits while any suggestion remains pending.
+The vote tally runs again each time the author accepts or rejects a suggestion.
+If approval can proceed, `close_review_panel` creates one revision that contains all accepted edits.
+The new revision keeps the reviewed revision's author, subject tags, and references to uploaded media.
+The reviewed revision remains unchanged, and each accepted suggestion records the new revision ID.
+A rejecting majority closes the case without publication.
+
+The API provides these operations under `/reviews/cases/:id`.
+Clients have no direct access to the three tables.
+Database functions check live seats, account suspension, and case state before new feedback writes.
+These functions lock the open panel to prevent publication during a concurrent feedback write.
+
+Message owners can edit or delete their comments and replies after the case closes or their seat expires.
+The account must remain active, and the caller must have access to the case.
+The guide author has no additional rights over another person's messages.
+Each edit sets `edited_at`, which the reader shows as an edited marker.
+Deletion clears `body` and sets `deleted_at`.
+The database keeps deleted rows and all replies.
+The reader hides deleted replies and counts only live messages.
+A deleted root with live replies shows an `Original comment deleted` notice above those replies.
+When no live messages remain, the thread disappears from passages and the detached list.
+Its badge and passage marking disappear with it.
+Repeated deletion preserves the original deletion timestamp.
+Deleted messages cannot be edited.
+
+The API accepts `PATCH` and `DELETE` at `/reviews/cases/:id/threads/:threadId`.
+Reply operations use `/reviews/cases/:id/threads/:threadId/replies/:replyId`.
+Each response includes `can_edit` and `can_delete` for the current viewer.
+Database functions enforce message ownership independently of those display permissions.
+These operations do not change votes, suggestions, case outcomes, or published revisions.
+
 #### Specialized case tables
 
 Each attaches type-specific data to a `review_cases` row. `case_id` is both primary key and FK to `review_cases` → one satellite row per case.
@@ -500,7 +571,11 @@ Submitting a revision creates a `guide_review_cases` row pointing at a `review_c
 **Why** `guide_revisions.status` **is only** `draft | submitted`**.** A revision only needs to record the part of its lifecycle that *it* owns:
 
 - `draft` — being written, mutable, no case yet.
-- `submitted` — handed off to review; exactly one `guide_review_cases` row now exists.
+- `submitted` — handed off to review, or created at publication from author-accepted reviewer edits.
+
+A reviewed revision has a `guide_review_cases` row.
+A revision created from accepted edits links back through `review_suggestions.applied_revision_id`.
+The original case remains attached to the unchanged revision that the panel reviewed.
 
 Adding `in_review`, `accepted`, or `rejected` here would duplicate `review_cases.status`. Two columns describing the same fact means they can possibly disagree/drift (e.g. the case is `approved` but the revision still says `in_review` because an update was missed). So, a revision "reads as accepted" when its case is `approved`, and it is never stamped on the revision row itself. `published` and `archived` are excluded for a different reason: they describe a *node's* disposition, not a single revision's, so they belong to `guides`/`guide_bases`, not here.
 

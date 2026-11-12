@@ -31,12 +31,18 @@ type EditorProps = {
   value?: string;
   onChange?: (markdown: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
+  // The guide flow waits for a pause in typing. A short form submits right
+  // after an edit, and a tap on iOS does not always blur the editor first.
+  changeDelayMs?: number;
+  mode?: "guide" | "review";
 };
 
 export default function Editor({
   value,
   onChange,
   onUploadImage,
+  changeDelayMs = 1000,
+  mode = "guide",
 }: EditorProps) {
   const [initialMarkdown] = useState<string>(() => value ?? "");
   const [markdown, setMarkdown] = useState<string>(() => value ?? "");
@@ -66,9 +72,9 @@ export default function Editor({
       saveTimeoutRef.current = setTimeout(() => {
         onChangeRef.current?.(newMarkdown);
         saveTimeoutRef.current = null;
-      }, 1000);
+      }, changeDelayMs);
     },
-    []
+    [changeDelayMs]
   );
 
   // MDXEditor's imperative setMarkdown() does NOT fire the editor's onChange,
@@ -81,6 +87,7 @@ export default function Editor({
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
+
     setMarkdown(newMarkdown);
     latestRef.current = newMarkdown;
     onChangeRef.current?.(newMarkdown);
@@ -93,6 +100,7 @@ export default function Editor({
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
+
       if (latestRef.current !== null) {
         onChangeRef.current?.(latestRef.current);
       }
@@ -104,6 +112,7 @@ export default function Editor({
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+
         if (latestRef.current !== null) {
           onChangeRef.current?.(latestRef.current);
         }
@@ -140,6 +149,7 @@ export default function Editor({
   );
 
   // Stable plugins configuration to avoid rebuilding Lexical instance during state re-renders
+  // Note: changes to markdown, mode, or overlayContainer recreate this configuration.
   const plugins = useMemo(
     () => [
       headingsPlugin({
@@ -183,6 +193,8 @@ export default function Editor({
         toolbarContents: () => (
           <EditorToolbar
             editorRef={editorRef}
+            overlayContainer={overlayContainer}
+            mode={mode}
             markdown={markdown}
             onImportMarkdown={handleImportMarkdown}
             onH1Attempted={() => {
@@ -196,23 +208,32 @@ export default function Editor({
         ),
       }),
     ],
-    [markdown]
+    [markdown, mode, overlayContainer]
   );
 
   return (
     <div
       id="bluelearn-editor-container"
-      className="editor-only-container transition-all"
+      className={
+        mode === "review"
+          ? "editor-only-container editor-review"
+          : "editor-only-container transition-all"
+      }
     >
       <div className="editor-only-paper flex flex-col">
         {overlayContainer && (
           <MDXEditor
             ref={editorRef}
+            className={mode === "review" ? "review-comment-editor" : undefined}
             markdown={initialMarkdown}
             onChange={handleMarkdownChange}
             onBlur={handleBlur}
             contentEditableClassName="mdxeditor-content"
-            placeholder="What will you teach the world today? Start typing here..."
+            placeholder={
+              mode === "review"
+                ? "Propose an edit..."
+                : "What will you teach the world today? Start typing here..."
+            }
             plugins={plugins}
             overlayContainer={overlayContainer}
           />

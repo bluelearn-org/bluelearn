@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { GUIDE_UI_ATTR } from "@/lib/reviewAnchors";
 
 type CodeBlockProps = {
   code: string;
@@ -27,7 +28,10 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
 
   return (
     <div className="relative my-6 overflow-hidden rounded-lg border bg-muted">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+      <div
+        {...{ [GUIDE_UI_ATTR]: "" }}
+        className="flex items-center justify-between border-b px-4 py-2"
+      >
         <span className="text-xs text-muted-foreground uppercase">
           {language ?? "text"}
         </span>
