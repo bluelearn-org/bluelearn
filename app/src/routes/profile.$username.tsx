@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { profileActivitySearchSchema } from "@bluelearn/schemas";
 import type { ProfileActivitySearch } from "@bluelearn/schemas";
 import { getAvatarUrl, getInitials } from "@/lib/profile";
@@ -8,6 +8,7 @@ import { ActivityTable } from "@/components/tables/ActivityTable";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/authContext";
 
 export const Route = createFileRoute("/profile/$username")({
   ssr: false,
@@ -45,7 +46,9 @@ function ProfileMessage({
 }
 
 function ProfilePage() {
-  const { profile, roles, stats, activity } = Route.useLoaderData();
+  const { profile, roles, stats, activity, is_owner, followed_subjects } =
+    Route.useLoaderData();
+  const { user } = useAuth();
   const { username } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -137,6 +140,33 @@ function ProfilePage() {
         </div>
 
         <Separator className="mb-8 bg-border" />
+
+        {is_owner && user?.id === profile.id && (
+          <section aria-labelledby="followed-subjects-heading" className="mb-8">
+            <h2 id="followed-subjects-heading" className="data-label mb-4">
+              Followed Subjects
+            </h2>
+            {followed_subjects?.length ? (
+              <ul className="flex flex-wrap gap-3">
+                {followed_subjects.map((subject) => (
+                  <li key={subject.slug} className="max-w-full min-w-0">
+                    <Link
+                      to="/subjects/$slug"
+                      params={{ slug: subject.slug }}
+                      className="text-sm break-words underline underline-offset-4 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
+                    >
+                      {subject.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                You aren't following any subjects yet.
+              </p>
+            )}
+          </section>
+        )}
 
         <ActivityTable
           activity={activity}

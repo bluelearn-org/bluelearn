@@ -292,6 +292,16 @@ Guide approval or curator publication of an attached objective publishes the sub
 Objective Details checks each proposed subject before adding it. The editor uses shared name limits and slug normalization.
 Invalid names or blank summaries show a field-specific error.
 
+### `subject_follows`
+
+Private shortcuts to subjects for each user.
+
+- `user_id`: FK to `profiles.id`, cascading on profile deletion.
+- `subject_id`: FK to `subjects.id`, cascading on subject deletion.
+- Primary key `(user_id, subject_id)` prevents duplicates and supports owner lookups. A subject index supports cascading subject deletion.
+
+Authenticated users can select, insert, and delete only their own follows through RLS. Inserts require a published subject with a slug. Anonymous access and updates are not granted. The API derives the user from the authenticated session, and the public profile response omits follows unless the caller owns the profile.
+
 ### `guide_revision_subjects`
 
 Many-to-many join table between guide revisions and subjects. Tagging is revision-scoped: each guide revision carries its own tag set, edited while the revision is a draft and frozen once submitted. A variant's live tags are its current revision's, and a guide base's live tags are its canonical variant's current revision's.

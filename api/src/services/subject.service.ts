@@ -14,6 +14,55 @@ import { buildObjectiveListItems } from "./objective.service";
 
 type DB = SupabaseClient<Database>;
 
+export async function getSubjectFollow(
+  supabase: DB,
+  userId: string,
+  slug: string
+) {
+  const subject = await resolveSubjectId(supabase, slug);
+  const { data, error } = await supabase
+    .from("subject_follows")
+    .select("subject_id")
+    .eq("user_id", userId)
+    .eq("subject_id", subject.id)
+    .maybeSingle();
+  if (error) {
+    console.error(error);
+    throw new ServiceError("Failed to load subject follow", 500);
+  }
+  return { following: data !== null };
+}
+
+export async function setSubjectFollow(
+  supabase: DB,
+  userId: string,
+  slug: string,
+  following: boolean
+) {
+  const subject = await resolveSubjectId(supabase, slug);
+  const { error } = following
+    ? await supabase
+        .from("subject_follows")
+        .upsert(
+          { user_id: userId, subject_id: subject.id },
+          { onConflict: "user_id,subject_id", ignoreDuplicates: true }
+        )
+    : await supabase
+        .from("subject_follows")
+        .delete()
+        .eq("user_id", userId)
+        .eq("subject_id", subject.id);
+  if (error) {
+    console.error(error);
+    if (error.code === "23503")
+      throw new ServiceError("Subject not found", 404);
+    if (error.code === "42501")
+      throw new ServiceError("Subject cannot be followed", 403);
+    throw new ServiceError("Failed to update subject follow", 500);
+  }
+  return { following };
+}
+
 // Resolve a subject slug to its id, or 404. Shared by the tagged-node listings.
 async function resolveSubjectId(supabase: DB, rawSlug: string) {
   const { data, error } = await supabase
