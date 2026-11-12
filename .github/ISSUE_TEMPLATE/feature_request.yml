@@ -2,15 +2,21 @@ name: Feature request
 description: Propose a new feature, capability, or improvement.
 title: "[Feature] "
 labels:
-  - "enhancement"
-  - "needs-triage"
+  - "tag:enhancement"
+  - "status:triage"
+type: feature
 body:
   - type: markdown
     attributes:
       value: |
-        Please describe the problem first, then the proposal. BLUE
+        Please describe the problem first, then the proposal. Bluelearn
         is a mission-driven project with non-negotiable principles.
         Proposals that violate those principles will not be accepted.
+        Issues should:
+        - solve a users pain point
+        - contribute to our goal of making learning more accessible
+        - contribute to our milestones
+        - improve user experience
 
   - type: textarea
     id: problem
