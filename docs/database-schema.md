@@ -332,7 +332,13 @@ Constraints:
 - One vote per voter per guide, enforced directly by the composite primary key `(voter_id, guide_id)` — no separate surrogate `id` or unique constraint needed.
 - A check that `reason` is present if and only if `direction = 'down'`.
 
-Public users see only the upvote and downvote totals. Row level security limits direct access to the rubric breakdown to moderators. Notifications give guide authors anonymous downvote reasons and notes. Notifications do not identify downvoters. The net votes determine the order of sibling guides. The database does not store a rank column.
+Public users see only the upvote and downvote totals. Row level security lets voters read their own votes. Admins and moderators can read all votes. Notifications give guide authors anonymous downvote reasons and notes. Notifications do not identify downvoters.
+
+`inspect_guide_downvotes()` returns current downvotes with voter IDs, usernames, reasons, notes, and update times. Any user with a row in `user_roles` can use it on any guide. Suspended accounts cannot use it.
+
+The API exposes this function through `/variants/:id/downvotes` and `/reviews/cases/:id/downvotes`. The case endpoint shows the downvotes of the guide under that case. Both endpoints require authentication and return paginated results with `Cache-Control: private, no-store`. The guide reader, variant reader, and review page show the inspection panel to staff. The function does not expand direct access to the `votes` table.
+
+The net votes determine the order of sibling guides. The database does not store a rank column.
 
 ### `content_holds`
 
@@ -428,7 +434,7 @@ A downvote row lists the reason and note of each downvote since the previous dow
 
 `notification_vote_tallies` keeps the tiers of each guide author, guide, and direction: `started_at` is the first counted vote, `total` counts distinct voters, `notified_total` is the total at the latest notification, and `feedback` holds the downvote reasons since then. A vote locks its tally row, so concurrent votes on one guide wait for each other.
 
-`notification_voters` records the counted voters of each tally. A downvoter is kept only here. Its primary key is `(author_id, guide_id, type, voter_id)`. A voter who votes again in the same direction adds nothing, even after a flip. Only the service role can read or change these records and the tallies.
+`notification_voters` records the counted voters of each tally. Its primary key is `(author_id, guide_id, type, voter_id)`. A voter who votes again in the same direction adds nothing, even after a flip. Only the service role can read or change these records and the tallies. The separate `votes` table retains each current vote and its voter identity.
 
 The five-minute worker calls `notify_review_deadlines()`. The function skips expired seats, completed seats, replaced seats, closed panels, and cases outside review.
 

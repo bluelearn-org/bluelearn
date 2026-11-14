@@ -1743,6 +1743,15 @@ export type Database = {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      inspect_guide_downvotes: {
+        Args: {
+          p_case_id?: string
+          p_guide_id?: string
+          p_limit?: number
+          p_page?: number
+        }
+        Returns: Json
+      }
       is_active_guide_author: { Args: never; Returns: boolean }
       list_guide_variants_by_score: {
         Args: { p_guide_base_id: string; p_z?: number }

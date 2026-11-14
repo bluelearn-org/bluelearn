@@ -5,6 +5,7 @@ import type { ReaderGuide } from "@/components/GuideReader";
 import type { RevisionDiffData } from "@/components/RevisionDiff";
 import { GuideReader } from "@/components/GuideReader";
 import { RevisionDiff } from "@/components/RevisionDiff";
+import { DownvoteInspection } from "@/components/DownvoteInspection";
 
 import { ApiError } from "@/lib/api/apiHelpers";
 import { getReviewCase } from "@/lib/api/reviews";
@@ -152,6 +153,8 @@ function RouteComponent() {
               <DiffPane diff={diff} failed={diffFailed} />
             </div>
           )}
+
+          <DownvoteInspection target={{ caseId }} />
         </main>
       </section>
     </div>
