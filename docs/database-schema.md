@@ -332,7 +332,7 @@ Constraints:
 - One vote per voter per guide, enforced directly by the composite primary key `(voter_id, guide_id)` — no separate surrogate `id` or unique constraint needed.
 - A check that `reason` is present if and only if `direction = 'down'`.
 
-Display rules: public users see upvote/downvote totals only. The rubric breakdown is visible to moderators only, enforced by row level security. Guide ordering among siblings is **derived** from net votes, not stored as a rank column.
+Public users see only the upvote and downvote totals. Row level security limits direct access to the rubric breakdown to moderators. Notifications give guide authors anonymous downvote reasons and notes. Notifications do not identify downvoters. The net votes determine the order of sibling guides. The database does not store a rank column.
 
 ### `content_holds`
 

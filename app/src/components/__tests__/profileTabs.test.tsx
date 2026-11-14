@@ -41,7 +41,7 @@ describe("ProfileTabs", () => {
     ).toBe("/profile/seeduser");
     expect(
       screen.getByRole("link", { name: "Notifications" }).getAttribute("href")
-    ).toBe("/profile/notifications");
+    ).toBe("/notifications");
   });
 
   it.each([

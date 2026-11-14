@@ -95,7 +95,7 @@ export function NotificationPanel({
 
       <div className="border-t px-4 py-2 text-center">
         <Link
-          to="/profile/notifications"
+          to="/notifications"
           onClick={onNavigate}
           className="text-xs font-semibold text-brand-bright-blue hover:underline"
         >

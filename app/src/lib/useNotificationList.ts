@@ -44,8 +44,8 @@ const PAGE_SIZE = 20;
 
 // One list of the signed-in user's notifications, shared by the bell panel and
 // the notifications page.
-export function useNotificationList() {
-  const [view, setView] = useState(FILTER_VIEWS[0]);
+export function useNotificationList(initialView = FILTER_VIEWS[0]) {
+  const [view, setView] = useState(initialView);
   const [items, setItems] = useState<Array<Notification>>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -58,6 +58,7 @@ export function useNotificationList() {
   const load = useCallback(
     async (nextPage: number) => {
       controllerRef.current?.abort();
+
       const controller = new AbortController();
       controllerRef.current = controller;
       const { signal } = controller;
@@ -75,11 +76,13 @@ export function useNotificationList() {
           },
           { signal }
         );
+
         // A row can move to the next page when a new event arrives, so drop
         // repeats by id.
         setItems((current) => {
           const kept = nextPage === 1 ? [] : current;
           const seen = new Set(kept.map((item) => item.id));
+
           return [
             ...kept,
             ...result.notifications.filter((item) => !seen.has(item.id)),
@@ -101,6 +104,7 @@ export function useNotificationList() {
 
   useEffect(() => {
     void load(1);
+
     return () => controllerRef.current?.abort();
   }, [load]);
 
@@ -111,6 +115,7 @@ export function useNotificationList() {
   // Shows the row read at once and resolves to whether the server saved it.
   const markRead = useCallback((item: Notification) => {
     const readAt = new Date().toISOString();
+
     setItems((current) =>
       current.map((row) =>
         row.id === item.id ? { ...row, read_at: readAt } : row
@@ -128,25 +133,36 @@ export function useNotificationList() {
 
   // Marks the current view read and resolves to whether the server saved it.
   const markAll = async () => {
+    const category = view.category;
+
     try {
-      await markAllNotificationsRead(view.category);
+      await markAllNotificationsRead(category);
     } catch (error) {
       console.error(error);
       return false;
     }
 
     const readAt = new Date().toISOString();
+
     setItems((current) =>
-      current.map((row) => (row.read_at ? row : { ...row, read_at: readAt }))
+      current.map((row) => {
+        const matchesCategory =
+          category === undefined || row.category === category;
+
+        if (row.read_at || !matchesCategory) return row;
+
+        return { ...row, read_at: readAt };
+      })
     );
+
     return true;
   };
 
-  // Types without a renderer stay hidden.
   const rows = useMemo(
     () =>
       items.flatMap((item): Array<NotificationListRow> => {
         const rendered = renderNotification(item);
+
         return rendered ? [{ item, rendered }] : [];
       }),
     [items]

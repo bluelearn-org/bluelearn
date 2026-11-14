@@ -46,8 +46,9 @@ const reviewTarget = {
   params: { caseId: "c1" },
 };
 const notificationsPage = {
-  to: "/profile/notifications",
+  to: "/notifications",
   hash: "notification-00000000-0000-4000-8000-000000000001",
+  search: {},
 };
 
 describe.each([

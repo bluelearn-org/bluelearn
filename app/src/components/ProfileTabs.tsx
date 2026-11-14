@@ -40,10 +40,8 @@ export function ProfileTabs({ username }: PropTypes) {
         </li>
         <li>
           <Link
-            to="/profile/notifications"
-            className={tabClass(
-              Boolean(matchRoute({ to: "/profile/notifications" }))
-            )}
+            to="/notifications"
+            className={tabClass(Boolean(matchRoute({ to: "/notifications" })))}
           >
             <Bell className="h-4 w-4" />
             Notifications

@@ -6,13 +6,19 @@ import {
 } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
+import { notificationsQuerySchema } from "@bluelearn/schemas";
 import type { Notification } from "@bluelearn/schemas";
 
-import type { NotificationListRow } from "@/lib/useNotificationList";
+import type {
+  NotificationListRow,
+  NotificationListView,
+} from "@/lib/useNotificationList";
 import { requireSession } from "@/lib/auth";
 import { useAuth } from "@/lib/authContext";
 import { notificationAnchor } from "@/lib/notifications";
 import {
+  CATEGORY_VIEWS,
+  FILTER_VIEWS,
   NOTIFICATIONS_READ_EVENT,
   useNotificationList,
 } from "@/lib/useNotificationList";
@@ -25,24 +31,42 @@ import { NotificationFeed } from "@/components/notifications/NotificationFeed";
 import { NotificationRow } from "@/components/notifications/NotificationRow";
 import { NotificationViewMenu } from "@/components/notifications/NotificationViewMenu";
 
-export const Route = createFileRoute("/profile/notifications")({
+export const Route = createFileRoute("/notifications")({
   ssr: false,
   beforeLoad: requireSession,
+  validateSearch: notificationsQuerySchema.pick({
+    filter: true,
+    category: true,
+  }),
   component: RouteComponent,
 });
 
-// Once the server has marked rows read, the bell counts again.
-function announceRead() {
-  window.dispatchEvent(new Event(NOTIFICATIONS_READ_EVENT));
-}
+type NotificationsPageProps = {
+  hash: string;
+  initialView: NotificationListView;
+};
 
 function RouteComponent() {
-  const navigate = useNavigate();
   const hash = useLocation({ select: (location) => location.hash });
+  const { filter, category } = Route.useSearch();
+  const view = category
+    ? CATEGORY_VIEWS.find((entry) => entry.category === category)
+    : FILTER_VIEWS.find((entry) => entry.filter === filter);
+
+  return (
+    <NotificationsPage
+      key={`${category ?? filter}:${hash}`}
+      hash={hash}
+      initialView={view ?? FILTER_VIEWS[0]}
+    />
+  );
+}
+
+function NotificationsPage({ hash, initialView }: NotificationsPageProps) {
+  const navigate = useNavigate();
   const { currentProfile } = useAuth();
-  const list = useNotificationList();
+  const list = useNotificationList(initialView);
   const { rows, hasMore, loading, failed, loadOlder, markRead } = list;
-  // The hash this page has already scrolled to.
   const shownHashRef = useRef<string | null>(null);
 
   const markOpened = useCallback(
@@ -58,14 +82,23 @@ function RouteComponent() {
 
   const open = async ({ item, rendered }: NotificationListRow) => {
     markOpened(item);
+
     const target =
       rendered.pageTarget === undefined ? rendered.target : rendered.pageTarget;
+
     if (target) await navigate(target);
   };
 
   const markAll = async () => {
     if (await list.markAll()) announceRead();
   };
+
+  const changeView = (view: NotificationListView) =>
+    navigate({
+      to: "/notifications",
+      search: { filter: view.filter, category: view.category },
+      hash: "",
+    });
 
   const focused = rows.find(({ item }) => notificationAnchor(item.id) === hash);
 
@@ -76,6 +109,7 @@ function RouteComponent() {
 
     if (!focused) {
       if (hasMore && !loading && !failed) void loadOlder();
+
       return;
     }
 
@@ -101,10 +135,7 @@ function RouteComponent() {
 
         <div className="mx-auto w-full max-w-5xl">
           <div className="flex flex-wrap items-center gap-3 border-b px-4 pb-4">
-            <NotificationViewMenu
-              view={list.view}
-              onViewChange={list.setView}
-            />
+            <NotificationViewMenu view={list.view} onViewChange={changeView} />
 
             <div className="ml-auto flex items-center gap-2">
               {hasUnread && (
@@ -187,4 +218,8 @@ function RouteComponent() {
       </section>
     </div>
   );
+}
+
+function announceRead() {
+  window.dispatchEvent(new Event(NOTIFICATIONS_READ_EVENT));
 }

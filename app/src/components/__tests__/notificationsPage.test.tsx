@@ -9,8 +9,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ComponentType, ReactNode } from "react";
-import type { Notification } from "@bluelearn/schemas";
-import { Route } from "@/routes/profile.notifications";
+import type { Notification, NotificationCategory } from "@bluelearn/schemas";
+import { Route } from "@/routes/notifications";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const {
@@ -26,7 +26,13 @@ const {
   markNotificationRead: vi.fn(),
   markAllNotificationsRead: vi.fn(),
   getUnreadNotificationCount: vi.fn(),
-  location: { hash: "" },
+  location: {
+    hash: "",
+    search: {
+      filter: "all",
+      category: undefined as NotificationCategory | undefined,
+    },
+  },
   navigate: vi.fn(),
   scrollIntoView: vi.fn(),
 }));
@@ -46,7 +52,10 @@ vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 
 // Keep link destinations visible without mounting the application router.
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => (options: unknown) => ({ options }),
+  createFileRoute: () => (options: unknown) => ({
+    options,
+    useSearch: () => location.search,
+  }),
   Link: ({
     children,
     to,
@@ -105,10 +114,11 @@ const renderWithBell = () =>
     </>
   );
 
-describe("profile notifications page", () => {
+describe("notifications page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     location.hash = "";
+    location.search = { filter: "all", category: undefined };
     // jsdom has no layout, so scrolling is recorded instead.
     Element.prototype.scrollIntoView = scrollIntoView;
     markNotificationRead.mockResolvedValue(undefined);
@@ -247,4 +257,41 @@ describe("profile notifications page", () => {
     expect(getUnreadNotificationCount).toHaveBeenCalledTimes(1);
     expect(screen.getAllByText("Unread")).toHaveLength(2);
   });
+
+  it.each(["new", "same"])(
+    "opens a %s hash from a filtered inbox with all categories available",
+    async (navigation) => {
+      const linked = downvote();
+      const guide = downvote({
+        type: "guide_review_decision",
+        category: "guide_statuses",
+        data: { outcome: "approved", title: "Guide decision" },
+      });
+      const hash = `notification-${linked.id}`;
+      location.hash = navigation === "same" ? hash : "";
+      location.search.category = "guide_statuses";
+      listNotifications
+        .mockResolvedValueOnce(envelope([guide]))
+        .mockResolvedValue(envelope([linked]));
+
+      const page = render(<NotificationsPage />);
+
+      await screen.findByRole("button", { name: /guide.*approved/i });
+      expect(anchor(linked)).toBeNull();
+
+      location.hash = hash;
+      location.search = { filter: "all", category: undefined };
+      page.rerender(<NotificationsPage />);
+
+      const reasons = await screen.findByRole("list", {
+        name: /downvote reasons/i,
+      });
+
+      expect(anchor(linked)?.contains(reasons)).toBe(true);
+      expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
+      await waitFor(() =>
+        expect(scrollIntoView.mock.contexts).toContain(anchor(linked))
+      );
+    }
+  );
 });

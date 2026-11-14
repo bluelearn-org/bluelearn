@@ -217,6 +217,55 @@ describe("NotificationPanel", () => {
     }
   );
 
+  it.each([
+    { view: "Guide statuses", remaining: 1 },
+    { view: "All", remaining: 0 },
+  ])(
+    "keeps a delayed bulk-read response scoped to $view after a category change",
+    async ({ view, remaining }) => {
+      const guide = titled("Guide decision");
+      const downvote = vote("guide_downvotes");
+      const pages: Partial<
+        Record<NotificationCategory | "all", ReturnType<typeof envelope>>
+      > = {
+        all: envelope([guide, downvote]),
+        guide_statuses: envelope([guide]),
+        community_engagement: envelope([downvote]),
+      };
+      listNotifications.mockImplementation(({ category }: ListQuery) =>
+        Promise.resolve(pages[category ?? "all"])
+      );
+
+      let finishRead!: () => void;
+      const pendingRead = new Promise<void>((resolve) => {
+        finishRead = resolve;
+      });
+      markAllNotificationsRead.mockReturnValue(pendingRead);
+
+      render(<Harness initialUnread={2} />);
+      await screen.findByRole("button", { name: /guide.*approved/i });
+      await pickView(view);
+
+      fireEvent.click(screen.getByRole("button", { name: /mark.*all.*read/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: view }), {
+        button: 0,
+        ctrlKey: false,
+      });
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "Community engagement" })
+      );
+      await screen.findByRole("button", { name: /downvotes on/i });
+      expect(unreadMarkers()).toHaveLength(1);
+
+      await act(async () => {
+        finishRead();
+        await pendingRead;
+      });
+
+      expect(unreadMarkers()).toHaveLength(remaining);
+    }
+  );
+
   it("appends older rows once each and stops at the total", async () => {
     const newest = titled("Newest");
     const shared = titled("Shared");
@@ -302,8 +351,9 @@ describe("NotificationPanel", () => {
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith({
-        to: "/profile/notifications",
+        to: "/notifications",
         hash: `notification-${downvote.id}`,
+        search: {},
       })
     );
     expect(markNotificationRead).toHaveBeenCalledWith(downvote.id);
@@ -332,7 +382,7 @@ describe("NotificationPanel", () => {
 
     fireEvent.click(viewAll);
 
-    expect(viewAll.getAttribute("href")).toBe("/profile/notifications");
+    expect(viewAll.getAttribute("href")).toBe("/notifications");
     expect(closePanel).toHaveBeenCalledTimes(1);
   });
 });

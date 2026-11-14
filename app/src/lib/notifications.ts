@@ -25,7 +25,7 @@ export type NotificationTarget =
       to: "/guides/$slug/$variantSlug";
       params: { slug: string; variantSlug: string };
     }
-  | { to: "/profile/notifications"; hash: string };
+  | { to: "/notifications"; hash: string; search: Record<string, never> };
 
 export type NotificationView = {
   title: string;
@@ -69,7 +69,11 @@ export const notificationRenderers: Partial<
           ? `A downvote on "${title}"`
           : `${votes} downvotes on "${title}"`,
       hint: "Click to see why.",
-      target: { to: "/profile/notifications", hash: notificationAnchor(id) },
+      target: {
+        to: "/notifications",
+        hash: notificationAnchor(id),
+        search: {},
+      },
       pageTarget: guideTarget(data),
       icon: ThumbsDown,
       feedback: downvoteFeedback(data),
