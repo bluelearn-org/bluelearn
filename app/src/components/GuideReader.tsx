@@ -1,35 +1,16 @@
-import ReactMarkdown from "react-markdown";
-import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import remarkDirective from "remark-directive";
+
 
 import { Calendar, Clock, ShieldCheck, User } from "lucide-react";
-import { createElement } from "react";
-import type { ReactElement } from "react";
 import type { Guide } from "@bluelearn/schemas";
 import type { GuideType } from "@/types/guides";
-import { remarkCallout } from "@/lib/remarkCallout";
-import { remarkIndentedCodeAsParagraph } from "@/lib/remarkIndentedCodeAsParagraph";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { CodeBlock } from "@/components/CodeBlock";
-import { Callout } from "@/components/Callout";
 import { GuideToc } from "@/components/GuideToc";
+import { BlueMarkdown } from "@/components/blue_markdown/BlueMarkdown";
 
-import { formatDate, formatDuration, getHeadingId } from "@/lib/guideUtils";
+import { formatDate, formatDuration } from "@/lib/guideUtils";
 
-const sanitizeSchema = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    img: [...(defaultSchema.attributes?.img ?? []), "width", "height"],
-    callout: ["type"],
-  },
-  tagNames: [...(defaultSchema.tagNames ?? []), "callout", "u"],
-};
+
 
 type ReaderTag = { id?: string; slug?: string; name: string };
 
@@ -57,39 +38,7 @@ export const GuideReader = ({
   const createdLabel = Number.isNaN(created.getTime())
     ? guide.created_at
     : formatDate(created);
-  const headingIds = new Map<string, number>();
-
-  const renderHeading =
-    (level: number) =>
-    ({ children }: any) => {
-      const getText = (value: any): string => {
-        if (value == null) {
-          return "";
-        }
-
-        if (typeof value === "string" || typeof value === "number") {
-          return String(value);
-        }
-
-        if (Array.isArray(value)) {
-          return value.map(getText).join("");
-        }
-
-        if (value?.props?.children != null) {
-          return getText(value.props.children);
-        }
-
-        return "";
-      };
-
-      const text = getText(children);
-
-      return createElement(
-        `h${level}`,
-        { id: getHeadingId(text.trim(), headingIds) },
-        children
-      );
-    };
+ 
 
   return (
     <>
@@ -163,57 +112,7 @@ export const GuideReader = ({
       <Separator className="mb-8" />
 
       <article className="markdown">
-        <ReactMarkdown
-          remarkPlugins={[
-            remarkGfm,
-            remarkMath,
-            remarkDirective,
-            remarkCallout,
-            remarkIndentedCodeAsParagraph,
-          ]}
-          rehypePlugins={[
-            rehypeRaw,
-            [rehypeSanitize, sanitizeSchema],
-            rehypeKatex,
-          ]}
-          components={{
-            h1: renderHeading(1),
-            h2: renderHeading(2),
-            h3: renderHeading(3),
-            h4: renderHeading(4),
-            h5: renderHeading(5),
-            h6: renderHeading(6),
-            pre({ children }) {
-              const child = children as ReactElement<{
-                className?: string;
-                children?: React.ReactNode;
-              }>;
-
-              const code = String(child.props.children).replace(/\n$/, "");
-              const language = child.props.className?.replace("language-", "");
-
-              return <CodeBlock code={code} language={language} />;
-            },
-
-            code({ children, className }) {
-              if (className) {
-                return <code className={className}>{children}</code>;
-              }
-
-              return (
-                <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                  {children}
-                </code>
-              );
-            },
-            // @ts-expect-error custom component callout
-            callout({ node, children, ...props }: any) {
-              return <Callout type={props.type}>{children}</Callout>;
-            },
-          }}
-        >
-          {guide.body ?? ""}
-        </ReactMarkdown>
+        <BlueMarkdown body={guide.body ?? ""} />
       </article>
     </>
   );
