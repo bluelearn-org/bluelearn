@@ -107,8 +107,7 @@ const pickView = async (label: string) => {
   fireEvent.click(await screen.findByRole("menuitem", { name: label }));
 };
 
-// Holds the unread count the way NotificationBell does, so the test reads the
-// count from the panel header.
+// Holds the unread count the way NotificationBell does.
 function Harness({ initialUnread }: { initialUnread: number }) {
   const [unread, setUnread] = useState(initialUnread);
   return (

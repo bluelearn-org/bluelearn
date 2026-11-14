@@ -16,9 +16,6 @@ import type {
 } from "@bluelearn/schemas";
 import { downvoteReasonItems } from "@/lib/api/votes";
 
-// Each type pairs a database registry entry and event source with a renderer.
-// The bell hides types without a renderer, and settings disables their toggles.
-
 export type NotificationTarget =
   | { to: "/review/$caseId"; params: { caseId: string } }
   | {
@@ -30,22 +27,21 @@ export type NotificationTarget =
 export type NotificationView = {
   title: string;
   body: string;
-  // Shown under the body in the bell panel only, such as a pointer to the
-  // notifications page.
+  // Shown in the bell panel only.
   hint?: string;
   // Null when the data no longer names a page to open.
   target: NotificationTarget | null;
   // Where the notifications page opens the row, when target is that page.
   pageTarget?: NotificationTarget | null;
-  // Shown in place of the avatar when nobody acted, such as a panel outcome.
+  // Replaces the avatar when nobody acted.
   icon: LucideIcon;
-  // Each downvote reason and note in the row, newest first, for the
-  // notifications page.
+  // Downvote reasons and notes, newest first.
   feedback?: Array<{ reason: string | null; note: string | null }>;
 };
 
 type Renderer = (notification: Notification) => NotificationView;
 
+// Types without a renderer stay hidden in the bell and disabled in settings.
 export const notificationRenderers: Partial<
   Record<NotificationType, Renderer>
 > = {
@@ -55,9 +51,7 @@ export const notificationRenderers: Partial<
     reviewDecision(notification, "variant"),
   guide_upvotes: upvotes,
 
-  // Downvoters stay private, so these rows never carry an actor. The bell
-  // opens the notifications page, which shows the reasons and notes; there
-  // the row opens the guide.
+  // No actor: downvoters stay private.
   guide_downvotes: ({ id, data, count }) => {
     const title = text(data.title) ?? "Untitled";
     const votes = voteTotal(data) ?? count;
@@ -137,7 +131,7 @@ export function isNotificationTypeLive(type: NotificationType) {
   return type in notificationRenderers;
 }
 
-// The id of a row on the notifications page, and the link hash that opens it.
+// The row's element id, and the hash that links to it.
 export function notificationAnchor(id: string) {
   return `notification-${id}`;
 }
@@ -188,8 +182,7 @@ function voteTotal(data: Notification["data"]) {
     : null;
 }
 
-// One { reason, note } entry per downvote, newest first. A reason the app
-// does not know keeps its note.
+// A reason the app does not know keeps its note.
 function downvoteFeedback(data: Notification["data"]) {
   const entries = Array.isArray(data.feedback)
     ? data.feedback.filter(

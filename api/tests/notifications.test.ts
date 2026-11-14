@@ -37,8 +37,7 @@ async function unreadCount(token: string) {
   return ((await res.json()) as { count: number }).count;
 }
 
-// A guide revision by `authorId` under review by a one-seat panel. The
-// panelist's decision closes the case through close_review_panel.
+// A one-seat panel, so the panelist's decision closes the case.
 async function seedCaseForAuthor(authorId: string, title: string) {
   const panelist = await makeUser();
   const base = await createGuideBase();
@@ -80,8 +79,7 @@ async function decide(
   expect(res.status).toBe(200);
 }
 
-// Moves the start of a guide's upvote tiers back by `hours`. A total stands in
-// for earlier voters, as if the latest notification showed it.
+// Backdates the upvote tiers. `total` stands in for earlier voters.
 async function ageUpvotes(guideId: string, hours: number, total?: number) {
   await admin
     .from("notification_vote_tallies")

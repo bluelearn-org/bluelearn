@@ -55,8 +55,7 @@ create trigger review_cases_notify_decision
   )
   execute function public.notify_review_decision();
 
--- Draft autosaves do not change the live revision. First publication and
--- later published edits notify through the same transaction as publication.
+-- Autosaves do not change the live revision, so only publication notifies.
 create or replace function public.notify_variant_publication()
 returns trigger
 language plpgsql
@@ -122,8 +121,7 @@ create trigger guides_notify_variant_publication
   )
   execute function public.notify_variant_publication();
 
--- One row per guide author, guide, and vote direction. The vote tiers count
--- from started_at.
+-- One row per guide author, guide, and vote direction.
 create table public.notification_vote_tallies (
   author_id uuid not null references public.profiles (id) on delete cascade,
   guide_id uuid not null references public.guides (id) on delete cascade,
@@ -139,8 +137,7 @@ create table public.notification_vote_tallies (
   primary key (author_id, guide_id, type)
 );
 
--- Each tally counts a voter once. The voters stay in this table, which clients
--- cannot read, because a downvote must not name its voter.
+-- Clients cannot read this table, so a downvote never names its voter.
 create table public.notification_voters (
   author_id uuid not null,
   guide_id uuid not null,
@@ -159,13 +156,7 @@ alter table public.notification_voters enable row level security;
 revoke all on public.notification_voters from public, anon, authenticated;
 grant all on public.notification_voters to service_role;
 
--- Votes notify the guide author in tiers, timed from the first counted vote in
--- each direction. In the live tier every vote joins one row, and an upvote
--- names its voter. After it, votes count silently, and a new row shows the
--- total once enough new voters arrive. A downvote row carries the reason and
--- note of each downvote since the previous row, newest first, but no actor, so
--- the author learns why the guide was downvoted but not who downvoted it. A
--- disabled preference consumes the row that would have been sent.
+-- The vote tiers and downvote privacy are described in docs/database-schema.md.
 create or replace function public.notify_guide_vote()
 returns trigger
 language plpgsql
@@ -363,8 +354,7 @@ create trigger panel_members_notify_assignment
   when (new.status = 'assigned')
   execute function public.notify_review_assignment();
 
--- Keep the claim after the inbox row is read. A new assignee or expiry permits
--- one new reminder. A disabled preference consumes this event too.
+-- Claims outlive read rows. A new assignee or expiry allows one new reminder.
 create table public.review_deadline_notifications (
   seat_id uuid not null references public.panel_members (id) on delete cascade,
   member_id uuid not null references public.profiles (id) on delete cascade,

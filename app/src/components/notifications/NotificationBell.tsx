@@ -11,9 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 
-// The count updates once a minute, on window focus, and after the
-// notifications page marks rows read, so a new notification can take up to a
-// minute to show.
+// A new notification can take up to a minute to show.
 const POLL_MS = 60_000;
 
 export function NotificationBell() {

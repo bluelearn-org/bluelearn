@@ -26,8 +26,7 @@ export function NotificationPanel({
 
   const open = async ({ item, rendered }: NotificationListRow) => {
     if (!item.read_at) {
-      // The page opens even if this fails; the next count poll corrects the
-      // badge.
+      // The next count poll corrects the badge if this fails.
       void list.markRead(item);
       onUnreadChange(Math.max(0, unread - 1));
     }

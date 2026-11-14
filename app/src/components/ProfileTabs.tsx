@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/authContext";
 import { cn } from "@/lib/utils";
 
 type PropTypes = {
-  // The profile on screen. The tabs only show on the signed-in user's own.
   username: string;
 };
 

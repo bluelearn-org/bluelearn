@@ -36,14 +36,12 @@ export const CATEGORY_VIEWS: Array<NotificationListView> =
     category: section.category,
   }));
 
-// The notifications page sends this after the server marks rows read, so the
-// bell counts again.
+// Tells the bell to recount after the page marks rows read.
 export const NOTIFICATIONS_READ_EVENT = "bluelearn:notifications-read";
 
 const PAGE_SIZE = 20;
 
-// One list of the signed-in user's notifications, shared by the bell panel and
-// the notifications page.
+// Shared by the bell panel and the notifications page.
 export function useNotificationList(initialView = FILTER_VIEWS[0]) {
   const [view, setView] = useState(initialView);
   const [items, setItems] = useState<Array<Notification>>([]);
@@ -51,8 +49,7 @@ export function useNotificationList(initialView = FILTER_VIEWS[0]) {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  // Starting any load aborts the one before it, so a late page from an old
-  // view never lands in the new one.
+  // A new load aborts the last, so an old view's late page never lands.
   const controllerRef = useRef<AbortController | null>(null);
 
   const load = useCallback(
@@ -77,8 +74,7 @@ export function useNotificationList(initialView = FILTER_VIEWS[0]) {
           { signal }
         );
 
-        // A row can move to the next page when a new event arrives, so drop
-        // repeats by id.
+        // A new event can push a row onto the next page, so drop repeats.
         setItems((current) => {
           const kept = nextPage === 1 ? [] : current;
           const seen = new Set(kept.map((item) => item.id));

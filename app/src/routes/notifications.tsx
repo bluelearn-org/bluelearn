@@ -102,8 +102,7 @@ function NotificationsPage({ hash, initialView }: NotificationsPageProps) {
 
   const focused = rows.find(({ item }) => notificationAnchor(item.id) === hash);
 
-  // A link from the bell names one row by its hash. Older pages load until
-  // that row shows, then the page scrolls to it and marks it read.
+  // Load pages until the linked row shows, then scroll to it and mark it read.
   useEffect(() => {
     if (!hash || shownHashRef.current === hash) return;
 

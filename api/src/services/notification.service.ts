@@ -9,10 +9,7 @@ import type {
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 
-// Every query runs on the caller's client, so RLS limits the rows to the
-// caller's own notifications and preferences. public.notify() is the only
-// writer of notifications; this service only reads them and sets read_at.
-
+// The caller's client, so RLS scopes every query to them.
 type DB = SupabaseClient<Database>;
 
 const NOTIFICATION_COLUMNS = `
@@ -155,7 +152,6 @@ export async function markAllNotificationsRead(
   }
 }
 
-// Every registered type, with the caller's choice or the type default.
 export async function listNotificationPreferences(
   supabase: DB,
   userId: string

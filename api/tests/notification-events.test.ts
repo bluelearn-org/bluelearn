@@ -154,8 +154,7 @@ async function reviewSeat(
     expires_at: options.expiresAt ?? hoursFromNow(24),
   });
 
-  // The insert trigger supplies an expiry for null; a later cleared expiry is
-  // the real nullable state the sweep must also exclude.
+  // The insert trigger fills a null expiry, so clear it afterwards.
   if (options.expiresAt === null) {
     await admin
       .from("panel_members")
@@ -596,8 +595,7 @@ describe("downvote events", () => {
       });
 
     await preference(author.token, "guide_downvotes", true);
-    // The first vote creates the tally row. Later votes race on that row,
-    // which only its lock serializes.
+    // The first vote creates the tally row the others race on.
     await castDownvote(first.userId, 0);
     // Open the connections first, so the votes reach the database together.
     await Promise.all(

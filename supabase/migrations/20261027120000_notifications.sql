@@ -1,8 +1,3 @@
--- public.notify() is the only writer. It runs inside the transaction that
--- caused the event, so a notification commits or rolls back with its event.
--- To add a notification type, follow "To add a type" in
--- docs/database-schema.md.
-
 create type public.notification_category as enum (
   'guide_statuses',
   'variant_statuses',
@@ -13,6 +8,7 @@ create type public.notification_category as enum (
 -- Preferences are kept per channel. Email adds a value here.
 create type public.notification_channel as enum ('in_app');
 
+-- To add a type, see "To add a type" in docs/database-schema.md.
 create table public.notification_types (
   type text primary key,
   category public.notification_category not null,
@@ -30,19 +26,17 @@ insert into public.notification_types (type, category, default_enabled) values
   ('review_assignment', 'review_workflows', false),
   ('review_deadline', 'review_workflows', true);
 
+-- public.notify() is the only writer and runs inside the event's transaction.
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
   recipient_id uuid not null references public.profiles (id) on delete cascade,
   type text not null references public.notification_types (type) on delete cascade,
   -- Null for system events, such as a panel outcome.
   actor_id uuid references public.profiles (id) on delete set null,
-  -- Events with the same key share one row and raise its count.
-  -- A null key gives every event its own row.
+  -- Same key, same row. A null key gives each event its own row.
   group_key text,
   group_count integer not null default 1,
-  -- Ids, slugs and titles that the app needs to show and link the row.
-  -- Store only text that the recipient can already read. A downvote row also
-  -- gives the guide author the reason and note of each downvote it covers.
+  -- Only text the recipient may already read. Downvote rows add reasons and notes.
   data jsonb not null default '{}'::jsonb,
   -- The time of the latest event in the row.
   occurred_at timestamptz not null default now(),
@@ -50,8 +44,7 @@ create table public.notifications (
   constraint notifications_group_count_positive check (group_count > 0)
 );
 
--- One row per group. Reading the row does not close the group: the next event
--- marks it unread again.
+-- Reading a row does not close its group. The next event marks it unread.
 create unique index notifications_group_idx
   on public.notifications (recipient_id, type, group_key)
   where group_key is not null;
@@ -127,8 +120,7 @@ begin
 end;
 $$;
 
--- Only database code and the service role may notify. A client cannot use
--- this function to send a notification to another user.
+-- Only database code and the service role may notify.
 revoke execute on function public.notify(uuid, text, uuid, jsonb, text)
   from public, anon, authenticated;
 grant execute on function public.notify(uuid, text, uuid, jsonb, text)
@@ -169,9 +161,7 @@ create policy "Users can change their own notification preferences"
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
--- New tables get every privilege by default (20260713120000). Set the grants
--- again: the registry is read-only, and read_at is the only column a
--- recipient can change.
+-- New tables get every privilege by default (20260713120000), so set them again.
 revoke all on public.notification_types from anon, authenticated;
 grant select on public.notification_types to anon, authenticated;
 

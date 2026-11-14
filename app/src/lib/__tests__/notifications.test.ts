@@ -2,8 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationType } from "@bluelearn/schemas";
 import { notificationSections, renderNotification } from "@/lib/notifications";
 
-// The reason labels come from the vote API module, whose client needs env
-// vars on import.
+// The vote API module's client needs env vars on import.
 vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 
 function notification(

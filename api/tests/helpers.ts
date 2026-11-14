@@ -78,8 +78,7 @@ export async function makeUser(): Promise<{ token: string; userId: string }> {
   return { token: session.session.access_token, userId: created.user.id };
 }
 
-// A client that acts as the user directly against PostgREST, the way a
-// hostile browser could, without the API in between.
+// Calls PostgREST as the user directly, the way a hostile browser could.
 export function userClient(token: string): DB {
   return createClient<Database>(
     env.SUPABASE_URL,
