@@ -482,6 +482,248 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          channel: Database["public"]["Enums"]["notification_channel"]
+          enabled: boolean
+          type: string
+          user_id: string
+        }
+        Insert: {
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          enabled: boolean
+          type: string
+          user_id: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          enabled?: boolean
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_type_fkey"
+            columns: ["type"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["type"]
+          },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_types: {
+        Row: {
+          category: Database["public"]["Enums"]["notification_category"]
+          default_enabled: boolean
+          type: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["notification_category"]
+          default_enabled: boolean
+          type: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["notification_category"]
+          default_enabled?: boolean
+          type?: string
+        }
+        Relationships: []
+      }
+      notification_vote_tallies: {
+        Row: {
+          author_id: string
+          feedback: Json
+          guide_id: string
+          notified_total: number
+          started_at: string
+          total: number
+          type: string
+        }
+        Insert: {
+          author_id: string
+          feedback?: Json
+          guide_id: string
+          notified_total?: number
+          started_at?: string
+          total?: number
+          type: string
+        }
+        Update: {
+          author_id?: string
+          feedback?: Json
+          guide_id?: string
+          notified_total?: number
+          started_at?: string
+          total?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_vote_tallies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "published_guides"
+            referencedColumns: ["guide_id"]
+          },
+          {
+            foreignKeyName: "notification_vote_tallies_type_fkey"
+            columns: ["type"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["type"]
+          },
+        ]
+      }
+      notification_voters: {
+        Row: {
+          author_id: string
+          guide_id: string
+          type: string
+          voter_id: string
+        }
+        Insert: {
+          author_id: string
+          guide_id: string
+          type: string
+          voter_id: string
+        }
+        Update: {
+          author_id?: string
+          guide_id?: string
+          type?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_voters_author_id_guide_id_type_fkey"
+            columns: ["author_id", "guide_id", "type"]
+            isOneToOne: false
+            referencedRelation: "notification_vote_tallies"
+            referencedColumns: ["author_id", "guide_id", "type"]
+          },
+          {
+            foreignKeyName: "notification_voters_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_voters_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          data: Json
+          group_count: number
+          group_key: string | null
+          id: string
+          occurred_at: string
+          read_at: string | null
+          recipient_id: string
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          data?: Json
+          group_count?: number
+          group_key?: string | null
+          id?: string
+          occurred_at?: string
+          read_at?: string | null
+          recipient_id: string
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          data?: Json
+          group_count?: number
+          group_key?: string | null
+          id?: string
+          occurred_at?: string
+          read_at?: string | null
+          recipient_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_type_fkey"
+            columns: ["type"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["type"]
+          },
+        ]
+      }
       objective_revision_edges: {
         Row: {
           from_node_id: string
@@ -1011,6 +1253,46 @@ export type Database = {
           },
         ]
       }
+      review_deadline_notifications: {
+        Row: {
+          expires_at: string
+          member_id: string
+          seat_id: string
+        }
+        Insert: {
+          expires_at: string
+          member_id: string
+          seat_id: string
+        }
+        Update: {
+          expires_at?: string
+          member_id?: string
+          seat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_deadline_notifications_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_deadline_notifications_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_deadline_notifications_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "panel_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_decision_reasons: {
         Row: {
           decision_id: string
@@ -1461,6 +1743,15 @@ export type Database = {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      inspect_guide_downvotes: {
+        Args: {
+          p_case_id?: string
+          p_guide_id?: string
+          p_limit?: number
+          p_page?: number
+        }
+        Returns: Json
+      }
       is_active_guide_author: { Args: never; Returns: boolean }
       list_guide_variants_by_score: {
         Args: { p_guide_base_id: string; p_z?: number }
@@ -1471,6 +1762,17 @@ export type Database = {
           title: string
         }[]
       }
+      notify: {
+        Args: {
+          p_actor_id?: string
+          p_data?: Json
+          p_group_key?: string
+          p_recipient_id: string
+          p_type: string
+        }
+        Returns: string
+      }
+      notify_review_deadlines: { Args: never; Returns: undefined }
       objective_closure: {
         Args: { p_targets: string[] }
         Returns: {
@@ -1559,6 +1861,12 @@ export type Database = {
       edge_type: "prerequisite" | "related"
       knowledge_type: "theoretical" | "practical"
       node_status: "draft" | "published" | "archived"
+      notification_category:
+        | "guide_statuses"
+        | "variant_statuses"
+        | "community_engagement"
+        | "review_workflows"
+      notification_channel: "in_app"
       objective_revision_status: "draft" | "published"
       review_outcome: "approved" | "rejected"
       revision_status: "draft" | "submitted"
@@ -1726,6 +2034,13 @@ export const Constants = {
       edge_type: ["prerequisite", "related"],
       knowledge_type: ["theoretical", "practical"],
       node_status: ["draft", "published", "archived"],
+      notification_category: [
+        "guide_statuses",
+        "variant_statuses",
+        "community_engagement",
+        "review_workflows",
+      ],
+      notification_channel: ["in_app"],
       objective_revision_status: ["draft", "published"],
       review_outcome: ["approved", "rejected"],
       revision_status: ["draft", "submitted"],

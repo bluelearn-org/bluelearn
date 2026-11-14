@@ -18,6 +18,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ObjectivesRouteImport } from './routes/objectives'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -27,11 +28,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as ReviewIndexRouteImport } from './routes/review.index'
+import { Route as ProfileIndexRouteImport } from './routes/profile.index'
 import { Route as ObjectivesIndexRouteImport } from './routes/objectives.index'
 import { Route as GuidesIndexRouteImport } from './routes/guides/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as SubjectsSlugRouteImport } from './routes/subjects.$slug'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings.appearance'
 import { Route as SettingsAccountRouteImport } from './routes/settings.account'
 import { Route as ReviewCaseIdRouteImport } from './routes/review.$caseId'
@@ -94,6 +97,11 @@ const ObjectivesRoute = ObjectivesRouteImport.update({
   path: '/objectives',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -139,6 +147,11 @@ const ReviewIndexRoute = ReviewIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ReviewRoute,
 } as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProfileRoute,
+} as any)
 const ObjectivesIndexRoute = ObjectivesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -162,6 +175,11 @@ const SubjectsSlugRoute = SubjectsSlugRouteImport.update({
 const SettingsProfileRoute = SettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
@@ -256,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/objectives': typeof ObjectivesRouteWithChildren
   '/profile': typeof ProfileRouteWithChildren
   '/register': typeof RegisterRoute
@@ -274,11 +293,13 @@ export interface FileRoutesByFullPath {
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
@@ -296,7 +317,7 @@ export interface FileRoutesByTo {
   '/contribute': typeof ContributeRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/profile': typeof ProfileRouteWithChildren
+  '/notifications': typeof NotificationsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/todos': typeof TodosRoute
@@ -308,11 +329,13 @@ export interface FileRoutesByTo {
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/dashboard': typeof DashboardIndexRoute
   '/guides': typeof GuidesIndexRoute
   '/objectives': typeof ObjectivesIndexRoute
+  '/profile': typeof ProfileIndexRoute
   '/review': typeof ReviewIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/subjects': typeof SubjectsIndexRoute
@@ -332,6 +355,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/objectives': typeof ObjectivesRouteWithChildren
   '/profile': typeof ProfileRouteWithChildren
   '/register': typeof RegisterRoute
@@ -350,11 +374,13 @@ export interface FileRoutesById {
   '/review/$caseId': typeof ReviewCaseIdRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/subjects/$slug': typeof SubjectsSlugRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/objectives/': typeof ObjectivesIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/subjects/': typeof SubjectsIndexRoute
@@ -375,6 +401,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/notifications'
     | '/objectives'
     | '/profile'
     | '/register'
@@ -393,11 +420,13 @@ export interface FileRouteTypes {
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/subjects/$slug'
     | '/dashboard/'
     | '/guides/'
     | '/objectives/'
+    | '/profile/'
     | '/review/'
     | '/settings/'
     | '/subjects/'
@@ -415,7 +444,7 @@ export interface FileRouteTypes {
     | '/contribute'
     | '/forgot-password'
     | '/login'
-    | '/profile'
+    | '/notifications'
     | '/register'
     | '/reset-password'
     | '/todos'
@@ -427,11 +456,13 @@ export interface FileRouteTypes {
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/subjects/$slug'
     | '/dashboard'
     | '/guides'
     | '/objectives'
+    | '/profile'
     | '/review'
     | '/settings'
     | '/subjects'
@@ -450,6 +481,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/notifications'
     | '/objectives'
     | '/profile'
     | '/register'
@@ -468,11 +500,13 @@ export interface FileRouteTypes {
     | '/review/$caseId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/notifications'
     | '/settings/profile'
     | '/subjects/$slug'
     | '/dashboard/'
     | '/guides/'
     | '/objectives/'
+    | '/profile/'
     | '/review/'
     | '/settings/'
     | '/subjects/'
@@ -492,6 +526,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   ObjectivesRoute: typeof ObjectivesRouteWithChildren
   ProfileRoute: typeof ProfileRouteWithChildren
   RegisterRoute: typeof RegisterRoute
@@ -570,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ObjectivesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -633,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewIndexRouteImport
       parentRoute: typeof ReviewRoute
     }
+    '/profile/': {
+      id: '/profile/'
+      path: '/'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof ProfileRoute
+    }
     '/objectives/': {
       id: '/objectives/'
       path: '/'
@@ -666,6 +715,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/appearance': {
@@ -832,10 +888,12 @@ const ObjectivesRouteWithChildren = ObjectivesRoute._addFileChildren(
 
 interface ProfileRouteChildren {
   ProfileUsernameRoute: typeof ProfileUsernameRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
 }
 
 const ProfileRouteChildren: ProfileRouteChildren = {
   ProfileUsernameRoute: ProfileUsernameRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
 }
 
 const ProfileRouteWithChildren =
@@ -857,6 +915,7 @@ const ReviewRouteWithChildren =
 interface SettingsRouteChildren {
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -864,6 +923,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsProfileRoute: SettingsProfileRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
@@ -914,6 +974,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   ObjectivesRoute: ObjectivesRouteWithChildren,
   ProfileRoute: ProfileRouteWithChildren,
   RegisterRoute: RegisterRoute,

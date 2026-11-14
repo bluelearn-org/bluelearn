@@ -15,6 +15,7 @@ import {
   contributorsResponseSchema,
   createGuideSchema,
   createVariantSchema,
+  downvoteInspectionResponseSchema,
   guideListResponseSchema,
   guideObjectiveListResponseSchema,
   guideRevisionDetailResponseSchema,
@@ -34,6 +35,7 @@ import {
   walkthroughSchema,
 } from "@bluelearn/schemas";
 import { errorResponses, jsonContent, validate } from "../lib/openapi";
+import { inspectDownvotes } from "../services/vote-inspection.service";
 import {
   addGuideVariant,
   archiveGuide,
@@ -373,6 +375,34 @@ export const variantsRouter = new Hono<HonoEnv>()
         c.req.valid("param").id
       );
       return c.json({ variant });
+    }
+  )
+
+  .get(
+    "/:id/downvotes",
+    describeRoute({
+      tags: ["variants"],
+      summary: "Inspect downvotes for moderation or an assigned review",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          downvoteInspectionResponseSchema,
+          "Downvotes with voter identities"
+        ),
+        ...errorResponses(400, 401, 403, 404),
+      },
+    }),
+    requireUser,
+    validate("param", idParamSchema),
+    validate("query", paginationSchema),
+    async (c) => {
+      const result = await inspectDownvotes(
+        c.get("supabase"),
+        { guideId: c.req.valid("param").id },
+        c.req.valid("query")
+      );
+      c.header("Cache-Control", "private, no-store");
+      return c.json(result);
     }
   )
 

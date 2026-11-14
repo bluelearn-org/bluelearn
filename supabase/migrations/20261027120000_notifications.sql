@@ -1,0 +1,173 @@
+create type public.notification_category as enum (
+  'guide_statuses',
+  'variant_statuses',
+  'community_engagement',
+  'review_workflows'
+);
+
+-- Preferences are kept per channel. Email adds a value here.
+create type public.notification_channel as enum ('in_app');
+
+-- To add a type, see "To add a type" in docs/database-schema.md.
+create table public.notification_types (
+  type text primary key,
+  category public.notification_category not null,
+  -- Applies until the user saves a preference for the type.
+  default_enabled boolean not null
+);
+
+insert into public.notification_types (type, category, default_enabled) values
+  ('guide_review_decision', 'guide_statuses', true),
+  ('variant_created', 'guide_statuses', true),
+  ('variant_review_decision', 'variant_statuses', false),
+  ('variant_edited', 'variant_statuses', false),
+  ('guide_upvotes', 'community_engagement', true),
+  ('guide_downvotes', 'community_engagement', false),
+  ('review_assignment', 'review_workflows', false),
+  ('review_deadline', 'review_workflows', true);
+
+-- public.notify() is the only writer and runs inside the event's transaction.
+create table public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references public.profiles (id) on delete cascade,
+  type text not null references public.notification_types (type) on delete cascade,
+  -- Null for system events, such as a panel outcome.
+  actor_id uuid references public.profiles (id) on delete set null,
+  -- Same key, same row. A null key gives each event its own row.
+  group_key text,
+  group_count integer not null default 1,
+  -- Only text the recipient may already read. Downvote rows add reasons and notes.
+  data jsonb not null default '{}'::jsonb,
+  -- The time of the latest event in the row.
+  occurred_at timestamptz not null default now(),
+  read_at timestamptz,
+  constraint notifications_group_count_positive check (group_count > 0)
+);
+
+-- Reading a row does not close its group. The next event marks it unread.
+create unique index notifications_group_idx
+  on public.notifications (recipient_id, type, group_key)
+  where group_key is not null;
+
+create index notifications_recipient_occurred_idx
+  on public.notifications (recipient_id, occurred_at desc);
+
+create index notifications_recipient_unread_idx
+  on public.notifications (recipient_id)
+  where read_at is null;
+
+-- A missing row means the type default applies.
+create table public.notification_preferences (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  type text not null references public.notification_types (type) on delete cascade,
+  channel public.notification_channel not null default 'in_app',
+  enabled boolean not null,
+  primary key (user_id, type, channel)
+);
+
+create or replace function public.notify(
+  p_recipient_id uuid,
+  p_type text,
+  p_actor_id uuid default null,
+  p_data jsonb default '{}'::jsonb,
+  p_group_key text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_enabled boolean;
+  v_id uuid;
+begin
+  if p_recipient_id is null or p_recipient_id = p_actor_id then
+    return null;
+  end if;
+
+  select coalesce(p.enabled, t.default_enabled)
+    into v_enabled
+    from public.notification_types t
+    left join public.notification_preferences p
+      on p.type = t.type
+     and p.user_id = p_recipient_id
+     and p.channel = 'in_app'
+   where t.type = p_type;
+
+  if not found then
+    raise exception 'Unknown notification type: %', p_type
+      using errcode = '22023';
+  end if;
+  if not v_enabled then
+    return null;
+  end if;
+
+  insert into public.notifications
+    (recipient_id, type, actor_id, group_key, data)
+  values
+    (p_recipient_id, p_type, p_actor_id, p_group_key, coalesce(p_data, '{}'::jsonb))
+  on conflict (recipient_id, type, group_key)
+    where group_key is not null
+  do update set
+    group_count = public.notifications.group_count + 1,
+    actor_id = excluded.actor_id,
+    data = excluded.data,
+    occurred_at = now(),
+    read_at = null
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+-- Only database code and the service role may notify.
+revoke execute on function public.notify(uuid, text, uuid, jsonb, text)
+  from public, anon, authenticated;
+grant execute on function public.notify(uuid, text, uuid, jsonb, text)
+  to service_role;
+
+alter table public.notification_types enable row level security;
+alter table public.notifications enable row level security;
+alter table public.notification_preferences enable row level security;
+
+create policy "Anyone can view notification types"
+  on public.notification_types for select
+  using (true);
+
+create policy "Users can view their own notifications"
+  on public.notifications for select
+  to authenticated
+  using (recipient_id = (select auth.uid()));
+
+create policy "Users can mark their own notifications read"
+  on public.notifications for update
+  to authenticated
+  using (recipient_id = (select auth.uid()))
+  with check (recipient_id = (select auth.uid()));
+
+create policy "Users can view their own notification preferences"
+  on public.notification_preferences for select
+  to authenticated
+  using (user_id = (select auth.uid()));
+
+create policy "Users can add their own notification preferences"
+  on public.notification_preferences for insert
+  to authenticated
+  with check (user_id = (select auth.uid()));
+
+create policy "Users can change their own notification preferences"
+  on public.notification_preferences for update
+  to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+-- New tables get every privilege by default (20260713120000), so set them again.
+revoke all on public.notification_types from anon, authenticated;
+grant select on public.notification_types to anon, authenticated;
+
+revoke all on public.notifications from anon, authenticated;
+grant select on public.notifications to authenticated;
+grant update (read_at) on public.notifications to authenticated;
+
+revoke all on public.notification_preferences from anon, authenticated;
+grant select, insert, update on public.notification_preferences to authenticated;

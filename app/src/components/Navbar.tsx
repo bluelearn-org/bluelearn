@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/Logo";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const navItems: Array<{ label: string; to: string }> = [
   { label: "Browse", to: "/browse" },
@@ -135,6 +136,8 @@ export function Navbar() {
                 </DropdownMenu>
               </div>
             )}
+
+            {session && <NotificationBell />}
 
             {session ? (
               /* Desktop Profile Dropdown */

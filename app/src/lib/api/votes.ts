@@ -38,6 +38,27 @@ export async function retractVote(id: string) {
   await assertOk(res);
 }
 
+export async function inspectDownvotes(
+  target: { guideId: string } | { caseId: string },
+  page: number,
+  { signal }: FetchOptions = {}
+) {
+  const query = { page: String(page), limit: "20" };
+  const res =
+    "guideId" in target
+      ? await variants[":id"].downvotes.$get(
+          { param: { id: target.guideId }, query },
+          { init: { signal } }
+        )
+      : await client.reviews.cases[":id"].downvotes.$get(
+          { param: { id: target.caseId }, query },
+          { init: { signal } }
+        );
+
+  await assertOk(res);
+  return res.json();
+}
+
 // The display text for each reason.
 const REASON_TEXT: Record<
   DownvoteReason,

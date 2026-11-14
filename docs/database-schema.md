@@ -332,7 +332,13 @@ Constraints:
 - One vote per voter per guide, enforced directly by the composite primary key `(voter_id, guide_id)` — no separate surrogate `id` or unique constraint needed.
 - A check that `reason` is present if and only if `direction = 'down'`.
 
-Display rules: public users see upvote/downvote totals only. The rubric breakdown is visible to moderators only, enforced by row level security. Guide ordering among siblings is **derived** from net votes, not stored as a rank column.
+Public users see only the upvote and downvote totals. Row level security lets voters read their own votes. Admins and moderators can read all votes. Notifications give guide authors anonymous downvote reasons and notes. Notifications do not identify downvoters.
+
+`inspect_guide_downvotes()` returns current downvotes with voter IDs, usernames, reasons, notes, and update times. Any user with a row in `user_roles` can use it on any guide. Suspended accounts cannot use it.
+
+The API exposes this function through `/variants/:id/downvotes` and `/reviews/cases/:id/downvotes`. The case endpoint shows the downvotes of the guide under that case. Both endpoints require authentication and return paginated results with `Cache-Control: private, no-store`. The guide reader, variant reader, and review page show the inspection panel to staff. The function does not expand direct access to the `votes` table.
+
+The net votes determine the order of sibling guides. The database does not store a rank column.
 
 ### `content_holds`
 
@@ -372,6 +378,76 @@ The manifest of object-storage assets, so a purge can delete media reliably inst
 
 - `revision_id`: FK to `guide_revisions`.
 - `asset_id`: FK to `media_assets`. The pair `(revision_id, asset_id)` is the primary key.
+
+### `notification_types`, `notifications`, and `notification_preferences`
+
+The function `public.notify()` is the only writer of in-app notifications. Each notification commits or rolls back with its event.
+
+`notification_types` is the registry. It has one row for each type:
+
+- `type`: primary key, for example `guide_upvotes`.
+- `category`: one of `guide_statuses`, `variant_statuses`, `community_engagement`, `review_workflows`. The settings page and the inbox filter use it.
+- `default_enabled`: applies until the user saves a preference.
+
+`notifications`:
+
+- `recipient_id`: FK to `profiles.id`. Only the recipient can read the row.
+- `type`: FK to `notification_types`.
+- `actor_id`: FK to `profiles.id`. It is null for system events, for example a panel outcome. It is also null for downvotes, so the author cannot see who downvoted.
+- `group_key`: events with the same key share one row. A null key gives each event its own row.
+- `group_count`: the number of events in the row. A vote row counts each voter once.
+- `data`: ids, slugs, and titles that the app needs to show and link the row. Store only text that the recipient can already read. A downvote row also gives the guide author the reason and note of each downvote it covers in `feedback`, newest first. A vote row after the live tier also holds the vote `total`.
+- `occurred_at`: the time of the latest event in the row.
+- `read_at`: null while the row is unread.
+
+`notification_preferences`:
+
+- `user_id`, `type`, `channel`: the composite primary key. `channel` is `in_app` now. Email adds a value to the enum.
+- `enabled`: the choice of the user. A missing row means the type default applies.
+
+Constraints:
+
+- A partial unique index on `(recipient_id, type, group_key)` covers rows with a key. `notify()` adds an event to the row with the same key. The event marks the row unread and moves it to the top, so reading a row does not close its group.
+- `notify()` skips a recipient who is also the actor. It also skips a recipient who turned the type off. It raises an error for a type that is not in the registry. It returns the id of the row it writes, or null when it skips.
+- Clients cannot run `notify()`. A recipient can update only `read_at`.
+
+Events:
+
+| Type | Event | Recipient |
+| --- | --- | --- |
+| `guide_review_decision` | A panel approves or rejects a canonical guide revision. | The revision author. |
+| `variant_created` | A variant becomes public for the first time. | The canonical guide author. |
+| `variant_review_decision` | A panel approves or rejects a variant revision. | The revision author. |
+| `variant_edited` | A new revision becomes the public revision of a variant. | The original variant author. |
+| `guide_upvotes` | A vote becomes an upvote. | The guide author. |
+| `guide_downvotes` | A vote becomes a downvote. | The guide author. |
+| `review_assignment` | A reviewer gets a new seat or replaces another reviewer in an existing seat. | The assigned reviewer. |
+| `review_deadline` | An assigned seat has an expiry within the next 48 hours. | The assigned reviewer. |
+
+Draft changes do not send variant notifications. Votes notify the guide author in tiers. The tiers count from the first counted vote in each direction:
+
+- For the first 24 hours, every vote joins one live row. Its group key is the guide id. An upvote row names the latest voter.
+- Until day 7, votes count silently. Each time 5 new voters arrive, a new row shows the new total.
+- After day 7, a new row shows the total each time it reaches double the total of the previous row.
+
+A downvote row lists the reason and note of each downvote since the previous downvote row, newest first. It has no actor, so the author learns why but not who. Rows after the live tier have no actor. The author's own vote counts for nothing. A disabled preference consumes a due row, and enabling the preference later does not replay it.
+
+`notification_vote_tallies` keeps the tiers of each guide author, guide, and direction: `started_at` is the first counted vote, `total` counts distinct voters, `notified_total` is the total at the latest notification, and `feedback` holds the downvote reasons since then. A vote locks its tally row, so concurrent votes on one guide wait for each other.
+
+`notification_voters` records the counted voters of each tally. Its primary key is `(author_id, guide_id, type, voter_id)`. A voter who votes again in the same direction adds nothing, even after a flip. Only the service role can read or change these records and the tallies. The separate `votes` table retains each current vote and its voter identity.
+
+The five-minute worker calls `notify_review_deadlines()`. The function skips expired seats, completed seats, replaced seats, closed panels, and cases outside review.
+
+`review_deadline_notifications` records each processed reminder. Its primary key is `(seat_id, member_id, expires_at)`. Only the service role can read or change these records.
+
+The reminder record and its notification share one transaction. A repeated call cannot send the same reminder after the recipient reads the notification. A new assignee or expiry permits a new reminder. A disabled preference consumes the reminder without a notification. Enabling that preference later does not replay the event.
+
+To add a type:
+
+1. Insert one row into `notification_types`.
+2. Call `notify()` where the event happens. Use a trigger on the table that records the event, or call it from the RPC that owns the event.
+3. Add the type to `notificationTypeSchema` in `packages/schemas`.
+4. Add a renderer in `app/src/lib/notifications.ts`. The settings page enables the toggle of a type when the type has a renderer.
 
 ### `review_cases`, `review_panels`, and `review_decisions`
 

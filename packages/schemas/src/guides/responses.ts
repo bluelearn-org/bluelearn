@@ -192,6 +192,23 @@ export const myVoteResponseSchema = z.strictObject({
   vote: voteSchema.nullable(),
 });
 
+export const downvoteInspectionResponseSchema = z.strictObject({
+  votes: z.array(
+    z.strictObject({
+      voter_id: z.uuid(),
+      username: z.string().nullable(),
+      reason: downvoteReasonSchema,
+      note: z.string().nullable(),
+      updated_at: z.iso.datetime({ offset: true }),
+    })
+  ),
+  total: totalSchema,
+});
+
+export type DownvoteInspection = z.infer<
+  typeof downvoteInspectionResponseSchema
+>;
+
 export const contributorsResponseSchema = z.strictObject({
   contributors: z.array(contributorSchema),
 });

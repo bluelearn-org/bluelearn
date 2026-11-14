@@ -33,6 +33,7 @@ import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { GuideReader } from "@/components/GuideReader";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import { DownvoteInspection } from "@/components/DownvoteInspection";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -320,6 +321,10 @@ function RouteComponent() {
             showToc
             isOfficial={guide.is_official}
           />
+
+          {guide.variant_id && (
+            <DownvoteInspection target={{ guideId: guide.variant_id }} />
+          )}
 
           {sequence && (sequence.prev || sequence.next) && (
             <nav

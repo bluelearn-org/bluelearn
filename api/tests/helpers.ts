@@ -78,6 +78,18 @@ export async function makeUser(): Promise<{ token: string; userId: string }> {
   return { token: session.session.access_token, userId: created.user.id };
 }
 
+// Calls PostgREST as the user directly, the way a hostile browser could.
+export function userClient(token: string): DB {
+  return createClient<Database>(
+    env.SUPABASE_URL,
+    env.SUPABASE_PUBLISHABLE_KEY,
+    {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    }
+  );
+}
+
 export function clientIp(): string {
   const octet = () => Math.floor(Math.random() * 256);
   return `${octet()}.${octet()}.${octet()}.${octet()}`;

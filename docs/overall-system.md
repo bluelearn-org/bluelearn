@@ -251,6 +251,8 @@ Optional alongside the rubric reason: a **section pointer** (dropdown of the gui
 
 **Moderator display.** Moderators (and verifiers with reading access, where applicable) see the full rubric breakdown at both whole-guide and per-section granularity. This is what panels use to decide re-review action: edit, demote to author, route to dispute, or dismiss as brigade.
 
+**Voter identities.** Staff can inspect current downvotes with voter identities, reasons, and notes. Staff are users with any granted role in `user_roles`. Suspended accounts receive no inspection access. Author notifications remain anonymous.
+
 **Re-review trigger (multi-path).** A moderator panel re-review fires when **any one** of the following crosses threshold, and only after a minimum total-vote floor (low-volume guides are not eligible to trigger):
 
 - **Ratio path.** Downvote share exceeds a threshold percentage. Catches slow drift in quality.

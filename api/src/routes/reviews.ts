@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 import {
   createDecisionSchema,
+  downvoteInspectionResponseSchema,
   paginationSchema,
   reviewCaseDetailResponseSchema,
   reviewCaseListResponseSchema,
@@ -10,6 +11,7 @@ import {
   reviewQueueResponseSchema,
 } from "@bluelearn/schemas";
 import { errorResponses, jsonContent, validate } from "../lib/openapi";
+import { inspectDownvotes } from "../services/vote-inspection.service";
 import {
   getAuthenticatedUser,
   getServiceSupabase,
@@ -100,6 +102,34 @@ export const reviewsRouter = new Hono<HonoEnv>()
         user?.id ?? null
       );
       return c.json(result, 200);
+    }
+  )
+
+  .get(
+    "/cases/:id/downvotes",
+    describeRoute({
+      tags: ["reviews"],
+      summary: "Inspect downvotes for an assigned case",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(
+          downvoteInspectionResponseSchema,
+          "Downvotes with voter identities"
+        ),
+        ...errorResponses(400, 401, 403, 404),
+      },
+    }),
+    requireUser,
+    validate("param", idParamSchema),
+    validate("query", paginationSchema),
+    async (c) => {
+      const result = await inspectDownvotes(
+        c.get("supabase"),
+        { caseId: c.req.valid("param").id },
+        c.req.valid("query")
+      );
+      c.header("Cache-Control", "private, no-store");
+      return c.json(result);
     }
   )
 
