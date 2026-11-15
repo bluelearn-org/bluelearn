@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 import {
+  deleteDraftsSchema,
   meResponseSchema,
   myDraftsResponseSchema,
   profilePageResponseSchema,
@@ -18,6 +19,7 @@ import { CONTRIBUTION, DESTRUCTIVE } from "../middleware/rateLimits";
 import type { HonoEnv } from "../types";
 import {
   deleteMyAccount,
+  deleteMyDrafts,
   getMyDrafts,
   getMyIdentity,
   getProfilePage,
@@ -72,6 +74,26 @@ export const meRouter = new Hono<HonoEnv>()
     async (c) => {
       const drafts = await getMyDrafts(c.get("supabase"), c.get("user").id);
       return c.json(drafts);
+    }
+  )
+
+  .delete(
+    "/drafts",
+    describeRoute({
+      tags: ["identity"],
+      summary: "Delete the caller's selected drafts",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        204: { description: "All selected drafts were deleted" },
+        ...errorResponses(400, 401, 404, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...DESTRUCTIVE, bucket: "draft-delete" }),
+    validate("json", deleteDraftsSchema),
+    async (c) => {
+      await deleteMyDrafts(c.get("supabase"), c.req.valid("json"));
+      return c.body(null, 204);
     }
   )
 
