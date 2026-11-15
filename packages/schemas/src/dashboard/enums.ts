@@ -8,4 +8,5 @@ export const userRoleSchema = z.enum([
   "curator",
   "admin",
   "official",
+  "lead-verifier",
 ]);

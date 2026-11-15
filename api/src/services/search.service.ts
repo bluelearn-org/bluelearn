@@ -267,6 +267,38 @@ export async function syncGuideDocument(
   }
 }
 
+// Subject edits affect the tags cached on guide search cards. Read after the
+// transaction so merges and renames both use the retained subject's new tags.
+export async function syncGuidesForSubject(
+  env: Bindings,
+  supabase: DB,
+  subjectId: string
+) {
+  try {
+    const pageSize = 100;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await supabase
+        .from("published_guides")
+        .select("id")
+        .contains("subject_ids", [subjectId])
+        .order("id")
+        .range(offset, offset + pageSize - 1);
+      if (error) throw new Error(error.message);
+      const ids = (data ?? []).flatMap(({ id }) => (id ? [id] : []));
+      for (let start = 0; start < ids.length; start += 5) {
+        await Promise.all(
+          ids
+            .slice(start, start + 5)
+            .map((id) => syncGuideDocument(env, supabase, id))
+        );
+      }
+      if ((data?.length ?? 0) < pageSize) break;
+    }
+  } catch (error) {
+    console.error(`Search sync failed for subject ${subjectId}:`, error);
+  }
+}
+
 // Same contract as syncGuideDocument, for one objective.
 export async function syncObjectiveDocument(
   env: Bindings,

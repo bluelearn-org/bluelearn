@@ -2,6 +2,12 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import type { HonoEnv } from "../types";
 import { requireUser } from "../middleware/auth.middleware";
+import { rateLimitMiddleware } from "../middleware/rate-limit.middleware";
+import { MODERATION } from "../middleware/rateLimits";
+import {
+  scheduleSearchSync,
+  syncGuidesForSubject,
+} from "../services/search.service";
 import {
   getUserStatus,
   markUserStatus,
@@ -13,6 +19,8 @@ import {
   fetchMembersTable,
   fetchAssignmentsTable,
   reassignPanelMember,
+  fetchSubjectsTable,
+  manageSubjects,
 } from "../services/dashboard.service";
 import { jsonContent, errorResponses, validate } from "../lib/openapi";
 import {
@@ -29,9 +37,58 @@ import {
   rolesTableQuerySchema,
   membersTableQuerySchema,
   assignmentsTableQuerySchema,
+  subjectsTableQuerySchema,
+  subjectsTableResponseSchema,
+  manageSubjectsSchema,
 } from "@bluelearn/schemas";
 
 export const dashboardRouter = new Hono<HonoEnv>()
+  .get(
+    "/subjects",
+    describeRoute({
+      tags: ["dashboard"],
+      summary: "List subjects for moderation",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(subjectsTableResponseSchema, "Subjects table"),
+        ...errorResponses(400, 401, 403),
+      },
+    }),
+    requireUser,
+    validate("query", subjectsTableQuerySchema),
+    async (c) =>
+      c.json(
+        await fetchSubjectsTable(c.get("supabase"), c.req.valid("query")),
+        200
+      )
+  )
+  .post(
+    "/subjects/manage",
+    describeRoute({
+      tags: ["dashboard"],
+      summary: "Edit a subject or merge selected subjects",
+      security: [{ bearerAuth: [] }],
+      responses: {
+        200: jsonContent(successResponseSchema, "Subjects saved"),
+        ...errorResponses(400, 401, 403, 409, 429),
+      },
+    }),
+    requireUser,
+    rateLimitMiddleware({ ...MODERATION, bucket: "subject-manage" }),
+    validate("json", manageSubjectsSchema),
+    async (c) => {
+      await manageSubjects(c.get("supabase"), c.req.valid("json"));
+      scheduleSearchSync(
+        c,
+        syncGuidesForSubject(
+          c.env,
+          c.get("supabase"),
+          c.req.valid("json").target_id
+        )
+      );
+      return c.json({ success: true }, 200);
+    }
+  )
   // Get user status (Active, Inactive, Suspended)
   .get(
     "/:id/status",

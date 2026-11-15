@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { FileCheckCorner, Shield, Users } from "lucide-react";
+import { BookOpen, FileCheckCorner, Shield, Users } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,12 @@ const items: Array<{
   >;
   roles?: Array<string>;
 }> = [
+  {
+    label: "Subjects",
+    to: "/dashboard/subjects",
+    icon: BookOpen,
+    roles: ["lead-verifier", "admin"],
+  },
   {
     label: "Members",
     to: "/dashboard/members",
@@ -82,6 +88,7 @@ export const DashboardSidebar = () => {
 };
 
 export const DashboardTabs = () => {
+  const { roles } = useAuth();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -89,24 +96,29 @@ export const DashboardTabs = () => {
   return (
     <nav className="-mx-4 mb-6 overflow-x-auto border-b px-4 sm:-mx-8 sm:px-8 md:hidden">
       <ul className="flex w-max items-center gap-6">
-        {items.map((item) => {
-          const active = pathname === item.to;
+        {items
+          .filter(
+            (item) =>
+              !item.roles || item.roles.some((role) => roles.includes(role))
+          )
+          .map((item) => {
+            const active = pathname === item.to;
 
-          return (
-            <li key={item.to}>
-              <Link
-                to={item.to}
-                className={cn(
-                  "data-label flex shrink-0 items-center gap-2 border-b-2 border-transparent py-3 whitespace-nowrap",
-                  active && "border-primary font-bold text-primary"
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
+            return (
+              <li key={item.to}>
+                <Link
+                  to={item.to}
+                  className={cn(
+                    "data-label flex shrink-0 items-center gap-2 border-b-2 border-transparent py-3 whitespace-nowrap",
+                    active && "border-primary font-bold text-primary"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
       </ul>
     </nav>
   );
