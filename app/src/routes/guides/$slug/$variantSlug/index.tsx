@@ -23,7 +23,6 @@ import { getVariantBySlug } from "@/lib/api/variants";
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { GuideReader } from "@/components/GuideReader";
-import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { DownvoteInspection } from "@/components/DownvoteInspection";
 import {
   DropdownMenu,
@@ -243,10 +242,6 @@ function RouteComponent() {
           </div>
 
           <Separator className="mb-8" />
-
-          {variant.disclaimers.length > 0 && (
-            <DisclaimerBanner disclaimers={variant.disclaimers} />
-          )}
 
           <GuideReader
             guide={guide}

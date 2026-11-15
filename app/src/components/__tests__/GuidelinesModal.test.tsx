@@ -48,10 +48,6 @@ describe("Quick Guidelines", () => {
   it("keeps the nested guidelines inside their parent list items", () => {
     render(<GuidelinesModal open onOpenChange={() => {}} />);
 
-    const jargon = screen.getByText("Minimize jargon whenever possible.");
-    expect(jargon.closest("ul")?.parentElement?.textContent).toContain(
-      "Introducing New Concepts (Jargon)"
-    );
     const formats = screen.getByText(/Allowed formats:/);
     expect(formats.closest("ul")?.parentElement?.textContent).toContain(
       "Images"

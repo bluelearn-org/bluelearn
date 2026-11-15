@@ -7,11 +7,16 @@ export type BreadcrumbOrigin = {
   type: "objective" | "subject" | "guide";
   title: string;
   path: string;
+  // Where on the origin page to land, e.g. the objective's open step.
+  search?: Record<string, string | undefined>;
+  hash?: string;
 };
 
 export type Breadcrumb = {
   label: string;
   path?: string;
+  search?: Record<string, string | undefined>;
+  hash?: string;
 };
 
 declare module "@tanstack/react-router" {
@@ -35,7 +40,13 @@ export function buildBreadcrumbs(
   const crumbs: Array<Breadcrumb> = [{ label: "Home", path: "/" }];
 
   if (origin) {
-    crumbs.push({ label: origin.title, path: origin.path });
+    const { title, path, search, hash } = origin;
+    crumbs.push({
+      label: title,
+      path,
+      ...(search && { search }),
+      ...(hash && { hash }),
+    });
   }
 
   crumbs.push({ label: guideTitle });

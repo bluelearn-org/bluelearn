@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DecisionReason, Pagination } from "@bluelearn/schemas";
+import type {
+  DecisionReason,
+  DisclaimerSlug,
+  Pagination,
+} from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 import { PANEL_POLICY_DEFAULTS } from "../lib/review-policy";
@@ -124,6 +128,9 @@ type CaseDetailRow = {
       word_count: number;
       guide_revision_subjects: Array<{
         subjects: { id: string; name: string; status: string } | null;
+      }> | null;
+      guide_revision_disclaimers: Array<{
+        disclaimers: { slug: DisclaimerSlug } | null;
       }> | null;
     } | null;
   } | null;
@@ -431,7 +438,8 @@ export async function getReviewCase(
          guide_revision_id,
          guide_revisions(
            id, guide_id, author_id, title, summary, body, change_summary, status, created_at, word_count,
-           guide_revision_subjects(subjects(id, name, status))
+           guide_revision_subjects(subjects(id, name, status)),
+           guide_revision_disclaimers(disclaimers(slug))
          )
        )`
     )
@@ -569,6 +577,9 @@ export async function getReviewCase(
             (revision.guide_revision_subjects ?? [])
               .map((r) => r.subjects)
               .filter((s): s is NonNullable<typeof s> => !!s),
+          disclaimers: (revision.guide_revision_disclaimers ?? [])
+            .map((r) => r.disclaimers?.slug)
+            .filter((s): s is DisclaimerSlug => s != null),
         }
       : null,
     prerequisites: tagsAndEdges?.prerequisites ?? [],

@@ -25,13 +25,13 @@ import { getObjective } from "@/lib/api/objectives";
 import { buildGuideMeta } from "@/lib/guideUtils";
 import {
   findGuideNeighbours,
+  guideAnchor,
   parseObjectiveGuideSearch,
 } from "@/lib/objectiveSnapshot";
 
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { GuideReader } from "@/components/GuideReader";
-import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { DownvoteInspection } from "@/components/DownvoteInspection";
 import {
   DropdownMenu,
@@ -144,6 +144,12 @@ function RouteComponent() {
           type: "objective",
           title: sequence.objective.title,
           path: `/objectives/${sequence.objective.slug}`,
+          // A target means the guide was opened from the linear view, so
+          // return to its sub-objective; from the graph, back to the graph.
+          search: search.target
+            ? { view: "linear", target: sequence.targetId }
+            : undefined,
+          hash: guideAnchor(slug),
         }
       : breadcrumbOrigin
   );
@@ -177,6 +183,8 @@ function RouteComponent() {
                   {crumb.path ? (
                     <Link
                       to={crumb.path}
+                      search={crumb.search}
+                      hash={crumb.hash}
                       className="flex min-w-0 items-center hover:text-foreground"
                       aria-label={crumb.label}
                     >
@@ -299,10 +307,6 @@ function RouteComponent() {
           </div>
 
           <Separator className="mb-8" />
-
-          {guide.disclaimers.length > 0 && (
-            <DisclaimerBanner disclaimers={guide.disclaimers} />
-          )}
 
           {/* Header */}
 

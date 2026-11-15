@@ -52,6 +52,23 @@ describe("buildBreadcrumbs", () => {
     ]);
   });
 
+  it("carries where on the origin page to land", () => {
+    expect(
+      buildBreadcrumbs("Loops", {
+        type: "objective",
+        title: "Proofs",
+        path: "/objectives/proofs",
+        search: { view: "linear", target: "termination" },
+        hash: "guide-loops",
+      })[1]
+    ).toEqual({
+      label: "Proofs",
+      path: "/objectives/proofs",
+      search: { view: "linear", target: "termination" },
+      hash: "guide-loops",
+    });
+  });
+
   it("keeps the current guide as the last, unlinked crumb", () => {
     const crumbs = buildBreadcrumbs("LaTeX Usage 101", {
       type: "subject",

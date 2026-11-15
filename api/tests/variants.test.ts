@@ -45,9 +45,9 @@ describe("GET /variants/{id}", () => {
     await expectToMatchSpec(res, "GET", "/variants/{id}");
   });
 
-  it("includes the disclaimers attached to the variant's shared guide base", async () => {
-    const { base, guide } = await createPublishedGuide();
-    await replaceDisclaimers(admin, base.id, ["medical", "financial"]);
+  it("includes the disclaimers attached to the variant", async () => {
+    const { guide } = await createPublishedGuide();
+    await replaceDisclaimers(admin, guide.id, ["medical", "financial"]);
 
     const res = await app.request(`/variants/${guide.id}`, {}, env);
 
