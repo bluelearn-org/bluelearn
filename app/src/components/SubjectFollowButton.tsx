@@ -83,13 +83,14 @@ function FollowControl({ slug, name }: Props) {
       aria-busy={following === null || saving}
       onClick={toggle}
     >
-      {following === null
-        ? "Loading..."
-        : saving
-          ? "Saving..."
-          : following
-            ? "Following"
-            : "Follow"}
+      {followLabel(following, saving)}
     </Button>
   );
+}
+
+function followLabel(following: boolean | null, saving: boolean) {
+  if (following === null) return "Loading...";
+  if (saving) return "Saving...";
+
+  return following ? "Following" : "Follow";
 }
