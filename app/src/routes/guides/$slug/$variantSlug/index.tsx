@@ -23,6 +23,7 @@ import { getVariantBySlug } from "@/lib/api/variants";
 import "katex/dist/katex.min.css";
 import { GuideSidebar } from "@/components/sidebar/GuideSidebar";
 import { GuideReader } from "@/components/GuideReader";
+import { DownvoteInspection } from "@/components/DownvoteInspection";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -248,6 +249,8 @@ function RouteComponent() {
             showToc
             isOfficial={variant.is_official}
           />
+
+          <DownvoteInspection target={{ guideId: variant.id }} />
         </main>
       </section>
     </div>
