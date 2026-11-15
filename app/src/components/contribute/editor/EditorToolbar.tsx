@@ -68,7 +68,11 @@ import {
 } from "@/components/ui/tooltip.tsx";
 import { getCharacterCount, getWordCount } from "@/lib/wordCount";
 
-function CustomBlockTypeSelect() {
+function CustomBlockTypeSelect({
+  overlayContainer,
+}: {
+  overlayContainer: HTMLElement | null;
+}) {
   const [open, setOpen] = useState(false);
   const convertSelectionToNode = usePublisher(convertSelectionToNode$);
   const currentBlockType = useCellValue(currentBlockType$);
@@ -141,6 +145,7 @@ function CustomBlockTypeSelect() {
       </Tooltip>
 
       <PopoverContent
+        container={overlayContainer}
         className="toolbar-popover-content w-40"
         align="start"
         onCloseAutoFocus={(e) => e.preventDefault()}
@@ -207,6 +212,8 @@ interface EditorToolbarProps {
   markdown: string;
   onImportMarkdown: (markdown: string) => void;
   onH1Attempted: () => void;
+  overlayContainer: HTMLElement | null;
+  mode: "guide" | "review";
 }
 
 export default function EditorToolbar({
@@ -214,6 +221,8 @@ export default function EditorToolbar({
   markdown,
   onImportMarkdown,
   onH1Attempted,
+  overlayContainer,
+  mode,
 }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
@@ -225,6 +234,7 @@ export default function EditorToolbar({
 
   useEffect(() => {
     if (
+      mode === "guide" &&
       previousWordCountRef.current <= MAX_WORD_COUNT &&
       wordCount > MAX_WORD_COUNT
     ) {
@@ -234,7 +244,7 @@ export default function EditorToolbar({
     }
 
     previousWordCountRef.current = wordCount;
-  }, [wordCount]);
+  }, [wordCount, mode]);
 
   // Refs for hidden native buttons to trigger programmatically from our custom Popovers
   const linkRef = useRef<HTMLSpanElement>(null);
@@ -350,7 +360,7 @@ export default function EditorToolbar({
           <StrikeThroughSupSubToggles options={["Strikethrough"]} />
           <CodeToggle />
           <div className="mdx-toolbar-divider" />
-          <CustomBlockTypeSelect />
+          <CustomBlockTypeSelect overlayContainer={overlayContainer} />
           <div className="mdx-toolbar-divider" />
           <ListsToggle />
           <IndentButtons />
@@ -377,6 +387,7 @@ export default function EditorToolbar({
             </Tooltip>
 
             <PopoverContent
+              container={overlayContainer}
               className="toolbar-popover-content"
               align="start"
               onCloseAutoFocus={(e) => e.preventDefault()}
@@ -443,6 +454,7 @@ export default function EditorToolbar({
             </Tooltip>
 
             <PopoverContent
+              container={overlayContainer}
               className="toolbar-popover-content"
               align="start"
               onCloseAutoFocus={(e) => e.preventDefault()}
@@ -622,23 +634,25 @@ export default function EditorToolbar({
               <TooltipContent>Import .md file</TooltipContent>
             </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setShowWordCount((visible) => !visible)}
-                  aria-label={
-                    showWordCount ? "Hide Word Count" : "Show Word Count"
-                  }
-                >
-                  {showWordCount ? <Eye /> : <EyeOff />}
-                </button>
-              </TooltipTrigger>
+            {mode === "guide" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setShowWordCount((visible) => !visible)}
+                    aria-label={
+                      showWordCount ? "Hide Word Count" : "Show Word Count"
+                    }
+                  >
+                    {showWordCount ? <Eye /> : <EyeOff />}
+                  </button>
+                </TooltipTrigger>
 
-              <TooltipContent>
-                {showWordCount ? "Hide Word Count" : "Show Word Count"}
-              </TooltipContent>
-            </Tooltip>
+                <TooltipContent>
+                  {showWordCount ? "Hide Word Count" : "Show Word Count"}
+                </TooltipContent>
+              </Tooltip>
+            )}
 
             <div className="mx-1 h-4 w-px bg-border" />
 
@@ -698,26 +712,29 @@ export default function EditorToolbar({
                 </button>
               </PopoverTrigger>
               <PopoverContent
+                container={overlayContainer}
                 className="toolbar-popover-content w-48"
                 align="end"
                 onCloseAutoFocus={(e) => e.preventDefault()}
               >
                 <div className="toolbar-popover-header">Actions</div>
-                <button
-                  type="button"
-                  className="toolbar-popover-item"
-                  onClick={() => setShowWordCount((visible) => !visible)}
-                >
-                  {showWordCount ? (
-                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                  ) : (
-                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
+                {mode === "guide" && (
+                  <button
+                    type="button"
+                    className="toolbar-popover-item"
+                    onClick={() => setShowWordCount((visible) => !visible)}
+                  >
+                    {showWordCount ? (
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
 
-                  <span>
-                    {showWordCount ? "Hide word count" : "Show word count"}
-                  </span>
-                </button>
+                    <span>
+                      {showWordCount ? "Hide word count" : "Show word count"}
+                    </span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="toolbar-popover-item"
@@ -815,7 +832,7 @@ export default function EditorToolbar({
         </div>
       </TooltipProvider>
 
-      {showWordCount && (
+      {mode === "guide" && showWordCount && (
         <div
           className={`editor-word-count ${
             wordCount > MAX_WORD_COUNT ? "text-red-500" : ""
