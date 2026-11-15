@@ -1,4 +1,5 @@
 import type { InferRequestType } from "hono/client";
+import type { DisclaimerSlug } from "@bluelearn/schemas";
 import { client } from "@/lib/api/apiClient";
 import { assertOk } from "@/lib/api/apiHelpers";
 
@@ -34,9 +35,7 @@ export type RemoteRevision = {
     summary: string;
   }>;
   revised_from_case_id: string | null;
-  disclaimers: Array<
-    "medical" | "financial" | "legal" | "mature" | "profanity"
-  >;
+  disclaimers: Array<DisclaimerSlug>;
 };
 
 export async function getRevision(

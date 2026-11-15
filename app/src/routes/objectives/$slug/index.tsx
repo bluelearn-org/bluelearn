@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { Ellipsis, House, Pencil } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Breadcrumb } from "@/lib/breadcrumbs";
 import { buildBreadcrumbs } from "@/lib/breadcrumbs";
@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
-import { buildObjectiveFlow } from "@/lib/objectiveSnapshot";
+import {
+  buildObjectiveFlow,
+  guideSlugFromAnchor,
+  parseObjectivePageSearch,
+} from "@/lib/objectiveSnapshot";
+import { defaultTargetId } from "@/lib/objectiveGraph";
 import { getObjective } from "@/lib/api/objectives";
 import { getMyIdentity } from "@/lib/api/identity";
 import { listGuides } from "@/lib/api/guides";
@@ -28,6 +33,10 @@ import {
 } from "@/components/objective/ObjectiveGraph";
 
 export const Route = createFileRoute("/objectives/$slug/")({
+  validateSearch: parseObjectivePageSearch,
+  // The page mirrors its view and sub-objective into the URL as the learner
+  // moves around it; that alone must not refetch the objective.
+  shouldReload: ({ cause }) => cause !== "stay",
   loader: async ({ params: { slug }, abortController }) => {
     const [objective, guides, identity] = await Promise.all([
       getObjective(slug, { signal: abortController.signal }),
@@ -172,8 +181,57 @@ function ObjectivePage() {
   const { objective, snapshot, guides, identity } = Route.useLoaderData();
   const isCurator = identity?.roles.includes("curator") ?? false;
 
-  const [view, setView] = useState<"graph" | "linear">("graph");
-  const selection = useObjectiveSelection(snapshot);
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const returnedFrom = useLocation({
+    select: (location) => guideSlugFromAnchor(location.hash),
+  });
+
+  // The URL only seeds the page; from then on the page owns its state and
+  // mirrors it back below.
+  const [view, setView] = useState<"graph" | "linear">(search.view ?? "graph");
+  const selection = useObjectiveSelection(snapshot, {
+    targetId: search.target,
+  });
+
+  // Back from a guide opened on the graph, its node opens again. The hash
+  // never reaches the server, so this waits for the browser to hydrate.
+  const { select } = selection;
+  useEffect(() => {
+    const returnedId = returnedFrom
+      ? snapshot.nodes.find((node) => node.slug === returnedFrom)?.id
+      : undefined;
+    if (returnedId) select(returnedId);
+    // Only the hash the page arrived with counts; later picks are the
+    // learner's own.
+  }, []);
+
+  // Replacing the entry keeps browser back in step with the page. A target
+  // the URL already names stays as written, and the default is left out.
+  const urlTargetId = search.target ?? defaultTargetId(snapshot);
+  useEffect(() => {
+    const next = {
+      view: view === "linear" ? ("linear" as const) : undefined,
+      target:
+        selection.targetId === urlTargetId
+          ? search.target
+          : (selection.targetId ?? undefined),
+    };
+    if (next.view === search.view && next.target === search.target) return;
+
+    navigate({
+      search: (prev) => ({ ...prev, ...next }),
+      replace: true,
+      resetScroll: false,
+    });
+  }, [
+    navigate,
+    search.target,
+    search.view,
+    selection.targetId,
+    urlTargetId,
+    view,
+  ]);
 
   const breadcrumbOrigin = useLocation({
     select: (location) => location.state.breadcrumbOrigin,

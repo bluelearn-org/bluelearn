@@ -1,10 +1,17 @@
 import { ChevronsUpDown } from "lucide-react";
 import { Fragment, useState } from "react";
 
-import type { DiffLine, FieldDiff, RevisionRef } from "@bluelearn/schemas";
+import type {
+  DiffLine,
+  DisclaimerDiff,
+  DisclaimerSlug,
+  FieldDiff,
+  RevisionRef,
+} from "@bluelearn/schemas";
+import { disclaimerLabel } from "@/lib/disclaimers";
 import { cn } from "@/lib/utils";
 
-export type { DiffLine, FieldDiff };
+export type { DiffLine, DisclaimerDiff, FieldDiff };
 
 export type RevisionDiffData = {
   from: RevisionRef;
@@ -14,6 +21,7 @@ export type RevisionDiffData = {
     summary: FieldDiff;
     body: FieldDiff;
   };
+  disclaimers: DisclaimerDiff;
 };
 
 type Row = {
@@ -206,6 +214,69 @@ export const DiffField = ({
   );
 };
 
+// One side of the disclaimer set, with the slugs only that side has shaded.
+const DisclaimerCell = ({
+  slugs,
+  changed,
+  tone,
+}: {
+  slugs: Array<DisclaimerSlug>;
+  changed: Array<DisclaimerSlug>;
+  tone: "removed" | "added";
+}) => (
+  <div className="flex flex-wrap gap-1.5 px-3 py-2">
+    {slugs.length === 0 && (
+      <span className="mono-micro text-muted-foreground">None</span>
+    )}
+    {slugs.map((slug) => (
+      <span
+        key={slug}
+        className={cn(
+          "rounded-md border px-2 py-0.5 font-mono text-xs",
+          changed.includes(slug) &&
+            (tone === "removed" ? "diff-removed" : "diff-added")
+        )}
+      >
+        {disclaimerLabel(slug)}
+      </span>
+    ))}
+  </div>
+);
+
+const DisclaimersDiffField = ({ diff }: { diff: DisclaimerDiff }) => {
+  if (!diff.changed) {
+    return (
+      <div className="flex items-baseline gap-3 border-b px-3 py-2 last:border-b-0">
+        <p className="font-mono text-[11px] font-bold tracking-[0.08em] uppercase">
+          Disclaimers
+        </p>
+        <p className="mono-micro text-muted-foreground">Unchanged</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-b last:border-b-0">
+      <p className="border-b bg-muted/40 px-3 py-2 font-mono text-[11px] font-bold tracking-[0.08em] uppercase">
+        Disclaimers
+      </p>
+
+      <div className="grid grid-cols-2 divide-x">
+        <DisclaimerCell
+          slugs={[...diff.unchanged, ...diff.removed]}
+          changed={diff.removed}
+          tone="removed"
+        />
+        <DisclaimerCell
+          slugs={[...diff.unchanged, ...diff.added]}
+          changed={diff.added}
+          tone="added"
+        />
+      </div>
+    </div>
+  );
+};
+
 export const RevisionDiff = ({
   diff,
   fromLabel = "Live version",
@@ -218,12 +289,14 @@ export const RevisionDiff = ({
   const unchanged =
     !diff.fields.title.changed &&
     !diff.fields.summary.changed &&
-    !diff.fields.body.changed;
+    !diff.fields.body.changed &&
+    !diff.disclaimers.changed;
 
   if (unchanged) {
     return (
       <p className="mono-micro text-muted-foreground">
-        This revision proposes no changes to the title, summary, or body.
+        This revision proposes no changes to the title, summary, body, or
+        disclaimers.
       </p>
     );
   }
@@ -242,6 +315,7 @@ export const RevisionDiff = ({
       <DiffField label="Title" field={diff.fields.title} />
       <DiffField label="Summary" field={diff.fields.summary} />
       <DiffField label="Body" field={diff.fields.body} />
+      <DisclaimersDiffField diff={diff.disclaimers} />
     </div>
   );
 };

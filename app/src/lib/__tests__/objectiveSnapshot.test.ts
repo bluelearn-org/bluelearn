@@ -5,8 +5,12 @@ import type {
   ObjectiveSnapshotNode,
 } from "@bluelearn/schemas";
 import {
+  buildSubObjectives,
   findGuideNeighbours,
+  guideAnchor,
+  guideSlugFromAnchor,
   parseObjectiveGuideSearch,
+  parseObjectivePageSearch,
 } from "@/lib/objectiveSnapshot";
 
 const guideNode = (
@@ -67,6 +71,53 @@ describe("parseObjectiveGuideSearch", () => {
       objective: undefined,
       target: undefined,
     });
+  });
+});
+
+describe("buildSubObjectives", () => {
+  it("lists the target once when the stored sequence already ends with it", () => {
+    const [{ steps }] = buildSubObjectives(
+      snapshotOf(
+        [guideNode("intro"), target("ship", 0)],
+        [order("ship", "intro", 0), order("ship", "ship", 1)]
+      )
+    );
+
+    expect(steps.map((node) => node.id)).toEqual(["intro", "ship"]);
+  });
+});
+
+describe("parseObjectivePageSearch", () => {
+  it("keeps the linear view and the target", () => {
+    expect(
+      parseObjectivePageSearch({ view: "linear", target: "ship" })
+    ).toEqual({ view: "linear", target: "ship" });
+  });
+
+  it("leaves the graph, the default, out", () => {
+    expect(parseObjectivePageSearch({ view: "graph" })).toEqual({
+      view: undefined,
+      target: undefined,
+    });
+  });
+
+  it("drops values that are missing or malformed", () => {
+    expect(parseObjectivePageSearch({ view: 1, target: ["a"] })).toEqual({
+      view: undefined,
+      target: undefined,
+    });
+  });
+});
+
+describe("guide anchors", () => {
+  it("round-trips a guide slug", () => {
+    expect(guideAnchor("loops")).toBe("guide-loops");
+    expect(guideSlugFromAnchor(guideAnchor("loops"))).toBe("loops");
+  });
+
+  it("ignores a hash that names no guide", () => {
+    expect(guideSlugFromAnchor("")).toBeUndefined();
+    expect(guideSlugFromAnchor("overview")).toBeUndefined();
   });
 });
 
