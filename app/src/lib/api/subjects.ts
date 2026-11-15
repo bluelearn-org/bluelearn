@@ -10,6 +10,27 @@ const subjects = client.subjects;
 
 type FetchOptions = { signal?: AbortSignal };
 
+export async function getSubjectFollow(
+  slug: string,
+  { signal }: FetchOptions = {}
+) {
+  const res = await subjects[":slug"].follow.$get(
+    { param: { slug } },
+    { init: { signal, cache: "no-store" } }
+  );
+  await assertOk(res);
+  return res.json();
+}
+
+export async function setSubjectFollow(slug: string, following: boolean) {
+  const endpoint = subjects[":slug"].follow;
+  const res = following
+    ? await endpoint.$put({ param: { slug } })
+    : await endpoint.$delete({ param: { slug } });
+  await assertOk(res);
+  return res.json();
+}
+
 export async function listSubjects({ signal }: FetchOptions = {}) {
   return collectAll<SubjectListItem>(async (query) => {
     const res = await subjects.$get({ query }, { init: { signal } });

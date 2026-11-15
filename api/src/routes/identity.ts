@@ -148,6 +148,7 @@ export const profilesRouter = new Hono<HonoEnv>()
         c.req.valid("param").username,
         user?.id ?? null
       );
+      c.header("Cache-Control", "no-store");
       return c.json(page);
     }
   );

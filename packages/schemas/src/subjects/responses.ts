@@ -39,6 +39,10 @@ export const subjectResponseSchema = z.strictObject({
   subject: subjectSchema,
 });
 
+export const subjectFollowResponseSchema = z.strictObject({
+  following: z.boolean(),
+});
+
 export const subjectGuidesResponseSchema = z.strictObject({
   guides: z.array(guideListItemSchema),
   total: totalSchema,
