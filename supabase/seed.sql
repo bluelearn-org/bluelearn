@@ -402,19 +402,25 @@ on conflict do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Disclaimer associations for seed data.
--- Disclaimers live on guide_bases so they apply to all variants.
+-- Disclaimers live on each guide, so every variant of these bases gets one.
 -- ---------------------------------------------------------------------------
-insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
-select '20000000-0000-4000-8000-000000000003', id from public.disclaimers where slug = 'financial'
-on conflict do nothing; -- Deploy to Cloudflare Workers: financial
+insert into public.guide_disclaimers (guide_id, disclaimer_id)
+select g.id, d.id
+from public.guides g
+join public.disclaimers d on d.slug = case g.guide_base_id
+  when '20000000-0000-4000-8000-000000000003' then 'financial' -- Deploy to Cloudflare Workers
+  when '20000000-0000-4000-8000-000000000004' then 'medical'   -- SQL Joins
+  when '20000000-0000-4000-8000-000000000005' then 'legal'     -- Debounce a Search Input
+end
+on conflict do nothing;
 
-insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
-select '20000000-0000-4000-8000-000000000004', id from public.disclaimers where slug = 'medical'
-on conflict do nothing; -- SQL Joins: medical
-
-insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
-select '20000000-0000-4000-8000-000000000005', id from public.disclaimers where slug = 'legal'
-on conflict do nothing; -- Debounce a Search Input: legal
+-- Revisions above were inserted before their guides had disclaimers, so give
+-- them their guide's set now.
+insert into public.guide_revision_disclaimers (guide_revision_id, disclaimer_id)
+select gr.id, gd.disclaimer_id
+from public.guide_revisions gr
+join public.guide_disclaimers gd on gd.guide_id = gr.guide_id
+on conflict do nothing;
 
 -- Publish guides 1-5 and their variants: point each guide at its live revision,
 -- each base at its canonical guide, and flip both to published. Guide/base 6 stays draft.

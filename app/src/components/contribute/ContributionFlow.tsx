@@ -321,7 +321,11 @@ export default function ContributionFlow({
   useEffect(() => {
     if (slug && !variantContData.baseGuide) {
       getGuide(slug).then((guide) =>
-        setVariantContData((prev) => ({ ...prev, baseGuide: guide.slug }))
+        setVariantContData((prev) => ({
+          ...prev,
+          baseGuide: guide.slug,
+          disclaimers: guide.disclaimers,
+        }))
       );
     }
   });
@@ -878,6 +882,7 @@ function Inner({
       ...existingTagIds(variantContData.newSubjects),
     ],
     newSubjects: unsavedSubjects(variantContData.newSubjects),
+    disclaimers: variantContData.disclaimers,
   });
 
   const objectiveTagFields = () => ({
