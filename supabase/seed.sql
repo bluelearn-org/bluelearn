@@ -402,19 +402,25 @@ on conflict do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Disclaimer associations for seed data.
--- Disclaimers live on guide_bases so they apply to all variants.
+-- Disclaimers live on each guide, so every variant of these bases gets one.
 -- ---------------------------------------------------------------------------
-insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
-select '20000000-0000-4000-8000-000000000003', id from public.disclaimers where slug = 'financial'
-on conflict do nothing; -- Deploy to Cloudflare Workers: financial
+insert into public.guide_disclaimers (guide_id, disclaimer_id)
+select g.id, d.id
+from public.guides g
+join public.disclaimers d on d.slug = case g.guide_base_id
+  when '20000000-0000-4000-8000-000000000003' then 'financial' -- Deploy to Cloudflare Workers
+  when '20000000-0000-4000-8000-000000000004' then 'medical'   -- SQL Joins
+  when '20000000-0000-4000-8000-000000000005' then 'legal'     -- Debounce a Search Input
+end
+on conflict do nothing;
 
-insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
-select '20000000-0000-4000-8000-000000000004', id from public.disclaimers where slug = 'medical'
-on conflict do nothing; -- SQL Joins: medical
-
-insert into public.guide_disclaimers (guide_base_id, disclaimer_id)
-select '20000000-0000-4000-8000-000000000005', id from public.disclaimers where slug = 'legal'
-on conflict do nothing; -- Debounce a Search Input: legal
+-- Revisions above were inserted before their guides had disclaimers, so give
+-- them their guide's set now.
+insert into public.guide_revision_disclaimers (guide_revision_id, disclaimer_id)
+select gr.id, gd.disclaimer_id
+from public.guide_revisions gr
+join public.guide_disclaimers gd on gd.guide_id = gr.guide_id
+on conflict do nothing;
 
 -- Publish guides 1-5 and their variants: point each guide at its live revision,
 -- each base at its canonical guide, and flip both to published. Guide/base 6 stays draft.
@@ -510,10 +516,22 @@ declare
     'aaaaaaaa-0000-4000-8000-000000000404',
     'aaaaaaaa-0000-4000-8000-000000000405'
   ];
+
+  -- A second objective over the same guides, split into three sub-objectives,
+  -- so a guide can be opened from one that is not the first.
+  v_platformer      uuid := 'aaaaaaaa-0000-4000-8000-000000000030';
+  v_platformer_rev  uuid := 'aaaaaaaa-0000-4000-8000-000000000031';
+  platformer_nodes uuid[] := array[
+    'aaaaaaaa-0000-4000-8000-000000000501',
+    'aaaaaaaa-0000-4000-8000-000000000502',
+    'aaaaaaaa-0000-4000-8000-000000000503',
+    'aaaaaaaa-0000-4000-8000-000000000504',
+    'aaaaaaaa-0000-4000-8000-000000000505'
+  ];
   i int;
 begin
   -- Clear prior demo rows (children cascade off these).
-  delete from public.objectives where id = v_objective;
+  delete from public.objectives where id in (v_objective, v_platformer);
   delete from public.guide_bases where id = any(gb);
   delete from public.subjects where id = v_subject;
 
@@ -592,6 +610,50 @@ begin
       (revision_id, target_node_id, node_id, position)
     values (v_orev, node_ids[5], node_ids[i], i - 1);
   end loop;
+
+  -- "Make a 2D Platformer": three sub-objectives in this order.
+  --   1. Setting Up Your Project (featured, so it opens first)
+  --        Intro to Game Engines -> Setting Up Your Project
+  --   2. Player Movement and Physics
+  --        Sprites and Assets -> Player Movement and Physics
+  --   3. Shipping Your First Game
+  --        Intro to Game Engines -> Sprites and Assets -> Shipping Your First Game
+  -- Sprites and Assets sits only in the second and third, so opening it and
+  -- coming back shows whether the page returns to the right one.
+  insert into public.objectives (id, slug, created_by, status, current_revision_id)
+  values (v_platformer, 'make-a-2d-platformer', v_author, 'published', v_platformer_rev);
+
+  insert into public.objective_revisions
+    (id, objective_id, title, summary, author_id, status, published_at)
+  values (
+    v_platformer_rev, v_platformer,
+    'Make a 2D Platformer',
+    'Set up a project, make a character move, then ship it: three milestones on the way to a platformer.',
+    v_author, 'published', now()
+  );
+
+  for i in 1..5 loop
+    insert into public.objective_revision_nodes
+      (id, revision_id, guide_base_id, guide_id, is_target, is_featured, target_position)
+    values (
+      platformer_nodes[i], v_platformer_rev, gb[i], gd[i],
+      i in (2, 4, 5),
+      i = 2,
+      case i when 2 then 0 when 4 then 1 when 5 then 2 end
+    );
+  end loop;
+
+  insert into public.objective_revision_subjects (objective_revision_id, subject_id)
+  values (v_platformer_rev, v_subject);
+
+  -- Each sequence lists the guides before its target, not the target itself.
+  insert into public.objective_revision_node_orders
+    (revision_id, target_node_id, node_id, position)
+  values
+    (v_platformer_rev, platformer_nodes[2], platformer_nodes[1], 0),
+    (v_platformer_rev, platformer_nodes[4], platformer_nodes[3], 0),
+    (v_platformer_rev, platformer_nodes[5], platformer_nodes[1], 0),
+    (v_platformer_rev, platformer_nodes[5], platformer_nodes[3], 1);
 end $$;
 
 

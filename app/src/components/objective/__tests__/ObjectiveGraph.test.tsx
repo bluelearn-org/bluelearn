@@ -240,9 +240,15 @@ describe("an objective's graph and linear views", () => {
     drawn_edges: [{ from_node_id: "basics", to_node_id: "tools" }],
   };
 
-  function Reader() {
-    const [view, setView] = useState<"graph" | "linear">("graph");
-    const selection = useObjectiveSelection(twoTargets);
+  function Reader({
+    initialView = "graph",
+    initial,
+  }: {
+    initialView?: "graph" | "linear";
+    initial?: Parameters<typeof useObjectiveSelection>[1];
+  }) {
+    const [view, setView] = useState<"graph" | "linear">(initialView);
+    const selection = useObjectiveSelection(twoTargets, initial);
     const { targets } = useMemo(() => buildObjectiveFlow(twoTargets, []), []);
 
     return (
@@ -312,6 +318,24 @@ describe("an objective's graph and linear views", () => {
 
     switchView();
     graphShows("Soil survey");
+  });
+
+  describe("returning from a guide", () => {
+    it("reopens the linear view on the sub-objective it left", () => {
+      render(<Reader initialView="linear" initial={{ targetId: "tools" }} />);
+      linearShows("Tools");
+    });
+
+    it("reopens the graph on the guide it left", () => {
+      render(<Reader initial={{ selectedId: "basics" }} />);
+      graphShows("Basics");
+      expect(highlighted("Basics")).toBe("true");
+    });
+
+    it("falls back to the default for a target no longer in the objective", () => {
+      render(<Reader initialView="linear" initial={{ targetId: "gone" }} />);
+      linearShows("Soil survey");
+    });
   });
 });
 

@@ -9,6 +9,7 @@ import {
   reviewSeatStatusSchema,
   reviewSuggestionStatusSchema,
 } from "./enums";
+import { disclaimerSchema } from "../guides/enums";
 
 export const reviewCaseListItemSchema = z.object({
   id: z.string(),
@@ -84,6 +85,7 @@ export const reviewCaseDetailResponseSchema = z.strictObject({
       is_variant: z.boolean(),
       status: z.string(),
       created_at: z.string(),
+      disclaimers: z.array(disclaimerSchema),
     })
     .nullable(),
   prerequisites: z.array(

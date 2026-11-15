@@ -1,8 +1,9 @@
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { VariantContribution } from "@/types/contributions";
 import type { listGuides } from "@/lib/api/guides";
 import type { listSubjects } from "@/lib/api/subjects";
+import { getGuide } from "@/lib/api/guides";
 
 import {
   Field,
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
+import { DisclaimersField } from "@/components/contribute/DisclaimersField";
 
 type PropTypes = {
   variantContData: VariantContribution;
@@ -34,6 +36,21 @@ export const VariantDetails = ({
     name: string;
     summary: string;
   }>({ name: "", summary: "" });
+
+  // Picking a base guide starts the variant from that guide's disclaimers.
+  // Only the latest pick applies if an earlier lookup resolves after it.
+  const latestBaseGuide = useRef<string | null>(null);
+  const selectBaseGuide = (baseGuide: string) => {
+    onVariantChange({ baseGuide });
+    latestBaseGuide.current = baseGuide;
+
+    getGuide(baseGuide)
+      .then((guide) => {
+        if (latestBaseGuide.current !== baseGuide) return;
+        onVariantChange({ disclaimers: guide.disclaimers });
+      })
+      .catch(() => {});
+  };
 
   return (
     <FieldGroup>
@@ -114,9 +131,15 @@ export const VariantDetails = ({
               };
             })}
           value={variantContData.baseGuide}
-          onValueChange={(baseGuide) => onVariantChange({ baseGuide })}
+          onValueChange={selectBaseGuide}
         />
       </Field>
+
+      <DisclaimersField
+        value={variantContData.disclaimers}
+        onChange={(disclaimers) => onVariantChange({ disclaimers })}
+        description="Starts from the base guide's disclaimers. Add or remove the ones that apply; they cover the guide and all of its variants."
+      />
 
       <div className="py-2">
         <div className="py-2">

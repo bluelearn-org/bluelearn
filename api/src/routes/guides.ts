@@ -688,7 +688,7 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
     }
   )
 
-  // Returns the diff against the previous approved revision as { from, to, fields }.
+  // Returns the diff against the previous approved revision as { from, to, fields, disclaimers }.
   .get(
     "/:id/diff/prev",
     describeRoute({
@@ -701,15 +701,15 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
     }),
     validate("param", idParamSchema),
     async (c) => {
-      const { from, to, fields } = await diffWithPrevious(
+      const { from, to, fields, disclaimers } = await diffWithPrevious(
         c.get("supabase"),
         c.req.valid("param").id
       );
-      return c.json({ from, to, fields });
+      return c.json({ from, to, fields, disclaimers });
     }
   )
 
-  // Returns the diff between two revisions as { from, to, fields }.
+  // Returns the diff between two revisions as { from, to, fields, disclaimers }.
   .get(
     "/:id/diff/:otherId",
     describeRoute({
@@ -723,11 +723,11 @@ export const guideRevisionsRouter = new Hono<HonoEnv>()
     validate("param", diffParamSchema),
     async (c) => {
       const { id, otherId } = c.req.valid("param");
-      const { from, to, fields } = await diffRevisions(
+      const { from, to, fields, disclaimers } = await diffRevisions(
         c.get("supabase"),
         id,
         otherId
       );
-      return c.json({ from, to, fields });
+      return c.json({ from, to, fields, disclaimers });
     }
   );
