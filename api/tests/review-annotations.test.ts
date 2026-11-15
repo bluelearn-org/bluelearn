@@ -9,6 +9,10 @@ import type {
   ReviewThreadReply,
 } from "@bluelearn/schemas";
 import app from "../src/index";
+import {
+  replaceDisclaimers,
+  replaceRevisionDisclaimers,
+} from "../src/services/disclaimer.service";
 import { admin, auth, env, insert, jsonAuth, makeUser } from "./helpers";
 import {
   createGuideReviewCase,
@@ -215,6 +219,24 @@ async function revisionBody(revisionId: string) {
     .single()
     .throwOnError();
   return data;
+}
+
+async function guideDisclaimers(guideId: string) {
+  const { data } = await admin
+    .from("guide_disclaimers")
+    .select("disclaimers!inner(slug)")
+    .eq("guide_id", guideId)
+    .throwOnError();
+  return (data ?? []).map((r) => r.disclaimers.slug).sort();
+}
+
+async function revisionDisclaimers(revisionId: string) {
+  const { data } = await admin
+    .from("guide_revision_disclaimers")
+    .select("disclaimers!inner(slug)")
+    .eq("guide_revision_id", revisionId)
+    .throwOnError();
+  return (data ?? []).map((r) => r.disclaimers.slug).sort();
 }
 
 describe("review comment threads", () => {
@@ -556,6 +578,37 @@ describe("verifier edits", () => {
     expect(prev.status).toBe(200);
     const { from } = (await prev.json()) as { from: { id: string } };
     expect(from.id).toBe(revision.id);
+  });
+
+  it("publishes accepted edits with the reviewed revision's disclaimers", async () => {
+    const { author, guideId, revision, reviewCase, panelists } =
+      await seedFeedbackCase("guide_edit");
+    await replaceDisclaimers(admin, guideId, ["medical"]);
+    await replaceRevisionDisclaimers(admin, revision.id, ["legal"]);
+    const suggestion = await suggestionOf(
+      await suggest(
+        panelists[0].token,
+        reviewCase.id,
+        revision.id,
+        "A group is a set with one associative operation."
+      )
+    );
+    await approveByMajority(panelists, reviewCase.id);
+
+    expect(await guideDisclaimers(guideId)).toEqual(["medical"]);
+
+    const accepted = await decide(
+      author.token,
+      reviewCase.id,
+      suggestion.id,
+      "accepted"
+    );
+    expect(accepted.status).toBe(200);
+
+    const { current_revision_id } = await guideState(guideId);
+    expect(current_revision_id).not.toBe(revision.id);
+    expect(await revisionDisclaimers(current_revision_id!)).toEqual(["legal"]);
+    expect(await guideDisclaimers(guideId)).toEqual(["legal"]);
   });
 
   it("refuses to accept an edit that overlaps an accepted one", async () => {
