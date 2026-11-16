@@ -20,7 +20,10 @@ import {
 import { claimTodos } from "./todo.service";
 import { readingMinutes } from "../lib/reading";
 import { loadUsernames } from "./identity.service";
-import { loadDisclaimers, replaceDisclaimers } from "./disclaimer.service";
+import {
+  loadDisclaimers,
+  replaceRevisionDisclaimers,
+} from "./disclaimer.service";
 
 type DB = SupabaseClient<Database>;
 
@@ -235,9 +238,9 @@ export async function createGuide(
     requests,
   });
 
+  // Proposed on the draft; approval copies them onto the new guide base.
   if (disclaimers.length > 0) {
-    const base = await resolveRevisionBase(supabase, revision_id);
-    await replaceDisclaimers(supabase, base.id, disclaimers);
+    await replaceRevisionDisclaimers(supabase, revision_id, disclaimers);
   }
 
   if (requestClaims.length > 0) {
@@ -367,7 +370,7 @@ export async function getGuideBySlug(supabase: DB, rawSlug: string) {
       loadPrerequisites(supabase, guide.id),
       loadRequests(supabase, guide.id),
       loadFollowUps(supabase, guide.id),
-      loadDisclaimers(supabase, guide.id),
+      loadDisclaimers(supabase, canonical?.id ?? null),
     ]);
   const authorId = canonical?.author_id ?? null;
   const usernames = await loadUsernames(supabase, [authorId]);
@@ -582,6 +585,13 @@ export async function addGuideVariant(
     newSubjects: input.newSubjects,
   });
 
+  // The draft starts from the canonical guide's disclaimers; only an explicit
+  // set replaces them. Either way the variant gets its own set, so approving it
+  // never changes the other guides under this base.
+  if (input.disclaimers !== undefined) {
+    await replaceRevisionDisclaimers(supabase, revision_id, input.disclaimers);
+  }
+
   return { revision_id };
 }
 
@@ -623,7 +633,7 @@ export async function getVariantBySlug(
         .maybeSingle(),
       loadCanonicalTags(supabase, variant.current?.id ?? null),
       loadUsernames(supabase, [variant.author_id]),
-      loadDisclaimers(supabase, variant.guide_base_id),
+      loadDisclaimers(supabase, variant.id),
     ]);
 
   if (tallyError) {

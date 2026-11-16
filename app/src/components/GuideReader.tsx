@@ -5,6 +5,9 @@ import type { Guide } from "@bluelearn/schemas";
 import type { GuideType } from "@/types/guides";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { CodeBlock } from "@/components/CodeBlock";
+import { Callout } from "@/components/Callout";
+import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { GuideToc } from "@/components/GuideToc";
 import { BlueMarkdown } from "@/components/blue_markdown/BlueMarkdown";
 
@@ -42,6 +45,10 @@ export const GuideReader = ({
 
   return (
     <>
+      {guide.disclaimers.length > 0 && (
+        <DisclaimerBanner disclaimers={guide.disclaimers} />
+      )}
+
       <header className="mb-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
