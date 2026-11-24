@@ -7,6 +7,10 @@ import { WalkthroughGraph } from "@/components/graph/WalkthroughGraph";
 import { WalkthroughPanel } from "@/components/graph/WalkthroughPanel";
 import { getGuideWalkthrough } from "@/lib/api/guides";
 import { parseObjectiveGuideSearch } from "@/lib/objectiveSnapshot";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+
+// Everything below Tailwind's md breakpoint (768px).
+const MOBILE_QUERY = "(max-width: 767px)";
 
 export const Route = createFileRoute("/guides/$slug/walkthrough")({
   validateSearch: parseObjectiveGuideSearch,
@@ -28,6 +32,9 @@ function RouteComponent() {
   // Panel never sits empty: no click yet means it describes the target.
   const [selectedGuide, setSelectedGuide] = useState<string | null>(null);
   const selectedSlug = selectedGuide ?? slug;
+
+  // Below md the panel is a bottom sheet that opens when a node is tapped.
+  const isMobile = useMediaQuery(MOBILE_QUERY);
 
   const [walkthroughData, setWalkthroughData] = useState<Walkthrough | null>(
     null
@@ -72,7 +79,7 @@ function RouteComponent() {
 
   return (
     <div className="mx-auto max-w-7xl bg-background md:h-[calc(100vh-65px)]">
-      {/* Panel sits under the graph on small screens, beside it from md up. */}
+      {/* Beside the graph from md up; below md it is a sheet over the graph. */}
       <section className="flex h-full flex-col-reverse md:grid md:grid-cols-[320px_1fr]">
         {selectedNode ? (
           <WalkthroughPanel
@@ -81,6 +88,14 @@ function RouteComponent() {
             targetTitle={targetTitle}
             breadcrumbOrigin={breadcrumbOrigin}
             objectiveSearch={objectiveSearch}
+            mobileSheet={
+              isMobile
+                ? {
+                    open: selectedGuide !== null,
+                    onClose: () => setSelectedGuide(null),
+                  }
+                : undefined
+            }
           />
         ) : (
           <aside className="hidden h-full border-r px-6 py-6 md:block" />
