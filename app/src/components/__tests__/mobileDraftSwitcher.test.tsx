@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MobileDraftSwitcher } from "@/components/sidebar/MobileDraftSwitcher";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+// Switching local drafts must not need an authenticated backend.
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
