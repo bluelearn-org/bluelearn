@@ -1,15 +1,20 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 /**
- * tracks whether a CSS media query currently matches, re-rendering on change
+ * Tracks whether a CSS media query matches. Returns false on the server and on
+ * the first client render, then updates on resize and rotation.
  */
-export const useMediaQuery = (query: string) =>
-  useSyncExternalStore(
-    (onChange) => {
-      const mql = window.matchMedia(query);
-      mql.addEventListener("change", onChange);
-      return () => mql.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(query).matches,
-    () => false
-  );
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    setMatches(media.matches);
+
+    const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [query]);
+
+  return matches;
+}

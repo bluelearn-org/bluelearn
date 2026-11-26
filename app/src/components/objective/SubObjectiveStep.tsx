@@ -1,4 +1,5 @@
 import { GuideCard } from "@/components/cards/GuideCard";
+import { guideAnchor } from "@/lib/objectiveSnapshot";
 
 import { Route as GuideRoute } from "@/routes/guides/$slug/index";
 
@@ -28,7 +29,11 @@ export function SubObjectiveStep({ Stepper, target, objective }: Props) {
             };
 
             return (
-              <li key={step.id} className="flex items-start gap-6">
+              <li
+                key={step.id}
+                id={canOpen ? guideAnchor(step.slug) : undefined}
+                className="flex scroll-mt-24 items-start gap-6"
+              >
                 <div className="flex w-9 shrink-0 flex-col items-center self-stretch">
                   <div className="mt-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-badge-border bg-badge font-mono text-sm font-semibold text-badge-foreground">
                     {index + 1}

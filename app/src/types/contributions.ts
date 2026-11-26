@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { disclaimerSchema } from "@bluelearn/schemas";
 
 // Schemas are only used to check drafts restored from localStorage. Doesn't use shared
 // schemas because an empty field here is "" not null.
@@ -9,14 +10,6 @@ export const contributionTypeSchema = z.enum([
   "guide-request",
 ]);
 export const guideTypeSchema = z.enum(["theoretical", "practical"]);
-
-const disclaimerSlugSchema = z.enum([
-  "medical",
-  "financial",
-  "legal",
-  "mature",
-  "profanity",
-]);
 
 const newSubjectSchema = z.object({
   id: z.string().optional(),
@@ -33,7 +26,7 @@ export const guideContributionSchema = z.object({
   newSubjects: z.array(newSubjectSchema),
   prereqs: z.array(z.string()),
   requests: z.array(z.object({ title: z.string(), summary: z.string() })),
-  disclaimers: z.array(disclaimerSlugSchema),
+  disclaimers: z.array(disclaimerSchema),
 });
 
 export const variantContributionSchema = z.object({
@@ -44,7 +37,7 @@ export const variantContributionSchema = z.object({
   subjects: z.array(z.string()),
   newSubjects: z.array(newSubjectSchema),
   body: z.string(),
-  disclaimers: z.array(disclaimerSlugSchema),
+  disclaimers: z.array(disclaimerSchema),
 });
 
 // Keyed by node id: a target can be a guide or a request. The sequence is node
