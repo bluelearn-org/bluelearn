@@ -1482,6 +1482,13 @@ export type Database = {
         }
         Returns: string
       }
+      delete_own_drafts: {
+        Args: {
+          p_guide_revision_ids: string[]
+          p_objective_revision_ids: string[]
+        }
+        Returns: undefined
+      }
       eligible_panel_admins: {
         Args: { p_created_by: string; p_panel_id?: string }
         Returns: {
@@ -1774,4 +1781,3 @@ export const Constants = {
     },
   },
 } as const
-

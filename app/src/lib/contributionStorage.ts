@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { z } from "zod";
+import type { DeleteDraftsInput } from "@bluelearn/schemas";
 import type { ContributionType } from "@/types/contributions";
 import type { UUID } from "node:crypto";
 import {
@@ -339,6 +340,25 @@ export function clearStoredDraft(localDraftId: string): void {
   delete drafts[localDraftId];
 
   writeStoredDrafts(drafts);
+}
+
+// Remove only local copies of revisions the server confirmed were deleted.
+export function clearStoredDraftsForRevisions(input: DeleteDraftsInput): void {
+  const drafts = readStoredDrafts();
+  let changed = false;
+  for (const [key, raw] of Object.entries(drafts)) {
+    const draft = parseStoredDraft(raw);
+    if (!draft?.revisionId) continue;
+    const ids =
+      draft.type === "objective"
+        ? input.objective_revision_ids
+        : input.guide_revision_ids;
+    if (ids.includes(draft.revisionId)) {
+      delete drafts[key];
+      changed = true;
+    }
+  }
+  if (changed) writeStoredDrafts(drafts);
 }
 
 // checks whether a particular local draft exists - checks ID presence only
