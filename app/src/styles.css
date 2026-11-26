@@ -252,6 +252,126 @@
   .markdown a {
     @apply text-primary underline;
   }
+
+  /* Clears the badges that straddle the edge of the block above. A heading
+     keeps its own larger margin. */
+  [data-review-block]:has([data-review-annotation-badges])
+    + [data-review-block]
+    [data-review-block-content]
+    > :first-child:not(h1, h2, h3, h4, h5, h6) {
+    margin-top: 0.75rem;
+  }
+
+  /* The composer keeps its passage visible while the input has focus. */
+  ::highlight(review-passage-draft) {
+    background-color: color-mix(
+      in oklab,
+      var(--brand-bright-blue) 35%,
+      transparent
+    );
+    text-decoration: underline;
+    text-decoration-color: var(--brand-bright-blue);
+  }
+}
+
+/* MDXEditor ships unlayered styles; scope these overrides to review composers. */
+.mdxeditor.review-comment-editor,
+.mdxeditor-popup-container.review-comment-editor {
+  --basePageBg: var(--popover);
+  --baseBase: var(--background);
+  --baseBgSubtle: var(--muted);
+  --baseBg: var(--muted);
+  --baseBgHover: var(--secondary);
+  --baseBgActive: var(--accent);
+  --baseLine: var(--border);
+  --baseBorder: var(--border);
+  --baseBorderHover: var(--ring);
+  --baseSolid: var(--muted-foreground);
+  --baseSolidHover: var(--foreground);
+  --baseText: var(--muted-foreground);
+  --baseTextContrast: var(--foreground);
+
+  --accentBase: var(--background);
+  --accentBgSubtle: var(--muted);
+  --accentBg: var(--secondary);
+  --accentBgHover: var(--accent);
+  --accentBgActive: var(--accent);
+  --accentLine: var(--border);
+  --accentBorder: var(--border);
+  --accentBorderHover: var(--ring);
+  --accentSolid: var(--primary);
+  --accentSolidHover: var(--primary);
+  --accentText: var(--primary);
+  --accentTextContrast: var(--primary-foreground);
+
+  color: var(--foreground);
+}
+
+[data-review-composer] .mdxeditor-toolbar {
+  padding: 2px 4px 1px;
+
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
+  background-color: var(--background);
+}
+
+[data-review-composer] .mdxeditor-toolbar button {
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+}
+
+[data-review-composer] .mdxeditor-toolbar svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (any-pointer: coarse) {
+  [data-review-composer] .mdxeditor-toolbar button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+[data-review-composer] .review-comment-input {
+  padding: 6px 10px;
+}
+
+::view-transition-group(.review-motion),
+::view-transition-old(.review-motion),
+::view-transition-new(.review-motion) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
+:root:active-view-transition-type(review)::view-transition {
+  pointer-events: none;
+}
+
+:root:active-view-transition-type(review)::view-transition-group(root),
+:root:active-view-transition-type(review)::view-transition-old(root),
+:root:active-view-transition-type(review)::view-transition-new(root) {
+  animation: none;
+}
+
+@keyframes review-selection-toolbar {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.review-motion),
+  ::view-transition-old(.review-motion),
+  ::view-transition-new(.review-motion) {
+    animation-duration: 0s;
+  }
 }
 
 /* == COMPONENT UTILITIES == */
