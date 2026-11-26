@@ -265,7 +265,7 @@ export const StepperActionHeader = ({
                 onClick={toggleGuidelineModal}
               >
                 <Scroll className="size-4 shrink-0" />
-                <span className="hidden min-[400px]:inline">
+                <span className="hidden min-[450px]:inline">
                   View Guidelines
                 </span>
               </button>
