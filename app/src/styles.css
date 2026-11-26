@@ -586,3 +586,8 @@
 math-field::part(virtual-keyboard-toggle) {
   display: none !important;
 }
+
+/* Stop scroll on `Sheet` elements for mobile users */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
