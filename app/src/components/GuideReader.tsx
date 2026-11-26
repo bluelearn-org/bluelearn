@@ -1,19 +1,13 @@
-
-
 import { Calendar, Clock, ShieldCheck, User } from "lucide-react";
 import type { Guide } from "@bluelearn/schemas";
 import type { GuideType } from "@/types/guides";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { CodeBlock } from "@/components/CodeBlock";
-import { Callout } from "@/components/Callout";
 import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import { GuideToc } from "@/components/GuideToc";
 import { BlueMarkdown } from "@/components/blue_markdown/BlueMarkdown";
 
 import { formatDate, formatDuration } from "@/lib/guideUtils";
-
-
 
 type ReaderTag = { id?: string; slug?: string; name: string };
 
@@ -41,7 +35,6 @@ export const GuideReader = ({
   const createdLabel = Number.isNaN(created.getTime())
     ? guide.created_at
     : formatDate(created);
- 
 
   return (
     <>
@@ -118,9 +111,7 @@ export const GuideReader = ({
 
       <Separator className="mb-8" />
 
-      <article className="markdown">
-        <BlueMarkdown body={guide.body ?? ""} />
-      </article>
+      <BlueMarkdown body={guide.body ?? ""} />
     </>
   );
 };

@@ -7,17 +7,13 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkDirective from "remark-directive";
 
-import { createElement, useMemo } from "react";
 import type { ReactNode } from "react";
 
 import { remarkCallout } from "@/lib/remarkCallout";
 import { remarkIndentedCodeAsParagraph } from "@/lib/remarkIndentedCodeAsParagraph";
 import { CodeBlock } from "@/components/CodeBlock";
 import { Callout } from "@/components/Callout";
-import { getHeadingId } from "@/lib/guideUtils";
-
-import { toText } from "@/components/blue_markdown/utils"
-
+import { rehypeHeadingIds } from "@/components/blue_markdown/utils";
 
 const sanitizeSchema = {
   ...defaultSchema,
@@ -34,75 +30,38 @@ type BlueMarkdownProps = {
   className?: string;
 };
 
-export function BlueMarkdown({
-  body,
-  className = "",
-}: BlueMarkdownProps) {
-  const components = useMemo(() => {
-    const headingIds = new Map<string, number>();
+const components = {
+  pre({ children }: { children?: ReactNode }) {
+    const child = Array.isArray(children) ? children[0] : children;
 
-    const renderHeading = (level: number) =>
-      ({ children }: { children?: ReactNode }) => {
-        const text = toText(children).trim();
+    if (!child || typeof child !== "object" || !("props" in child)) {
+      return <pre>{children}</pre>;
+    }
 
-        return createElement(
-          `h${level}`,
-          { id: getHeadingId(text, headingIds) },
-          children
-        );
-      };
+    const code = String(child.props.children ?? "").replace(/\n$/, "");
+    const language = child.props.className?.replace("language-", "");
 
-    return {
-      h1: renderHeading(1),
-      h2: renderHeading(2),
-      h3: renderHeading(3),
-      h4: renderHeading(4),
-      h5: renderHeading(5),
-      h6: renderHeading(6),
+    return <CodeBlock code={code} language={language} />;
+  },
 
-      pre({ children }: { children?: ReactNode }) {
-        const child = Array.isArray(children) ? children[0] : children;
+  code({ children, className }: { children?: ReactNode; className?: string }) {
+    if (className) {
+      return <code className={className}>{children}</code>;
+    }
 
-        if (
-          !child ||
-          typeof child !== "object" ||
-          !("props" in child)
-        ) {
-          return <pre>{children}</pre>;
-        }
+    return (
+      <code className="rounded bg-muted px-1 py-0.5 font-mono">{children}</code>
+    );
+  },
 
-        const code = String(child.props.children ?? "").replace(/\n$/, "");
-        const language = child.props.className?.replace("language-", "");
+  callout({ children, ...props }: any) {
+    return <Callout type={props.type}>{children}</Callout>;
+  },
+};
 
-        return <CodeBlock code={code} language={language} />;
-      },
-
-      code({
-        children,
-        className,
-      }: {
-        children?: ReactNode;
-        className?: string;
-      }) {
-        if (className) {
-          return <code className={className}>{children}</code>;
-        }
-
-        return (
-          <code className="rounded bg-muted px-1 py-0.5 font-mono">
-            {children}
-          </code>
-        );
-      },
-
-      callout({ children, ...props }: any) {
-        return <Callout type={props.type}>{children}</Callout>;
-      },
-    };
-  }, []);
-
+export function BlueMarkdown({ body, className }: BlueMarkdownProps) {
   return (
-    <article className={`markdown ${className}`}>
+    <article className={className ? `markdown ${className}` : "markdown"}>
       <ReactMarkdown
         remarkPlugins={[
           remarkGfm,
@@ -115,6 +74,7 @@ export function BlueMarkdown({
           rehypeRaw,
           [rehypeSanitize, sanitizeSchema],
           rehypeKatex,
+          rehypeHeadingIds,
         ]}
         components={components}
       >
