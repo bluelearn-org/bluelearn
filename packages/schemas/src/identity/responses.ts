@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { subjectReferenceSchema } from "../subjects/references";
 import {
   activityContentKindSchema,
   activityStatusSchema,
@@ -88,6 +89,7 @@ export const profilePageResponseSchema = z.strictObject({
   stats: profileStatsSchema,
   activity: z.array(profileActivityItemSchema),
   is_owner: z.boolean(),
+  followed_subjects: z.array(subjectReferenceSchema).optional(),
 });
 
 export type Profile = z.infer<typeof profileSchema>;

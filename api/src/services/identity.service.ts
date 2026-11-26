@@ -1,9 +1,37 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { UpdateProfileInput } from "@bluelearn/schemas";
+import type { SubjectReference, UpdateProfileInput } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import { ServiceError } from "../lib/service-error";
 
 type DB = SupabaseClient<Database>;
+
+async function listFollowedSubjects(supabase: DB, userId: string) {
+  const subjects: SubjectReference[] = [];
+  // Page through PostgREST's row limit so a large follow list isn't truncated.
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("subject_follows")
+      .select("subject_id, subjects!inner(slug, name)")
+      .eq("user_id", userId)
+      .eq("subjects.status", "published")
+      .not("subjects.slug", "is", null)
+      .order("subject_id")
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error(error);
+      throw new ServiceError("Failed to load followed subjects", 500);
+    }
+    for (const row of data) {
+      if (row.subjects.slug !== null)
+        subjects.push({ slug: row.subjects.slug, name: row.subjects.name });
+    }
+    if (data.length < pageSize) break;
+  }
+  return subjects.sort(
+    (a, b) => a.name.localeCompare(b.name) || a.slug.localeCompare(b.slug)
+  );
+}
 
 type GuideDraft = {
   revision_id: string;
@@ -206,12 +234,13 @@ export async function getProfilePage(
   if (!profile) throw new ServiceError("Profile not found", 404);
 
   const isOwner = callerId === profile.id;
-  const [roles, stats, activity] = await Promise.all([
+  const [roles, stats, activity, followedSubjects] = await Promise.all([
     isOwner
       ? fetchRoles(supabase, profile.id)
       : fetchPublicBadges(service, profile.id),
     getProfileStats(supabase, profile.id),
     getProfileActivity(supabase, profile.id),
+    isOwner ? listFollowedSubjects(supabase, profile.id) : undefined,
   ]);
 
   return {
@@ -222,6 +251,7 @@ export async function getProfilePage(
       ? activity
       : activity.filter((row) => PUBLIC_ACTIVITY_STATUSES.has(row.status)),
     is_owner: isOwner,
+    ...(isOwner ? { followed_subjects: followedSubjects } : {}),
   };
 }
 

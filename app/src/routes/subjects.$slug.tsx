@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ObjectiveCard } from "@/components/cards/ObjectiveCard";
 import { GuideCard } from "@/components/cards/GuideCard";
+import { SubjectFollowButton } from "@/components/SubjectFollowButton";
 
 import { Route as ObjectiveRoute } from "@/routes/objectives/$slug/index";
 import { Route as GuideRoute } from "@/routes/guides/$slug/index";
@@ -67,11 +68,17 @@ function SubjectPage() {
 
   return (
     <div className="mx-auto max-w-[1280px] bg-background">
+      <header className="flex items-center justify-between gap-4 border-b px-8 py-8 lg:px-16">
+        <h1 className="min-w-0 font-mono text-[14px] tracking-[0.08em] break-words text-muted-foreground uppercase">
+          {subject.name}
+        </h1>
+        <SubjectFollowButton slug={slug} name={subject.name} />
+      </header>
       <section className="border-b px-8 py-8 lg:px-16">
         <div className="mb-6">
-          <h1 className="data-label text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
-            {subject.name} Learning Objectives ({objectives.length})
-          </h1>
+          <h2 className="data-label">
+            Learning Objectives ({objectives.length})
+          </h2>
         </div>
 
         <Separator className="mb-4 bg-border" />
@@ -117,9 +124,7 @@ function SubjectPage() {
 
       <section className="border-b px-8 py-8 lg:px-16">
         <div className="mb-6">
-          <h1 className="data-label text-[14px] tracking-[0.08em] text-muted-foreground uppercase">
-            {subject.name} Guides ({guides.length})
-          </h1>
+          <h2 className="data-label">Guides ({guides.length})</h2>
         </div>
 
         <Separator className="mb-4 bg-border" />
