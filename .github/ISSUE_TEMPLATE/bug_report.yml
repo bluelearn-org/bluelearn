@@ -32,8 +32,8 @@ body:
         Minimal, ordered steps. A repo or code snippet that
         reproduces the issue is ideal.
       placeholder: |
-        1. Run `pnpm dev`
-        2. Open http://localhost:5173
+        1. Run `pnpm dev:app`
+        2. Open http://localhost:3000
         3. Click "..."
         4. Observe ...
     validations:

@@ -337,9 +337,8 @@ the long-term path for editorial content.
 For changes that are too big for a single PR — new subsystems, API
 redesigns, governance changes — write a short proposal first.
 
-Today: open an issue using the **Feature request** template and tag it
-`rfc`. A `bluelearn-org/rfcs` repo with a real template is on the
-roadmap; until then, the issue is the proposal.
+Today: open an issue using the **Feature request** template and describe
+the bigger change there. The issue is the proposal.
 
 
 ## Reporting bugs
