@@ -8,5 +8,6 @@ export * from "./identity";
 export * from "./objectives";
 export * from "./graph";
 export * from "./media";
+export * from "./notifications";
 export * from "./review";
 export * from "./search";
