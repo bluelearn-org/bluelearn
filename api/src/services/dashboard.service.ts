@@ -3,6 +3,8 @@ import type {
   AssignmentsTableQuery,
   MembersTableQuery,
   RolesTableQuery,
+  SubjectsTableQuery,
+  ManageSubjectsInput,
 } from "@bluelearn/schemas";
 import type { Database } from "../database.types";
 import type { ProfileActivityRow } from "./identity.service";
@@ -129,7 +131,11 @@ const assignmentColumns = {
   date_updated: { column: "updated_at", kind: "range" },
 } satisfies TableColumns;
 
-type TableQuery = MembersTableQuery | RolesTableQuery | AssignmentsTableQuery;
+type TableQuery =
+  | MembersTableQuery
+  | RolesTableQuery
+  | AssignmentsTableQuery
+  | SubjectsTableQuery;
 
 type TableRequest<B> = PromiseLike<{
   data: unknown;
@@ -243,6 +249,78 @@ async function fetchTablePage<B extends TableRequest<B>>(
   }
 
   return { rows: data as Awaited<B>["data"], total: count ?? 0 };
+}
+
+export async function requireSubjectManager(supabase: DB) {
+  const roles = await Promise.all([
+    supabase.rpc("has_role", { check_role: "admin" }),
+    supabase.rpc("has_role", { check_role: "lead-verifier" }),
+  ]);
+  if (roles.some(({ error }) => error))
+    throw new ServiceError("Unable to check subject permissions", 500);
+  if (!roles.some(({ data }) => data))
+    throw new ServiceError(
+      "Only admins and lead verifiers can manage subjects",
+      403
+    );
+}
+
+export async function fetchSubjectsTable(
+  supabase: DB,
+  query: SubjectsTableQuery
+) {
+  await requireSubjectManager(supabase);
+  const { rows, total } = await fetchTablePage(
+    ({ head }) =>
+      supabase
+        .from("subjects")
+        .select("id, name, summary, slug, status, created_at", {
+          count: "exact",
+          head,
+        }),
+    {
+      name: { column: "name", kind: "text" },
+      summary: { column: "summary", kind: "text" },
+      date_created: { column: "created_at", kind: "range" },
+    },
+    query,
+    ["id"],
+    "Failed to load subjects"
+  );
+  return {
+    data: (rows ?? []).map(({ created_at, ...row }) => ({
+      ...row,
+      date_created: created_at,
+    })),
+    total,
+  };
+}
+
+export async function manageSubjects(supabase: DB, input: ManageSubjectsInput) {
+  await requireSubjectManager(supabase);
+  const { error } = await supabase.rpc("manage_subjects", {
+    p_subject_ids: input.subject_ids,
+    p_target_id: input.target_id,
+    p_name: input.name,
+    p_summary: input.summary ?? "",
+  });
+  if (!error) return;
+  if (error.code === "42501")
+    throw new ServiceError(
+      "Only admins and lead verifiers can manage subjects",
+      403
+    );
+  if (error.code === "P0002")
+    throw new ServiceError(
+      "A selected subject is no longer available. Refresh the table and try again.",
+      409
+    );
+  if (error.code === "23514") throw new ServiceError(error.message, 400);
+  console.error(error);
+  throw new ServiceError(
+    "Unable to save subjects. Refresh the table before trying again.",
+    500
+  );
 }
 
 // select one page of data from the dashboard view for the roles table

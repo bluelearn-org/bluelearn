@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import type { InferRequestType, InferResponseType } from "hono/client";
+import type { ManageSubjectsInput } from "@bluelearn/schemas";
 import { client } from "@/lib/api/apiClient";
 import { assertOk } from "@/lib/api/apiHelpers";
 
@@ -8,6 +9,20 @@ const dashboard = client.dashboard;
 type FetchOptions = { signal?: AbortSignal };
 
 type TableQuery = Record<string, string | Array<string>>;
+
+export async function fetchSubjectsTable(
+  query: TableQuery,
+  { signal }: FetchOptions = {}
+) {
+  const res = await dashboard.subjects.$get({ query }, { init: { signal } });
+  await assertOk(res);
+  return res.json();
+}
+
+export async function manageSubjects(input: ManageSubjectsInput) {
+  const res = await dashboard.subjects.manage.$post({ json: input });
+  await assertOk(res);
+}
 
 export type UserStatus = InferRequestType<
   (typeof dashboard)[":id"]["status"]["$patch"]

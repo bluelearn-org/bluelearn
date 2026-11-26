@@ -2,6 +2,7 @@ import { z } from "zod";
 import { paginationSchema } from "../pagination";
 import { reviewCaseTypeSchema, reviewSeatStatusSchema } from "../review/enums";
 import { userStatusSchema, userRoleSchema } from "./enums";
+import { subjectNameSchema, subjectSummarySchema } from "../subjects/fields";
 
 export const updateStatusSchema = z.object({
   status: userStatusSchema,
@@ -107,3 +108,31 @@ export const assignmentsTableQuerySchema = tablePageSchema.extend({
 export type MembersTableQuery = z.infer<typeof membersTableQuerySchema>;
 export type RolesTableQuery = z.infer<typeof rolesTableQuerySchema>;
 export type AssignmentsTableQuery = z.infer<typeof assignmentsTableQuerySchema>;
+
+export const subjectsTableQuerySchema = tablePageSchema.extend({
+  sortBy: z.enum(["name", "summary", "date_created"]).optional(),
+  name: z.string().optional(),
+  summary: z.string().optional(),
+  date_created_from: instant,
+  date_created_to: instant,
+});
+
+export const manageSubjectsSchema = z
+  .object({
+    subject_ids: z.array(z.uuid()).min(1).max(100),
+    target_id: z.uuid(),
+    name: z.string().trim().pipe(subjectNameSchema),
+    summary: subjectSummarySchema.nullable(),
+  })
+  .refine(
+    ({ subject_ids, target_id }) =>
+      subject_ids.includes(target_id) &&
+      new Set(subject_ids).size === subject_ids.length,
+    {
+      message:
+        "Select distinct subjects and a subject to keep from that selection.",
+    }
+  );
+
+export type SubjectsTableQuery = z.infer<typeof subjectsTableQuerySchema>;
+export type ManageSubjectsInput = z.infer<typeof manageSubjectsSchema>;

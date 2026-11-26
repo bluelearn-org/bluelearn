@@ -1508,6 +1508,15 @@ export type Database = {
           title: string
         }[]
       }
+      manage_subjects: {
+        Args: {
+          p_name: string
+          p_subject_ids: string[]
+          p_summary: string
+          p_target_id: string
+        }
+        Returns: undefined
+      }
       objective_closure: {
         Args: { p_targets: string[] }
         Returns: {
@@ -1570,7 +1579,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "verifier" | "moderator" | "curator" | "admin" | "official"
+      app_role:
+        | "verifier"
+        | "moderator"
+        | "curator"
+        | "admin"
+        | "official"
+        | "lead-verifier"
       case_status: "pending" | "in_review" | "approved" | "rejected"
       case_type:
         | "guide_publish"
@@ -1734,7 +1749,14 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: ["verifier", "moderator", "curator", "admin", "official"],
+      app_role: [
+        "verifier",
+        "moderator",
+        "curator",
+        "admin",
+        "official",
+        "lead-verifier",
+      ],
       case_status: ["pending", "in_review", "approved", "rejected"],
       case_type: [
         "guide_publish",

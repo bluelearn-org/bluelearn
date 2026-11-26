@@ -292,6 +292,17 @@ Guide approval or curator publication of an attached objective publishes the sub
 Objective Details checks each proposed subject before adding it. The editor uses shared name limits and slug normalization.
 Invalid names or blank summaries show a field-specific error.
 
+Admins and lead verifiers can edit a subject's name and summary or merge selected subjects
+through `manage_subjects`. The function checks the caller's role and locks the selected
+rows before moving guide and objective revision tags in one transaction. This includes
+draft and past revisions; duplicate tags are collapsed, and no guides or objectives are
+deleted. A missing selection aborts the whole operation.
+
+The retained subject keeps its ID, slug, status and creation date. A merge containing a
+published subject must retain a published destination. Removed subjects' URLs do not
+redirect. The `lead-verifier` enum migration must be applied before the function migration;
+it defines the role but does not assign it to any users.
+
 ### `guide_revision_subjects`
 
 Many-to-many join table between guide revisions and subjects. Tagging is revision-scoped: each guide revision carries its own tag set, edited while the revision is a draft and frozen once submitted. A variant's live tags are its current revision's, and a guide base's live tags are its canonical variant's current revision's.
